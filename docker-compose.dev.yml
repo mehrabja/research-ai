@@ -1,0 +1,30 @@
+name: research-ai-dev
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: research_ai_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-research_ai}
+      POSTGRES_USER: ${POSTGRES_USER:-research_ai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - research_ai_pgdata_dev:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "pg_isready -U ${POSTGRES_USER:-research_ai} -d ${POSTGRES_DB:-research_ai}"
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+volumes:
+  research_ai_pgdata_dev:
+    name: research_ai_pgdata_dev

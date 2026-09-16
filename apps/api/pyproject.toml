@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "research-ai-api"
+version = "0.1.0"
+description = "Evidence-grounded Research Report Generator — API and DB layer"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "research-ai" }]
+dependencies = [
+    "SQLAlchemy>=2.0.30,<2.1",
+    "alembic>=1.13.1,<2.0",
+    "psycopg[binary]>=3.1.18,<4.0",
+    "pgvector>=0.2.5,<0.4",
+    "python-dotenv>=1.0.1,<2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.1,<9.0",
+    "pytest-asyncio>=0.23,<1.0",
+    "ruff>=0.4,<1.0",
+    "mypy>=1.10,<2.0",
+    "types-python-dateutil>=2.9",
+]
+
+[tool.setuptools]
+packages = ["app", "app.db", "app.db.models"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "W", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+plugins = []
+strict = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+exclude = ["alembic/versions/"]
