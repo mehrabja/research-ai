@@ -172,6 +172,29 @@ class Settings(BaseSettings):
         default=200, ge=0, le=10000
     )
 
+    # --- Humanization (Milestone 14) --------------------------------------
+    humanization_enabled: bool = True
+    humanization_policy_version: str = "m14.1"
+    humanization_temperature: float = Field(
+        default=0.4, ge=0.0, le=2.0
+    )
+    humanization_max_output_tokens: int = Field(
+        default=2048, ge=64, le=32000
+    )
+    humanization_max_segments: int = Field(
+        default=50, ge=1, le=500
+    )
+    humanization_max_total_tokens: int = Field(
+        default=60_000, ge=100, le=1_000_000
+    )
+    humanization_max_segment_chars: int = Field(
+        default=4_000, ge=50, le=100_000
+    )
+    humanization_allow_partial: bool = False
+    humanization_max_preservation_retries: int = Field(
+        default=1, ge=0, le=5
+    )
+
     # --- Semantic Scholar / Source Discovery (M7) -------------------------
     semantic_scholar_api_key: str = Field(default="", repr=False)
     semantic_scholar_base_url: str = (

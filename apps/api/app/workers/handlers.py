@@ -2,9 +2,11 @@
 
 ``test_noop``          — deterministic test handler.
 ``embedding_source``   — M11 handler that delegates to M9.
-``generate_report``    — M12 handler that delegates to the
-generation service.
+``generate_report``    — M12 handler that delegates to the generation service.
+``detect_report``      — M13 handler that delegates to the detection service.
+``humanize_report``    — M14 handler that delegates to the humanization service.
 """
+
 from __future__ import annotations
 
 import logging
@@ -12,9 +14,15 @@ import time
 import uuid
 from typing import cast
 
+from sqlalchemy import select
+
 from app.core.exceptions import AppError
 from app.db.session import SessionLocal
 from app.domain.generation import GenerationAlreadySucceeded
+from app.domain.humanization import (
+    HumanizationAlreadyCompletedError,
+    HumanizationStateError,
+)
 from app.domain.jobs import (
     EXECUTABLE_JOB_TYPES,
     RESERVED_JOB_TYPES,
@@ -24,6 +32,11 @@ from app.domain.jobs import (
 from app.services import detection as detection_service
 from app.services import embeddings as embeddings_service
 from app.services import generation as generation_service
+from app.services import humanization as humanization_service
+from app.services import humanization_jobs
+from app.services import jobs as jobs_service
+from app.services import report_status as report_status_service
+from app.services import report_versions as report_versions_service
 from app.services.detection_profile import (
     build_detection_provider,
     get_current_detection_profile,
@@ -36,11 +49,19 @@ from app.services.generation_profile import (
     build_generation_provider,
     get_current_generation_profile,
 )
+from app.services.humanization_jobs import (
+    HumanizationEnqueueError,
+    HumanizationEnqueueStateError,
+)
+from app.services.humanization_profile import build_policy_from_settings
 from app.workers.registry import register_handler, registered_types
 
 logger = logging.getLogger(__name__)
 
 
+# ---------------------------------------------------------------------------
+# test_noop
+# ---------------------------------------------------------------------------
 def _test_noop(ctx: JobContext) -> None:
     mode = (ctx.payload or {}).get("mode", "success")
     if mode == "success":
@@ -68,9 +89,7 @@ class InvalidEmbeddingPayloadError(AppError):
 def _parse_payload(payload: dict) -> tuple[uuid.UUID, uuid.UUID]:
     report_raw = payload.get("report_id")
     source_raw = payload.get("source_id")
-    if not isinstance(report_raw, str) or not isinstance(
-        source_raw, str
-    ):
+    if not isinstance(report_raw, str) or not isinstance(source_raw, str):
         raise InvalidEmbeddingPayloadError(
             "report_id and source_id are required"
         )
@@ -82,9 +101,7 @@ def _parse_payload(payload: dict) -> tuple[uuid.UUID, uuid.UUID]:
         ) from exc
 
 
-def _resolve_owner_user_id(  # noqa: ANN001
-    db, job_id: uuid.UUID
-):  # noqa: ANN202
+def _resolve_owner_user_id(db, job_id: uuid.UUID):
     from app.db.models.jobs import Job
 
     job = db.get(Job, job_id)
@@ -211,6 +228,7 @@ def _generate_report(ctx: JobContext) -> None:
         len(result.cited_markers),
     )
 
+
 # ---------------------------------------------------------------------------
 # M13 — detection handler
 # ---------------------------------------------------------------------------
@@ -232,18 +250,58 @@ def _parse_detection_payload(
     try:
         return uuid.UUID(r), uuid.UUID(v)
     except (ValueError, TypeError) as exc:
-        raise InvalidDetectionPayloadError(
-            "ids must be UUIDs"
-        ) from exc
+        raise InvalidDetectionPayloadError("ids must be UUIDs") from exc
+
+
+def _try_enqueue_humanization_after_detection(
+    *,
+    user_id: uuid.UUID,
+    report_id: uuid.UUID,
+    version_id: uuid.UUID,
+    policy_version: str | None,
+) -> None:
+    """Best-effort idempotent enqueue of the M14 humanization job.
+
+    Runs in its own session. Never raises for idempotent duplicates.
+    Real enqueue failures propagate so the M13 job can be retried.
+    """
+    from app.db.models.pipeline import DetectionRun
+
+    try:
+        with SessionLocal() as db:
+            det = db.execute(
+                select(DetectionRun).where(
+                    DetectionRun.report_id == report_id,
+                    DetectionRun.version_id == version_id,
+                    DetectionRun.status == "completed",
+                )
+            ).scalar_one_or_none()
+            if det is None:
+                return
+
+            humanization_jobs.enqueue_humanization_job(
+                db=db,
+                user_id=user_id,
+                report_id=report_id,
+                version_id=version_id,
+                detection_run_id=det.id,
+                jobs_service=jobs_service,
+                policy_version=policy_version,
+            )
+            db.commit()
+    except HumanizationEnqueueStateError:
+        # Idempotent no-op: already enqueued or report already progressed.
+        return
+    except HumanizationEnqueueError:
+        # Real enqueue failure — surface so M13 job retries.
+        raise
 
 
 def _detect_report(ctx: JobContext) -> None:
     from app.core.exceptions import DetectionAlreadyCompletedError
     from app.db.models.jobs import Job
 
-    report_id, version_id = _parse_detection_payload(
-        dict(ctx.payload)
-    )
+    report_id, version_id = _parse_detection_payload(dict(ctx.payload))
 
     with SessionLocal() as db:
         job = db.get(Job, ctx.job_id)
@@ -252,15 +310,15 @@ def _detect_report(ctx: JobContext) -> None:
         if job.job_type != JobTypes.DETECT_REPORT:
             raise InvalidDetectionPayloadError("wrong job_type")
         if job.report_id is None or job.report_id != report_id:
-            raise InvalidDetectionPayloadError(
-                "job.report_id mismatch"
-            )
+            raise InvalidDetectionPayloadError("job.report_id mismatch")
         if job.user_id is None:
             raise InvalidDetectionPayloadError("no owning user")
         user_id = cast(uuid.UUID, job.user_id)
 
     profile = get_current_detection_profile()
     provider = build_detection_provider(profile)
+
+    policy_version = (ctx.payload or {}).get("policy_version")
 
     try:
         with SessionLocal() as db:
@@ -276,6 +334,13 @@ def _detect_report(ctx: JobContext) -> None:
         logger.info(
             "detect_report_already_completed job_id=%s", ctx.job_id
         )
+        # --- M14 recovery: try to enqueue humanization anyway ---
+        _try_enqueue_humanization_after_detection(
+            user_id=user_id,
+            report_id=report_id,
+            version_id=version_id,
+            policy_version=policy_version,
+        )
         return
 
     logger.info(
@@ -287,29 +352,139 @@ def _detect_report(ctx: JobContext) -> None:
         result.label,
         result.probability,
     )
+
+    # --- M14: enqueue humanization after successful detection ---
+    _try_enqueue_humanization_after_detection(
+        user_id=user_id,
+        report_id=report_id,
+        version_id=version_id,
+        policy_version=policy_version,
+    )
+
+
+# ---------------------------------------------------------------------------
+# M14 — humanization handler
+# ---------------------------------------------------------------------------
+class InvalidHumanizationPayloadError(AppError):
+    code = "INVALID_HUMANIZATION_PAYLOAD"
+    status_code = 400
+    message = "Humanization job payload is invalid."
+
+
+def _parse_humanization_payload(
+    payload: dict,
+) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
+    r = payload.get("report_id")
+    v = payload.get("version_id")
+    d = payload.get("detection_run_id")
+    if not isinstance(r, str) or not isinstance(v, str) or not isinstance(d, str):
+        raise InvalidHumanizationPayloadError(
+            "report_id, version_id, and detection_run_id are required"
+        )
+    try:
+        return uuid.UUID(r), uuid.UUID(v), uuid.UUID(d)
+    except (ValueError, TypeError) as exc:
+        raise InvalidHumanizationPayloadError("ids must be UUIDs") from exc
+
+
+def _humanize_report(ctx: JobContext) -> None:
+    from app.db.models.jobs import Job
+
+    report_id, version_id, detection_run_id = _parse_humanization_payload(
+        dict(ctx.payload)
+    )
+
+    with SessionLocal() as db:
+        job = db.get(Job, ctx.job_id)
+        if job is None:
+            raise InvalidHumanizationPayloadError("job not found")
+        if job.job_type != JobTypes.HUMANIZE_REPORT:
+            raise InvalidHumanizationPayloadError(
+                f"wrong job_type {job.job_type!r}"
+            )
+        if job.report_id is None or job.report_id != report_id:
+            raise InvalidHumanizationPayloadError(
+                "job.report_id does not match payload.report_id"
+            )
+        if job.user_id is None:
+            raise InvalidHumanizationPayloadError(
+                "humanization job has no owning user"
+            )
+        user_id = cast(uuid.UUID, job.user_id)
+
+    policy = build_policy_from_settings(
+        version=(ctx.payload or {}).get("policy_version"),
+        job_id=str(ctx.job_id),
+    )
+
+    # Reuse the M12 generation provider transport.
+    gen_profile = get_current_generation_profile()
+    provider = build_generation_provider(gen_profile)
+
+    try:
+        with SessionLocal() as db:
+            result = humanization_service.run_humanization(
+                db=db,
+                user_id=user_id,
+                report_id=report_id,
+                version_id=version_id,
+                detection_run_id=detection_run_id,
+                provider=provider,
+                policy=policy,
+                usage_recorder=None,          # TODO: wire M12 usage path
+                version_service=report_versions_service,
+                status_service=report_status_service,
+            )
+    except HumanizationAlreadyCompletedError:
+        logger.info(
+            "humanize_report_already_completed job_id=%s", ctx.job_id
+        )
+        return
+    except HumanizationStateError as exc:
+        logger.info(
+            "humanize_report_skipped job_id=%s reason=%s",
+            ctx.job_id,
+            str(exc),
+        )
+        return
+
+    logger.info(
+        "humanize_report_done job_id=%s report_id=%s version_id=%s "
+        "status=%s output_version_id=%s",
+        ctx.job_id,
+        report_id,
+        version_id,
+        result.status,
+        result.output_version_id,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Registration
 # ---------------------------------------------------------------------------
 def register_all_handlers() -> None:
     if JobTypes.TEST_NOOP not in registered_types():
         register_handler(JobTypes.TEST_NOOP, _test_noop)
+
     if JobTypes.EMBEDDING_SOURCE not in registered_types():
-        register_handler(
-            JobTypes.EMBEDDING_SOURCE, _embedding_source
-        )
+        register_handler(JobTypes.EMBEDDING_SOURCE, _embedding_source)
+
     if JobTypes.GENERATE_REPORT not in registered_types():
-        register_handler(
-            JobTypes.GENERATE_REPORT, _generate_report
-        )
+        register_handler(JobTypes.GENERATE_REPORT, _generate_report)
 
     if JobTypes.DETECT_REPORT not in registered_types():
         register_handler(JobTypes.DETECT_REPORT, _detect_report)
+
+    if JobTypes.HUMANIZE_REPORT not in registered_types():
+        register_handler(JobTypes.HUMANIZE_REPORT, _humanize_report)
+
 
 __all__ = [
     "EXECUTABLE_JOB_TYPES",
     "InvalidEmbeddingPayloadError",
     "InvalidGenerationPayloadError",
-    "RESERVED_JOB_TYPES",
     "InvalidDetectionPayloadError",
+    "InvalidHumanizationPayloadError",
+    "RESERVED_JOB_TYPES",
     "register_all_handlers",
 ]

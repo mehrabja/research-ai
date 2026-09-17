@@ -7,6 +7,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Literal
 
 JobStatus = Literal[
@@ -57,18 +58,19 @@ def validate_job_transition(
         )
 
 
-class JobTypes:
-    EMBEDDING_SOURCE = "embedding_source"
+class JobTypes(str, Enum):
     TEST_NOOP = "test_noop"
-    GENERATE_REPORT = "generate_report"  # M12
-    DETECT_REPORT = "detect_report"      # M13
-
+    EMBEDDING_SOURCE = "embedding_source"
+    GENERATE_REPORT = "generate_report"
+    DETECT_REPORT = "detect_report"
+    HUMANIZE_REPORT = "humanize_report"   # ← این خط جدید
 
 EXECUTABLE_JOB_TYPES: frozenset[str] = frozenset({
     JobTypes.TEST_NOOP,
     JobTypes.EMBEDDING_SOURCE,
     JobTypes.GENERATE_REPORT,
     JobTypes.DETECT_REPORT,
+    JobTypes.HUMANIZE_REPORT.value,
 })
 
 RESERVED_JOB_TYPES: frozenset[str] = frozenset()
