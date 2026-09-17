@@ -37,6 +37,7 @@ from app.services import humanization_jobs
 from app.services import jobs as jobs_service
 from app.services import report_status as report_status_service
 from app.services import report_versions as report_versions_service
+from app.services import translation as translation_service
 from app.services.detection_profile import (
     build_detection_provider,
     get_current_detection_profile,
@@ -54,6 +55,10 @@ from app.services.humanization_jobs import (
     HumanizationEnqueueStateError,
 )
 from app.services.humanization_profile import build_policy_from_settings
+from app.services.translation_profile import (
+    build_translation_provider,
+    get_current_translation_profile,
+)
 from app.workers.registry import register_handler, registered_types
 
 logger = logging.getLogger(__name__)
@@ -462,7 +467,85 @@ def _humanize_report(ctx: JobContext) -> None:
 # ---------------------------------------------------------------------------
 # Registration
 # ---------------------------------------------------------------------------
+class InvalidTranslationPayloadError(AppError):
+    code = "INVALID_TRANSLATION_PAYLOAD"
+    status_code = 400
+    message = "Translation job payload is invalid."
+
+
+def _parse_translation_payload(
+    payload: dict,
+) -> tuple[uuid.UUID, uuid.UUID, str]:
+    r = payload.get("report_id")
+    v = payload.get("source_version_id")
+    t = payload.get("target_language")
+    if not isinstance(r, str) or not isinstance(v, str) or not isinstance(t, str):
+        raise InvalidTranslationPayloadError(
+            "report_id, source_version_id, target_language required"
+        )
+    try:
+        return uuid.UUID(r), uuid.UUID(v), t
+    except (ValueError, TypeError) as exc:
+        raise InvalidTranslationPayloadError("ids must be UUIDs") from exc
+
+
+def _translate_report(ctx: JobContext) -> None:
+    from app.db.models.jobs import Job
+
+    report_id, source_version_id, target_language = _parse_translation_payload(
+        dict(ctx.payload)
+    )
+
+    with SessionLocal() as db:
+        job = db.get(Job, ctx.job_id)
+        if job is None:
+            raise InvalidTranslationPayloadError("job not found")
+        if job.job_type != JobTypes.TRANSLATE_REPORT:
+            raise InvalidTranslationPayloadError(
+                f"wrong job_type {job.job_type!r}"
+            )
+        if job.report_id is None or job.report_id != report_id:
+            raise InvalidTranslationPayloadError("job.report_id mismatch")
+        if job.user_id is None:
+            raise InvalidTranslationPayloadError("no owning user")
+        user_id = cast(uuid.UUID, job.user_id)
+
+    profile = get_current_translation_profile()
+    provider = build_translation_provider(profile)
+
+    try:
+        with SessionLocal() as db:
+            outcome = translation_service.translate_report(
+                db=db,
+                user_id=user_id,
+                report_id=report_id,
+                source_version_id=source_version_id,
+                target_language=target_language,
+                provider=provider,
+                profile=profile,
+            )
+    except translation_service.TranslationAlreadySucceeded as exc:
+        logger.info(
+            "translate_report_already_succeeded job_id=%s detail=%s",
+            ctx.job_id,
+            str(exc),
+        )
+        return
+
+    logger.info(
+        "translate_report_done job_id=%s report_id=%s "
+        "src_version=%s target=%s run_id=%s version_id=%s",
+        ctx.job_id,
+        report_id,
+        source_version_id,
+        target_language,
+        outcome.run_id,
+        outcome.version_id,
+    )
 def register_all_handlers() -> None:
+    if JobTypes.TRANSLATE_REPORT not in registered_types():
+        register_handler(JobTypes.TRANSLATE_REPORT, _translate_report)
+
     if JobTypes.TEST_NOOP not in registered_types():
         register_handler(JobTypes.TEST_NOOP, _test_noop)
 
@@ -487,4 +570,5 @@ __all__ = [
     "InvalidHumanizationPayloadError",
     "RESERVED_JOB_TYPES",
     "register_all_handlers",
+    "InvalidTranslationPayloadError",
 ]

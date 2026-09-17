@@ -1,6 +1,7 @@
 """M15 — Pre-translation human review service."""
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -14,8 +15,9 @@ from app.services.report_status import update_report_status
 from app.services.report_versions import create_report_version
 from app.services.reports import get_report
 
-REVIEW_STAGE_PRE_TRANSLATION = "pre_translation"
+logger = logging.getLogger(__name__)
 
+REVIEW_STAGE_PRE_TRANSLATION = "pre_translation"
 REVIEW_ACTION_EDITED = "edited"
 REVIEW_ACTION_APPROVED = "approved"
 REVIEW_ACTION_REQUESTED_CHANGES = "requested_changes"
@@ -234,7 +236,6 @@ def approve_pre_translation_review(
     locked = _lock_and_load_report(db, report_id)
 
     if locked.status == "translating":
-        # Idempotent success — already transitioned.
         db.commit()
         return locked
 
@@ -268,10 +269,52 @@ def approve_pre_translation_review(
         reason="pre_translation_review_approved",
         commit=False,
     )
-    db.commit()
+    db.commit()  # approval durable BEFORE enqueue
     db.refresh(locked)
-    return locked
 
+    # ---- M16 handoff: enqueue ALWAYS in a separate transaction ----
+    try:
+        from app.services.translation_jobs import (
+            TranslationEnqueueError,
+            TranslationEnqueueStateError,
+            enqueue_translation_job,
+        )
+        from app.services.translation_profile import (
+            get_current_translation_profile_id,
+        )
+
+        target_language = current.language
+        report_row = db.get(Report, report_id)
+        if report_row is not None and getattr(
+            report_row, "output_language", None
+        ):
+            target_language = report_row.output_language
+
+        enqueue_translation_job(
+            db=db,
+            user_id=user_id,
+            report_id=report_id,
+            source_version_id=current.id,
+            target_language=target_language,
+            profile_id=get_current_translation_profile_id(),
+        )
+        db.commit()
+    except TranslationEnqueueStateError:
+        db.rollback()
+    except TranslationEnqueueError:
+        db.rollback()
+        logger.warning(
+            "m16_enqueue_after_approval_failed",
+            extra={"report_id": str(report_id)},
+        )
+    except Exception:
+        db.rollback()
+        logger.exception(
+            "m16_enqueue_unexpected_failure",
+            extra={"report_id": str(report_id)},
+        )
+
+    return locked
 
 def request_changes_pre_translation_review(
     db: Session,

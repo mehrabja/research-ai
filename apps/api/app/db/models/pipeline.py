@@ -187,6 +187,12 @@ class TranslationRun(Base, UUIDPKMixin, CreatedAtMixin):
         ForeignKey("generation_runs.id", ondelete="SET NULL"),
         nullable=True,
     )
+    source_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("report_versions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    profile_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_lang: Mapped[str] = mapped_column(Text, nullable=False)
     target_lang: Mapped[str] = mapped_column(Text, nullable=False)
     provider: Mapped[str] = mapped_column(Text, nullable=False)

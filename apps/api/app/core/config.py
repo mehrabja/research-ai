@@ -194,7 +194,39 @@ class Settings(BaseSettings):
     humanization_max_preservation_retries: int = Field(
         default=1, ge=0, le=5
     )
-
+    # --- Translation (Milestone 16) ---------------------------------------
+    translation_enabled: bool = True
+    translation_provider: str = "openai"
+    translation_model: str = "gpt-4o-mini"
+    translation_temperature: float = Field(
+        default=0.1, ge=0.0, le=2.0
+    )
+    translation_max_output_tokens: int = Field(
+        default=8000, ge=64, le=16000
+    )
+    translation_profile_version: str = "m16.1"
+    translation_timeout_seconds: float = Field(
+        default=90.0, ge=5.0, le=600.0
+    )
+    translation_max_retries: int = Field(default=2, ge=0, le=10)
+    translation_retry_base_seconds: float = Field(
+        default=1.0, ge=0.1, le=60.0
+    )
+    translation_retry_max_seconds: float = Field(
+        default=30.0, ge=1.0, le=600.0
+    )
+    translation_retry_jitter_fraction: float = Field(
+        default=0.25, ge=0.0, le=1.0
+    )
+    translation_max_input_chars: int = Field(
+        default=12_000, ge=100, le=1_000_000
+    )
+    translation_max_output_chars: int = Field(
+        default=40_000, ge=100, le=2_000_000
+    )
+    translation_preservation_retry_count: int = Field(
+        default=1, ge=0, le=3
+    )
     # --- Semantic Scholar / Source Discovery (M7) -------------------------
     semantic_scholar_api_key: str = Field(default="", repr=False)
     semantic_scholar_base_url: str = (

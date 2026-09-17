@@ -63,7 +63,8 @@ class JobTypes(StrEnum):
     EMBEDDING_SOURCE = "embedding_source"
     GENERATE_REPORT = "generate_report"
     DETECT_REPORT = "detect_report"
-    HUMANIZE_REPORT = "humanize_report"   # ← این خط جدید
+    HUMANIZE_REPORT = "humanize_report"
+    TRANSLATE_REPORT = "translate_report"
 
 EXECUTABLE_JOB_TYPES: frozenset[str] = frozenset({
     JobTypes.TEST_NOOP,
@@ -71,6 +72,7 @@ EXECUTABLE_JOB_TYPES: frozenset[str] = frozenset({
     JobTypes.GENERATE_REPORT,
     JobTypes.DETECT_REPORT,
     JobTypes.HUMANIZE_REPORT.value,
+    JobTypes.TRANSLATE_REPORT.value,
 })
 
 RESERVED_JOB_TYPES: frozenset[str] = frozenset()

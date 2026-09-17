@@ -91,6 +91,34 @@ def classify_exception(exc: BaseException) -> str:
         if isinstance(exc, DetectionInputTooLargeError):
             return "input_too_large"
 
+    try:
+        from app.integrations.translation.base import (
+            TranslationAuthenticationError,
+            TranslationInputTooLargeError,
+            TranslationInvalidRequestError,
+            TranslationInvalidResponseError,
+            TranslationProviderUnavailableError,
+            TranslationRateLimitError,
+            TranslationTimeoutError,
+        )
+    except Exception:
+        pass
+    else:
+        if isinstance(exc, TranslationRateLimitError):
+            return "rate_limited"
+        if isinstance(exc, TranslationTimeoutError):
+            return "provider_timeout"
+        if isinstance(exc, TranslationProviderUnavailableError):
+            return "provider_unavailable"
+        if isinstance(exc, TranslationAuthenticationError):
+            return "authentication_error"
+        if isinstance(exc, TranslationInvalidRequestError):
+            return "invalid_payload"
+        if isinstance(exc, TranslationInvalidResponseError):
+            return "invalid_provider_response"
+        if isinstance(exc, TranslationInputTooLargeError):
+            return "input_too_large"
+
     if isinstance(exc, TimeoutError):
         return "provider_timeout"
     if isinstance(exc, ConnectionError):

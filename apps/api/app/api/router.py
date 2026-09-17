@@ -12,6 +12,7 @@ from app.api.routes.jobs import router as jobs_router
 from app.api.routes.reports import router as reports_router
 from app.api.routes.reviews import router as reviews_router
 from app.api.routes.sources import router as sources_router
+from app.api.routes.translation import router as translation_router
 
 api_router = APIRouter()
 
@@ -24,3 +25,4 @@ api_router.include_router(jobs_router)
 api_router.include_router(detection_router)
 api_router.include_router(humanization_router)
 api_router.include_router(reviews_router)
+api_router.include_router(translation_router)
