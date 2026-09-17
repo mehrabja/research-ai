@@ -199,3 +199,34 @@ class SourceNotReadyForEmbedding(AppError):
     code = "SOURCE_NOT_READY_FOR_EMBEDDING"
     status_code = 409
     message = "Source is not ready for embedding."
+
+
+# --- Jobs (Milestone 10) --------------------------------------------------
+class JobNotFoundError(AppError):
+    code = "JOB_NOT_FOUND"
+    status_code = 404
+    message = "Job not found."
+
+
+class JobLeaseLostError(AppError):
+    code = "JOB_LEASE_LOST"
+    status_code = 409
+    message = "Worker no longer owns this job."
+
+
+class UnknownJobTypeError(AppError):
+    code = "UNKNOWN_JOB_TYPE"
+    status_code = 400
+    message = "Unknown job type."
+
+
+class InvalidJobStateError(AppError):
+    code = "INVALID_JOB_STATE"
+    status_code = 409
+    message = "Job is not in a valid state for this operation."
+
+
+class JobPayloadTooLargeError(AppError):
+    code = "JOB_PAYLOAD_TOO_LARGE"
+    status_code = 413
+    message = "Job payload exceeds the maximum allowed size."

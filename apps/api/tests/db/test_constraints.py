@@ -163,18 +163,17 @@ def test_report_version_unique(conn: Connection) -> None:
 def test_jobs_idempotency_unique(conn: Connection) -> None:
     conn.execute(
         text(
-            "INSERT INTO jobs (phase, status, idempotency_key) "
-            "VALUES ('discovery', 'pending', 'k-1')"
+            "INSERT INTO jobs (job_type, status, idempotency_key) "
+            "VALUES ('test_noop', 'queued', 'k-1')"
         )
     )
     with pytest.raises(IntegrityError):
         conn.execute(
             text(
-                "INSERT INTO jobs (phase, status, idempotency_key) "
-                "VALUES ('discovery', 'pending', 'k-1')"
+                "INSERT INTO jobs (job_type, status, idempotency_key) "
+                "VALUES ('test_noop', 'queued', 'k-1')"
             )
         )
-
 
 def test_money_columns_are_numeric(conn: Connection) -> None:
     rows = conn.execute(

@@ -9,6 +9,7 @@ from app.db.models.humanization import (
     HumanizationRewrite,
     HumanizationRun,
 )
+from app.db.models.jobs import Job
 from app.db.models.knowledge import (
     AITellPattern,
     DetectionThreshold,
@@ -18,7 +19,6 @@ from app.db.models.knowledge import (
 )
 from app.db.models.ops import (
     CreditTransaction,
-    Job,
     ModelPricing,
     UsageLog,
 )
@@ -31,6 +31,7 @@ from app.db.models.pipeline import (
 )
 from app.db.models.report import (
     Report,
+    ReportEvent,
     ReportVersion,
     ReviewEvent,
 )
@@ -44,6 +45,7 @@ from app.db.models.user import User
 __all__ = [
     "User",
     "Report",
+    "ReportEvent",
     "ReportVersion",
     "ReviewEvent",
     "Source",

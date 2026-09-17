@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pytest
+
 from app.domain.extraction import (
     EXTRACTION_PIPELINE_VERSION,
     CanonicalDocument,

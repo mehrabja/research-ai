@@ -113,6 +113,27 @@ class Settings(BaseSettings):
         default=1.0, ge=0.1, le=10.0
     )
 
+    # --- Job Queue / Worker (Milestone 10) --------------------------------
+    job_default_max_attempts: int = Field(default=3, ge=1, le=20)
+    job_retry_base_seconds: float = Field(
+        default=1.0, ge=0.1, le=60.0
+    )
+    job_retry_max_seconds: float = Field(
+        default=300.0, ge=1.0, le=3600.0
+    )
+    job_retry_jitter: float = Field(default=0.25, ge=0.0, le=1.0)
+    job_processing_timeout_seconds: int = Field(
+        default=300, ge=30, le=86400
+    )
+    job_heartbeat_interval_seconds: int = Field(
+        default=30, ge=5, le=3600
+    )
+    job_poll_interval_seconds: float = Field(
+        default=1.0, ge=0.1, le=60.0
+    )
+    job_payload_max_bytes: int = Field(
+        default=65536, ge=256, le=10 * 1024 * 1024
+    )
     @model_validator(mode="after")
     def _validate_production_secrets(self) -> Settings:
         if self.app_env.lower() == "production":
@@ -174,7 +195,22 @@ class Settings(BaseSettings):
                 "off/strict_order/relaxed_order"
             )
         return self
-
+    @model_validator(mode="after")
+    def _validate_job_config(self) -> Settings:
+        if self.job_retry_max_seconds < self.job_retry_base_seconds:
+            raise ValueError(
+                "job_retry_max_seconds must be >= "
+                "job_retry_base_seconds"
+            )
+        if (
+            self.job_heartbeat_interval_seconds
+            >= self.job_processing_timeout_seconds
+        ):
+            raise ValueError(
+                "job_heartbeat_interval_seconds must be < "
+                "job_processing_timeout_seconds"
+            )
+        return self
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

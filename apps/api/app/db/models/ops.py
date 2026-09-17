@@ -30,44 +30,6 @@ def _in_check(
     )
 
 
-class Job(Base, UUIDPKMixin, CreatedAtMixin):
-    __tablename__ = "jobs"
-
-    report_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("reports.id", ondelete="CASCADE"),
-        nullable=True,
-    )
-    phase: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(Text, nullable=False)
-    retry_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, server_default=text("0")
-    )
-    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    idempotency_key: Mapped[str | None] = mapped_column(
-        Text, nullable=True, unique=True
-    )
-    trace_id: Mapped[str | None] = mapped_column(Text, nullable=True)
-    started_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-
-    __table_args__ = (
-        _in_check(
-            "status",
-            ("pending", "running", "success", "failed", "cancelled", "retrying"),
-            "ck_jobs_status",
-        ),
-        CheckConstraint("retry_count >= 0", name="ck_jobs_retry_count"),
-        Index("ix_jobs_status_created", "status", "created_at"),
-        Index("ix_jobs_report", "report_id"),
-        Index("ix_jobs_trace_id", "trace_id"),
-    )
-
-
 class UsageLog(Base, UUIDPKMixin, CreatedAtMixin):
     """Append-only audit of every metered call.
 
@@ -159,18 +121,6 @@ class CreditTransaction(Base, UUIDPKMixin, CreatedAtMixin):
 
     This table is the *only* source of truth for money. There is no
     authoritative mutable ``credits.balance`` column anywhere.
-
-    Balance reconstruction::
-
-        SELECT COALESCE(SUM(CASE
-            WHEN type IN ('purchase','release','refund') THEN  amount
-            WHEN type IN ('reserve','settlement')        THEN -amount
-        END), 0) AS balance
-        FROM credit_transactions
-        WHERE user_id = :uid AND status = 'posted';
-
-    A cached balance may be added later for performance, but it must
-    never become the authoritative value.
     """
 
     __tablename__ = "credit_transactions"
