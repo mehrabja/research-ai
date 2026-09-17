@@ -1,9 +1,14 @@
+"""Humanization routes."""
+from __future__ import annotations
+
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.dependencies import get_current_user
+from app.db.models.user import User
+from app.db.session import get_db
 from app.schemas.humanization import HumanizationEnqueueRequest
 from app.services import humanization_jobs as humanization_jobs_service
 from app.services import jobs as jobs_service
@@ -18,13 +23,13 @@ router = APIRouter(prefix="/reports", tags=["humanization"])
 def enqueue_humanization(
     report_id: uuid.UUID,
     body: HumanizationEnqueueRequest,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
-):
+) -> dict[str, str]:
     try:
         job_id = humanization_jobs_service.enqueue_humanization_job(
             db=db,
-            user_id=user.id,
+            user_id=current_user.id,
             report_id=report_id,
             version_id=body.version_id,
             detection_run_id=body.detection_run_id,
@@ -34,8 +39,8 @@ def enqueue_humanization(
         db.commit()
     except humanization_jobs_service.HumanizationEnqueueOwnershipError:
         db.rollback()
-        raise HTTPException(status_code=404, detail="not found")
+        raise HTTPException(status_code=404, detail="not found") from None
     except humanization_jobs_service.HumanizationEnqueueStateError as exc:
         db.rollback()
-        raise HTTPException(status_code=409, detail=str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from None
     return {"job_id": str(job_id), "status": "queued"}

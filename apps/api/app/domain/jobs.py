@@ -7,7 +7,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 JobStatus = Literal[
@@ -58,7 +58,7 @@ def validate_job_transition(
         )
 
 
-class JobTypes(str, Enum):
+class JobTypes(StrEnum):
     TEST_NOOP = "test_noop"
     EMBEDDING_SOURCE = "embedding_source"
     GENERATE_REPORT = "generate_report"

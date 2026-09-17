@@ -35,7 +35,9 @@ def test_policy_roundtrip():
 
 
 def test_policy_rejects_oversize_threshold():
-    with pytest.raises(Exception):
+    from app.domain.humanization import InvalidHumanizationPayloadError
+
+    with pytest.raises(InvalidHumanizationPayloadError):
         HumanizationPolicy(
             version="m14.1",
             stage=HumanizationStage.PRE_TRANSLATION,

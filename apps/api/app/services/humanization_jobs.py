@@ -14,7 +14,6 @@ from app.domain.humanization import (
     build_humanization_job_idempotency_key,
 )
 from app.domain.jobs import JobTypes
-from app.domain.report_status import ReportStatus
 from app.services.humanization_profile import build_policy_from_settings
 
 
@@ -75,7 +74,7 @@ def enqueue_humanization_job(
     if getattr(detection, "status", None) != DETECTION_STATUS_COMPLETED:
         raise HumanizationEnqueueStateError("detection run not completed")
 
-    if getattr(report, "status", None) != ReportStatus.HUMANIZING.value:
+    if getattr(report, "status", None) != "humanizing":
         raise HumanizationEnqueueStateError(
             f"report status {getattr(report, 'status', None)!r} != humanizing"
         )

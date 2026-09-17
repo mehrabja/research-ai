@@ -6,19 +6,19 @@ import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 DEFAULT_POLICY_VERSION = "m14.1"
 DETECTION_STATUS_COMPLETED = "completed"
 
 
-class HumanizationStage(str, Enum):
+class HumanizationStage(StrEnum):
     PRE_TRANSLATION = "pre_translation"
     POST_TRANSLATION = "post_translation"
 
 
-class HumanizationStatus(str, Enum):
+class HumanizationStatus(StrEnum):
     RUNNING = "running"
     SUCCESS = "success"
     PARTIAL = "partial"
@@ -26,7 +26,7 @@ class HumanizationStatus(str, Enum):
     FAILED = "failed"
 
 
-class HumanizationLayer(str, Enum):
+class HumanizationLayer(StrEnum):
     L1 = "L1"
     L2 = "L2"
     L3 = "L3"
@@ -101,15 +101,17 @@ class HumanizationPolicy:
         seen = set(self.enabled_layers)
         if len(seen) != len(self.enabled_layers):
             raise InvalidHumanizationPayloadError("duplicate layers")
-        expected = tuple(l for l in canonical if l in seen)
+        expected = tuple(lyr for lyr in canonical if lyr in seen)
         if self.enabled_layers != expected:
-            raise InvalidHumanizationPayloadError("enabled_layers must be in L1, L2, L3 order")
+            raise InvalidHumanizationPayloadError(
+                "enabled_layers must be in L1, L2, L3 order"
+            )
 
     def to_jsonable(self) -> dict[str, Any]:
         return {
             "version": self.version,
             "stage": self.stage.value,
-            "enabled_layers": [l.value for l in self.enabled_layers],
+            "enabled_layers": [lyr.value for lyr in self.enabled_layers],
             "max_segments": self.max_segments,
             "max_total_tokens": self.max_total_tokens,
             "max_segment_chars": self.max_segment_chars,

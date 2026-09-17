@@ -43,7 +43,6 @@ from app.domain.humanization_preservation import (
     extract_protected_tokens,
     validate_preservation,
 )
-from app.domain.report_status import ReportStatus
 from app.services.humanization_profile import build_policy_from_settings
 
 logger = logging.getLogger(__name__)
@@ -425,7 +424,10 @@ def _fail_run(
         return
     locked.status = status or HumanizationStatus.FAILED.value
     locked.completed_at = _utcnow()
-    locked.policy_json = {**(locked.policy_json or {}), "error_code": error_code}
+    locked.policy_json = {
+        **(locked.policy_json or {}),
+        "error_code": error_code,
+    }
 
 
 def _finalize_noop(
@@ -439,9 +441,13 @@ def _finalize_noop(
 ) -> None:
     run.status = HumanizationStatus.SUCCESS.value
     run.completed_at = _utcnow()
-    run.policy_json = {**(run.policy_json or {}), "noop": True, "output_version_id": None}
-    iteration.flagged_segments = 0
-    iteration.rewritten_segments = 0
+    run.policy_json = {
+        **(run.policy_json or {}),
+        "noop": True,
+        "output_version_id": None,
+    }
+    iteration.flagged_segments = {"count": 0, "segment_ids": []}
+    iteration.rewritten_segments = {"count": 0, "skipped_count": 0}
     if status_service is not None:
         next_status = next_status_for_stage(policy.stage)
         status_service.update_report_status(
@@ -481,7 +487,7 @@ def run_humanization(
         raise HumanizationError("report ownership mismatch")
 
     current_status = getattr(report, "status", None)
-    if current_status != ReportStatus.HUMANIZING.value:
+    if current_status != "humanizing":
         raise HumanizationStateError(
             f"report status {current_status!r} is not 'humanizing'"
         )
@@ -602,13 +608,19 @@ def run_humanization(
 
             existing = _find_existing_rewrite(db=db, idempotency_key=idem)
             if existing is not None and existing.preservation_ok:
-                if current_text != existing.text_after:
-                    changed = True
-                current_text = existing.text_after
-                continue
-            if existing is not None and not existing.preservation_ok:
+                reused_text = existing.text_after
+                if reused_text is not None:
+                    if current_text != reused_text:
+                        changed = True
+                    current_text = reused_text
+                    continue
+                # corrupt row: fall through and re-run
                 db.delete(existing)
                 db.flush()
+            elif existing is not None and not existing.preservation_ok:
+                db.delete(existing)
+                db.flush()
+
 
             before_text = current_text
             before_snapshot = extract_protected_tokens(before_text)
@@ -708,8 +720,14 @@ def run_humanization(
         else:
             segments_skipped += 1
 
-    iteration.flagged_segments = len(targets)
-    iteration.rewritten_segments = segments_rewritten
+    iteration.flagged_segments = {
+        "count": len(targets),
+        "segment_ids": [t.segment_id for t in targets],
+    }
+    iteration.rewritten_segments = {
+        "count": segments_rewritten,
+        "skipped_count": segments_skipped,
+    }
     db.flush()
 
     had_preservation_skips = bool(skipped_preservation)
@@ -750,17 +768,17 @@ def run_humanization(
         if status_service is not None:
             next_status = next_status_for_stage(policy.stage)
             if had_preservation_skips:
-                reason = "humanization_partial_noop"
+                reason_ns = "humanization_partial_noop"
             elif had_oversize_skips:
-                reason = "humanization_oversize_noop"
+                reason_ns = "humanization_oversize_noop"
             else:
-                reason = "humanization_noop"
+                reason_ns = "humanization_noop"
             status_service.update_report_status(
                 db=db,
                 report_id=report.id,
                 new_status=next_status,
                 actor_user_id=None,
-                reason=reason,
+                reason=reason_ns,
                 commit=False,
             )
         db.commit()
@@ -779,7 +797,7 @@ def run_humanization(
     diff_summary = {
         "stage": policy.stage.value,
         "policy_version": policy.version,
-        "layers": [l.value for l in policy.enabled_layers],
+        "layers": [lyr.value for lyr in policy.enabled_layers],
         "segments_targeted": len(targets),
         "segments_rewritten": segments_rewritten,
         "segments_skipped": segments_skipped,
@@ -815,16 +833,16 @@ def run_humanization(
 
     next_status = next_status_for_stage(policy.stage)
     if had_preservation_skips or had_oversize_skips:
-        reason = "humanization_partial"
+        reason_final = "humanization_partial"
     else:
-        reason = "humanization_success"
+        reason_final = "humanization_success"
 
     status_service.update_report_status(
         db=db,
         report_id=report_id,
         new_status=next_status,
         actor_user_id=None,
-        reason=reason,
+        reason=reason_final,
         commit=False,
     )
 
