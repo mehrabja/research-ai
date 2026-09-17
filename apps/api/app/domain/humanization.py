@@ -52,7 +52,7 @@ def sha256_hex(text: str) -> str:
 
 
 _STAGE_NEXT_STATUS: Mapping[str, str] = {
-    HumanizationStage.PRE_TRANSLATION.value: "translating",
+    HumanizationStage.PRE_TRANSLATION.value: "pre_translation_review",
 }
 
 

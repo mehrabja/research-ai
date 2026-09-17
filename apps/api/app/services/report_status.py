@@ -21,9 +21,15 @@ def update_report_status(
     user_id: uuid.UUID,
     report_id: uuid.UUID,
     new_status: str,
+    actor_user_id: uuid.UUID | None = None,
+    reason: str | None = None,
     commit: bool = True,
 ) -> Report:
-    """Change a report's status and record an audit event atomically."""
+    """Change a report's status and record an audit event atomically.
+
+    ``actor_user_id`` defaults to ``user_id``. ``reason`` is optional and
+    currently informational; existing callers may omit both.
+    """
     report = get_report(
         db,
         user_id=user_id,
@@ -52,7 +58,7 @@ def update_report_status(
         create_status_transition_event(
             db,
             report_id=report_id,
-            user_id=user_id,
+            user_id=actor_user_id or user_id,
             from_status=current_status,
             to_status=new_status,
         )

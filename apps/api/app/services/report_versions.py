@@ -17,6 +17,46 @@ _UNIQUE_VIOLATION = "23505"
 _MAX_NUMBER_ATTEMPTS = 5
 
 
+def _insert_version(
+    db: Session,
+    *,
+    report_id: uuid.UUID,
+    language: str,
+    content: str,
+    created_by_user: bool,
+    change_type: str | None,
+    source_version_id: uuid.UUID | None,
+    diff_from_previous: dict | None,
+) -> ReportVersion:
+    next_number = (
+        db.execute(
+            select(
+                func.coalesce(
+                    func.max(ReportVersion.version_number),
+                    0,
+                )
+                + 1
+            ).where(
+                ReportVersion.report_id == report_id,
+                ReportVersion.language == language,
+            )
+        ).scalar_one()
+    )
+    version = ReportVersion(
+        report_id=report_id,
+        version_number=next_number,
+        language=language,
+        content=content,
+        created_by_user=created_by_user,
+        change_type=change_type,
+        source_version_id=source_version_id,
+        diff_from_previous=diff_from_previous,
+    )
+    db.add(version)
+    db.flush()
+    return version
+
+
 def create_report_version(
     db: Session,
     *,
@@ -26,9 +66,16 @@ def create_report_version(
     content: str,
     created_by_user: bool = False,
     change_type: str | None = None,
+    source_version_id: uuid.UUID | None = None,
+    diff_from_previous: dict | None = None,
     commit: bool = True,
 ) -> ReportVersion:
-    """Create a new immutable version and its audit event atomically."""
+    """Create a new immutable version and its audit event atomically.
+
+    When ``commit=False`` the caller is responsible for committing the
+    surrounding transaction; the version + audit event are flushed but
+    not committed.
+    """
     if not commit:
         report = db.execute(
             select(Report)
@@ -43,30 +90,26 @@ def create_report_version(
             from app.core.exceptions import ReportNotFound
             raise ReportNotFound()
 
-        next_number = (
-            db.execute(
-                select(
-                    func.coalesce(
-                        func.max(ReportVersion.version_number),
-                        0,
-                    )
-                    + 1
-                ).where(
-                    ReportVersion.report_id == report_id,
-                    ReportVersion.language == language,
-                )
-            ).scalar_one()
-        )
-        version = ReportVersion(
+        version = _insert_version(
+            db,
             report_id=report_id,
-            version_number=next_number,
             language=language,
             content=content,
             created_by_user=created_by_user,
             change_type=change_type,
+            source_version_id=source_version_id,
+            diff_from_previous=diff_from_previous,
         )
-        db.add(version)
-        db.flush()
+        create_version_created_event(
+            db,
+            report_id=report_id,
+            user_id=user_id,
+            version_id=version.id,
+            metadata={
+                "version_number": version.version_number,
+                "language": version.language,
+            },
+        )
         return version
 
     get_report(
@@ -78,33 +121,17 @@ def create_report_version(
     last_error: IntegrityError | None = None
 
     for _ in range(_MAX_NUMBER_ATTEMPTS):
-        next_number = (
-            db.execute(
-                select(
-                    func.coalesce(
-                        func.max(ReportVersion.version_number),
-                        0,
-                    )
-                    + 1
-                ).where(
-                    ReportVersion.report_id == report_id,
-                    ReportVersion.language == language,
-                )
-            ).scalar_one()
-        )
-
-        version = ReportVersion(
-            report_id=report_id,
-            version_number=next_number,
-            language=language,
-            content=content,
-            created_by_user=created_by_user,
-            change_type=change_type,
-        )
-
         try:
-            db.add(version)
-            db.flush()
+            version = _insert_version(
+                db,
+                report_id=report_id,
+                language=language,
+                content=content,
+                created_by_user=created_by_user,
+                change_type=change_type,
+                source_version_id=source_version_id,
+                diff_from_previous=diff_from_previous,
+            )
 
             create_version_created_event(
                 db,

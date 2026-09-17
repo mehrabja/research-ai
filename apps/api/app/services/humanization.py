@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import uuid
 from collections.abc import Mapping, Sequence
@@ -385,8 +384,8 @@ def _get_or_create_iteration(
         humanization_run_id=run.id,
         iteration_index=iteration_index,
         detection_snapshot={"detection_run_id": str(detection_run_id)},
-        flagged_segments=0,
-        rewritten_segments=0,
+        flagged_segments={"count": 0, "segment_ids": []},
+        rewritten_segments={"count": 0, "skipped_count": 0},
         detection_score_mean=None,
         cost_usd=None,
     )
@@ -438,6 +437,7 @@ def _finalize_noop(
     report: Report,
     policy: HumanizationPolicy,
     status_service,
+    user_id: uuid.UUID,
 ) -> None:
     run.status = HumanizationStatus.SUCCESS.value
     run.completed_at = _utcnow()
@@ -452,9 +452,9 @@ def _finalize_noop(
         next_status = next_status_for_stage(policy.stage)
         status_service.update_report_status(
             db=db,
+            user_id=user_id,
             report_id=report.id,
             new_status=next_status,
-            actor_user_id=None,
             reason="humanization_noop",
             commit=False,
         )
@@ -539,7 +539,7 @@ def run_humanization(
     if not targets:
         _finalize_noop(
             db=db, run=run, iteration=iteration, report=report,
-            policy=policy, status_service=status_service,
+            policy=policy, status_service=status_service, user_id=user_id,
         )
         db.commit()
         return HumanizationOutcome(
@@ -614,13 +614,11 @@ def run_humanization(
                         changed = True
                     current_text = reused_text
                     continue
-                # corrupt row: fall through and re-run
                 db.delete(existing)
                 db.flush()
             elif existing is not None and not existing.preservation_ok:
                 db.delete(existing)
                 db.flush()
-
 
             before_text = current_text
             before_snapshot = extract_protected_tokens(before_text)
@@ -740,7 +738,7 @@ def run_humanization(
     if segments_rewritten == 0 and not had_preservation_skips and not had_oversize_skips:
         _finalize_noop(
             db=db, run=run, iteration=iteration, report=report,
-            policy=policy, status_service=status_service,
+            policy=policy, status_service=status_service, user_id=user_id,
         )
         db.commit()
         return HumanizationOutcome(
@@ -775,9 +773,9 @@ def run_humanization(
                 reason_ns = "humanization_noop"
             status_service.update_report_status(
                 db=db,
+                user_id=user_id,
                 report_id=report.id,
                 new_status=next_status,
-                actor_user_id=None,
                 reason=reason_ns,
                 commit=False,
             )
@@ -810,13 +808,14 @@ def run_humanization(
 
     new_version = version_service.create_report_version(
         db=db,
+        user_id=user_id,
         report_id=report_id,
         content=final_content,
         language=source_version.language,
         created_by_user=False,
         change_type="humanized",
         source_version_id=source_version.id,
-        diff_from_previous=json.dumps(diff_summary, sort_keys=True),
+        diff_from_previous=diff_summary,
         commit=False,
     )
 
@@ -839,9 +838,9 @@ def run_humanization(
 
     status_service.update_report_status(
         db=db,
+        user_id=user_id,
         report_id=report_id,
         new_status=next_status,
-        actor_user_id=None,
         reason=reason_final,
         commit=False,
     )

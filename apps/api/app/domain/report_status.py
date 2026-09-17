@@ -12,6 +12,7 @@ ReportStatus = Literal[
     "review_1",
     "detecting",
     "humanizing",
+    "pre_translation_review",
     "translating",
     "post_translation_review",
     "converging",
@@ -31,6 +32,7 @@ ALL_REPORT_STATUSES: tuple[ReportStatus, ...] = (
     "review_1",
     "detecting",
     "humanizing",
+    "pre_translation_review",
     "translating",
     "post_translation_review",
     "converging",
@@ -49,7 +51,8 @@ _FORWARD: dict[ReportStatus, ReportStatus] = {
     "generating": "review_1",
     "review_1": "detecting",
     "detecting": "humanizing",
-    "humanizing": "translating",
+    "humanizing": "pre_translation_review",
+    "pre_translation_review": "translating",
     "translating": "post_translation_review",
     "post_translation_review": "converging",
     "converging": "review_2",
@@ -74,7 +77,7 @@ def _build_transition_map() -> dict[str, frozenset[ReportStatus]]:
 
         if status == "draft":
             allowed.add("searching")
-            allowed.add("generating")  # M12 generation entry point
+            allowed.add("generating")
             allowed.add("cancelled")
         else:
             next_status = _FORWARD.get(status)
