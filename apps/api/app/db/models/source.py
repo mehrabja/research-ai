@@ -123,11 +123,6 @@ class Source(Base, UUIDPKMixin, TimestampMixin):
     )
 
     # --- Extraction lifecycle (Milestone 8) -------------------------------
-    # All nullable: historical Source rows remain valid until their next
-    # extraction. ``extraction_pipeline_version`` participates in the
-    # idempotency decision so a change to normalization, canonicalization,
-    # chunking, or extractor behavior triggers a rebuild even when the raw
-    # content hash is unchanged.
     content_hash: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
@@ -235,8 +230,6 @@ class Chunk(Base, UUIDPKMixin, CreatedAtMixin):
     )
 
     # --- Chunk provenance (Milestone 8) -----------------------------------
-    # Half-open character range into the canonical source text. Nullable
-    # so historical chunks (pre-M8) remain valid.
     char_start: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
@@ -247,6 +240,37 @@ class Chunk(Base, UUIDPKMixin, CreatedAtMixin):
     )
     page_number: Mapped[int | None] = mapped_column(
         Integer,
+        nullable=True,
+    )
+
+    # --- Embedding lifecycle (Milestone 9) --------------------------------
+    embedding_input_hash: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    embedding_provider: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    embedding_dimensions: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    embedding_status: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        server_default=text("'pending'"),
+    )
+    embedding_error: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    embedding_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    embedding_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
         nullable=True,
     )
 
@@ -280,6 +304,15 @@ class Chunk(Base, UUIDPKMixin, CreatedAtMixin):
         CheckConstraint(
             "page_number IS NULL OR page_number >= 1",
             name="ck_chunks_page_number_pos",
+        ),
+        CheckConstraint(
+            "embedding_dimensions IS NULL OR embedding_dimensions > 0",
+            name="ck_chunks_embedding_dimensions_pos",
+        ),
+        CheckConstraint(
+            "embedding_status IS NULL OR embedding_status IN "
+            "('pending','processing','completed','failed')",
+            name="ck_chunks_embedding_status",
         ),
         Index(
             "ix_chunks_source_id_chunk_index",

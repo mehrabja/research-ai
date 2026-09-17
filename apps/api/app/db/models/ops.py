@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import uuid
@@ -15,13 +14,16 @@ from sqlalchemy import (
     Text,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, CreatedAtMixin, UUIDPKMixin
 
 
-def _in_check(column: str, values: tuple[str, ...], name: str) -> CheckConstraint:
+def _in_check(
+    column: str, values: tuple[str, ...], name: str
+) -> CheckConstraint:
     return CheckConstraint(
         f"{column} IN (" + ",".join(f"'{v}'" for v in values) + ")",
         name=name,
@@ -42,10 +44,16 @@ class Job(Base, UUIDPKMixin, CreatedAtMixin):
         Integer, nullable=False, server_default=text("0")
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    idempotency_key: Mapped[str | None] = mapped_column(Text, nullable=True, unique=True)
+    idempotency_key: Mapped[str | None] = mapped_column(
+        Text, nullable=True, unique=True
+    )
     trace_id: Mapped[str | None] = mapped_column(Text, nullable=True)
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     __table_args__ = (
         _in_check(
@@ -84,10 +92,22 @@ class UsageLog(Base, UUIDPKMixin, CreatedAtMixin):
     model: Mapped[str | None] = mapped_column(Text, nullable=True)
     input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    cost_usd_raw: Mapped[Decimal | None] = mapped_column(Numeric(18, 8), nullable=True)
-    cost_usd_charged: Mapped[Decimal | None] = mapped_column(Numeric(18, 8), nullable=True)
-    idempotency_key: Mapped[str | None] = mapped_column(Text, nullable=True, unique=True)
+    cost_usd_raw: Mapped[Decimal | None] = mapped_column(
+        Numeric(18, 8), nullable=True
+    )
+    cost_usd_charged: Mapped[Decimal | None] = mapped_column(
+        Numeric(18, 8), nullable=True
+    )
+    idempotency_key: Mapped[str | None] = mapped_column(
+        Text, nullable=True, unique=True
+    )
     trace_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # SQLAlchemy reserves `metadata`, so the Python attribute is
+    # `log_metadata`. The underlying column is named `metadata`.
+    log_metadata: Mapped[dict | None] = mapped_column(
+        "metadata", JSONB, nullable=True
+    )
 
     __table_args__ = (
         CheckConstraint(
@@ -109,8 +129,12 @@ class ModelPricing(Base, UUIDPKMixin):
 
     provider: Mapped[str] = mapped_column(Text, nullable=False)
     model: Mapped[str] = mapped_column(Text, nullable=False)
-    input_price: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
-    output_price: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    input_price: Mapped[Decimal] = mapped_column(
+        Numeric(18, 8), nullable=False
+    )
+    output_price: Mapped[Decimal] = mapped_column(
+        Numeric(18, 8), nullable=False
+    )
     effective_from: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -160,7 +184,9 @@ class CreditTransaction(Base, UUIDPKMixin, CreatedAtMixin):
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
     currency: Mapped[str] = mapped_column(Text, nullable=False)
     reference: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'posted'"))
+    status: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default=text("'posted'")
+    )
 
     __table_args__ = (
         _in_check(
@@ -173,7 +199,11 @@ class CreditTransaction(Base, UUIDPKMixin, CreatedAtMixin):
             ("pending", "posted", "failed", "reversed"),
             "ck_credit_transactions_status",
         ),
-        CheckConstraint("amount >= 0", name="ck_credit_transactions_amount_nonneg"),
-        Index("ix_credit_transactions_user_created", "user_id", "created_at"),
+        CheckConstraint(
+            "amount >= 0", name="ck_credit_transactions_amount_nonneg"
+        ),
+        Index(
+            "ix_credit_transactions_user_created", "user_id", "created_at"
+        ),
         Index("ix_credit_transactions_reference", "reference"),
     )

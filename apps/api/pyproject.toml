@@ -37,6 +37,8 @@ dev = [
     # --- Extraction & Chunking (Milestone 8) ---
     "pymupdf>=1.24,<2.0",
     "beautifulsoup4>=4.12,<5.0",
+    # --- RAG & Embedding (Milestone 9) ---
+    "tiktoken>=0.7,<1.0",
     "ruff>=0.4,<1.0",
     "mypy>=1.10,<2.0",
     "types-python-dateutil>=2.9",

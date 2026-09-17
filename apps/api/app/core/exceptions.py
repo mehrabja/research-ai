@@ -148,3 +148,54 @@ class ReportEventSourceMismatch(AppError):
     code = "REPORT_EVENT_SOURCE_MISMATCH"
     status_code = 500
     message = "Report event source does not belong to the report."
+
+
+# --- Embeddings (Milestone 9) ---------------------------------------------
+class EmbeddingConfigurationError(AppError):
+    code = "EMBEDDING_CONFIGURATION_ERROR"
+    status_code = 500
+    message = "Embedding configuration is invalid."
+
+
+class EmbeddingProviderUnavailableAppError(AppError):
+    """HTTP-facing variant.
+
+    Deliberately distinct from
+    ``app.integrations.embeddings.base.EmbeddingProviderUnavailableError``
+    (provider-layer, raised by adapters). The service layer maps the
+    provider-layer error to this HTTP-facing one.
+    """
+
+    code = "EMBEDDING_PROVIDER_UNAVAILABLE"
+    status_code = 502
+    message = "Embedding provider is currently unavailable."
+
+
+class EmbeddingRateLimitAppError(AppError):
+    code = "EMBEDDING_RATE_LIMITED"
+    status_code = 429
+    message = "Embedding provider rate limit reached."
+
+
+class EmbeddingInvalidResponseAppError(AppError):
+    code = "EMBEDDING_INVALID_RESPONSE"
+    status_code = 502
+    message = "Embedding provider returned an unexpected response."
+
+
+class EmbeddingsNotReadyError(AppError):
+    code = "EMBEDDINGS_NOT_READY"
+    status_code = 409
+    message = "No embedded chunks are available for this report."
+
+
+class RetrievalConfigurationError(AppError):
+    code = "RETRIEVAL_CONFIGURATION_ERROR"
+    status_code = 422
+    message = "Retrieval configuration is invalid."
+
+
+class SourceNotReadyForEmbedding(AppError):
+    code = "SOURCE_NOT_READY_FOR_EMBEDDING"
+    status_code = 409
+    message = "Source is not ready for embedding."
