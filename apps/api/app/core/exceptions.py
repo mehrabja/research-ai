@@ -92,3 +92,59 @@ class ReportEventVersionMismatch(AppError):
     code = "REPORT_EVENT_VERSION_MISMATCH"
     status_code = 500
     message = "Report event version does not belong to the report."
+
+
+# --- Sources (foundation for Milestone 8) ---------------------------------
+class SourceNotFound(AppError):
+    code = "SOURCE_NOT_FOUND"
+    status_code = 404
+    message = "Source not found."
+
+
+# --- Extraction (Milestone 8) ---------------------------------------------
+class DocumentFetchError(AppError):
+    code = "DOCUMENT_FETCH_ERROR"
+    status_code = 502
+    message = "Failed to fetch document."
+
+
+class UnsafeUrlError(AppError):
+    code = "UNSAFE_URL"
+    status_code = 422
+    message = "The source URL is not allowed."
+
+
+class DocumentTooLargeError(AppError):
+    code = "DOCUMENT_TOO_LARGE"
+    status_code = 413
+    message = "Document exceeds the maximum allowed size."
+
+
+class UnsupportedContentTypeError(AppError):
+    code = "UNSUPPORTED_CONTENT_TYPE"
+    status_code = 422
+    message = "Document content type is not supported."
+
+
+class DocumentParseError(AppError):
+    code = "DOCUMENT_PARSE_ERROR"
+    status_code = 422
+    message = "Failed to parse document."
+
+
+class NoExtractableTextError(AppError):
+    code = "NO_EXTRACTABLE_TEXT"
+    status_code = 422
+    message = "No extractable text found in document."
+
+
+class SourceDocumentUrlMissing(AppError):
+    code = "SOURCE_DOCUMENT_URL_MISSING"
+    status_code = 422
+    message = "Source has no document URL to extract."
+
+
+class ReportEventSourceMismatch(AppError):
+    code = "REPORT_EVENT_SOURCE_MISMATCH"
+    status_code = 500
+    message = "Report event source does not belong to the report."

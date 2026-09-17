@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     CheckConstraint,
+    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -120,6 +122,37 @@ class Source(Base, UUIDPKMixin, TimestampMixin):
         nullable=True,
     )
 
+    # --- Extraction lifecycle (Milestone 8) -------------------------------
+    # All nullable: historical Source rows remain valid until their next
+    # extraction. ``extraction_pipeline_version`` participates in the
+    # idempotency decision so a change to normalization, canonicalization,
+    # chunking, or extractor behavior triggers a rebuild even when the raw
+    # content hash is unchanged.
+    content_hash: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    extracted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    extraction_error: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    content_type: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    content_length: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    extraction_pipeline_version: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     __table_args__ = (
         _in_check(
             "status",
@@ -201,6 +234,22 @@ class Chunk(Base, UUIDPKMixin, CreatedAtMixin):
         nullable=True,
     )
 
+    # --- Chunk provenance (Milestone 8) -----------------------------------
+    # Half-open character range into the canonical source text. Nullable
+    # so historical chunks (pre-M8) remain valid.
+    char_start: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    char_end: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    page_number: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
     __table_args__ = (
         UniqueConstraint(
             "source_id",
@@ -214,6 +263,23 @@ class Chunk(Base, UUIDPKMixin, CreatedAtMixin):
         CheckConstraint(
             "token_count IS NULL OR token_count >= 0",
             name="ck_chunks_token_count_nonneg",
+        ),
+        CheckConstraint(
+            "char_start IS NULL OR char_start >= 0",
+            name="ck_chunks_char_start_nonneg",
+        ),
+        CheckConstraint(
+            "char_end IS NULL OR char_end > 0",
+            name="ck_chunks_char_end_pos",
+        ),
+        CheckConstraint(
+            "char_start IS NULL OR char_end IS NULL "
+            "OR char_end > char_start",
+            name="ck_chunks_char_range",
+        ),
+        CheckConstraint(
+            "page_number IS NULL OR page_number >= 1",
+            name="ck_chunks_page_number_pos",
         ),
         Index(
             "ix_chunks_source_id_chunk_index",

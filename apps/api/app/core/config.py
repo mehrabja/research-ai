@@ -42,6 +42,19 @@ class Settings(BaseSettings):
     login_rate_limit: int = Field(default=5, ge=1)
     login_rate_window_seconds: int = Field(default=300, ge=1)
 
+    # --- Document extraction (Milestone 8) --------------------------------
+    document_fetch_timeout_seconds: float = Field(
+        default=20.0, ge=1.0, le=120.0
+    )
+    document_max_bytes: int = Field(
+        default=20 * 1024 * 1024, ge=1024, le=200 * 1024 * 1024
+    )
+    document_max_redirects: int = Field(default=5, ge=0, le=10)
+
+    # --- Chunking ---------------------------------------------------------
+    chunk_target_words: int = Field(default=1200, ge=10, le=10000)
+    chunk_overlap_words: int = Field(default=150, ge=0, le=1000)
+
     @model_validator(mode="after")
     def _validate_production_secrets(self) -> Settings:
         if self.app_env.lower() == "production":
@@ -56,7 +69,15 @@ class Settings(BaseSettings):
                     f"JWT_SECRET_KEY must be at least {_MIN_JWT_SECRET_BYTES} "
                     "bytes when APP_ENV=production."
                 )
+        return self
 
+    @model_validator(mode="after")
+    def _validate_chunk_config(self) -> Settings:
+        if self.chunk_overlap_words >= self.chunk_target_words:
+            raise ValueError(
+                "chunk_overlap_words must be strictly less than "
+                "chunk_target_words"
+            )
         return self
 
 

@@ -254,11 +254,14 @@ class ReviewEvent(Base, UUIDPKMixin, CreatedAtMixin):
 class ReportEvent(Base, UUIDPKMixin, CreatedAtMixin):
     """Append-only audit event for a report.
 
-    Two shapes are possible, enforced by ``ck_report_events_shape``:
+    Three shapes are possible, enforced by ``ck_report_events_shape``:
 
       * ``status_transition`` — ``from_status``/``to_status`` set,
         ``version_id`` NULL.
       * ``version_created``   — ``version_id`` set, both statuses NULL.
+      * ``source_extracted``  — all three of ``from_status``,
+        ``to_status``, and ``version_id`` NULL. Source linkage is
+        captured in ``event_meta``.
 
     Any other combination is rejected at the DB level.
 
@@ -314,7 +317,8 @@ class ReportEvent(Base, UUIDPKMixin, CreatedAtMixin):
 
     __table_args__ = (
         CheckConstraint(
-            "event_type IN ('status_transition','version_created')",
+            "event_type IN "
+            "('status_transition','version_created','source_extracted')",
             name="ck_report_events_type",
         ),
         CheckConstraint(
@@ -327,7 +331,12 @@ class ReportEvent(Base, UUIDPKMixin, CreatedAtMixin):
             "(event_type = 'version_created'"
             " AND version_id IS NOT NULL"
             " AND from_status IS NULL"
-            " AND to_status IS NULL)",
+            " AND to_status IS NULL)"
+            " OR "
+            "(event_type = 'source_extracted'"
+            " AND from_status IS NULL"
+            " AND to_status IS NULL"
+            " AND version_id IS NULL)",
             name="ck_report_events_shape",
         ),
         Index(

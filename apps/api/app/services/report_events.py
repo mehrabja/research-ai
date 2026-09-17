@@ -16,10 +16,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import (
+    ReportEventSourceMismatch,
     ReportEventValidationError,
     ReportEventVersionMismatch,
 )
 from app.db.models.report import ReportEvent, ReportVersion
+from app.db.models.source import Source
 from app.domain.report_status import ALL_REPORT_STATUSES
 from app.services.reports import get_report
 
@@ -169,3 +171,66 @@ def list_report_events(
         .limit(effective_limit)
     )
     return list(db.execute(stmt).scalars().all())
+
+
+def create_source_extracted_event(
+    db: Session,
+    *,
+    report_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+    source_id: uuid.UUID,
+    content_hash: str,
+    chunk_count: int,
+    pipeline_version: str,
+) -> ReportEvent:
+    """Add a ``source_extracted`` event to the session. Does NOT commit.
+
+    The caller is responsible for committing the same transaction
+    that contains the source mutation and the chunk rewrite. Cross-
+    report linkage is refused, and the caller must have already
+    updated ``source.content_hash`` and
+    ``source.extraction_pipeline_version`` in the same session
+    before invoking this function.
+    """
+    if not content_hash:
+        raise ReportEventValidationError("content_hash is required")
+    if chunk_count < 0:
+        raise ReportEventValidationError("chunk_count must be >= 0")
+    if not pipeline_version:
+        raise ReportEventValidationError("pipeline_version is required")
+
+    source = db.get(Source, source_id)
+    if source is None:
+        raise ReportEventSourceMismatch(
+            "source_id does not reference an existing source"
+        )
+    if source.report_id != report_id:
+        raise ReportEventSourceMismatch(
+            "source_id belongs to a different report"
+        )
+    if source.content_hash != content_hash:
+        raise ReportEventValidationError(
+            "content_hash does not match the source's persisted hash"
+        )
+    if source.extraction_pipeline_version != pipeline_version:
+        raise ReportEventValidationError(
+            "pipeline_version does not match the source's persisted "
+            "extraction_pipeline_version"
+        )
+
+    event = ReportEvent(
+        report_id=report_id,
+        user_id=user_id,
+        event_type="source_extracted",
+        from_status=None,
+        to_status=None,
+        version_id=None,
+        event_meta={
+            "source_id": str(source_id),
+            "content_hash": content_hash,
+            "chunk_count": chunk_count,
+            "pipeline_version": pipeline_version,
+        },
+    )
+    db.add(event)
+    return event
