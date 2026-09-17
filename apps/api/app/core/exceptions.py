@@ -254,3 +254,32 @@ class DetectionAlreadyCompletedError(AppError):
     code = "DETECTION_ALREADY_COMPLETED"
     status_code = 409
     message = "Detection already completed for this version."
+# --- Source Discovery (M7 missing pieces) --------------------------------
+class SourceQueryInvalid(AppError):
+    code = "SOURCE_QUERY_INVALID"
+    status_code = 422
+    message = "Source search query is invalid."
+
+
+class SourceProviderUnavailable(AppError):
+    code = "SOURCE_PROVIDER_UNAVAILABLE"
+    status_code = 502
+    message = "Source provider is unavailable."
+
+
+class SourceProviderRateLimited(AppError):
+    code = "SOURCE_PROVIDER_RATE_LIMITED"
+    status_code = 429
+    message = "Source provider rate limit reached."
+
+
+class SourceProviderAuthError(AppError):
+    code = "SOURCE_PROVIDER_AUTH_ERROR"
+    status_code = 500
+    message = "Source provider credentials are invalid."
+
+
+class SourceProviderInvalidResponse(AppError):
+    code = "SOURCE_PROVIDER_INVALID_RESPONSE"
+    status_code = 502
+    message = "Source provider returned an unexpected response."

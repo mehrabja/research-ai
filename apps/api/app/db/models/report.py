@@ -318,7 +318,8 @@ class ReportEvent(Base, UUIDPKMixin, CreatedAtMixin):
     __table_args__ = (
         CheckConstraint(
             "event_type IN "
-            "('status_transition','version_created','source_extracted')",
+            "('status_transition','version_created',"
+            "'source_extracted','source_added')",
             name="ck_report_events_type",
         ),
         CheckConstraint(
@@ -333,7 +334,7 @@ class ReportEvent(Base, UUIDPKMixin, CreatedAtMixin):
             " AND from_status IS NULL"
             " AND to_status IS NULL)"
             " OR "
-            "(event_type = 'source_extracted'"
+            "(event_type IN ('source_extracted','source_added')"
             " AND from_status IS NULL"
             " AND to_status IS NULL"
             " AND version_id IS NULL)",

@@ -171,6 +171,19 @@ class Settings(BaseSettings):
     detection_minimum_text_chars: int = Field(
         default=200, ge=0, le=10000
     )
+
+    # --- Semantic Scholar / Source Discovery (M7) -------------------------
+    semantic_scholar_api_key: str = Field(default="", repr=False)
+    semantic_scholar_base_url: str = (
+        "https://api.semanticscholar.org/graph/v1"
+    )
+    semantic_scholar_timeout_seconds: float = Field(
+        default=15.0, ge=1.0, le=120.0
+    )
+    semantic_scholar_max_retries: int = Field(default=3, ge=0, le=10)
+    source_search_limit_default: int = Field(default=10, ge=1, le=100)
+    source_search_limit_max: int = Field(default=50, ge=1, le=100)
+
     @model_validator(mode="after")
     def _validate_production_secrets(self) -> Settings:
         if self.app_env.lower() == "production":
@@ -267,6 +280,22 @@ class Settings(BaseSettings):
                 "detection_minimum_text_chars must be >= 0"
             )
         return self
+
+    @model_validator(mode="after")
+    def _validate_source_discovery_config(self) -> Settings:
+        if self.source_search_limit_max < self.source_search_limit_default:
+            raise ValueError(
+                "source_search_limit_max must be >= "
+                "source_search_limit_default"
+            )
+        if not self.semantic_scholar_base_url.startswith(
+            ("http://", "https://")
+        ):
+            raise ValueError(
+                "semantic_scholar_base_url must start with http(s)://"
+            )
+        return self
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

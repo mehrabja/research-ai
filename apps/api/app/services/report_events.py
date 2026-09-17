@@ -234,3 +234,46 @@ def create_source_extracted_event(
     )
     db.add(event)
     return event
+def create_source_added_event(
+    db: Session,
+    *,
+    report_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+    source_id: uuid.UUID,
+    source_api: str | None,
+    external_source_id: str | None,
+    title: str,
+) -> ReportEvent:
+    """Add a ``source_added`` event to the session. Does NOT commit.
+
+    The caller is responsible for committing the same transaction
+    that contains the Source insert, so that both succeed or both
+    roll back together. Event metadata intentionally excludes any
+    secret material (API keys, raw provider payloads, headers).
+    """
+    source = db.get(Source, source_id)
+    if source is None:
+        raise ReportEventSourceMismatch(
+            "source_id does not reference an existing source"
+        )
+    if source.report_id != report_id:
+        raise ReportEventSourceMismatch(
+            "source_id belongs to a different report"
+        )
+
+    event = ReportEvent(
+        report_id=report_id,
+        user_id=user_id,
+        event_type="source_added",
+        from_status=None,
+        to_status=None,
+        version_id=None,
+        event_meta={
+            "source_id": str(source_id),
+            "source_api": source_api,
+            "external_source_id": external_source_id,
+            "title": title,
+        },
+    )
+    db.add(event)
+    return event
