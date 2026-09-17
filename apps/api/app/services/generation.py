@@ -427,7 +427,6 @@ def _persist_success_atomic(
         db.rollback()
         raise
 
-
 def _fail_attempt_and_report(
     db: Session,
     *,
@@ -436,11 +435,33 @@ def _fail_attempt_and_report(
     report_id: uuid.UUID,
     error_code: str,
 ) -> None:
+    """Mark a running attempt as permanently failed and fail the report.
+
+    Race-safe counterpart to ``_persist_success_atomic``.
+
+    The success path holds a row lock on the GenerationRun via its
+    conditional ``UPDATE ... WHERE status='running'``. This helper
+    takes the same row lock here with ``SELECT ... FOR UPDATE`` so
+    that the two terminal decisions are serialized. A late permanent
+    failure therefore observes the terminal state and no-ops instead
+    of overwriting a successful generation.
+
+    Lock order matches the success path: GenerationRun -> Report.
+    """
     try:
-        run = db.get(GenerationRun, attempt_id)
+        run = db.execute(
+            select(GenerationRun)
+            .where(GenerationRun.id == attempt_id)
+            .with_for_update()
+        ).scalar_one_or_none()
+
+        # Missing row, or already terminal (success / failed /
+        # cancelled): never overwrite. Roll back so the FOR UPDATE
+        # lock is released before returning.
         if run is None or run.status != "running":
             db.rollback()
             return
+
         oj = dict(run.output_json or {})
         oj["attempt_status"] = "failed"
         oj["error_code"] = error_code
@@ -450,11 +471,13 @@ def _fail_attempt_and_report(
         db.flush()
 
         report = db.execute(
-            select(Report).where(
+            select(Report)
+            .where(
                 Report.id == report_id,
                 Report.user_id == user_id,
                 Report.deleted_at.is_(None),
             )
+            .with_for_update()
         ).scalar_one_or_none()
         if report is not None and report.status == _GENERATING:
             report_status_service.update_report_status(
