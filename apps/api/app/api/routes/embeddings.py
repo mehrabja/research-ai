@@ -7,15 +7,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
-from app.core.config import get_settings
 from app.db.models.user import User
 from app.db.session import get_db
-from app.domain.embeddings import (
-    EmbeddingProfile,
-    build_embedding_profile_id,
-)
+from app.domain.embeddings import build_embedding_profile_id
 from app.domain.retrieval import RETRIEVAL_ALGORITHM_VERSION
-from app.integrations.embeddings.openai import OpenAIEmbeddingProvider
 from app.schemas.embeddings import SourceEmbeddingResponse
 from app.schemas.retrieval import (
     RetrievalCoverage,
@@ -25,23 +20,14 @@ from app.schemas.retrieval import (
 )
 from app.services import embeddings as embeddings_service
 from app.services import retrieval as retrieval_service
+from app.services.embedding_profile import (
+    build_embedding_provider,
+    get_current_embedding_profile,
+)
 
 router = APIRouter(prefix="/reports", tags=["embeddings"])
 
 
-def _current_profile() -> EmbeddingProfile:
-    s = get_settings()
-    return EmbeddingProfile(
-        provider=s.embedding_provider,
-        model=s.embedding_model,
-        dimensions=s.embedding_dimensions,
-        distance_metric=s.embedding_distance_metric,  # type: ignore[arg-type]
-        profile_version=s.embedding_profile_version,
-    )
-
-
-def _provider(profile: EmbeddingProfile) -> OpenAIEmbeddingProvider:
-    return OpenAIEmbeddingProvider(profile=profile)
 
 
 @router.post(
@@ -55,13 +41,13 @@ def embed_source(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SourceEmbeddingResponse:
-    profile = _current_profile()
+    profile = get_current_embedding_profile()
     result = embeddings_service.embed_source(
         db,
         user_id=current_user.id,
         report_id=report_id,
         source_id=source_id,
-        provider=_provider(profile),
+        provider=build_embedding_provider(profile),
         profile=profile,
     )
     return SourceEmbeddingResponse(
@@ -87,7 +73,7 @@ def retrieve(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RetrievalResponse:
-    profile = _current_profile()
+    profile = get_current_embedding_profile()
     results, coverage = retrieval_service.retrieve(
         db,
         user_id=current_user.id,
@@ -97,7 +83,7 @@ def retrieve(
         mode=payload.mode,
         algorithm="ann",
         source_ids=payload.source_ids,
-        provider=_provider(profile),
+        provider=build_embedding_provider(profile),
         profile=profile,
     )
     return RetrievalResponse(

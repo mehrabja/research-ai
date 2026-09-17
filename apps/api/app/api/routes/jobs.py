@@ -1,9 +1,13 @@
-"""Job API routes."""
+"""Job API routes.
+
+Capability checks come from ``app.domain.jobs`` so the API layer
+never imports worker code.
+"""
 from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -18,15 +22,48 @@ from app.domain.jobs import (
     ALL_JOB_STATUSES,
     EXECUTABLE_JOB_TYPES,
     RESERVED_JOB_TYPES,
+    JobTypes,
 )
 from app.schemas.jobs import (
     JobCancelResponse,
     JobEnqueueRequest,
     JobResponse,
 )
+from app.services import embedding_jobs
 from app.services import jobs as jobs_service
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
+
+
+def _parse_embedding_payload(
+    payload: dict,
+) -> tuple[uuid.UUID, uuid.UUID]:
+    report_raw = payload.get("report_id")
+    source_raw = payload.get("source_id")
+    if not isinstance(report_raw, str) or not isinstance(
+        source_raw, str
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "INVALID_PAYLOAD",
+                "message": (
+                    "embedding_source requires report_id and source_id"
+                ),
+            },
+        )
+    try:
+        return uuid.UUID(report_raw), uuid.UUID(source_raw)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "INVALID_PAYLOAD",
+                "message": (
+                    "report_id and source_id must be valid UUIDs"
+                ),
+            },
+        ) from exc
 
 
 @router.post("", response_model=JobResponse, status_code=201)
@@ -38,13 +75,29 @@ def enqueue_job(
     if payload.job_type in RESERVED_JOB_TYPES:
         raise UnknownJobTypeError(
             f"job_type {payload.job_type!r} is reserved but not "
-            "executable in M10"
+            "executable"
         )
     if payload.job_type not in EXECUTABLE_JOB_TYPES:
         raise UnknownJobTypeError(
             f"unknown job_type: {payload.job_type!r}"
         )
 
+    if payload.job_type == JobTypes.EMBEDDING_SOURCE:
+        report_id, source_id = _parse_embedding_payload(
+            payload.payload or {}
+        )
+        result = embedding_jobs.enqueue_source_embedding_job(
+            db,
+            user_id=current_user.id,
+            report_id=report_id,
+            source_id=source_id,
+            idempotency_key=payload.idempotency_key,
+            priority=payload.priority,
+            max_attempts=payload.max_attempts,
+        )
+        return result.job
+
+    # Generic enqueue (test_noop etc.)
     result = jobs_service.enqueue_job(
         db,
         job_type=payload.job_type,

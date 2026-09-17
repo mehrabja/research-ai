@@ -64,12 +64,12 @@ class JobTypes:
 
 EXECUTABLE_JOB_TYPES: frozenset[str] = frozenset({
     JobTypes.TEST_NOOP,
+    JobTypes.EMBEDDING_SOURCE,  # M11 — promoted from reserved
 })
 
-RESERVED_JOB_TYPES: frozenset[str] = frozenset({
-    JobTypes.EMBEDDING_SOURCE,
-})
-
+# M11 — embedding_source is executable now. Reserved set remains
+# for future job types that are still symbolic.
+RESERVED_JOB_TYPES: frozenset[str] = frozenset()
 
 RETRYABLE_ERROR_CODES: frozenset[str] = frozenset({
     "provider_unavailable",

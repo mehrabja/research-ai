@@ -120,18 +120,63 @@ def test_enqueue_unknown_job_type_400(
     assert r.json()["error"]["code"] == "UNKNOWN_JOB_TYPE"
 
 
-def test_enqueue_reserved_job_type_rejected(
+def test_enqueue_embedding_source_without_payload_422(
     cleanup_users: list[uuid.UUID],
 ) -> None:
+    """embedding_source is executable in M11, but requires
+    report_id and source_id in the payload."""
     _, token = _register_and_login(cleanup_users)
     r = client.post(
         "/api/v1/jobs",
         headers=_auth(token),
-        json={"job_type": "embedding_source"},
+        json={"job_type": "embedding_source", "payload": {}},
     )
-    assert r.status_code == 400
-    assert r.json()["error"]["code"] == "UNKNOWN_JOB_TYPE"
+    assert r.status_code == 422
 
+
+def test_enqueue_embedding_source_with_valid_payload(
+    cleanup_users: list[uuid.UUID],
+) -> None:
+    """Happy path: embedding_source enqueues with valid payload."""
+    from sqlalchemy import text
+
+    from app.db.session import SessionLocal
+
+    user_id, token = _register_and_login(cleanup_users)
+
+    r = client.post(
+        "/api/v1/reports",
+        headers=_auth(token),
+        json={"topic": "T", "output_language": "en"},
+    )
+    assert r.status_code == 201
+    report_id = r.json()["id"]
+
+    with SessionLocal() as db:
+        sid = db.execute(
+            text(
+                "INSERT INTO sources (report_id, title, status) "
+                "VALUES (:r, 'T', 'full_text') RETURNING id"
+            ),
+            {"r": report_id},
+        ).scalar()
+        db.commit()
+
+    r = client.post(
+        "/api/v1/jobs",
+        headers=_auth(token),
+        json={
+            "job_type": "embedding_source",
+            "payload": {
+                "report_id": report_id,
+                "source_id": str(sid),
+            },
+        },
+    )
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["job_type"] == "embedding_source"
+    assert body["status"] == "queued"
 
 def test_enqueue_idempotent(
     cleanup_users: list[uuid.UUID],

@@ -52,7 +52,6 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
         source_ids_subq = select(Source.id).where(
             Source.report_id.in_(report_ids_subq)
         )
-        # usage_logs.user_id is RESTRICT. Delete usage logs first.
         db.execute(
             delete(UsageLog).where(UsageLog.user_id.in_(user_ids))
         )
@@ -70,6 +69,7 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
         db.execute(delete(Report).where(Report.user_id.in_(user_ids)))
         db.execute(delete(User).where(User.id.in_(user_ids)))
         db.commit()
+
 
 def _register_and_login(
     cleanup_users: list[uuid.UUID],
@@ -160,13 +160,22 @@ class _FakeProvider:
 
 
 def _patch_provider(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Replace the OpenAI provider constructor in the route module."""
+    """Swap the OpenAI adapter for a deterministic fake.
+
+    The route module binds ``build_embedding_provider`` at import time
+    via ``from app.services.embedding_profile import ...``. We must
+    patch it in the route module's namespace, not in the source module.
+    """
     import app.api.routes.embeddings as route_mod
 
-    def _factory(_profile: EmbeddingProfile) -> _FakeProvider:
+    def _factory(
+        _profile: EmbeddingProfile | None = None,
+    ) -> _FakeProvider:
         return _FakeProvider()
 
-    monkeypatch.setattr(route_mod, "_provider", _factory)
+    monkeypatch.setattr(
+        route_mod, "build_embedding_provider", _factory
+    )
 
 
 # ===========================================================================
