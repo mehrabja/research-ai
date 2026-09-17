@@ -21,15 +21,9 @@ def update_report_status(
     user_id: uuid.UUID,
     report_id: uuid.UUID,
     new_status: str,
+    commit: bool = True,
 ) -> Report:
-    """Change a report's status and record an audit event atomically.
-
-    The status UPDATE and its ``status_transition`` audit event are
-    committed in a single transaction: either both persist or
-    neither does. The event insert is deliberately performed with the
-    same session and *before* the commit, without an intermediate
-    commit between them.
-    """
+    """Change a report's status and record an audit event atomically."""
     report = get_report(
         db,
         user_id=user_id,
@@ -38,8 +32,6 @@ def update_report_status(
 
     current_status = report.status
 
-    # Idempotent no-op: same-status requests return the unchanged
-    # report without writing an event.
     if new_status == current_status:
         return report
 
@@ -57,8 +49,6 @@ def update_report_status(
     report.status = new_status
 
     try:
-        # Same transaction: build the audit event *before* commit so
-        # that a failure on either side rolls back both.
         create_status_transition_event(
             db,
             report_id=report_id,
@@ -66,8 +56,11 @@ def update_report_status(
             from_status=current_status,
             to_status=new_status,
         )
-        db.commit()
-        db.refresh(report)
+        if commit:
+            db.commit()
+            db.refresh(report)
+        else:
+            db.flush()
     except Exception:
         db.rollback()
         raise

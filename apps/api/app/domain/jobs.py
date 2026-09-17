@@ -60,16 +60,17 @@ def validate_job_transition(
 class JobTypes:
     EMBEDDING_SOURCE = "embedding_source"
     TEST_NOOP = "test_noop"
+    GENERATE_REPORT = "generate_report"  # M12
 
 
 EXECUTABLE_JOB_TYPES: frozenset[str] = frozenset({
     JobTypes.TEST_NOOP,
-    JobTypes.EMBEDDING_SOURCE,  # M11 — promoted from reserved
+    JobTypes.EMBEDDING_SOURCE,
+    JobTypes.GENERATE_REPORT,
 })
 
-# M11 — embedding_source is executable now. Reserved set remains
-# for future job types that are still symbolic.
 RESERVED_JOB_TYPES: frozenset[str] = frozenset()
+
 
 RETRYABLE_ERROR_CODES: frozenset[str] = frozenset({
     "provider_unavailable",

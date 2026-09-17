@@ -1,17 +1,20 @@
 """Built-in handlers.
 
 ``test_noop``          — deterministic test handler.
-``embedding_source``   — M11 handler that delegates to the M9
-embedding service. No provider logic lives here.
+``embedding_source``   — M11 handler that delegates to M9.
+``generate_report``    — M12 handler that delegates to the
+generation service.
 """
 from __future__ import annotations
 
 import logging
 import time
 import uuid
+from typing import cast
 
 from app.core.exceptions import AppError
 from app.db.session import SessionLocal
+from app.domain.generation import GenerationAlreadySucceeded
 from app.domain.jobs import (
     EXECUTABLE_JOB_TYPES,
     RESERVED_JOB_TYPES,
@@ -19,18 +22,20 @@ from app.domain.jobs import (
     JobTypes,
 )
 from app.services import embeddings as embeddings_service
+from app.services import generation as generation_service
 from app.services.embedding_profile import (
     build_embedding_provider,
     get_current_embedding_profile,
+)
+from app.services.generation_profile import (
+    build_generation_provider,
+    get_current_generation_profile,
 )
 from app.workers.registry import register_handler, registered_types
 
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Test handler
-# ---------------------------------------------------------------------------
 def _test_noop(ctx: JobContext) -> None:
     mode = (ctx.payload or {}).get("mode", "success")
     if mode == "success":
@@ -50,8 +55,6 @@ def _test_noop(ctx: JobContext) -> None:
 # M11 — embedding handler
 # ---------------------------------------------------------------------------
 class InvalidEmbeddingPayloadError(AppError):
-    """Permanent failure: payload does not match the contract."""
-
     code = "INVALID_EMBEDDING_PAYLOAD"
     status_code = 400
     message = "Embedding job payload is invalid."
@@ -77,7 +80,6 @@ def _parse_payload(payload: dict) -> tuple[uuid.UUID, uuid.UUID]:
 def _resolve_owner_user_id(  # noqa: ANN001
     db, job_id: uuid.UUID
 ):  # noqa: ANN202
-    """Read the job's owner user_id."""
     from app.db.models.jobs import Job
 
     job = db.get(Job, job_id)
@@ -89,7 +91,6 @@ def _resolve_owner_user_id(  # noqa: ANN001
 
 
 def _embedding_source(ctx: JobContext) -> None:
-    """M11 handler. Delegates embedding to the M9 service."""
     report_id, source_id = _parse_payload(dict(ctx.payload))
 
     profile = get_current_embedding_profile()
@@ -121,10 +122,6 @@ def _embedding_source(ctx: JobContext) -> None:
         result.pending,
     )
 
-    # Partial-result policy: M9 may return normally while some chunks
-    # were not embedded. Treat an incomplete run as a retryable
-    # failure so M10 retries; M9 idempotency guarantees the next
-    # attempt skips current chunks.
     if result.failed > 0 or result.pending > 0:
         from app.integrations.embeddings.base import (
             EmbeddingProviderUnavailableError,
@@ -137,6 +134,80 @@ def _embedding_source(ctx: JobContext) -> None:
 
 
 # ---------------------------------------------------------------------------
+# M12 — generation handler
+# ---------------------------------------------------------------------------
+class InvalidGenerationPayloadError(AppError):
+    code = "INVALID_GENERATION_PAYLOAD"
+    status_code = 400
+    message = "Generation job payload is invalid."
+
+
+def _parse_generation_payload(payload: dict) -> uuid.UUID:
+    raw = payload.get("report_id")
+    if not isinstance(raw, str):
+        raise InvalidGenerationPayloadError("report_id is required")
+    try:
+        return uuid.UUID(raw)
+    except (ValueError, TypeError) as exc:
+        raise InvalidGenerationPayloadError(
+            "report_id must be a valid UUID"
+        ) from exc
+
+
+def _generate_report(ctx: JobContext) -> None:
+    from app.db.models.jobs import Job
+
+    report_id = _parse_generation_payload(dict(ctx.payload))
+
+    with SessionLocal() as db:
+        job = db.get(Job, ctx.job_id)
+        if job is None:
+            raise InvalidGenerationPayloadError("job not found")
+        if job.job_type != JobTypes.GENERATE_REPORT:
+            raise InvalidGenerationPayloadError(
+                f"wrong job_type {job.job_type!r}"
+            )
+        if job.report_id is None or job.report_id != report_id:
+            raise InvalidGenerationPayloadError(
+                "job.report_id does not match payload.report_id"
+            )
+        if job.user_id is None:
+            raise InvalidGenerationPayloadError(
+                "generation job has no owning user"
+            )
+        user_id = cast(uuid.UUID, job.user_id)
+
+    profile = get_current_generation_profile()
+    provider = build_generation_provider(profile)
+
+    try:
+        with SessionLocal() as db:
+            result = generation_service.generate_report(
+                db,
+                job_id=ctx.job_id,
+                user_id=user_id,
+                report_id=report_id,
+                provider=provider,
+                profile=profile,
+            )
+    except GenerationAlreadySucceeded:
+        logger.info(
+            "generate_report_already_succeeded job_id=%s",
+            ctx.job_id,
+        )
+        return
+
+    logger.info(
+        "generate_report_done job_id=%s report_id=%s "
+        "profile_id=%s cited_markers=%d",
+        ctx.job_id,
+        report_id,
+        result.profile_id,
+        len(result.cited_markers),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Registration
 # ---------------------------------------------------------------------------
 def register_all_handlers() -> None:
@@ -146,11 +217,16 @@ def register_all_handlers() -> None:
         register_handler(
             JobTypes.EMBEDDING_SOURCE, _embedding_source
         )
+    if JobTypes.GENERATE_REPORT not in registered_types():
+        register_handler(
+            JobTypes.GENERATE_REPORT, _generate_report
+        )
 
 
 __all__ = [
     "EXECUTABLE_JOB_TYPES",
     "InvalidEmbeddingPayloadError",
+    "InvalidGenerationPayloadError",
     "RESERVED_JOB_TYPES",
     "register_all_handlers",
 ]

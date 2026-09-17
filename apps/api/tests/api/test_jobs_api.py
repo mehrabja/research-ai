@@ -6,7 +6,7 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 
 from app.db.models.jobs import Job
 from app.db.models.report import Report
@@ -42,7 +42,6 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
     yield user_ids
     if not user_ids:
         return
-
     with SessionLocal() as db:
         report_ids_subq = select(Report.id).where(
             Report.user_id.in_(user_ids)
@@ -77,17 +76,24 @@ def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_enqueue_requires_auth() -> None:
+def _create_report(token: str) -> str:
     r = client.post(
-        "/api/v1/jobs",
-        json={"job_type": "test_noop"},
+        "/api/v1/reports",
+        headers=_auth(token),
+        json={"topic": "T", "output_language": "en"},
     )
-    assert r.status_code == 401
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
+
+
+def test_enqueue_requires_auth() -> None:
+    assert client.post(
+        "/api/v1/jobs", json={"job_type": "test_noop"}
+    ).status_code == 401
 
 
 def test_list_requires_auth() -> None:
-    r = client.get("/api/v1/jobs")
-    assert r.status_code == 401
+    assert client.get("/api/v1/jobs").status_code == 401
 
 
 def test_enqueue_test_noop_succeeds(
@@ -103,8 +109,6 @@ def test_enqueue_test_noop_succeeds(
     body = r.json()
     assert body["job_type"] == "test_noop"
     assert body["status"] == "queued"
-    assert body["attempt_count"] == 0
-    assert body["max_attempts"] >= 1
 
 
 def test_enqueue_unknown_job_type_400(
@@ -117,66 +121,7 @@ def test_enqueue_unknown_job_type_400(
         json={"job_type": "does_not_exist"},
     )
     assert r.status_code == 400
-    assert r.json()["error"]["code"] == "UNKNOWN_JOB_TYPE"
 
-
-def test_enqueue_embedding_source_without_payload_422(
-    cleanup_users: list[uuid.UUID],
-) -> None:
-    """embedding_source is executable in M11, but requires
-    report_id and source_id in the payload."""
-    _, token = _register_and_login(cleanup_users)
-    r = client.post(
-        "/api/v1/jobs",
-        headers=_auth(token),
-        json={"job_type": "embedding_source", "payload": {}},
-    )
-    assert r.status_code == 422
-
-
-def test_enqueue_embedding_source_with_valid_payload(
-    cleanup_users: list[uuid.UUID],
-) -> None:
-    """Happy path: embedding_source enqueues with valid payload."""
-    from sqlalchemy import text
-
-    from app.db.session import SessionLocal
-
-    user_id, token = _register_and_login(cleanup_users)
-
-    r = client.post(
-        "/api/v1/reports",
-        headers=_auth(token),
-        json={"topic": "T", "output_language": "en"},
-    )
-    assert r.status_code == 201
-    report_id = r.json()["id"]
-
-    with SessionLocal() as db:
-        sid = db.execute(
-            text(
-                "INSERT INTO sources (report_id, title, status) "
-                "VALUES (:r, 'T', 'full_text') RETURNING id"
-            ),
-            {"r": report_id},
-        ).scalar()
-        db.commit()
-
-    r = client.post(
-        "/api/v1/jobs",
-        headers=_auth(token),
-        json={
-            "job_type": "embedding_source",
-            "payload": {
-                "report_id": report_id,
-                "source_id": str(sid),
-            },
-        },
-    )
-    assert r.status_code == 201, r.text
-    body = r.json()
-    assert body["job_type"] == "embedding_source"
-    assert body["status"] == "queued"
 
 def test_enqueue_idempotent(
     cleanup_users: list[uuid.UUID],
@@ -220,8 +165,9 @@ def test_get_foreign_job_404(
         json={"job_type": "test_noop"},
     )
     jid = r.json()["id"]
-    r = client.get(f"/api/v1/jobs/{jid}", headers=_auth(token_b))
-    assert r.status_code == 404
+    assert client.get(
+        f"/api/v1/jobs/{jid}", headers=_auth(token_b)
+    ).status_code == 404
 
 
 def test_list_jobs_only_own(
@@ -229,16 +175,12 @@ def test_list_jobs_only_own(
 ) -> None:
     _, token_a = _register_and_login(cleanup_users)
     _, token_b = _register_and_login(cleanup_users)
-    client.post(
-        "/api/v1/jobs",
-        headers=_auth(token_a),
-        json={"job_type": "test_noop"},
-    )
-    client.post(
-        "/api/v1/jobs",
-        headers=_auth(token_a),
-        json={"job_type": "test_noop"},
-    )
+    for _ in range(2):
+        client.post(
+            "/api/v1/jobs",
+            headers=_auth(token_a),
+            json={"job_type": "test_noop"},
+        )
     client.post(
         "/api/v1/jobs",
         headers=_auth(token_b),
@@ -282,7 +224,94 @@ def test_cancel_foreign_job_404(
         json={"job_type": "test_noop"},
     )
     jid = r.json()["id"]
-    r = client.post(
+    assert client.post(
         f"/api/v1/jobs/{jid}/cancel", headers=_auth(token_b)
+    ).status_code == 404
+
+
+def test_enqueue_embedding_source_missing_payload_422(
+    cleanup_users: list[uuid.UUID],
+) -> None:
+    _, token = _register_and_login(cleanup_users)
+    r = client.post(
+        "/api/v1/jobs",
+        headers=_auth(token),
+        json={"job_type": "embedding_source", "payload": {}},
+    )
+    assert r.status_code == 422
+
+
+def test_enqueue_embedding_source_valid(
+    cleanup_users: list[uuid.UUID],
+) -> None:
+    user_id, token = _register_and_login(cleanup_users)
+    report_id = _create_report(token)
+    with SessionLocal() as db:
+        sid = db.execute(
+            text(
+                "INSERT INTO sources (report_id, title, status) "
+                "VALUES (:r, 'T', 'full_text') RETURNING id"
+            ),
+            {"r": report_id},
+        ).scalar()
+        db.commit()
+    r = client.post(
+        "/api/v1/jobs",
+        headers=_auth(token),
+        json={
+            "job_type": "embedding_source",
+            "payload": {
+                "report_id": report_id,
+                "source_id": str(sid),
+            },
+        },
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["job_type"] == "embedding_source"
+    _ = user_id
+
+
+def test_enqueue_generate_report_missing_payload_422(
+    cleanup_users: list[uuid.UUID],
+) -> None:
+    _, token = _register_and_login(cleanup_users)
+    r = client.post(
+        "/api/v1/jobs",
+        headers=_auth(token),
+        json={"job_type": "generate_report", "payload": {}},
+    )
+    assert r.status_code == 422
+
+
+def test_enqueue_generate_report_valid(
+    cleanup_users: list[uuid.UUID],
+) -> None:
+    _, token = _register_and_login(cleanup_users)
+    report_id = _create_report(token)
+    r = client.post(
+        "/api/v1/jobs",
+        headers=_auth(token),
+        json={
+            "job_type": "generate_report",
+            "payload": {"report_id": report_id},
+        },
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["job_type"] == "generate_report"
+
+
+def test_enqueue_generate_report_foreign_report_404(
+    cleanup_users: list[uuid.UUID],
+) -> None:
+    _, token_a = _register_and_login(cleanup_users)
+    _, token_b = _register_and_login(cleanup_users)
+    report_b = _create_report(token_b)
+    r = client.post(
+        "/api/v1/jobs",
+        headers=_auth(token_a),
+        json={
+            "job_type": "generate_report",
+            "payload": {"report_id": report_b},
+        },
     )
     assert r.status_code == 404

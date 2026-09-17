@@ -29,7 +29,7 @@ from app.schemas.jobs import (
     JobEnqueueRequest,
     JobResponse,
 )
-from app.services import embedding_jobs
+from app.services import embedding_jobs, generation_jobs
 from app.services import jobs as jobs_service
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -66,6 +66,28 @@ def _parse_embedding_payload(
         ) from exc
 
 
+def _parse_generation_payload(payload: dict) -> uuid.UUID:
+    raw = payload.get("report_id")
+    if not isinstance(raw, str):
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "INVALID_PAYLOAD",
+                "message": "generate_report requires report_id",
+            },
+        )
+    try:
+        return uuid.UUID(raw)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "INVALID_PAYLOAD",
+                "message": "report_id must be a valid UUID",
+            },
+        ) from exc
+
+
 @router.post("", response_model=JobResponse, status_code=201)
 def enqueue_job(
     payload: JobEnqueueRequest,
@@ -97,7 +119,18 @@ def enqueue_job(
         )
         return result.job
 
-    # Generic enqueue (test_noop etc.)
+    if payload.job_type == JobTypes.GENERATE_REPORT:
+        report_id = _parse_generation_payload(payload.payload or {})
+        result = generation_jobs.enqueue_report_generation_job(
+            db,
+            user_id=current_user.id,
+            report_id=report_id,
+            idempotency_key=payload.idempotency_key,
+            priority=payload.priority,
+            max_attempts=payload.max_attempts,
+        )
+        return result.job
+
     result = jobs_service.enqueue_job(
         db,
         job_type=payload.job_type,

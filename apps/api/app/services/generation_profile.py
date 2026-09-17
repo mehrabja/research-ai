@@ -1,0 +1,40 @@
+"""Shared constructor for the current generation profile + provider."""
+from __future__ import annotations
+
+from app.core.config import get_settings
+from app.domain.generation import (
+    GenerationProfile,
+    build_generation_profile_id,
+)
+from app.integrations.generation.base import GenerationProvider
+from app.integrations.generation.openai import OpenAIGenerationProvider
+
+
+def get_current_generation_profile() -> GenerationProfile:
+    s = get_settings()
+    return GenerationProfile(
+        provider=s.generation_provider,
+        model=s.generation_model,
+        temperature=s.generation_temperature,
+        max_output_tokens=s.generation_max_output_tokens,
+        profile_version=s.generation_profile_version,
+    )
+
+
+def get_current_generation_profile_id() -> str:
+    return build_generation_profile_id(get_current_generation_profile())
+
+
+def build_generation_provider(
+    profile: GenerationProfile | None = None,
+) -> GenerationProvider:
+    return OpenAIGenerationProvider(
+        model=(profile or get_current_generation_profile()).model
+    )
+
+
+__all__ = [
+    "build_generation_provider",
+    "get_current_generation_profile",
+    "get_current_generation_profile_id",
+]

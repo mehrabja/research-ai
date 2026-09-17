@@ -70,38 +70,23 @@ class ReportVersionNotFound(AppError):
 
 
 class ReportEventValidationError(AppError):
-    """Internal contract violation while creating a report event.
-
-    Not client-facing. Signals that a service tried to persist an
-    event with an invalid shape or an unknown status value.
-    """
-
     code = "REPORT_EVENT_VALIDATION_ERROR"
     status_code = 500
     message = "Report event validation failed."
 
 
 class ReportEventVersionMismatch(AppError):
-    """Cross-report version reference in a ``version_created`` event.
-
-    Raised when ``version_id`` does not belong to ``report_id``.
-    Not client-facing: the caller (version service) validated
-    ownership before invoking the event service.
-    """
-
     code = "REPORT_EVENT_VERSION_MISMATCH"
     status_code = 500
     message = "Report event version does not belong to the report."
 
 
-# --- Sources (foundation for Milestone 8) ---------------------------------
 class SourceNotFound(AppError):
     code = "SOURCE_NOT_FOUND"
     status_code = 404
     message = "Source not found."
 
 
-# --- Extraction (Milestone 8) ---------------------------------------------
 class DocumentFetchError(AppError):
     code = "DOCUMENT_FETCH_ERROR"
     status_code = 502
@@ -150,7 +135,6 @@ class ReportEventSourceMismatch(AppError):
     message = "Report event source does not belong to the report."
 
 
-# --- Embeddings (Milestone 9) ---------------------------------------------
 class EmbeddingConfigurationError(AppError):
     code = "EMBEDDING_CONFIGURATION_ERROR"
     status_code = 500
@@ -158,14 +142,6 @@ class EmbeddingConfigurationError(AppError):
 
 
 class EmbeddingProviderUnavailableAppError(AppError):
-    """HTTP-facing variant.
-
-    Deliberately distinct from
-    ``app.integrations.embeddings.base.EmbeddingProviderUnavailableError``
-    (provider-layer, raised by adapters). The service layer maps the
-    provider-layer error to this HTTP-facing one.
-    """
-
     code = "EMBEDDING_PROVIDER_UNAVAILABLE"
     status_code = 502
     message = "Embedding provider is currently unavailable."
@@ -201,7 +177,6 @@ class SourceNotReadyForEmbedding(AppError):
     message = "Source is not ready for embedding."
 
 
-# --- Jobs (Milestone 10) --------------------------------------------------
 class JobNotFoundError(AppError):
     code = "JOB_NOT_FOUND"
     status_code = 404
@@ -230,3 +205,45 @@ class JobPayloadTooLargeError(AppError):
     code = "JOB_PAYLOAD_TOO_LARGE"
     status_code = 413
     message = "Job payload exceeds the maximum allowed size."
+
+
+class NoEvidenceAvailableError(AppError):
+    code = "NO_EVIDENCE_AVAILABLE"
+    status_code = 422
+    message = "No evidence is available for generation."
+
+
+class GenerationConfigurationError(AppError):
+    code = "GENERATION_CONFIGURATION_ERROR"
+    status_code = 500
+    message = "Generation provider configuration is invalid."
+
+
+class GenerationProviderUnavailableAppError(AppError):
+    code = "GENERATION_PROVIDER_UNAVAILABLE"
+    status_code = 502
+    message = "Generation provider is unavailable."
+
+
+class GenerationRateLimitAppError(AppError):
+    code = "GENERATION_RATE_LIMITED"
+    status_code = 429
+    message = "Generation provider rate limit reached."
+
+
+class GenerationInvalidResponseAppError(AppError):
+    code = "GENERATION_INVALID_RESPONSE"
+    status_code = 502
+    message = "Generation provider returned an unexpected response."
+
+
+class GenerationEmptyOutputError(AppError):
+    code = "GENERATION_EMPTY_OUTPUT"
+    status_code = 422
+    message = "Generation produced empty output."
+
+
+class GenerationUnknownMarkerError(AppError):
+    code = "GENERATION_UNKNOWN_MARKER"
+    status_code = 422
+    message = "Generated text referenced an unknown evidence marker."

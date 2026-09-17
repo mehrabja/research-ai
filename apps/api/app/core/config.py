@@ -134,6 +134,36 @@ class Settings(BaseSettings):
     job_payload_max_bytes: int = Field(
         default=65536, ge=256, le=10 * 1024 * 1024
     )
+
+    # --- Generation (Milestone 12) ----------------------------------------
+    generation_provider: str = "openai"
+    generation_model: str = "gpt-4o-mini"
+    generation_temperature: float = Field(
+        default=0.2, ge=0.0, le=2.0
+    )
+    generation_max_output_tokens: int = Field(
+        default=2000, ge=64, le=32000
+    )
+    generation_max_context_chunks: int = Field(
+        default=8, ge=1, le=50
+    )
+    generation_profile_version: str = "m12.1"
+    generation_openai_api_key: str = Field(default="", repr=False)
+    generation_openai_base_url: str = "https://api.openai.com/v1"
+    generation_timeout_seconds: float = Field(
+        default=60.0, ge=5.0, le=600.0
+    )
+    generation_max_retries: int = Field(default=2, ge=0, le=10)
+    generation_retry_base_seconds: float = Field(
+        default=1.0, ge=0.1, le=60.0
+    )
+    generation_retry_max_seconds: float = Field(
+        default=30.0, ge=1.0, le=600.0
+    )
+    generation_retry_jitter_fraction: float = Field(
+        default=0.25, ge=0.0, le=1.0
+    )
+
     @model_validator(mode="after")
     def _validate_production_secrets(self) -> Settings:
         if self.app_env.lower() == "production":
@@ -142,7 +172,6 @@ class Settings(BaseSettings):
                     "JWT_SECRET_KEY must be set to a non-default value "
                     "when APP_ENV=production."
                 )
-
             if (
                 len(self.jwt_secret_key.encode("utf-8"))
                 < _MIN_JWT_SECRET_BYTES
@@ -195,6 +224,7 @@ class Settings(BaseSettings):
                 "off/strict_order/relaxed_order"
             )
         return self
+
     @model_validator(mode="after")
     def _validate_job_config(self) -> Settings:
         if self.job_retry_max_seconds < self.job_retry_base_seconds:
@@ -211,6 +241,18 @@ class Settings(BaseSettings):
                 "job_processing_timeout_seconds"
             )
         return self
+
+    @model_validator(mode="after")
+    def _validate_generation_config(self) -> Settings:
+        if (
+            self.generation_retry_max_seconds
+            < self.generation_retry_base_seconds
+        ):
+            raise ValueError(
+                "generation_retry_max_seconds must be >= base"
+            )
+        return self
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
