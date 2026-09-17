@@ -21,8 +21,13 @@ from app.domain.jobs import (
     JobContext,
     JobTypes,
 )
+from app.services import detection as detection_service
 from app.services import embeddings as embeddings_service
 from app.services import generation as generation_service
+from app.services.detection_profile import (
+    build_detection_provider,
+    get_current_detection_profile,
+)
 from app.services.embedding_profile import (
     build_embedding_provider,
     get_current_embedding_profile,
@@ -206,7 +211,82 @@ def _generate_report(ctx: JobContext) -> None:
         len(result.cited_markers),
     )
 
+# ---------------------------------------------------------------------------
+# M13 — detection handler
+# ---------------------------------------------------------------------------
+class InvalidDetectionPayloadError(AppError):
+    code = "INVALID_DETECTION_PAYLOAD"
+    status_code = 400
+    message = "Detection job payload is invalid."
 
+
+def _parse_detection_payload(
+    payload: dict,
+) -> tuple[uuid.UUID, uuid.UUID]:
+    r = payload.get("report_id")
+    v = payload.get("version_id")
+    if not isinstance(r, str) or not isinstance(v, str):
+        raise InvalidDetectionPayloadError(
+            "report_id and version_id are required"
+        )
+    try:
+        return uuid.UUID(r), uuid.UUID(v)
+    except (ValueError, TypeError) as exc:
+        raise InvalidDetectionPayloadError(
+            "ids must be UUIDs"
+        ) from exc
+
+
+def _detect_report(ctx: JobContext) -> None:
+    from app.core.exceptions import DetectionAlreadyCompletedError
+    from app.db.models.jobs import Job
+
+    report_id, version_id = _parse_detection_payload(
+        dict(ctx.payload)
+    )
+
+    with SessionLocal() as db:
+        job = db.get(Job, ctx.job_id)
+        if job is None:
+            raise InvalidDetectionPayloadError("job not found")
+        if job.job_type != JobTypes.DETECT_REPORT:
+            raise InvalidDetectionPayloadError("wrong job_type")
+        if job.report_id is None or job.report_id != report_id:
+            raise InvalidDetectionPayloadError(
+                "job.report_id mismatch"
+            )
+        if job.user_id is None:
+            raise InvalidDetectionPayloadError("no owning user")
+        user_id = cast(uuid.UUID, job.user_id)
+
+    profile = get_current_detection_profile()
+    provider = build_detection_provider(profile)
+
+    try:
+        with SessionLocal() as db:
+            result = detection_service.detect_report_version(
+                db,
+                user_id=user_id,
+                report_id=report_id,
+                version_id=version_id,
+                provider=provider,
+                profile=profile,
+            )
+    except DetectionAlreadyCompletedError:
+        logger.info(
+            "detect_report_already_completed job_id=%s", ctx.job_id
+        )
+        return
+
+    logger.info(
+        "detect_report_done job_id=%s report_id=%s version_id=%s "
+        "label=%s probability=%s",
+        ctx.job_id,
+        report_id,
+        version_id,
+        result.label,
+        result.probability,
+    )
 # ---------------------------------------------------------------------------
 # Registration
 # ---------------------------------------------------------------------------
@@ -222,11 +302,14 @@ def register_all_handlers() -> None:
             JobTypes.GENERATE_REPORT, _generate_report
         )
 
+    if JobTypes.DETECT_REPORT not in registered_types():
+        register_handler(JobTypes.DETECT_REPORT, _detect_report)
 
 __all__ = [
     "EXECUTABLE_JOB_TYPES",
     "InvalidEmbeddingPayloadError",
     "InvalidGenerationPayloadError",
     "RESERVED_JOB_TYPES",
+    "InvalidDetectionPayloadError",
     "register_all_handlers",
 ]

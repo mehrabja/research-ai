@@ -12,6 +12,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     Text,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -39,46 +40,19 @@ class GenerationRun(Base, UUIDPKMixin, CreatedAtMixin):
         ForeignKey("reports.id", ondelete="RESTRICT"),
         nullable=False,
     )
-
-    prompt_version: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )
-
-    model_provider: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
-    )
-
-    model_version: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
-    )
-
+    prompt_version: Mapped[str] = mapped_column(Text, nullable=False)
+    model_provider: Mapped[str | None] = mapped_column(Text, nullable=True)
+    model_version: Mapped[str | None] = mapped_column(Text, nullable=True)
     input_token_count: Mapped[int | None] = mapped_column(
-        Integer,
-        nullable=True,
+        Integer, nullable=True
     )
-
     output_token_count: Mapped[int | None] = mapped_column(
-        Integer,
-        nullable=True,
+        Integer, nullable=True
     )
-
-    # Structured claim/evidence graph.
-    output_json: Mapped[dict] = mapped_column(
-        JSONB,
-        nullable=False,
-    )
-
-    status: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )
-
+    output_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
+        DateTime(timezone=True), nullable=True
     )
 
     __table_args__ = (
@@ -118,47 +92,54 @@ class DetectionRun(Base, UUIDPKMixin, CreatedAtMixin):
         nullable=True,
     )
 
+    # M13 identity columns.
+    version_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("report_versions.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    profile_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    input_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    input_chars: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
     scanned_text_version: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
+        Text, nullable=False
     )
-
-    provider: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )
-
+    provider: Mapped[str] = mapped_column(Text, nullable=False)
     overall_score: Mapped[Decimal | None] = mapped_column(
-        Numeric,
-        nullable=True,
+        Numeric, nullable=True
     )
-
-    status: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )
-
+    status: Mapped[str] = mapped_column(Text, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
+        DateTime(timezone=True), nullable=True
     )
-
     detection_meta: Mapped[dict | None] = mapped_column(
-       "metadata",
-       JSONB,
-       nullable=True,
+        "metadata", JSONB, nullable=True
     )
 
     __table_args__ = (
         _in_check(
             "status",
-            ("pending", "running", "success", "partial", "failed"),
+            ("pending", "running", "completed", "failed"),
             "ck_detection_runs_status",
+        ),
+        CheckConstraint(
+            "input_chars IS NULL OR input_chars >= 0",
+            name="ck_detection_runs_input_chars",
         ),
         Index(
             "ix_detection_runs_report_created",
             "report_id",
             "created_at",
+        ),
+        Index(
+            "ux_detection_runs_identity",
+            "report_id",
+            "version_id",
+            "profile_id",
+            "input_hash",
+            unique=True,
+            postgresql_where=text("status = 'completed'"),
         ),
     )
 
@@ -171,35 +152,17 @@ class DetectionSegment(Base, UUIDPKMixin, CreatedAtMixin):
         ForeignKey("detection_runs.id", ondelete="CASCADE"),
         nullable=False,
     )
-
     paragraph_index: Mapped[int | None] = mapped_column(
-        Integer,
-        nullable=True,
+        Integer, nullable=True
     )
-
     segment_identifier: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
+        Text, nullable=True
     )
-
-    score: Mapped[Decimal | None] = mapped_column(
-        Numeric,
-        nullable=True,
-    )
-
-    flagged: Mapped[bool | None] = mapped_column(
-        nullable=True,
-    )
-
-    reason: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
-    )
-
+    score: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    flagged: Mapped[bool | None] = mapped_column(nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     segment_meta: Mapped[dict | None] = mapped_column(
-        "metadata",
-        JSONB,
-        nullable=True,
+        "metadata", JSONB, nullable=True
     )
 
     __table_args__ = (
@@ -207,10 +170,7 @@ class DetectionSegment(Base, UUIDPKMixin, CreatedAtMixin):
             "paragraph_index IS NULL OR paragraph_index >= 0",
             name="ck_detection_segments_paragraph_index",
         ),
-        Index(
-            "ix_detection_segments_run",
-            "detection_run_id",
-        ),
+        Index("ix_detection_segments_run", "detection_run_id"),
     )
 
 
@@ -222,36 +182,17 @@ class TranslationRun(Base, UUIDPKMixin, CreatedAtMixin):
         ForeignKey("reports.id", ondelete="RESTRICT"),
         nullable=False,
     )
-
     generation_run_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("generation_runs.id", ondelete="SET NULL"),
         nullable=True,
     )
-
-    source_lang: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )
-
-    target_lang: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )
-
-    provider: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )
-
-    status: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )
-
+    source_lang: Mapped[str] = mapped_column(Text, nullable=False)
+    target_lang: Mapped[str] = mapped_column(Text, nullable=False)
+    provider: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
+        DateTime(timezone=True), nullable=True
     )
 
     __table_args__ = (
@@ -276,25 +217,14 @@ class TranslationVersion(Base, UUIDPKMixin, CreatedAtMixin):
         ForeignKey("translation_runs.id", ondelete="CASCADE"),
         nullable=False,
     )
-
-    content: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )
-
+    content: Mapped[str] = mapped_column(Text, nullable=False)
     preservation_check_status: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
+        Text, nullable=False
     )
-
     preservation_details: Mapped[dict | None] = mapped_column(
-        JSONB,
-        nullable=True,
+        JSONB, nullable=True
     )
 
     __table_args__ = (
-        Index(
-            "ix_translation_versions_run",
-            "translation_run_id",
-        ),
+        Index("ix_translation_versions_run", "translation_run_id"),
     )

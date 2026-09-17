@@ -61,12 +61,14 @@ class JobTypes:
     EMBEDDING_SOURCE = "embedding_source"
     TEST_NOOP = "test_noop"
     GENERATE_REPORT = "generate_report"  # M12
+    DETECT_REPORT = "detect_report"      # M13
 
 
 EXECUTABLE_JOB_TYPES: frozenset[str] = frozenset({
     JobTypes.TEST_NOOP,
     JobTypes.EMBEDDING_SOURCE,
     JobTypes.GENERATE_REPORT,
+    JobTypes.DETECT_REPORT,
 })
 
 RESERVED_JOB_TYPES: frozenset[str] = frozenset()

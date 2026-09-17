@@ -1,0 +1,48 @@
+"""Shared constructor for the current detection profile + provider."""
+from __future__ import annotations
+
+from app.core.config import get_settings
+from app.domain.detection import (
+    DetectionProfile,
+    build_detection_profile_id,
+)
+from app.integrations.detection.base import (
+    DetectionProvider,
+    DetectionProviderError,
+)
+from app.integrations.detection.heuristic import (
+    HeuristicDetectionProvider,
+)
+
+
+def get_current_detection_profile() -> DetectionProfile:
+    s = get_settings()
+    return DetectionProfile(
+        provider=s.detection_provider,
+        model=s.detection_model,
+        profile_version=s.detection_profile_version,
+        minimum_text_chars=s.detection_minimum_text_chars,
+        supports_probability=True,
+    )
+
+
+def get_current_detection_profile_id() -> str:
+    return build_detection_profile_id(get_current_detection_profile())
+
+
+def build_detection_provider(
+    profile: DetectionProfile | None = None,
+) -> DetectionProvider:
+    p = profile or get_current_detection_profile()
+    if p.provider == "heuristic":
+        return HeuristicDetectionProvider()
+    raise DetectionProviderError(
+        f"unknown detection provider: {p.provider!r}"
+    )
+
+
+__all__ = [
+    "build_detection_provider",
+    "get_current_detection_profile",
+    "get_current_detection_profile_id",
+]

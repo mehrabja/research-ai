@@ -131,6 +131,47 @@ def enqueue_job(
         )
         return result.job
 
+    if payload.job_type == JobTypes.DETECT_REPORT:
+        body = payload.payload or {}
+        report_raw = body.get("report_id")
+        version_raw = body.get("version_id")
+        if not isinstance(report_raw, str) or not isinstance(
+            version_raw, str
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "INVALID_PAYLOAD",
+                    "message": (
+                        "detect_report requires report_id and version_id"
+                    ),
+                },
+            )
+        try:
+            report_id = uuid.UUID(report_raw)
+            version_id = uuid.UUID(version_raw)
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "INVALID_PAYLOAD",
+                    "message": "ids must be valid UUIDs",
+                },
+            ) from exc
+
+        from app.services import detection_jobs
+
+        result = detection_jobs.enqueue_detection_job(
+            db,
+            user_id=current_user.id,
+            report_id=report_id,
+            version_id=version_id,
+            idempotency_key=payload.idempotency_key,
+            priority=payload.priority,
+            max_attempts=payload.max_attempts,
+        )
+        return result.job
+
     result = jobs_service.enqueue_job(
         db,
         job_type=payload.job_type,

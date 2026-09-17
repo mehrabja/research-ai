@@ -164,6 +164,13 @@ class Settings(BaseSettings):
         default=0.25, ge=0.0, le=1.0
     )
 
+    # --- Detection (Milestone 13) -----------------------------------------
+    detection_provider: str = "heuristic"
+    detection_model: str = "baseline-v1"
+    detection_profile_version: str = "m13.1"
+    detection_minimum_text_chars: int = Field(
+        default=200, ge=0, le=10000
+    )
     @model_validator(mode="after")
     def _validate_production_secrets(self) -> Settings:
         if self.app_env.lower() == "production":
@@ -253,6 +260,13 @@ class Settings(BaseSettings):
             )
         return self
 
+    @model_validator(mode="after")
+    def _validate_detection_config(self) -> Settings:
+        if self.detection_minimum_text_chars < 0:
+            raise ValueError(
+                "detection_minimum_text_chars must be >= 0"
+            )
+        return self
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

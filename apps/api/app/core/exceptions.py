@@ -247,3 +247,10 @@ class GenerationUnknownMarkerError(AppError):
     code = "GENERATION_UNKNOWN_MARKER"
     status_code = 422
     message = "Generated text referenced an unknown evidence marker."
+
+
+# --- Detection (Milestone 13) ---------------------------------------------
+class DetectionAlreadyCompletedError(AppError):
+    code = "DETECTION_ALREADY_COMPLETED"
+    status_code = 409
+    message = "Detection already completed for this version."

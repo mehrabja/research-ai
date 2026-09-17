@@ -63,6 +63,34 @@ def classify_exception(exc: BaseException) -> str:
         if isinstance(exc, GenerationInputTooLargeError):
             return "input_too_large"
 
+    try:
+        from app.integrations.detection.base import (
+            DetectionAuthenticationError,
+            DetectionInputTooLargeError,
+            DetectionInvalidRequestError,
+            DetectionInvalidResponseError,
+            DetectionProviderUnavailableError,
+            DetectionRateLimitError,
+            DetectionTimeoutError,
+        )
+    except Exception:
+        pass
+    else:
+        if isinstance(exc, DetectionRateLimitError):
+            return "rate_limited"
+        if isinstance(exc, DetectionTimeoutError):
+            return "provider_timeout"
+        if isinstance(exc, DetectionProviderUnavailableError):
+            return "provider_unavailable"
+        if isinstance(exc, DetectionAuthenticationError):
+            return "authentication_error"
+        if isinstance(exc, DetectionInvalidRequestError):
+            return "invalid_payload"
+        if isinstance(exc, DetectionInvalidResponseError):
+            return "invalid_provider_response"
+        if isinstance(exc, DetectionInputTooLargeError):
+            return "input_too_large"
+
     if isinstance(exc, TimeoutError):
         return "provider_timeout"
     if isinstance(exc, ConnectionError):
@@ -86,6 +114,7 @@ def classify_exception(exc: BaseException) -> str:
         return "database_error"
 
     from app.core.exceptions import (
+        DetectionAlreadyCompletedError,
         InvalidJobStateError,
         JobLeaseLostError,
         JobNotFoundError,
@@ -105,9 +134,8 @@ def classify_exception(exc: BaseException) -> str:
         return "permanent_business_error"
     if isinstance(exc, NoEvidenceAvailableError):
         return "permanent_business_error"
-
-    if isinstance(exc, (ValueError, TypeError, KeyError, AttributeError)):
-        return "invalid_payload"
+    if isinstance(exc, DetectionAlreadyCompletedError):
+        return "detection_already_completed"
 
     logger.debug("unclassified_exception")
     return "unexpected_error"
