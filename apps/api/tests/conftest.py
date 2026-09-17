@@ -8,14 +8,13 @@ rolled back on teardown, so the database is left clean.
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 import pytest
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection, Engine
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(REPO_ROOT / ".env", override=False)

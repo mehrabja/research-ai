@@ -7,7 +7,6 @@ from decimal import Decimal
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
-
 BALANCE_SQL = text(
     """
     SELECT COALESCE(SUM(CASE

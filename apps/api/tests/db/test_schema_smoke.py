@@ -4,7 +4,6 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
-
 REQUIRED_TABLES = {
     "users", "reports", "sources", "chunks",
     "generation_runs", "detection_runs", "detection_segments",
@@ -14,7 +13,7 @@ REQUIRED_TABLES = {
     "convergence_strategies",
     "voice_profiles", "style_exemplars", "ai_tell_patterns",
     "detection_thresholds", "terminology_glossary",
-    "report_versions", "review_events", "citation_links",
+    "report_versions", "review_events", "report_events", "citation_links",
     "jobs", "usage_logs", "model_pricing", "credit_transactions",
 }
 
@@ -41,4 +40,4 @@ def test_required_extensions_exist(conn: Connection) -> None:
 
 def test_alembic_version_is_present(conn: Connection) -> None:
     version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-    assert version == "0001_initial_schema"
+    assert version == "0002_add_report_events"

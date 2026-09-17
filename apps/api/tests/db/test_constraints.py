@@ -5,8 +5,8 @@ import uuid
 
 import pytest
 from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.engine import Connection
+from sqlalchemy.exc import IntegrityError
 
 
 def test_uuid_default_is_server_side(conn: Connection) -> None:

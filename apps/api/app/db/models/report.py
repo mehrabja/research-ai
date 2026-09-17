@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
@@ -13,11 +14,11 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, CreatedAtMixin, TimestampMixin, UUIDPKMixin
-
 
 REPORT_STATUSES = (
     "draft",
@@ -105,6 +106,11 @@ class Report(Base, UUIDPKMixin, TimestampMixin):
     audience_level: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
     )
 
     __table_args__ = (
@@ -241,6 +247,91 @@ class ReviewEvent(Base, UUIDPKMixin, CreatedAtMixin):
         ),
         Index(
             "ix_review_events_report_created",
+            "report_id",
+            "created_at",
+        ),
+    )
+class ReportEvent(Base, UUIDPKMixin, CreatedAtMixin):
+    """Append-only audit event for a report.
+
+    Two shapes are possible, enforced by ``ck_report_events_shape``:
+
+      * ``status_transition`` — ``from_status``/``to_status`` set,
+        ``version_id`` NULL.
+      * ``version_created``   — ``version_id`` set, both statuses NULL.
+
+    Any other combination is rejected at the DB level.
+
+    The Python attribute is named ``event_meta`` because ``metadata``
+    is reserved on SQLAlchemy declarative classes. The underlying
+    column is still named ``metadata``.
+    """
+
+    __tablename__ = "report_events"
+
+    report_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("reports.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+
+    # Nullable: system-generated events (e.g. background jobs) have no
+    # user. Historical/audit FK uses RESTRICT so that a user with
+    # events cannot be hard-deleted by accident.
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+
+    event_type: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+
+    from_status: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    to_status: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    version_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("report_versions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    # Python attr = event_meta; DB column = metadata.
+    event_meta: Mapped[dict | None] = mapped_column(
+        "metadata",
+        JSONB,
+        nullable=True,
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "event_type IN ('status_transition','version_created')",
+            name="ck_report_events_type",
+        ),
+        CheckConstraint(
+            "(event_type = 'status_transition'"
+            " AND from_status IS NOT NULL"
+            " AND to_status IS NOT NULL"
+            " AND from_status <> to_status"
+            " AND version_id IS NULL)"
+            " OR "
+            "(event_type = 'version_created'"
+            " AND version_id IS NOT NULL"
+            " AND from_status IS NULL"
+            " AND to_status IS NULL)",
+            name="ck_report_events_shape",
+        ),
+        Index(
+            "ix_report_events_report_created",
             "report_id",
             "created_at",
         ),
