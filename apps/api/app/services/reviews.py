@@ -1,5 +1,4 @@
 """M15 — Pre-translation human review service."""
-
 from __future__ import annotations
 
 import uuid
@@ -50,20 +49,10 @@ class ReviewValidationError(AppError):
     message = "Review input is invalid."
 
 
-def get_current_pre_translation_review_version(
-    db: Session,
-    *,
-    user_id: uuid.UUID,
-    report_id: uuid.UUID,
-) -> ReportVersion:
-    """Resolve the exact version currently under pre-translation review."""
-    report = get_report(db, user_id=user_id, report_id=report_id)
-    if report.status != "pre_translation_review":
-        raise InvalidReviewStateError(
-            f"report status is {report.status!r}, expected 'pre_translation_review'"
-        )
-
-    latest = db.execute(
+def _resolve_latest_review_version(
+    db: Session, *, report_id: uuid.UUID
+) -> ReportVersion | None:
+    return db.execute(
         select(ReportVersion)
         .where(
             ReportVersion.report_id == report_id,
@@ -72,12 +61,6 @@ def get_current_pre_translation_review_version(
         .order_by(ReportVersion.version_number.desc())
         .limit(1)
     ).scalar_one_or_none()
-
-    if latest is None:
-        raise ReviewNotFoundError(
-            "no humanized or human-review-edited version found for this report"
-        )
-    return latest
 
 
 def _review_history(db: Session, *, report_id: uuid.UUID) -> list[ReviewEvent]:
@@ -93,18 +76,16 @@ def _review_history(db: Session, *, report_id: uuid.UUID) -> list[ReviewEvent]:
     )
 
 
-def get_pre_translation_review(
-    db: Session,
-    *,
-    user_id: uuid.UUID,
-    report_id: uuid.UUID,
+def _build_review_context(
+    db: Session, *, user_id: uuid.UUID, report_id: uuid.UUID
 ) -> dict[str, Any]:
     report = get_report(db, user_id=user_id, report_id=report_id)
-    version = get_current_pre_translation_review_version(
-        db, user_id=user_id, report_id=report_id
-    )
+    version = _resolve_latest_review_version(db, report_id=report_id)
+    if version is None:
+        raise ReviewNotFoundError(
+            "no humanized or human-review-edited version found for this report"
+        )
     events = _review_history(db, report_id=report_id)
-
     return {
         "report_id": report.id,
         "status": report.status,
@@ -119,10 +100,55 @@ def get_pre_translation_review(
     }
 
 
-def _lock_report(db: Session, report_id: uuid.UUID) -> None:
-    db.execute(
-        select(Report.id).where(Report.id == report_id).with_for_update()
-    )
+def get_pre_translation_review(
+    db: Session, *, user_id: uuid.UUID, report_id: uuid.UUID
+) -> dict[str, Any]:
+    """Strict GET — requires the report to be in ``pre_translation_review``."""
+    report = get_report(db, user_id=user_id, report_id=report_id)
+    if report.status != "pre_translation_review":
+        raise InvalidReviewStateError(
+            f"report status is {report.status!r}, expected 'pre_translation_review'"
+        )
+    return _build_review_context(db, user_id=user_id, report_id=report_id)
+
+
+def get_review_context(
+    db: Session, *, user_id: uuid.UUID, report_id: uuid.UUID
+) -> dict[str, Any]:
+    """Non-strict context — used after actions that change status."""
+    return _build_review_context(db, user_id=user_id, report_id=report_id)
+
+
+def get_current_pre_translation_review_version(
+    db: Session, *, user_id: uuid.UUID, report_id: uuid.UUID
+) -> ReportVersion:
+    report = get_report(db, user_id=user_id, report_id=report_id)
+    if report.status != "pre_translation_review":
+        raise InvalidReviewStateError(
+            f"report status is {report.status!r}, expected 'pre_translation_review'"
+        )
+    latest = _resolve_latest_review_version(db, report_id=report_id)
+    if latest is None:
+        raise ReviewNotFoundError(
+            "no humanized or human-review-edited version found for this report"
+        )
+    return latest
+
+
+def _lock_and_load_report(db: Session, report_id: uuid.UUID) -> Report:
+    """Acquire a row lock on the report and return a fresh snapshot.
+
+    Uses ``populate_existing=True`` so that any previously cached
+    ``Report`` instance in the session is refreshed from the DB — this is
+    critical because ``with_for_update()`` alone returns the stale
+    session-cached instance without re-reading the row.
+    """
+    return db.execute(
+        select(Report)
+        .where(Report.id == report_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).scalar_one()
 
 
 def edit_pre_translation_review(
@@ -134,11 +160,7 @@ def edit_pre_translation_review(
     content: str,
     notes: str | None = None,
 ) -> ReportVersion:
-    report = get_report(db, user_id=user_id, report_id=report_id)
-    if report.status != "pre_translation_review":
-        raise InvalidReviewStateError(
-            f"report status is {report.status!r}"
-        )
+    get_report(db, user_id=user_id, report_id=report_id)
 
     if not isinstance(content, str) or not content.strip():
         raise ReviewValidationError("content must be a non-empty string")
@@ -151,12 +173,15 @@ def edit_pre_translation_review(
             f"notes exceed maximum length {MAX_NOTES_LENGTH}"
         )
 
-    _lock_report(db, report_id)
+    locked = _lock_and_load_report(db, report_id)
 
-    current = get_current_pre_translation_review_version(
-        db, user_id=user_id, report_id=report_id
-    )
-    if current.id != version_id:
+    if locked.status != "pre_translation_review":
+        db.rollback()
+        raise InvalidReviewStateError(f"report status is {locked.status!r}")
+
+    current = _resolve_latest_review_version(db, report_id=report_id)
+    if current is None or current.id != version_id:
+        db.rollback()
         raise StaleReviewVersionError(
             "version_id is no longer the active review version"
         )
@@ -204,23 +229,22 @@ def approve_pre_translation_review(
     report_id: uuid.UUID,
     version_id: uuid.UUID,
 ) -> Report:
-    report = get_report(db, user_id=user_id, report_id=report_id)
+    get_report(db, user_id=user_id, report_id=report_id)
 
-    # Idempotent success: already transitioned.
-    if report.status == "translating":
-        return report
+    locked = _lock_and_load_report(db, report_id)
 
-    if report.status != "pre_translation_review":
-        raise InvalidReviewStateError(
-            f"report status is {report.status!r}"
-        )
+    if locked.status == "translating":
+        # Idempotent success — already transitioned.
+        db.commit()
+        return locked
 
-    _lock_report(db, report_id)
+    if locked.status != "pre_translation_review":
+        db.rollback()
+        raise InvalidReviewStateError(f"report status is {locked.status!r}")
 
-    current = get_current_pre_translation_review_version(
-        db, user_id=user_id, report_id=report_id
-    )
-    if current.id != version_id:
+    current = _resolve_latest_review_version(db, report_id=report_id)
+    if current is None or current.id != version_id:
+        db.rollback()
         raise StaleReviewVersionError(
             "version_id is no longer the active review version"
         )
@@ -245,8 +269,8 @@ def approve_pre_translation_review(
         commit=False,
     )
     db.commit()
-    db.refresh(report)
-    return report
+    db.refresh(locked)
+    return locked
 
 
 def request_changes_pre_translation_review(
@@ -257,9 +281,8 @@ def request_changes_pre_translation_review(
     version_id: uuid.UUID,
     notes: str,
 ) -> Report:
-    report = get_report(db, user_id=user_id, report_id=report_id)
-    if report.status != "pre_translation_review":
-        raise InvalidReviewStateError(f"report status is {report.status!r}")
+    get_report(db, user_id=user_id, report_id=report_id)
+
     if not notes or not notes.strip():
         raise ReviewValidationError("notes must be non-empty")
     if len(notes) > MAX_NOTES_LENGTH:
@@ -267,12 +290,14 @@ def request_changes_pre_translation_review(
             f"notes exceed maximum length {MAX_NOTES_LENGTH}"
         )
 
-    _lock_report(db, report_id)
+    locked = _lock_and_load_report(db, report_id)
+    if locked.status != "pre_translation_review":
+        db.rollback()
+        raise InvalidReviewStateError(f"report status is {locked.status!r}")
 
-    current = get_current_pre_translation_review_version(
-        db, user_id=user_id, report_id=report_id
-    )
-    if current.id != version_id:
+    current = _resolve_latest_review_version(db, report_id=report_id)
+    if current is None or current.id != version_id:
+        db.rollback()
         raise StaleReviewVersionError("stale version")
 
     db.add(
@@ -286,8 +311,8 @@ def request_changes_pre_translation_review(
         )
     )
     db.commit()
-    db.refresh(report)
-    return report
+    db.refresh(locked)
+    return locked
 
 
 def reject_pre_translation_review(
@@ -298,9 +323,8 @@ def reject_pre_translation_review(
     version_id: uuid.UUID,
     notes: str,
 ) -> Report:
-    report = get_report(db, user_id=user_id, report_id=report_id)
-    if report.status != "pre_translation_review":
-        raise InvalidReviewStateError(f"report status is {report.status!r}")
+    get_report(db, user_id=user_id, report_id=report_id)
+
     if not notes or not notes.strip():
         raise ReviewValidationError("notes must be non-empty")
     if len(notes) > MAX_NOTES_LENGTH:
@@ -308,12 +332,14 @@ def reject_pre_translation_review(
             f"notes exceed maximum length {MAX_NOTES_LENGTH}"
         )
 
-    _lock_report(db, report_id)
+    locked = _lock_and_load_report(db, report_id)
+    if locked.status != "pre_translation_review":
+        db.rollback()
+        raise InvalidReviewStateError(f"report status is {locked.status!r}")
 
-    current = get_current_pre_translation_review_version(
-        db, user_id=user_id, report_id=report_id
-    )
-    if current.id != version_id:
+    current = _resolve_latest_review_version(db, report_id=report_id)
+    if current is None or current.id != version_id:
+        db.rollback()
         raise StaleReviewVersionError("stale version")
 
     db.add(
@@ -327,5 +353,5 @@ def reject_pre_translation_review(
         )
     )
     db.commit()
-    db.refresh(report)
-    return report
+    db.refresh(locked)
+    return locked

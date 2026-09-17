@@ -58,7 +58,7 @@ def edit_pre_translation_review(
         content=body.content,
         notes=body.notes,
     )
-    data = reviews_service.get_pre_translation_review(
+    data = reviews_service.get_review_context(
         db, user_id=current_user.id, report_id=report_id
     )
     return _to_response(data)
@@ -80,7 +80,7 @@ def approve_pre_translation_review(
         report_id=report_id,
         version_id=body.version_id,
     )
-    data = reviews_service.get_pre_translation_review(
+    data = reviews_service.get_review_context(
         db, user_id=current_user.id, report_id=report_id
     )
     return _to_response(data)
@@ -103,7 +103,7 @@ def request_changes_pre_translation_review(
         version_id=body.version_id,
         notes=body.notes,
     )
-    data = reviews_service.get_pre_translation_review(
+    data = reviews_service.get_review_context(
         db, user_id=current_user.id, report_id=report_id
     )
     return _to_response(data)
@@ -126,7 +126,7 @@ def reject_pre_translation_review(
         version_id=body.version_id,
         notes=body.notes,
     )
-    data = reviews_service.get_pre_translation_review(
+    data = reviews_service.get_review_context(
         db, user_id=current_user.id, report_id=report_id
     )
     return _to_response(data)
