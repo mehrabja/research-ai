@@ -1,12 +1,13 @@
 """Built-in handlers.
 
-``test_noop``          — deterministic test handler.
-``embedding_source``   — M11 handler that delegates to M9.
-``generate_report``    — M12 handler that delegates to the generation service.
-``detect_report``      — M13 handler that delegates to the detection service.
-``humanize_report``    — M14 handler that delegates to the humanization service.
+``test_noop``             — deterministic test handler.
+``embedding_source``      — M11 handler that delegates to M9.
+``generate_report``       — M12 handler that delegates to the generation service.
+``detect_report``         — M13 handler that delegates to the detection service.
+``humanize_report``       — M14 handler that delegates to the humanization service.
+``translate_report``      — M16 handler that delegates to the translation service.
+``humanize_post_translation`` — M17 handler that delegates to the M17 service.
 """
-
 from __future__ import annotations
 
 import logging
@@ -17,6 +18,7 @@ from typing import cast
 from sqlalchemy import select
 
 from app.core.exceptions import AppError
+from app.db.models.pipeline import TranslationRun, TranslationVersion
 from app.db.session import SessionLocal
 from app.domain.generation import GenerationAlreadySucceeded
 from app.domain.humanization import (
@@ -35,6 +37,8 @@ from app.services import generation as generation_service
 from app.services import humanization as humanization_service
 from app.services import humanization_jobs
 from app.services import jobs as jobs_service
+from app.services import post_translation_humanization as m17_service
+from app.services import post_translation_humanization_jobs as m17_jobs
 from app.services import report_status as report_status_service
 from app.services import report_versions as report_versions_service
 from app.services import translation as translation_service
@@ -54,11 +58,15 @@ from app.services.humanization_jobs import (
     HumanizationEnqueueError,
     HumanizationEnqueueStateError,
 )
-from app.services.humanization_profile import build_policy_from_settings
+from app.services.humanization_profile import (
+    build_policy_from_settings,
+    build_post_translation_policy_from_settings,
+)
 from app.services.translation_profile import (
     build_translation_provider,
     get_current_translation_profile,
 )
+from app.services.usage import record_humanization_usage
 from app.workers.registry import register_handler, registered_types
 
 logger = logging.getLogger(__name__)
@@ -243,9 +251,7 @@ class InvalidDetectionPayloadError(AppError):
     message = "Detection job payload is invalid."
 
 
-def _parse_detection_payload(
-    payload: dict,
-) -> tuple[uuid.UUID, uuid.UUID]:
+def _parse_detection_payload(payload: dict) -> tuple[uuid.UUID, uuid.UUID]:
     r = payload.get("report_id")
     v = payload.get("version_id")
     if not isinstance(r, str) or not isinstance(v, str):
@@ -265,11 +271,6 @@ def _try_enqueue_humanization_after_detection(
     version_id: uuid.UUID,
     policy_version: str | None,
 ) -> None:
-    """Best-effort idempotent enqueue of the M14 humanization job.
-
-    Runs in its own session. Never raises for idempotent duplicates.
-    Real enqueue failures propagate so the M13 job can be retried.
-    """
     from app.db.models.pipeline import DetectionRun
 
     try:
@@ -295,10 +296,8 @@ def _try_enqueue_humanization_after_detection(
             )
             db.commit()
     except HumanizationEnqueueStateError:
-        # Idempotent no-op: already enqueued or report already progressed.
         return
     except HumanizationEnqueueError:
-        # Real enqueue failure — surface so M13 job retries.
         raise
 
 
@@ -336,10 +335,7 @@ def _detect_report(ctx: JobContext) -> None:
                 profile=profile,
             )
     except DetectionAlreadyCompletedError:
-        logger.info(
-            "detect_report_already_completed job_id=%s", ctx.job_id
-        )
-        # --- M14 recovery: try to enqueue humanization anyway ---
+        logger.info("detect_report_already_completed job_id=%s", ctx.job_id)
         _try_enqueue_humanization_after_detection(
             user_id=user_id,
             report_id=report_id,
@@ -358,7 +354,6 @@ def _detect_report(ctx: JobContext) -> None:
         result.probability,
     )
 
-    # --- M14: enqueue humanization after successful detection ---
     _try_enqueue_humanization_after_detection(
         user_id=user_id,
         report_id=report_id,
@@ -422,7 +417,6 @@ def _humanize_report(ctx: JobContext) -> None:
         job_id=str(ctx.job_id),
     )
 
-    # Reuse the M12 generation provider transport.
     gen_profile = get_current_generation_profile()
     provider = build_generation_provider(gen_profile)
 
@@ -436,7 +430,7 @@ def _humanize_report(ctx: JobContext) -> None:
                 detection_run_id=detection_run_id,
                 provider=provider,
                 policy=policy,
-                usage_recorder=None,          # TODO: wire M12 usage path
+                usage_recorder=None,
                 version_service=report_versions_service,
                 status_service=report_status_service,
             )
@@ -465,7 +459,7 @@ def _humanize_report(ctx: JobContext) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Registration
+# M16 — translation handler
 # ---------------------------------------------------------------------------
 class InvalidTranslationPayloadError(AppError):
     code = "INVALID_TRANSLATION_PAYLOAD"
@@ -487,6 +481,29 @@ def _parse_translation_payload(
         return uuid.UUID(r), uuid.UUID(v), t
     except (ValueError, TypeError) as exc:
         raise InvalidTranslationPayloadError("ids must be UUIDs") from exc
+
+
+def _enqueue_m17_after_translation(
+    *,
+    report_id: uuid.UUID,
+    user_id: uuid.UUID,
+    translation_run_id: uuid.UUID,
+    translation_version_id: uuid.UUID,
+) -> m17_jobs.EnqueueOutcome:
+    """Enqueue M17 after M16 success. Raises on real enqueue failures so
+    the calling M16 job retries via the existing queue."""
+    policy_version = build_post_translation_policy_from_settings().version
+    with SessionLocal() as db:
+        result = m17_jobs.enqueue_post_translation_humanization_job(
+            db=db,
+            user_id=user_id,
+            report_id=report_id,
+            translation_run_id=translation_run_id,
+            translation_version_id=translation_version_id,
+            policy_version=policy_version,
+        )
+        db.commit()
+        return result.outcome
 
 
 def _translate_report(ctx: JobContext) -> None:
@@ -527,25 +544,160 @@ def _translate_report(ctx: JobContext) -> None:
     except translation_service.TranslationAlreadySucceeded as exc:
         logger.info(
             "translate_report_already_succeeded job_id=%s detail=%s",
-            ctx.job_id,
-            str(exc),
+            ctx.job_id, str(exc),
+        )
+        # Recovery: resolve exact M16 identities and enqueue M17.
+        with SessionLocal() as db:
+            trun = db.execute(
+                select(TranslationRun).where(
+                    TranslationRun.report_id == report_id,
+                    TranslationRun.source_version_id == source_version_id,
+                    TranslationRun.target_lang == target_language,
+                    TranslationRun.status == "success",
+                )
+            ).scalars().first()
+            if trun is None:
+                logger.warning(
+                    "m16_recovery_no_successful_run report_id=%s", report_id,
+                )
+                return
+            tver = db.execute(
+                select(TranslationVersion).where(
+                    TranslationVersion.translation_run_id == trun.id,
+                )
+            ).scalars().first()
+            if tver is None:
+                logger.warning(
+                    "m16_recovery_no_translation_version run_id=%s", trun.id,
+                )
+                return
+            recovered_run_id = trun.id
+            recovered_version_id = tver.id
+
+        _enqueue_m17_after_translation(
+            report_id=report_id,
+            user_id=user_id,
+            translation_run_id=recovered_run_id,
+            translation_version_id=recovered_version_id,
         )
         return
 
     logger.info(
         "translate_report_done job_id=%s report_id=%s "
         "src_version=%s target=%s run_id=%s version_id=%s",
-        ctx.job_id,
-        report_id,
-        source_version_id,
-        target_language,
-        outcome.run_id,
-        outcome.version_id,
+        ctx.job_id, report_id, source_version_id, target_language,
+        outcome.run_id, outcome.version_id,
     )
-def register_all_handlers() -> None:
-    if JobTypes.TRANSLATE_REPORT not in registered_types():
-        register_handler(JobTypes.TRANSLATE_REPORT, _translate_report)
 
+    # M16 → M17 handoff (raises on real enqueue failure → M16 retry).
+    _enqueue_m17_after_translation(
+        report_id=report_id,
+        user_id=user_id,
+        translation_run_id=outcome.run_id,
+        translation_version_id=outcome.version_id,
+    )
+
+
+# ---------------------------------------------------------------------------
+# M17 — post-translation humanization handler
+# ---------------------------------------------------------------------------
+class InvalidPostTranslationHumanizationPayloadError(AppError):
+    code = "INVALID_POST_TRANSLATION_HUMANIZATION_PAYLOAD"
+    status_code = 400
+    message = "Post-translation humanization job payload is invalid."
+
+
+def _parse_m17_payload(
+    payload: dict,
+) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID, str | None]:
+    r = payload.get("report_id")
+    tr = payload.get("translation_run_id")
+    tv = payload.get("translation_version_id")
+    pv = payload.get("policy_version")
+    if not isinstance(r, str) or not isinstance(tr, str) or not isinstance(tv, str):
+        raise InvalidPostTranslationHumanizationPayloadError(
+            "report_id, translation_run_id, translation_version_id required"
+        )
+    try:
+        return (
+            uuid.UUID(r),
+            uuid.UUID(tr),
+            uuid.UUID(tv),
+            pv if isinstance(pv, str) else None,
+        )
+    except (ValueError, TypeError) as exc:
+        raise InvalidPostTranslationHumanizationPayloadError(
+            "ids must be UUIDs"
+        ) from exc
+
+
+def _humanize_post_translation(ctx: JobContext) -> None:
+    from app.db.models.jobs import Job
+
+    report_id, translation_run_id, translation_version_id, policy_version = (
+        _parse_m17_payload(dict(ctx.payload))
+    )
+
+    with SessionLocal() as db:
+        job = db.get(Job, ctx.job_id)
+        if job is None:
+            raise InvalidPostTranslationHumanizationPayloadError("job not found")
+        if job.job_type != JobTypes.HUMANIZE_POST_TRANSLATION.value:
+            raise InvalidPostTranslationHumanizationPayloadError(
+                f"wrong job_type {job.job_type!r}"
+            )
+        if job.report_id is None or job.report_id != report_id:
+            raise InvalidPostTranslationHumanizationPayloadError(
+                "job.report_id mismatch"
+            )
+        if job.user_id is None:
+            raise InvalidPostTranslationHumanizationPayloadError(
+                "no owning user"
+            )
+        user_id = cast(uuid.UUID, job.user_id)
+
+    policy = build_post_translation_policy_from_settings(
+        job_id=str(ctx.job_id),
+        version=policy_version,
+    )
+    gen_provider = build_generation_provider(get_current_generation_profile())
+    det_profile = get_current_detection_profile()
+    det_provider = build_detection_provider(det_profile)
+
+    try:
+        with SessionLocal() as db:
+            outcome = m17_service.run_post_translation_humanization(
+                db=db,
+                user_id=user_id,
+                report_id=report_id,
+                translation_run_id=translation_run_id,
+                translation_version_id=translation_version_id,
+                provider=gen_provider,
+                detection_provider=det_provider,
+                detection_profile=det_profile,
+                policy=policy,
+                version_service=report_versions_service,
+                usage_recorder=record_humanization_usage,
+            )
+    except m17_service.PostTranslationHumanizationAlreadyCompleted as exc:
+        logger.info(
+            "humanize_post_translation_already_completed job_id=%s detail=%s",
+            ctx.job_id, str(exc),
+        )
+        return
+
+    logger.info(
+        "humanize_post_translation_done job_id=%s report_id=%s "
+        "translated_version_id=%s output_version_id=%s status=%s",
+        ctx.job_id, report_id,
+        outcome.translated_version_id, outcome.output_version_id, outcome.status,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Registration
+# ---------------------------------------------------------------------------
+def register_all_handlers() -> None:
     if JobTypes.TEST_NOOP not in registered_types():
         register_handler(JobTypes.TEST_NOOP, _test_noop)
 
@@ -561,6 +713,14 @@ def register_all_handlers() -> None:
     if JobTypes.HUMANIZE_REPORT not in registered_types():
         register_handler(JobTypes.HUMANIZE_REPORT, _humanize_report)
 
+    if JobTypes.TRANSLATE_REPORT not in registered_types():
+        register_handler(JobTypes.TRANSLATE_REPORT, _translate_report)
+
+    if JobTypes.HUMANIZE_POST_TRANSLATION not in registered_types():
+        register_handler(
+            JobTypes.HUMANIZE_POST_TRANSLATION, _humanize_post_translation
+        )
+
 
 __all__ = [
     "EXECUTABLE_JOB_TYPES",
@@ -568,7 +728,8 @@ __all__ = [
     "InvalidGenerationPayloadError",
     "InvalidDetectionPayloadError",
     "InvalidHumanizationPayloadError",
+    "InvalidTranslationPayloadError",
+    "InvalidPostTranslationHumanizationPayloadError",
     "RESERVED_JOB_TYPES",
     "register_all_handlers",
-    "InvalidTranslationPayloadError",
 ]

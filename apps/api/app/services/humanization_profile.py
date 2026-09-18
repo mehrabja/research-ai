@@ -29,3 +29,30 @@ def build_policy_from_settings(
         max_preservation_retries=settings.humanization_max_preservation_retries,
         job_id=job_id,
     )
+def build_post_translation_policy_from_settings(
+    *,
+    job_id: str | None = None,
+    version: str | None = None,
+):
+    from app.domain.humanization import (
+        HumanizationLayer,
+        HumanizationPolicy,
+        HumanizationStage,
+    )
+
+    s = get_settings()
+    return HumanizationPolicy(
+        version=version or s.post_translation_humanization_policy_version,
+        stage=HumanizationStage.POST_TRANSLATION,
+        enabled_layers=HumanizationLayer.post_translation_ordered(),
+        max_segments=s.post_translation_humanization_max_segments,
+        max_total_tokens=s.post_translation_humanization_max_total_tokens,
+        max_segment_chars=s.post_translation_humanization_max_segment_chars,
+        allow_partial=False,
+        temperature=s.post_translation_humanization_temperature,
+        max_output_tokens=s.post_translation_humanization_max_output_tokens,
+        max_preservation_retries=(
+            s.post_translation_humanization_max_preservation_retries
+        ),
+        job_id=job_id,
+    )

@@ -9,6 +9,9 @@ from app.api.routes.embeddings import router as embeddings_router
 from app.api.routes.health import router as health_router
 from app.api.routes.humanization import router as humanization_router
 from app.api.routes.jobs import router as jobs_router
+from app.api.routes.post_translation_humanization import (
+    router as post_translation_humanization_router,
+)
 from app.api.routes.reports import router as reports_router
 from app.api.routes.reviews import router as reviews_router
 from app.api.routes.sources import router as sources_router
@@ -26,3 +29,4 @@ api_router.include_router(detection_router)
 api_router.include_router(humanization_router)
 api_router.include_router(reviews_router)
 api_router.include_router(translation_router)
+api_router.include_router(post_translation_humanization_router)

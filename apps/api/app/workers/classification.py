@@ -119,6 +119,61 @@ def classify_exception(exc: BaseException) -> str:
         if isinstance(exc, TranslationInputTooLargeError):
             return "input_too_large"
 
+    # --- M17 — Humanization ---
+    try:
+        from app.domain.humanization import (
+            HumanizationAlreadyCompletedError,
+            HumanizationAlreadyRunningError,
+            HumanizationBudgetExceededError,
+            HumanizationNoSegmentDataError,
+            HumanizationOwnershipLostError,
+            HumanizationPreservationError,
+            HumanizationSegmentMappingError,
+            HumanizationSegmentTooLargeError,
+            HumanizationStateError,
+        )
+    except Exception:
+        pass
+    else:
+        if isinstance(exc, HumanizationAlreadyCompletedError):
+            return "already_completed"
+        if isinstance(exc, HumanizationAlreadyRunningError):
+            return "rate_limited"
+        if isinstance(exc, HumanizationOwnershipLostError):
+            return "lease_lost"
+        if isinstance(exc, HumanizationBudgetExceededError):
+            return "invalid_state"
+        if isinstance(exc, HumanizationPreservationError):
+            return "invalid_provider_response"
+        if isinstance(exc, HumanizationSegmentMappingError):
+            return "invalid_payload"
+        if isinstance(exc, HumanizationNoSegmentDataError):
+            return "invalid_payload"
+        if isinstance(exc, HumanizationSegmentTooLargeError):
+            return "input_too_large"
+        if isinstance(exc, HumanizationStateError):
+            return "invalid_state"
+
+    # --- M17 — Post-translation detection ---
+    try:
+        from app.services.post_translation_detection import (
+            PostTranslationDetectionAlreadyRunningError,
+            PostTranslationDetectionError,
+            PostTranslationDetectionNoSegmentContractError,
+            PostTranslationDetectionOwnershipLostError,
+        )
+    except Exception:
+        pass
+    else:
+        if isinstance(exc, PostTranslationDetectionAlreadyRunningError):
+            return "rate_limited"
+        if isinstance(exc, PostTranslationDetectionOwnershipLostError):
+            return "lease_lost"
+        if isinstance(exc, PostTranslationDetectionNoSegmentContractError):
+            return "invalid_provider_response"
+        if isinstance(exc, PostTranslationDetectionError):
+            return "invalid_provider_response"
+
     if isinstance(exc, TimeoutError):
         return "provider_timeout"
     if isinstance(exc, ConnectionError):

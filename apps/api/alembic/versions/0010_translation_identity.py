@@ -1,4 +1,4 @@
-"""M16 — translation identity: source_version_id + profile_id + unique index."""
+"""M16/M17 — translation identity: source_version_id + profile_id."""
 
 from __future__ import annotations
 
@@ -6,9 +6,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
-
 revision = "0010"
-down_revision = "0009"   # VERIFY: با alembic heads تطبیق بده
+down_revision = "0009"   # VERIFY با alembic heads
 branch_labels = None
 depends_on = None
 
@@ -40,23 +39,18 @@ def upgrade() -> None:
                 nullable=True,
             ),
         )
-
     if not _has_column("translation_runs", "profile_id"):
         op.add_column(
             "translation_runs",
             sa.Column("profile_id", sa.Text(), nullable=True),
         )
-
     if not _has_index("translation_runs", "ux_translation_runs_identity"):
         op.create_index(
             "ux_translation_runs_identity",
             "translation_runs",
             [
-                "report_id",
-                "source_version_id",
-                "source_lang",
-                "target_lang",
-                "profile_id",
+                "report_id", "source_version_id",
+                "source_lang", "target_lang", "profile_id",
             ],
             unique=True,
             postgresql_where=sa.text("status = 'success'"),

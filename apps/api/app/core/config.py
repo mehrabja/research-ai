@@ -227,6 +227,39 @@ class Settings(BaseSettings):
     translation_preservation_retry_count: int = Field(
         default=1, ge=0, le=3
     )
+    # --- Post-Translation Humanization (Milestone 17) ---------------------
+    post_translation_humanization_enabled: bool = True
+    post_translation_humanization_policy_version: str = "m17.1"
+    post_translation_humanization_temperature: float = Field(
+        default=0.4, ge=0.0, le=2.0
+    )
+    post_translation_humanization_max_output_tokens: int = Field(
+        default=2048, ge=64, le=32000
+    )
+    post_translation_humanization_max_segments: int = Field(
+        default=50, ge=1, le=500
+    )
+    post_translation_humanization_max_total_tokens: int = Field(
+        default=60_000, ge=100, le=1_000_000
+    )
+    post_translation_humanization_max_segment_chars: int = Field(
+        default=4_000, ge=50, le=100_000
+    )
+    post_translation_humanization_max_preservation_retries: int = Field(
+        default=1, ge=0, le=5
+    )
+    # Lease expiry is DERIVED from provider execution limits. These are
+    # added on top of the derived maximum active provider window:
+    #   max_active = timeout × (retries + 1)
+    #              + retry_max_seconds × (retries + 1)
+    #   lease_expires_at = now() + max_active + safety_margin_seconds
+    post_translation_humanization_lease_safety_margin_seconds: int = Field(
+        default=120, ge=30, le=3600
+    )
+    post_translation_detection_lease_safety_margin_seconds: int = Field(
+        default=60, ge=30, le=3600
+    )
+
     # --- Semantic Scholar / Source Discovery (M7) -------------------------
     semantic_scholar_api_key: str = Field(default="", repr=False)
     semantic_scholar_base_url: str = (
