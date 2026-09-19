@@ -13,8 +13,14 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ReportNotFound
+from app.core.exceptions import (
+    ProjectNotFound,
+    ProjectReportAttachForbiddenError,
+    ReportNotFound,
+)
+from app.db.models.project import Project
 from app.db.models.report import Report
+from app.domain.project import EDITABLE_PROJECT_STATUSES
 
 
 def create_report(
@@ -23,6 +29,20 @@ def create_report(
     user_id: uuid.UUID,
     data: dict[str, Any],
 ) -> Report:
+    project_id = data.get("project_id")
+    if project_id is not None:
+        project = db.execute(
+            select(Project).where(
+                Project.id == project_id,
+                Project.user_id == user_id,
+            )
+        ).scalar_one_or_none()
+        if project is None:
+            # Same 404 for missing and foreign projects (no oracle).
+            raise ProjectNotFound()
+        if project.status not in EDITABLE_PROJECT_STATUSES:
+            raise ProjectReportAttachForbiddenError()
+
     # status is server-controlled. The database server_default remains
     # authoritative and initializes new reports as "draft".
     report = Report(
@@ -39,7 +59,6 @@ def create_report(
         raise
 
     return report
-
 
 def list_reports(
     db: Session,

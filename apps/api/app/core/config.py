@@ -134,7 +134,90 @@ class Settings(BaseSettings):
     job_payload_max_bytes: int = Field(
         default=65536, ge=256, le=10 * 1024 * 1024
     )
+    # --- Universal File Intelligence (Milestone 19) -----------------------
+    # Reuses document_max_bytes (M8) as the upload size cap. Do not
+    # introduce a second source of truth for "max bytes".
+    #
+    # Note: extraction jobs use the global ``job_processing_timeout_seconds``
+    # (M10) for lease expiry. There is no per-job-type timeout today.
+    file_storage_backend: Literal["local"] = "local"
+    file_storage_local_root: str = "storage/files"
+    file_chunk_stream_size: int = Field(
+        default=1 * 1024 * 1024, ge=4096, le=16 * 1024 * 1024
+    )
+    file_max_filename_length: int = Field(default=255, ge=32, le=1024)
+    file_extraction_max_attempts: int = Field(default=3, ge=1, le=10)
+    # --- Code & Data Intelligence (Milestone 20) --------------------------
+    intelligence_analysis_version: str = "m20.1"
 
+    # Code intelligence
+    code_max_source_bytes: int = Field(
+        default=5 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024
+    )
+    code_max_symbols: int = Field(default=10_000, ge=100, le=100_000)
+    code_max_dependencies: int = Field(
+        default=5_000, ge=100, le=50_000
+    )
+
+    # Data intelligence
+    data_profile_max_rows_scanned: int = Field(
+        default=100_000, ge=100, le=2_000_000
+    )
+    data_profile_sample_rows: int = Field(default=100, ge=1, le=1000)
+    data_profile_max_columns: int = Field(
+        default=500, ge=1, le=5000
+    )
+    data_profile_top_values_limit: int = Field(
+        default=20, ge=1, le=200
+    )
+    data_profile_distinct_tracking_cap: int = Field(
+        default=10_000, ge=100, le=1_000_000
+    )
+    data_json_max_bytes: int = Field(
+        default=50 * 1024 * 1024, ge=1024, le=500 * 1024 * 1024
+    )
+    data_json_max_depth: int = Field(default=64, ge=4, le=512)
+    data_category_max_distinct: int = Field(
+        default=50, ge=2, le=1000
+    )
+    data_xlsx_max_uncompressed_bytes: int = Field(
+        default=100 * 1024 * 1024, ge=1024, le=1024 * 1024 * 1024
+    )
+    # --- Research Classification (Milestone 21) --------------------------
+    classification_enabled: bool = True
+    classification_use_llm: bool = False
+    classification_classifier_version: str = "m21.1"
+    classification_taxonomy_version: str = "m21.1"
+
+    classification_max_project_text: int = Field(
+        default=4000, ge=100, le=50_000
+    )
+    classification_max_reports: int = Field(default=10, ge=0, le=100)
+    classification_max_files: int = Field(default=20, ge=0, le=500)
+    classification_max_file_text: int = Field(
+        default=1500, ge=0, le=20_000
+    )
+    classification_max_evidence_items: int = Field(
+        default=50, ge=1, le=500
+    )
+    classification_max_evidence_chars: int = Field(
+        default=400, ge=50, le=4000
+    )
+    classification_max_alternatives: int = Field(
+        default=5, ge=1, le=20
+    )
+    classification_confidence_threshold: float = Field(
+        default=0.5, ge=0.0, le=1.0
+    )
+    classification_review_margin: float = Field(
+        default=0.15, ge=0.0, le=1.0
+    )
+    classification_max_secondary_paper_types: int = Field(
+        default=3, ge=0, le=10
+    )
+    classification_job_max_attempts: int = Field(
+        default=3, ge=1, le=10
+    )
     # --- Generation (Milestone 12) ----------------------------------------
     generation_provider: str = "openai"
     generation_model: str = "gpt-4o-mini"
@@ -383,8 +466,72 @@ class Settings(BaseSettings):
                 "semantic_scholar_base_url must start with http(s)://"
             )
         return self
+    @model_validator(mode="after")
+    def _validate_file_config(self) -> Settings:
+        if self.file_storage_backend not in ("local",):
+            raise ValueError("file_storage_backend must be 'local'")
+        if not self.file_storage_local_root.strip():
+            raise ValueError("file_storage_local_root must not be empty")
+        if self.file_chunk_stream_size > self.document_max_bytes:
+            raise ValueError(
+                "file_chunk_stream_size must be <= document_max_bytes"
+            )
+        return self
+    @model_validator(mode="after")
+    def _validate_intelligence_config(self) -> Settings:
+        if self.code_max_source_bytes > self.document_max_bytes:
+            raise ValueError(
+                "code_max_source_bytes must be <= document_max_bytes"
+            )
+        if self.data_profile_sample_rows > self.data_profile_max_rows_scanned:
+            raise ValueError(
+                "data_profile_sample_rows must be <= "
+                "data_profile_max_rows_scanned"
+            )
+        if (
+            self.data_profile_top_values_limit
+            > self.data_profile_distinct_tracking_cap
+        ):
+            raise ValueError(
+                "data_profile_top_values_limit must be <= "
+                "data_profile_distinct_tracking_cap"
+            )
+        if (
+            self.data_xlsx_max_uncompressed_bytes
+            < self.document_max_bytes
+        ):
+            raise ValueError(
+                "data_xlsx_max_uncompressed_bytes must be >= "
+                "document_max_bytes"
+            )
+        if not self.intelligence_analysis_version.strip():
+            raise ValueError(
+                "intelligence_analysis_version must not be empty"
+            )
+        return self
 
-
+    @model_validator(mode="after")
+    def _validate_classification_config(self) -> Settings:
+        if self.classification_use_llm:
+            raise ValueError(
+                "classification_use_llm is reserved for M21.5 and "
+                "must remain False in M21"
+            )
+        if self.classification_max_file_text > (
+            self.classification_max_project_text
+        ):
+            raise ValueError(
+                "classification_max_file_text must be <= "
+                "classification_max_project_text"
+            )
+        if self.classification_review_margin > (
+            self.classification_confidence_threshold
+        ):
+            raise ValueError(
+                "classification_review_margin must be <= "
+                "classification_confidence_threshold"
+            )
+        return self
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return Settings()  # type: ignore[call-arg]

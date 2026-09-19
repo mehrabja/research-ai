@@ -50,6 +50,11 @@ class Job(Base, UUIDPKMixin, TimestampMixin):
         ForeignKey("reports.id", ondelete="SET NULL"),
         nullable=True,
     )
+    project_file_id: Mapped[PGUUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("project_files.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     user_id: Mapped[PGUUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
@@ -123,6 +128,7 @@ class Job(Base, UUIDPKMixin, TimestampMixin):
             "status <> 'failed' OR failed_at IS NOT NULL",
             name="ck_jobs_failed_at_required",
         ),
+        Index("ix_jobs_project_file", "project_file_id"),
         Index(
             "ix_jobs_ready",
             "status",

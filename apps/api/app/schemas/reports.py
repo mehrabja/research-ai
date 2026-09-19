@@ -23,6 +23,7 @@ class ReportCreate(BaseModel):
     length: str | None = None
     structure_template: str | None = None
     audience_level: str | None = None
+    project_id: uuid.UUID | None = None
 
 
 class ReportUpdate(BaseModel):
@@ -56,5 +57,6 @@ class ReportResponse(BaseModel):
     structure_template: str | None
     output_language: str
     audience_level: str | None
+    project_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime

@@ -47,6 +47,7 @@ def enqueue_job(
     payload: dict,
     idempotency_key: str | None = None,
     report_id: uuid.UUID | None = None,
+    project_file_id: uuid.UUID | None = None,
     user_id: uuid.UUID | None = None,
     priority: int = 0,
     max_attempts: int | None = None,
@@ -81,6 +82,7 @@ def enqueue_job(
         status="queued",
         attempt_count=0,
         available_at=available_at or datetime.now(UTC),
+        project_file_id=project_file_id,
     )
     try:
         db.add(job)
@@ -120,6 +122,7 @@ def list_jobs(
     user_id: uuid.UUID,
     status: str | None = None,
     report_id: uuid.UUID | None = None,
+    project_file_id: uuid.UUID | None = None,
     limit: int = 50,
 ) -> list[Job]:
     stmt = select(Job).where(Job.user_id == user_id)
@@ -127,11 +130,12 @@ def list_jobs(
         stmt = stmt.where(Job.status == status)
     if report_id:
         stmt = stmt.where(Job.report_id == report_id)
+    if project_file_id:
+        stmt = stmt.where(Job.project_file_id == project_file_id)
     stmt = stmt.order_by(Job.created_at.desc()).limit(
         max(1, min(limit, 200))
     )
     return list(db.execute(stmt).scalars().all())
-
 
 def claim_job(db: Session, *, worker_id: str) -> Job | None:
     now = datetime.now(UTC)

@@ -7,6 +7,9 @@
 ``humanize_report``       — M14 handler that delegates to the humanization service.
 ``translate_report``      — M16 handler that delegates to the translation service.
 ``humanize_post_translation`` — M17 handler that delegates to the M17 service.
+``code_analyze``          — M20 handler for Code Intelligence.
+``data_profile``          — M20 handler for Data Intelligence.
+``research_classification`` — M21 handler for Research Classification.
 """
 from __future__ import annotations
 
@@ -698,6 +701,7 @@ def _humanize_post_translation(ctx: JobContext) -> None:
 # Registration
 # ---------------------------------------------------------------------------
 def register_all_handlers() -> None:
+
     if JobTypes.TEST_NOOP not in registered_types():
         register_handler(JobTypes.TEST_NOOP, _test_noop)
 
@@ -721,6 +725,22 @@ def register_all_handlers() -> None:
             JobTypes.HUMANIZE_POST_TRANSLATION, _humanize_post_translation
         )
 
+    from app.workers.intelligence_handlers import (
+        handle_code_analyze,
+        handle_data_profile,
+    )
+    if "code_analyze" not in registered_types():
+        register_handler("code_analyze", handle_code_analyze)
+    if "data_profile" not in registered_types():
+        register_handler("data_profile", handle_data_profile)
+
+    from app.workers.classification_handlers import (
+        handle_research_classification,
+    )
+    if "research_classification" not in registered_types():
+        register_handler(
+            "research_classification", handle_research_classification
+        )
 
 __all__ = [
     "EXECUTABLE_JOB_TYPES",

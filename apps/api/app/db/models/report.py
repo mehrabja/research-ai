@@ -59,6 +59,11 @@ class Report(Base, UUIDPKMixin, TimestampMixin):
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,
     )
+    project_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     topic: Mapped[str] = mapped_column(
         Text,
@@ -128,6 +133,7 @@ class Report(Base, UUIDPKMixin, TimestampMixin):
             "ix_reports_status",
             "status",
         ),
+        Index("ix_reports_project", "project_id"),
     )
 
 

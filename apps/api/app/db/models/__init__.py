@@ -1,5 +1,11 @@
 """Register every model so ``Base.metadata`` is complete for Alembic."""
 
+from app.db.models.code_analysis import (
+    CodeAnalysis,
+    CodeDependency,
+    CodeSymbol,
+)
+from app.db.models.data_profile import DataColumnProfile, DataProfile
 from app.db.models.humanization import (
     ConvergenceBestSnapshot,
     ConvergenceIteration,
@@ -29,11 +35,22 @@ from app.db.models.pipeline import (
     TranslationRun,
     TranslationVersion,
 )
+from app.db.models.project import Project, ProjectEvent
+from app.db.models.project_file import ProjectFile, ProjectFileEvent
 from app.db.models.report import (
     Report,
     ReportEvent,
     ReportVersion,
     ReviewEvent,
+)
+from app.db.models.research_classification import (
+    ClassificationEvidence,
+    ProjectClassification,
+)
+from app.db.models.research_taxonomy import (
+    PaperType,
+    ResearchDesign,
+    ResearchDomain,
 )
 from app.db.models.source import (
     Chunk,
@@ -72,4 +89,18 @@ __all__ = [
     "UsageLog",
     "ModelPricing",
     "CreditTransaction",
+    "Project",
+    "ProjectEvent",
+    "ProjectFile",
+    "ProjectFileEvent",
+    "CodeAnalysis",
+    "CodeSymbol",
+    "CodeDependency",
+    "DataProfile",
+    "DataColumnProfile",
+    "ResearchDomain",
+    "PaperType",
+    "ResearchDesign",
+    "ProjectClassification",
+    "ClassificationEvidence",
 ]

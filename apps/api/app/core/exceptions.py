@@ -55,8 +55,136 @@ class ReportNotFound(AppError):
     code = "REPORT_NOT_FOUND"
     status_code = 404
     message = "Report not found."
+class ProjectNotFound(AppError):
+    code = "PROJECT_NOT_FOUND"
+    status_code = 404
+    message = "Project not found."
 
 
+class ProjectReportAttachForbiddenError(AppError):
+    code = "PROJECT_REPORT_ATTACH_FORBIDDEN"
+    status_code = 409
+    message = "Reports cannot be attached to an archived project."
+class FileNotFound(AppError):
+    code = "FILE_NOT_FOUND"
+    status_code = 404
+    message = "File not found."
+
+
+class FileTooLarge(AppError):
+    code = "FILE_TOO_LARGE"
+    status_code = 413
+    message = "File exceeds the maximum allowed size."
+
+
+class InvalidFileName(AppError):
+    code = "INVALID_FILE_NAME"
+    status_code = 422
+    message = "Filename is not valid."
+
+
+class UnsupportedFileType(AppError):
+    code = "UNSUPPORTED_FILE_TYPE"
+    status_code = 422
+    message = "File type is not supported for upload."
+
+
+class DuplicateFile(AppError):
+    code = "DUPLICATE_FILE"
+    status_code = 409
+    message = "An identical file already exists in this project."
+
+
+class StorageUnavailable(AppError):
+    code = "STORAGE_UNAVAILABLE"
+    status_code = 503
+    message = "File storage is unavailable."
+
+
+class InvalidFileStatusTransition(AppError):
+    code = "INVALID_FILE_STATUS_TRANSITION"
+    status_code = 409
+    message = "The requested file status transition is not allowed."
+
+
+class ProjectArchivedForUpload(AppError):
+    code = "PROJECT_ARCHIVED_FOR_UPLOAD"
+    status_code = 409
+    message = "Cannot upload files to an archived project."
+class CodeAnalysisNotFound(AppError):
+    code = "CODE_ANALYSIS_NOT_FOUND"
+    status_code = 404
+    message = "Code analysis not found."
+
+
+class CodeAnalysisUnsupportedLanguage(AppError):
+    code = "CODE_ANALYSIS_UNSUPPORTED_LANGUAGE"
+    status_code = 422
+    message = "This language is not supported for analysis."
+
+
+class CodeAnalysisParseFailed(AppError):
+    code = "CODE_ANALYSIS_PARSE_FAILED"
+    status_code = 422
+    message = "Source code could not be parsed."
+
+
+class CodeAnalysisResourceLimit(AppError):
+    code = "CODE_ANALYSIS_RESOURCE_LIMIT"
+    status_code = 413
+    message = "Source file exceeds analysis resource limits."
+
+
+class DataProfileNotFound(AppError):
+    code = "DATA_PROFILE_NOT_FOUND"
+    status_code = 404
+    message = "Data profile not found."
+
+
+class DataProfileUnsupportedFormat(AppError):
+    code = "DATA_PROFILE_UNSUPPORTED_FORMAT"
+    status_code = 422
+    message = "This data format is not supported for profiling."
+
+
+class DataProfileMalformedData(AppError):
+    code = "DATA_PROFILE_MALFORMED_DATA"
+    status_code = 422
+    message = "Data file is malformed and could not be profiled."
+
+
+class DataProfileResourceLimit(AppError):
+    code = "DATA_PROFILE_RESOURCE_LIMIT"
+    status_code = 413
+    message = "Data file exceeds profiling resource limits."
+class ClassificationNotFound(AppError):
+    code = "CLASSIFICATION_NOT_FOUND"
+    status_code = 404
+    message = "Classification not found."
+
+
+class ClassificationTaxonomyNotFound(AppError):
+    code = "CLASSIFICATION_TAXONOMY_NOT_FOUND"
+    status_code = 404
+    message = "Requested taxonomy item not found or inactive."
+
+
+class ClassificationInvalidPayload(AppError):
+    code = "CLASSIFICATION_INVALID_PAYLOAD"
+    status_code = 422
+    message = "Classification payload is invalid."
+
+
+class ClassificationAlreadyRunning(AppError):
+    code = "CLASSIFICATION_ALREADY_RUNNING"
+    status_code = 409
+    message = "A classification job is already running for this project."
+
+
+class ClassificationResourceLimit(AppError):
+    code = "CLASSIFICATION_RESOURCE_LIMIT"
+    status_code = 413
+    message = "Classification context exceeds resource limits."
 class InvalidReportTransition(AppError):
     code = "INVALID_REPORT_TRANSITION"
     status_code = 409
