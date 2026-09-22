@@ -23,6 +23,13 @@ from app.db.models.knowledge import (
     TerminologyGlossary,
     VoiceProfile,
 )
+from app.db.models.literature import (
+    LiteratureCluster,
+    LiteratureClusterMember,
+    LiteratureGap,
+    LiteratureIntelligenceRun,
+    ProjectLiteratureItem,
+)
 from app.db.models.ops import (
     CreditTransaction,
     ModelPricing,
@@ -46,6 +53,13 @@ from app.db.models.report import (
 from app.db.models.research_classification import (
     ClassificationEvidence,
     ProjectClassification,
+)
+from app.db.models.research_plan import (
+    ResearchEvidenceRequirement,
+    ResearchPlan,
+    ResearchPlanDependency,
+    ResearchPlanRun,
+    ResearchPlanSection,
 )
 from app.db.models.research_taxonomy import (
     PaperType,
@@ -103,4 +117,14 @@ __all__ = [
     "ResearchDesign",
     "ProjectClassification",
     "ClassificationEvidence",
+    "LiteratureCluster",
+    "LiteratureClusterMember",
+    "LiteratureGap",
+    "LiteratureIntelligenceRun",
+    "ProjectLiteratureItem",
+    "ResearchPlan",
+    "ResearchPlanSection",
+    "ResearchEvidenceRequirement",
+    "ResearchPlanDependency",
+    "ResearchPlanRun",
 ]

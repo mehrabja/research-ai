@@ -15,11 +15,15 @@ from app.api.routes.health import router as health_router
 from app.api.routes.humanization import router as humanization_router
 from app.api.routes.intelligence import router as intelligence_router
 from app.api.routes.jobs import router as jobs_router
+from app.api.routes.literature import router as literature_router
 from app.api.routes.post_translation_humanization import (
     router as post_translation_humanization_router,
 )
 from app.api.routes.projects import router as projects_router
 from app.api.routes.reports import router as reports_router
+from app.api.routes.research_plan import (
+    router as research_plan_router,
+)
 from app.api.routes.reviews import router as reviews_router
 from app.api.routes.sources import router as sources_router
 from app.api.routes.translation import router as translation_router
@@ -41,3 +45,5 @@ api_router.include_router(project_files_router)
 api_router.include_router(files_router)
 api_router.include_router(intelligence_router)
 api_router.include_router(classification_router)
+api_router.include_router(literature_router)
+api_router.include_router(research_plan_router)

@@ -218,6 +218,23 @@ class Settings(BaseSettings):
     classification_job_max_attempts: int = Field(
         default=3, ge=1, le=10
     )
+    # --- Literature Intelligence (Milestone 23) --------------------------
+    literature_enabled: bool = True
+    literature_async_jobs: bool = False
+    literature_job_max_attempts: int = Field(
+        default=3, ge=1, le=10
+    )
+    # --- Research Planning (Milestone 24) --------------------------------
+    research_plan_enabled: bool = True
+    research_plan_async_jobs: bool = False
+    research_plan_llm_required: bool = False
+    research_plan_job_max_attempts: int = Field(default=3, ge=1, le=10)
+    research_plan_default_word_target: int = Field(
+        default=6000, ge=500, le=100_000
+    )
+    research_plan_llm_timeout_seconds: float = Field(
+        default=30.0, ge=1.0, le=300.0
+    )
     # --- Generation (Milestone 12) ----------------------------------------
     generation_provider: str = "openai"
     generation_model: str = "gpt-4o-mini"
@@ -510,6 +527,8 @@ class Settings(BaseSettings):
             )
         return self
 
+
+
     @model_validator(mode="after")
     def _validate_classification_config(self) -> Settings:
         if self.classification_use_llm:
@@ -532,6 +551,8 @@ class Settings(BaseSettings):
                 "classification_confidence_threshold"
             )
         return self
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return Settings()  # type: ignore[call-arg]

@@ -33,11 +33,15 @@ class Project(Base, UUIDPKMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     domain: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    research_objective: Mapped[str | None] = mapped_column(Text, nullable=True)
+    research_objective: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )
     research_questions: Mapped[list[Any] | None] = mapped_column(
         JSONB, nullable=True
     )
-    hypotheses: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
+    hypotheses: Mapped[list[Any] | None] = mapped_column(
+        JSONB, nullable=True
+    )
     scope: Mapped[str | None] = mapped_column(Text, nullable=True)
     constraints: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -54,10 +58,6 @@ class Project(Base, UUIDPKMixin, TimestampMixin):
     )
 
     __table_args__ = (
-        CheckConstraint(
-            "status IN ('draft', 'active', 'archived')",
-            name="ck_projects_status",
-        ),
         Index("ix_projects_user_created", "user_id", "created_at"),
         Index("ix_projects_status", "status"),
     )
@@ -67,8 +67,7 @@ class ProjectEvent(Base, UUIDPKMixin, CreatedAtMixin):
     """Append-only audit event for a project.
 
     Immutable by convention: no update/delete service methods exist
-    for this table. Mirrors ``ReportEvent`` naming (``event_meta``
-    Python attr, ``metadata`` DB column).
+    for this table.
     """
 
     __tablename__ = "project_events"
@@ -79,7 +78,6 @@ class ProjectEvent(Base, UUIDPKMixin, CreatedAtMixin):
         nullable=False,
     )
 
-    # Nullable: system-generated events have no user.
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT"),
@@ -88,15 +86,26 @@ class ProjectEvent(Base, UUIDPKMixin, CreatedAtMixin):
 
     event_type: Mapped[str] = mapped_column(Text, nullable=False)
 
-    # Python attr = event_meta; DB column = metadata.
     event_meta: Mapped[dict | None] = mapped_column(
         "metadata", JSONB, nullable=True
     )
 
     __table_args__ = (
         CheckConstraint(
-            "event_type IN "
-            "('project_created','project_updated','project_archived')",
+            "event_type IN ("
+            "'project_created','project_updated','project_archived',"
+            "'classification_started','classification_completed',"
+            "'classification_recomputed','classification_overridden',"
+            "'classification_failed','classification_skipped',"
+            "'literature_analysis_started','literature_analysis_completed',"
+            "'literature_analysis_failed','literature_analysis_skipped',"
+            "'literature_screening_overridden',"
+            "'literature_cluster_completed','literature_gap_detected',"
+            "'research_plan_generation_started',"
+            "'research_plan_generation_completed',"
+            "'research_plan_generation_failed',"
+            "'research_plan_generation_skipped'"
+            ")",
             name="ck_project_events_type",
         ),
         Index(

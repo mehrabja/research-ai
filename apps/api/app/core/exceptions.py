@@ -411,3 +411,43 @@ class SourceProviderInvalidResponse(AppError):
     code = "SOURCE_PROVIDER_INVALID_RESPONSE"
     status_code = 502
     message = "Source provider returned an unexpected response."
+class ResearchPlanNotFound(AppError):
+    code = "RESEARCH_PLAN_NOT_FOUND"
+    status_code = 404
+    message = "Research plan not found."
+
+
+class ResearchPlanInvalid(AppError):
+    code = "RESEARCH_PLAN_INVALID"
+    status_code = 409
+    message = "Research plan is invalid."
+
+
+class ResearchPlanDependencyCycle(AppError):
+    code = "RESEARCH_PLAN_DEPENDENCY_CYCLE"
+    status_code = 409
+    message = "Research plan dependency cycle detected."
+
+
+class ResearchPlanGenerationFailed(AppError):
+    code = "RESEARCH_PLAN_GENERATION_FAILED"
+    status_code = 500
+    message = "Research plan generation failed."
+
+
+class ResearchPlanGenerationForbidden(AppError):
+    code = "RESEARCH_PLAN_GENERATION_FORBIDDEN"
+    status_code = 403
+    message = "Research plan generation is not permitted."
+
+
+class ResearchPlanBudgetInvalid(AppError):
+    code = "RESEARCH_PLAN_BUDGET_INVALID"
+    status_code = 422
+    message = "Research plan budget is invalid."
+
+
+class ResearchPlanConfigurationInvalid(AppError):
+    code = "RESEARCH_PLAN_CONFIGURATION_INVALID"
+    status_code = 500
+    message = "Research plan configuration is invalid."
