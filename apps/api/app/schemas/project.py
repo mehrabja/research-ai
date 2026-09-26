@@ -21,6 +21,7 @@ class ProjectCreate(BaseModel):
     hypotheses: list[str] = Field(default_factory=list, max_length=100)
     scope: str | None = Field(default=None, max_length=10_000)
     constraints: str | None = Field(default=None, max_length=10_000)
+    provider_policy: dict[str, object] | None = None
     status: ProjectStatusLiteral = "draft"
 
 
@@ -42,6 +43,7 @@ class ProjectUpdate(BaseModel):
     hypotheses: list[str] | None = Field(default=None, max_length=100)
     scope: str | None = Field(default=None, max_length=10_000)
     constraints: str | None = Field(default=None, max_length=10_000)
+    provider_policy: dict[str, object] | None = None
     status: ProjectStatusLiteral | None = None
 
     @model_validator(mode="after")
@@ -63,6 +65,7 @@ class ProjectRead(BaseModel):
     hypotheses: list[str]
     scope: str | None
     constraints: str | None
+    provider_policy: dict[str, object] | None
     status: ProjectStatusLiteral
     report_count: int
     created_at: datetime
