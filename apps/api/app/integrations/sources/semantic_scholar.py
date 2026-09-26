@@ -56,6 +56,9 @@ class SemanticScholarProvider:
         limit: int,
         year: int | None = None,
         open_access_only: bool = False,
+        year_from: int | None = None,
+        year_to: int | None = None,
+        min_citations: int | None = None,
     ) -> list[SourceCandidate]:
         params: dict[str, str] = {
             "query": query,
@@ -64,6 +67,8 @@ class SemanticScholarProvider:
         }
         if year is not None:
             params["year"] = str(year)
+        elif year_from is not None or year_to is not None:
+            params["year"] = f"{year_from or 0}-{year_to or 3000}"
 
         url = (
             f"{self._base_url}/paper/search?"
@@ -85,6 +90,17 @@ class SemanticScholarProvider:
             if not isinstance(paper, dict):
                 continue
             if open_access_only and not paper.get("openAccessPdf"):
+                continue
+            paper_year = paper.get("year")
+            if year_from is not None and isinstance(paper_year, int) and paper_year < year_from:
+                continue
+            if year_to is not None and isinstance(paper_year, int) and paper_year > year_to:
+                continue
+            citation_count = paper.get("citationCount")
+            if min_citations is not None and (
+                not isinstance(citation_count, int)
+                or citation_count < min_citations
+            ):
                 continue
             candidate = self._to_candidate(paper)
             if candidate is not None:
