@@ -92,11 +92,15 @@ def list_projects(
 @router.get("/{project_id}", response_model=ProjectRead)
 def get_project(
     project_id: uuid.UUID,
+    workspace_id: uuid.UUID | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ProjectRead:
     project = projects_service.get_project(
-        db, user_id=current_user.id, project_id=project_id
+        db,
+        user_id=current_user.id,
+        project_id=project_id,
+        workspace_id=workspace_id,
     )
     return _to_read(db, user_id=current_user.id, project=project)
 
