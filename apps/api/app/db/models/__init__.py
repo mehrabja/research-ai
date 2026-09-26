@@ -1,11 +1,33 @@
 """Register every model so ``Base.metadata`` is complete for Alembic."""
 
+from app.db.models.academic_qa import (
+    AcademicQAFinding,
+    AcademicQARun,
+)
+
+# M37 — SaaS foundation
+from app.db.models.billing_event import BillingEvent  # noqa: F401
+from app.db.models.citation import (
+    CitationIdentity,
+    CitationRun,
+    Claim,
+    ClaimCitation,
+    ClaimEvidence,
+)
 from app.db.models.code_analysis import (
     CodeAnalysis,
     CodeDependency,
     CodeSymbol,
 )
+from app.db.models.collaboration import (
+    ManuscriptBranch,
+    ManuscriptComment,
+    ManuscriptReviewTask,
+    ProjectCollaborationEvent,
+    ProjectMember,
+)
 from app.db.models.data_profile import DataColumnProfile, DataProfile
+from app.db.models.experiment_result import ExperimentResult
 from app.db.models.humanization import (
     ConvergenceBestSnapshot,
     ConvergenceIteration,
@@ -15,6 +37,7 @@ from app.db.models.humanization import (
     HumanizationRewrite,
     HumanizationRun,
 )
+from app.db.models.invitation import WorkspaceInvitation  # noqa: F401
 from app.db.models.jobs import Job
 from app.db.models.knowledge import (
     AITellPattern,
@@ -23,6 +46,12 @@ from app.db.models.knowledge import (
     TerminologyGlossary,
     VoiceProfile,
 )
+from app.db.models.knowledge_graph import (
+    KnowledgeGraphBuildRun,
+    KnowledgeGraphEdge,
+    KnowledgeGraphNode,
+    KnowledgeGraphVersion,
+)
 from app.db.models.literature import (
     LiteratureCluster,
     LiteratureClusterMember,
@@ -30,10 +59,29 @@ from app.db.models.literature import (
     LiteratureIntelligenceRun,
     ProjectLiteratureItem,
 )
+from app.db.models.manuscript import (
+    Manuscript,
+    ManuscriptRun,
+    ManuscriptSection,
+    ManuscriptSectionDependency,
+    ManuscriptVersion,
+)
+from app.db.models.manuscript_prose import (
+    ManuscriptProseParagraph,
+    ManuscriptProseRun,
+    ManuscriptProseSection,
+    ManuscriptProseSentence,
+)
+from app.db.models.membership import WorkspaceMembership  # noqa: F401
+from app.db.models.metric import Metric
 from app.db.models.ops import (
     CreditTransaction,
     ModelPricing,
     UsageLog,
+)
+from app.db.models.orchestration import (
+    ResearchOrchestrationNode,
+    ResearchOrchestrationRun,
 )
 from app.db.models.pipeline import (
     DetectionRun,
@@ -42,8 +90,15 @@ from app.db.models.pipeline import (
     TranslationRun,
     TranslationVersion,
 )
+from app.db.models.plan import Plan, PlanEntitlement  # noqa: F401
 from app.db.models.project import Project, ProjectEvent
 from app.db.models.project_file import ProjectFile, ProjectFileEvent
+from app.db.models.publication import (
+    PublicationComplianceFinding,
+    PublicationComplianceRun,
+    PublicationTarget,
+    PublicationTargetSelection,
+)
 from app.db.models.report import (
     Report,
     ReportEvent,
@@ -53,6 +108,10 @@ from app.db.models.report import (
 from app.db.models.research_classification import (
     ClassificationEvidence,
     ProjectClassification,
+)
+from app.db.models.research_memory import (
+    ResearchMemory,
+    ResearchMemoryLink,
 )
 from app.db.models.research_plan import (
     ResearchEvidenceRequirement,
@@ -66,12 +125,24 @@ from app.db.models.research_taxonomy import (
     ResearchDesign,
     ResearchDomain,
 )
+from app.db.models.retrieval import RetrievalResult, RetrievalRun
+from app.db.models.section_research import (
+    SectionResearchEvidence,
+    SectionResearchRun,
+)
 from app.db.models.source import (
     Chunk,
     CitationLink,
     Source,
 )
+from app.db.models.subscription import Subscription  # noqa: F401
+from app.db.models.technical_fact import TechnicalFact
+from app.db.models.technical_intelligence import (
+    TechnicalIntelligenceRun,
+)
+from app.db.models.usage import UsageEvent  # noqa: F401
 from app.db.models.user import User
+from app.db.models.workspace import Workspace  # noqa: F401
 
 __all__ = [
     "User",
@@ -127,4 +198,58 @@ __all__ = [
     "ResearchEvidenceRequirement",
     "ResearchPlanDependency",
     "ResearchPlanRun",
+    "KnowledgeGraphVersion",
+    "KnowledgeGraphNode",
+    "KnowledgeGraphEdge",
+    "KnowledgeGraphBuildRun",
+    "RetrievalRun",
+    "RetrievalResult",
+    "ResearchMemory",
+    "ResearchMemoryLink",
+    "Manuscript",
+    "ManuscriptVersion",
+    "ManuscriptSection",
+    "ManuscriptSectionDependency",
+    "ManuscriptRun",
+    "SectionResearchRun",
+    "SectionResearchEvidence",
+    "TechnicalFact",
+    "ExperimentResult",
+    "Metric",
+    "TechnicalIntelligenceRun",
+    "Claim",
+    "ClaimEvidence",
+    "CitationIdentity",
+    "ClaimCitation",
+    "CitationRun",
+    "Claim",
+    "ClaimEvidence",
+    "CitationIdentity",
+    "ClaimCitation",
+    "CitationRun",
+    "AcademicQARun",
+    "AcademicQAFinding",
+    "PublicationTarget",
+    "PublicationTargetSelection",
+    "PublicationComplianceRun",
+    "PublicationComplianceFinding",
+    "ProjectMember",
+    "ManuscriptBranch",
+    "ManuscriptComment",
+    "ManuscriptReviewTask",
+    "ProjectCollaborationEvent",
+    "ResearchOrchestrationRun",
+    "ResearchOrchestrationNode",
+    "ManuscriptProseRun",
+    "ManuscriptProseSection",
+    "ManuscriptProseParagraph",
+    "ManuscriptProseSentence",
+    "BillingEvent",
+    "Plan",
+    "PlanEntitlement",
+    "Subscription",
+    "UsageEvent",
+    "Workspace",
+    "WorkspaceInvitation",
+    "WorkspaceMembership",
 ]

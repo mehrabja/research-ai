@@ -46,3 +46,18 @@ def conn(engine: Engine) -> Iterator[Connection]:
     finally:
         trans.rollback()
         connection.close()
+@pytest.fixture(autouse=True)
+def _reset_m36_state() -> Iterator[None]:
+    """Reset module-global M36 state between tests."""
+    from app.services.general_rate_limit import (
+        reset_rate_limit_backend,
+    )
+    from app.workers import stats as worker_stats
+
+    reset_rate_limit_backend()
+    worker_stats.reset()
+    try:
+        yield
+    finally:
+        reset_rate_limit_backend()
+        worker_stats.reset()

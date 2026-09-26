@@ -46,9 +46,9 @@ dev = [
     "types-python-dateutil>=2.9",
 ]
 
-[tool.setuptools]
-packages = ["app", "app.db", "app.db.models"]
-
+[tool.setuptools.packages.find]
+include = ["app*"]
+where = ["."]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra -q"
@@ -72,3 +72,5 @@ warn_redundant_casts = true
 disallow_untyped_defs = false
 ignore_missing_imports = true
 exclude = ["alembic/versions/"]
+explicit_package_bases = true
+mypy_path = "."

@@ -1,4 +1,4 @@
-"""M18-A — Project ORM models."""
+"""M18-A — Project ORM models (M37: tenant-aware)."""
 from __future__ import annotations
 
 import uuid
@@ -26,6 +26,13 @@ class Project(Base, UUIDPKMixin, TimestampMixin):
     user_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    # M37 — tenant anchor. Nullable in the DB only between ADD COLUMN
+    # and the NOT NULL alter; the ORM always treats it as required.
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("workspaces.id", ondelete="RESTRICT"),
         nullable=False,
     )
 
@@ -60,6 +67,12 @@ class Project(Base, UUIDPKMixin, TimestampMixin):
     __table_args__ = (
         Index("ix_projects_user_created", "user_id", "created_at"),
         Index("ix_projects_status", "status"),
+        Index("ix_projects_workspace", "workspace_id"),
+        Index(
+            "ix_projects_workspace_status",
+            "workspace_id",
+            "status",
+        ),
     )
 
 
@@ -67,7 +80,8 @@ class ProjectEvent(Base, UUIDPKMixin, CreatedAtMixin):
     """Append-only audit event for a project.
 
     Immutable by convention: no update/delete service methods exist
-    for this table.
+    for this table. NOTE: M37 does NOT add workspace_id here; project
+    events are always resolved through their parent project.
     """
 
     __tablename__ = "project_events"
@@ -104,7 +118,11 @@ class ProjectEvent(Base, UUIDPKMixin, CreatedAtMixin):
             "'research_plan_generation_started',"
             "'research_plan_generation_completed',"
             "'research_plan_generation_failed',"
-            "'research_plan_generation_skipped'"
+            "'research_plan_generation_skipped',"
+            "'knowledge_graph_generation_started',"
+            "'knowledge_graph_generation_completed',"
+            "'knowledge_graph_generation_failed',"
+            "'knowledge_graph_generation_skipped'"
             ")",
             name="ck_project_events_type",
         ),

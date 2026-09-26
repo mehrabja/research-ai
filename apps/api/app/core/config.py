@@ -22,12 +22,123 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
+    # --- Agentic Orchestration (Milestone 35) -------------------------
+    orchestration_enabled: bool = True
+    orchestration_async_jobs: bool = False
+    orchestration_job_max_attempts: int = Field(
+        default=3, ge=1, le=10
+    )
+    orchestration_max_nodes: int = Field(default=50, ge=1, le=500)
+    orchestration_max_retries_per_node: int = Field(
+        default=3, ge=0, le=10
+    )
+    orchestration_max_provider_calls: int = Field(
+        default=100, ge=1, le=1000
+    )
+    orchestration_max_wall_clock_seconds: int = Field(
+        default=3600, ge=60, le=86400
+    )
+    orchestration_max_total_tokens: int = Field(
+        default=500_000, ge=1000, le=10_000_000
+    )
+    orchestration_max_evidence_volume: int = Field(
+        default=1000, ge=1, le=100_000
+    )
+    orchestration_max_generated_chars: int = Field(
+        default=2_000_000, ge=1000, le=50_000_000
+    )
+    orchestration_require_approval: bool = True
+
     app_env: str = "development"
     debug: bool = False
     project_name: str = "research-ai"
     api_prefix: str = "/api/v1"
 
+    # --- M36: Production Foundation ------------------------------------
+    log_level: str = ""
+    log_format: Literal["text", "json"] = "text"
+
+    cors_allowed_origins: str = ""
+    cors_allow_credentials: bool = False
+    cors_allowed_methods: str = (
+        "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+    )
+    cors_allowed_headers: str = (
+        "Authorization,Content-Type,X-Request-ID"
+    )
+    cors_exposed_headers: str = "X-Request-ID"
+
+    trusted_hosts: str = "*"
+    trusted_proxies: str = ""
+    request_id_header: str = "X-Request-ID"
+    request_id_accept_incoming: bool = True
+
+    max_request_bytes: int = Field(
+        default=10 * 1024 * 1024,
+        ge=1024,
+        le=100 * 1024 * 1024,
+    )
+
+    rate_limit_enabled: bool = True
+    rate_limit_global_per_minute: int = Field(
+        default=600, ge=1, le=1_000_000
+    )
+    rate_limit_user_per_minute: int = Field(
+        default=300, ge=1, le=1_000_000
+    )
+    rate_limit_auth_per_minute: int = Field(
+        default=20, ge=1, le=100_000
+    )
+    rate_limit_upload_per_minute: int = Field(
+        default=30, ge=1, le=100_000
+    )
+    rate_limit_enqueue_per_minute: int = Field(
+        default=120, ge=1, le=1_000_000
+    )
+
+    readiness_timeout_seconds: float = Field(
+        default=3.0, ge=0.1, le=60.0
+    )
+    graceful_shutdown_timeout_seconds: float = Field(
+        default=30.0, ge=1.0, le=300.0
+    )
+
+    metrics_enabled: bool = True
+    tracing_enabled: bool = False
+
+    secret_backend: Literal["env"] = "env"
+    audit_enabled: bool = True
+    # --- M36 Chunk 3: Operational / DB pool ---------------------------
+    db_pool_size: int = Field(default=5, ge=1, le=200)
+    db_max_overflow: int = Field(default=10, ge=0, le=500)
+    db_pool_timeout_seconds: float = Field(
+        default=30.0, ge=0.1, le=300.0
+    )
+    db_pool_recycle_seconds: int = Field(
+        default=1800, ge=0, le=86400
+    )
+    db_connect_timeout_seconds: int = Field(
+        default=10, ge=1, le=120
+    )
+    db_statement_timeout_ms: int = Field(
+        default=30_000, ge=0, le=3_600_000
+    )
+    backup_directory: str = "backups"
+    backup_retention_days: int = Field(
+        default=14, ge=1, le=3650
+    )
     database_url: str = Field(..., repr=False)
+    # --- M37: SaaS / Billing -------------------------------------------
+    billing_provider: Literal["none", "fake"] = "none"
+    # --- Advanced Humanization (Milestone 32) -------------------------
+    manuscript_humanization_enabled: bool = True
+    manuscript_humanization_async_jobs: bool = False
+    manuscript_humanization_job_max_attempts: int = Field(
+        default=3, ge=1, le=10
+    )
+    manuscript_humanization_max_iterations: int = Field(
+        default=3, ge=1, le=20
+    )
 
     # JWT
     jwt_secret_key: str = Field(default=DEV_JWT_SECRET, repr=False)
@@ -134,6 +245,7 @@ class Settings(BaseSettings):
     job_payload_max_bytes: int = Field(
         default=65536, ge=256, le=10 * 1024 * 1024
     )
+
     # --- Universal File Intelligence (Milestone 19) -----------------------
     # Reuses document_max_bytes (M8) as the upload size cap. Do not
     # introduce a second source of truth for "max bytes".
@@ -147,6 +259,7 @@ class Settings(BaseSettings):
     )
     file_max_filename_length: int = Field(default=255, ge=32, le=1024)
     file_extraction_max_attempts: int = Field(default=3, ge=1, le=10)
+
     # --- Code & Data Intelligence (Milestone 20) --------------------------
     intelligence_analysis_version: str = "m20.1"
 
@@ -183,6 +296,7 @@ class Settings(BaseSettings):
     data_xlsx_max_uncompressed_bytes: int = Field(
         default=100 * 1024 * 1024, ge=1024, le=1024 * 1024 * 1024
     )
+
     # --- Research Classification (Milestone 21) --------------------------
     classification_enabled: bool = True
     classification_use_llm: bool = False
@@ -218,12 +332,14 @@ class Settings(BaseSettings):
     classification_job_max_attempts: int = Field(
         default=3, ge=1, le=10
     )
+
     # --- Literature Intelligence (Milestone 23) --------------------------
     literature_enabled: bool = True
     literature_async_jobs: bool = False
     literature_job_max_attempts: int = Field(
         default=3, ge=1, le=10
     )
+
     # --- Research Planning (Milestone 24) --------------------------------
     research_plan_enabled: bool = True
     research_plan_async_jobs: bool = False
@@ -235,6 +351,150 @@ class Settings(BaseSettings):
     research_plan_llm_timeout_seconds: float = Field(
         default=30.0, ge=1.0, le=300.0
     )
+
+    # --- Knowledge / Evidence Graph (Milestone 25) ------------------------
+    knowledge_graph_enabled: bool = True
+    knowledge_graph_async_jobs: bool = False
+    knowledge_graph_max_traversal_depth: int = Field(
+        default=3, ge=1, le=10
+    )
+    knowledge_graph_max_nodes: int = Field(
+        default=500, ge=1, le=10_000
+    )
+    knowledge_graph_job_max_attempts: int = Field(
+        default=3, ge=1, le=10
+    )
+
+    # --- Advanced RAG & Research Memory (Milestone 26) -----------------
+    rag_enabled: bool = True
+    rag_async_jobs: bool = False
+    rag_llm_decomposition_enabled: bool = False
+    rag_llm_rerank_enabled: bool = False
+    rag_max_candidates: int = Field(default=200, ge=10, le=2000)
+    rag_max_results: int = Field(default=20, ge=1, le=200)
+    rag_max_graph_depth: int = Field(default=2, ge=1, le=5)
+    rag_max_graph_nodes: int = Field(default=50, ge=1, le=500)
+    rag_diversity_enabled: bool = True
+    rag_mmr_lambda: float = Field(default=0.5, ge=0.0, le=1.0)
+    rag_memory_enabled: bool = True
+    rag_memory_reuse_top_k: int = Field(default=5, ge=0, le=50)
+    rag_memory_min_importance: float = Field(
+        default=0.3, ge=0.0, le=1.0
+    )
+    rag_min_relevance: float = Field(default=0.0, ge=0.0, le=1.0)
+    rag_job_max_attempts: int = Field(default=3, ge=1, le=10)
+
+    # --- Manuscript Architect (Milestone 27) ------------------------------
+    manuscript_enabled: bool = True
+    manuscript_async_jobs: bool = False
+    manuscript_job_max_attempts: int = Field(default=3, ge=1, le=10)
+    manuscript_budget_tolerance: float = Field(default=0.10, ge=0.0, le=0.5)
+
+    # --- Section Research (Milestone 28) --------------------------------
+    section_research_enabled: bool = True
+    section_research_async_jobs: bool = False
+    section_research_job_max_attempts: int = Field(default=3, ge=1, le=10)
+    section_research_max_queries: int = Field(default=5, ge=1, le=20)
+    section_research_max_candidates: int = Field(
+        default=200, ge=10, le=2000
+    )
+    section_research_max_evidence: int = Field(default=30, ge=1, le=200)
+    section_research_max_requirements: int = Field(default=10, ge=1, le=100)
+    section_research_max_total_excerpt_chars: int = Field(
+        default=12000, ge=100, le=200000
+    )
+    section_research_excerpt_chars: int = Field(
+        default=400, ge=50, le=4000
+    )
+    section_research_coverage_covered_threshold: float = Field(
+        default=0.7, ge=0.0, le=1.0
+    )
+    section_research_coverage_partial_threshold: float = Field(
+        default=0.4, ge=0.0, le=1.0
+    )
+
+    # --- Manuscript Prose Generation (Milestone 28.5) ----------------
+    manuscript_prose_enabled: bool = True
+    manuscript_prose_async_jobs: bool = False
+    manuscript_prose_job_max_attempts: int = Field(
+        default=3, ge=1, le=10
+    )
+    manuscript_prose_default_mode: str = "hybrid"
+    manuscript_prose_provider: str = "openai"
+    manuscript_prose_model: str = "gpt-4o-mini"
+    manuscript_prose_temperature: float = Field(
+        default=0.2, ge=0.0, le=2.0
+    )
+    manuscript_prose_max_output_tokens: int = Field(
+        default=2000, ge=64, le=32000
+    )
+    manuscript_prose_timeout_seconds: float = Field(
+        default=60.0, ge=5.0, le=600.0
+    )
+    manuscript_prose_max_retries: int = Field(default=2, ge=0, le=10)
+    manuscript_prose_max_sections: int = Field(
+        default=30, ge=1, le=200
+    )
+    manuscript_prose_max_paragraphs_per_section: int = Field(
+        default=20, ge=1, le=200
+    )
+    manuscript_prose_max_sentences_per_paragraph: int = Field(
+        default=15, ge=1, le=100
+    )
+    manuscript_prose_max_manuscript_words: int = Field(
+        default=30_000, ge=100, le=500_000
+    )
+    manuscript_prose_max_evidence_per_section: int = Field(
+        default=30, ge=1, le=500
+    )
+    manuscript_prose_max_technical_facts_per_section: int = Field(
+        default=30, ge=1, le=500
+    )
+
+    # --- Technical Intelligence (Milestone 29) ----------------------------
+    technical_intelligence_enabled: bool = True
+    technical_intelligence_async_jobs: bool = False
+    technical_intelligence_job_max_attempts: int = Field(
+        default=3, ge=1, le=10
+    )
+    technical_intelligence_max_files: int = Field(
+        default=500, ge=1, le=5000
+    )
+    technical_intelligence_max_facts: int = Field(
+        default=5000, ge=10, le=100000
+    )
+    technical_intelligence_max_results: int = Field(
+        default=500, ge=1, le=10000
+    )
+    technical_intelligence_max_metrics: int = Field(
+        default=5000, ge=1, le=50000
+    )
+    technical_intelligence_max_result_rows: int = Field(
+        default=200, ge=1, le=5000
+    )
+
+    # --- Citation Engine (Milestone 30) --------------------------------
+    citation_enabled: bool = True
+    citation_async_jobs: bool = False
+    citation_job_max_attempts: int = Field(default=3, ge=1, le=10)
+    citation_max_claims: int = Field(default=5000, ge=1, le=100000)
+    citation_max_evidence_per_claim: int = Field(
+        default=50, ge=1, le=500
+    )
+    citation_support_threshold: float = Field(
+        default=0.5, ge=0.0, le=1.0
+    )
+    citation_partial_threshold: float = Field(
+        default=0.3, ge=0.0, le=1.0
+    )
+
+    # --- Academic QA (Milestone 31) -----------------------------------
+    academic_qa_enabled: bool = True
+    academic_qa_async_jobs: bool = False
+    academic_qa_job_max_attempts: int = Field(default=3, ge=1, le=10)
+    academic_qa_max_findings: int = Field(default=5000, ge=1, le=100000)
+    academic_qa_advisory_llm_enabled: bool = False
+
     # --- Generation (Milestone 12) ----------------------------------------
     generation_provider: str = "openai"
     generation_model: str = "gpt-4o-mini"
@@ -263,6 +523,32 @@ class Settings(BaseSettings):
     generation_retry_jitter_fraction: float = Field(
         default=0.25, ge=0.0, le=1.0
     )
+
+    # --- Publication Targets (Milestone 33) ---------------------------
+    publication_targets_enabled: bool = True
+    publication_compliance_async_jobs: bool = False
+    publication_compliance_job_max_attempts: int = Field(
+        default=3, ge=1, le=10
+    )
+    publication_compliance_max_findings: int = Field(
+        default=5000, ge=1, le=100000
+    )
+    publication_target_max_checklist_items: int = Field(
+        default=200, ge=1, le=2000
+    )
+
+    # --- Collaboration (Milestone 34) --------------------------------
+    collaboration_enabled: bool = True
+    collaboration_max_members_per_project: int = Field(
+        default=50, ge=2, le=500
+    )
+    collaboration_max_comments_per_version: int = Field(
+        default=1000, ge=1, le=100000
+    )
+    collaboration_max_review_tasks_per_version: int = Field(
+        default=500, ge=1, le=10000
+    )
+    collaboration_optimistic_lock_enabled: bool = True
 
     # --- Detection (Milestone 13) -----------------------------------------
     detection_provider: str = "heuristic"
@@ -294,6 +580,7 @@ class Settings(BaseSettings):
     humanization_max_preservation_retries: int = Field(
         default=1, ge=0, le=5
     )
+
     # --- Translation (Milestone 16) ---------------------------------------
     translation_enabled: bool = True
     translation_provider: str = "openai"
@@ -327,6 +614,7 @@ class Settings(BaseSettings):
     translation_preservation_retry_count: int = Field(
         default=1, ge=0, le=3
     )
+
     # --- Post-Translation Humanization (Milestone 17) ---------------------
     post_translation_humanization_enabled: bool = True
     post_translation_humanization_policy_version: str = "m17.1"
@@ -350,8 +638,8 @@ class Settings(BaseSettings):
     )
     # Lease expiry is DERIVED from provider execution limits. These are
     # added on top of the derived maximum active provider window:
-    #   max_active = timeout × (retries + 1)
-    #              + retry_max_seconds × (retries + 1)
+    #   max_active = timeout x (retries + 1)
+    #              + retry_max_seconds x (retries + 1)
     #   lease_expires_at = now() + max_active + safety_margin_seconds
     post_translation_humanization_lease_safety_margin_seconds: int = Field(
         default=120, ge=30, le=3600
@@ -371,6 +659,54 @@ class Settings(BaseSettings):
     semantic_scholar_max_retries: int = Field(default=3, ge=0, le=10)
     source_search_limit_default: int = Field(default=10, ge=1, le=100)
     source_search_limit_max: int = Field(default=50, ge=1, le=100)
+
+    # ==================================================================
+    # M36 helper properties
+    # ==================================================================
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [
+            x.strip()
+            for x in self.cors_allowed_origins.split(",")
+            if x.strip()
+        ]
+
+    @property
+    def cors_allowed_methods_list(self) -> list[str]:
+        return [
+            x.strip()
+            for x in self.cors_allowed_methods.split(",")
+            if x.strip()
+        ]
+
+    @property
+    def cors_allowed_headers_list(self) -> list[str]:
+        return [
+            x.strip()
+            for x in self.cors_allowed_headers.split(",")
+            if x.strip()
+        ]
+
+    @property
+    def cors_exposed_headers_list(self) -> list[str]:
+        return [
+            x.strip()
+            for x in self.cors_exposed_headers.split(",")
+            if x.strip()
+        ]
+
+    @property
+    def trusted_hosts_list(self) -> list[str]:
+        return [
+            x.strip()
+            for x in self.trusted_hosts.split(",")
+            if x.strip()
+        ]
+
+    # ==================================================================
+    # Validators
+    # ==================================================================
 
     @model_validator(mode="after")
     def _validate_production_secrets(self) -> Settings:
@@ -483,6 +819,7 @@ class Settings(BaseSettings):
                 "semantic_scholar_base_url must start with http(s)://"
             )
         return self
+
     @model_validator(mode="after")
     def _validate_file_config(self) -> Settings:
         if self.file_storage_backend not in ("local",):
@@ -494,6 +831,7 @@ class Settings(BaseSettings):
                 "file_chunk_stream_size must be <= document_max_bytes"
             )
         return self
+
     @model_validator(mode="after")
     def _validate_intelligence_config(self) -> Settings:
         if self.code_max_source_bytes > self.document_max_bytes:
@@ -527,8 +865,6 @@ class Settings(BaseSettings):
             )
         return self
 
-
-
     @model_validator(mode="after")
     def _validate_classification_config(self) -> Settings:
         if self.classification_use_llm:
@@ -551,7 +887,29 @@ class Settings(BaseSettings):
                 "classification_confidence_threshold"
             )
         return self
-
+    @model_validator(mode="after")
+    def _validate_m36_security(self) -> Settings:
+        """Fail-closed guards that only apply to production."""
+        if self.app_env.lower() == "production":
+            if self.debug:
+                raise ValueError(
+                    "debug must be False when APP_ENV=production."
+                )
+            if any(
+                origin == "*"
+                for origin in self.cors_origins_list
+            ):
+                raise ValueError(
+                    "Wildcard CORS origin is not allowed "
+                    "when APP_ENV=production."
+                )
+        if self.db_max_overflow < 0:
+            raise ValueError("db_max_overflow must be >= 0")
+        if self.db_pool_size < 1:
+            raise ValueError("db_pool_size must be >= 1")
+        if not self.backup_directory.strip():
+            raise ValueError("backup_directory must not be empty")
+        return self
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

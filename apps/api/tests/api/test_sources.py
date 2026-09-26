@@ -12,6 +12,7 @@ from app.api.routes.sources import _default_provider
 from app.db.models.report import Report, ReportEvent
 from app.db.models.source import Chunk, Source
 from app.db.models.user import User
+from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
 from app.domain.source import SourceCandidate
 from app.main import app
@@ -52,6 +53,12 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
             delete(Source).where(Source.report_id.in_(report_ids_subq))
         )
         db.execute(delete(Report).where(Report.user_id.in_(ids)))
+        # M37: purge owned workspaces before deleting user
+        db.execute(
+            delete(Workspace).where(
+                Workspace.owner_user_id.in_(ids)
+            )
+        )
         db.execute(delete(User).where(User.id.in_(ids)))
         db.commit()
 

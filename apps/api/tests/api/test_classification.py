@@ -14,6 +14,7 @@ from app.db.models.project_file import ProjectFile, ProjectFileEvent
 from app.db.models.report import Report
 from app.db.models.research_classification import ProjectClassification
 from app.db.models.user import User
+from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
 from app.main import app
 from app.services.rate_limit import set_login_rate_limiter
@@ -61,6 +62,12 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
         )
         db.execute(delete(Report).where(Report.user_id.in_(uids)))
         db.execute(delete(Project).where(Project.user_id.in_(uids)))
+        # M37: purge owned workspaces before deleting user
+        db.execute(
+            delete(Workspace).where(
+                Workspace.owner_user_id.in_(uids)
+            )
+        )
         db.execute(delete(User).where(User.id.in_(uids)))
         db.commit()
 

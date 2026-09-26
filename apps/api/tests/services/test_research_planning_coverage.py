@@ -16,6 +16,7 @@ from app.db.models.project import Project, ProjectEvent
 from app.db.models.report import Report
 from app.db.models.source import Source
 from app.db.models.user import User
+from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
 from app.services import projects as projects_service
 from app.services.research_planning import coverage
@@ -43,6 +44,12 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
         db.execute(delete(Source).where(Source.report_id.in_(rids)))
         db.execute(delete(Report).where(Report.project_id.in_(pids)))
         db.execute(delete(Project).where(Project.user_id.in_(uids)))
+        # M37: purge owned workspaces before deleting user
+        db.execute(
+            delete(Workspace).where(
+                Workspace.owner_user_id.in_(uids)
+            )
+        )
         db.execute(delete(User).where(User.id.in_(uids)))
         db.commit()
 

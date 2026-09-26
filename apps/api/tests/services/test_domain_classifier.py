@@ -28,6 +28,7 @@ def _empty_ctx(**kwargs) -> ClassificationContext:
         )
     return ctx
 
+
 def test_explicit_domain_exact_match():
     with SessionLocal() as db:
         collector = EvidenceCollector()

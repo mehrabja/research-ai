@@ -5,19 +5,20 @@ import uuid
 from collections.abc import Iterator
 
 import pytest
-from app.workers.classification_handlers import (
-    handle_research_classification,
-)
 from sqlalchemy import delete, select
 
 from app.core.config import get_settings
 from app.db.models.project import Project, ProjectEvent
 from app.db.models.research_classification import ProjectClassification
 from app.db.models.user import User
+from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
 from app.domain.jobs import JobContext
 from app.services import jobs as jobs_service
 from app.services import projects as projects_service
+from app.workers.classification_handlers import (
+    handle_research_classification,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -44,6 +45,12 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
             delete(ProjectEvent).where(ProjectEvent.project_id.in_(pids))
         )
         db.execute(delete(Project).where(Project.user_id.in_(uids)))
+        # M37: purge owned workspaces before deleting user
+        db.execute(
+            delete(Workspace).where(
+                Workspace.owner_user_id.in_(uids)
+            )
+        )
         db.execute(delete(User).where(User.id.in_(uids)))
         db.commit()
 

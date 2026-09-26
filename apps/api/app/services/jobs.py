@@ -381,6 +381,29 @@ def reclaim_stale_jobs(db: Session, *, limit: int = 100) -> int:
         db.rollback()
         raise
 
+def classification_already_completed(
+    db: Session,
+    *,
+    project_id: uuid.UUID,
+    context_hash: str,
+) -> bool:
+    """Return True iff a completed-like run exists for this hash.
+
+    Used by the classification worker to avoid re-running the (expensive)
+    context build when the payload hash is already satisfied.
+    """
+    from app.db.models.research_classification import ClassificationRun
+
+    existing = db.execute(
+        select(ClassificationRun.id)
+        .where(
+            ClassificationRun.project_id == project_id,
+            ClassificationRun.context_hash == context_hash,
+            ClassificationRun.status.in_(("completed", "needs_review")),
+        )
+        .limit(1)
+    ).scalar_one_or_none()
+    return existing is not None
 
 __all__ = [
     "EnqueueResult",

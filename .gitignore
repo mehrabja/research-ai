@@ -1,32 +1,38 @@
-# Python
+# --- Python -----------------------------------------------------------
 __pycache__/
 *.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# --- Virtualenv -------------------------------------------------------
 .venv/
 venv/
-.pytest_cache/
-.mypy_cache/
+env/
 
-# Node
-node_modules/
-.next/
-npm-debug.log*
-
-# Environment
+# --- Secrets — never commit -------------------------------------------
 .env
 .env.*
 !.env.example
+!.env.test.example
+!.env.staging.example
+!.env.production.example
 
-# IDE
-.vscode/
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Coverage
-htmlcov/
+# --- Test / lint / type caches ----------------------------------------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .coverage
 coverage.xml
-# Python build metadata
-*.egg-info/
+htmlcov/
+
+# --- Runtime artifacts ------------------------------------------------
+storage/
+backups/
+*.log
+
+# --- IDE --------------------------------------------------------------
+.idea/
+.vscode/
+*.swp

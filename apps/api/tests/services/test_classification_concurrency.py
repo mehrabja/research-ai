@@ -15,6 +15,7 @@ from app.db.models.research_classification import (
     ProjectClassification,
 )
 from app.db.models.user import User
+from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
 from app.services import projects as projects_service
 from app.services.classification import orchestrator
@@ -53,6 +54,12 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
             delete(ProjectEvent).where(ProjectEvent.project_id.in_(pids))
         )
         db.execute(delete(Project).where(Project.user_id.in_(uids)))
+        # M37: purge owned workspaces before deleting user
+        db.execute(
+            delete(Workspace).where(
+                Workspace.owner_user_id.in_(uids)
+            )
+        )
         db.execute(delete(User).where(User.id.in_(uids)))
         db.commit()
 
@@ -116,9 +123,7 @@ def test_failure_does_not_clobber_concurrent_success(
         )
         pid = p.id
 
-    # First successful classification. With only "P" as project name
-    # and no paper/design signals, the classifier yields
-    # ``needs_review`` (see test_classification_needs_review.py).
+    # First successful classification → needs_review (no paper/design).
     with SessionLocal() as db:
         orchestrator.classify_project(db, project_id=pid, user_id=uid)
 
@@ -130,6 +135,34 @@ def test_failure_does_not_clobber_concurrent_success(
         ).scalar_one()
         assert completed.status == "needs_review"
         completed_id = completed.id
+
+    # Force the next call past the skip-if-unchanged guard by
+    # changing the context (description → different context_hash).
+    with SessionLocal() as db:
+        p = db.get(Project, pid)
+        p.description = "A different description to force a new hash"
+        db.commit()
+
+    def _boom(*a, **k):
+        raise RuntimeError("simulated crash")
+
+    monkeypatch.setattr(orchestrator, "classify_domain", _boom)
+
+    # Second attempt fails. Because the current row is not ``pending``,
+    # _write_failure() must leave it untouched.
+    with SessionLocal() as db, pytest.raises(RuntimeError):
+        orchestrator.classify_project(
+            db, project_id=pid, user_id=uid
+        )
+
+    with SessionLocal() as db:
+        row = db.execute(
+            select(ProjectClassification).where(
+                ProjectClassification.project_id == pid
+            )
+        ).scalar_one()
+        assert row.id == completed_id
+        assert row.status == "needs_review"
 
     def _boom(*a, **k):
         raise RuntimeError("simulated crash")

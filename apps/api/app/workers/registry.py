@@ -8,8 +8,7 @@ from app.domain.jobs import JobContext
 
 logger = logging.getLogger(__name__)
 
-JobHandler = Callable[[JobContext], None]
-
+JobHandler = Callable[[JobContext], object]
 _REGISTRY: dict[str, JobHandler] = {}
 
 

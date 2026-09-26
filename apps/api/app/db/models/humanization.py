@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import uuid
@@ -51,6 +50,7 @@ class HumanizationRun(Base, UUIDPKMixin, CreatedAtMixin):
     A run can happen:
     - before translation
     - after translation
+    - on a manuscript (M32)
 
     The run stores configuration, detection scores, usage and final status.
     """
@@ -135,12 +135,40 @@ class HumanizationRun(Base, UUIDPKMixin, CreatedAtMixin):
         nullable=True,
     )
 
+    # --- M32 extensions (nullable, additive) ---
+    manuscript_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("manuscript_versions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    manuscript_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("manuscripts.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    mode: Mapped[str | None] = mapped_column(
+        Text, nullable=True,
+    )
+    m32_version: Mapped[str | None] = mapped_column(
+        Text, nullable=True,
+    )
+    context_hash: Mapped[str | None] = mapped_column(
+        Text, nullable=True,
+    )
+    gate: Mapped[str | None] = mapped_column(
+        Text, nullable=True,
+    )
+    preservation_summary: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True,
+    )
+
     __table_args__ = (
         _in_check(
             "stage",
             (
                 "pre_translation",
                 "post_translation",
+                "manuscript",
             ),
             "ck_humanization_runs_stage",
         ),
@@ -156,17 +184,30 @@ class HumanizationRun(Base, UUIDPKMixin, CreatedAtMixin):
             "ck_humanization_runs_status",
         ),
         CheckConstraint(
+            "mode IS NULL OR mode IN "
+            "('conservative','academic','natural_academic',"
+            "'journal_targeted')",
+            name="ck_humanization_runs_mode",
+        ),
+        CheckConstraint(
+            "gate IS NULL OR gate IN "
+            "('pass','pass_with_warnings','rejected')",
+            name="ck_humanization_runs_gate",
+        ),
+        CheckConstraint(
             "tokens_used IS NULL OR tokens_used >= 0",
             name="ck_humanization_runs_tokens",
         ),
         CheckConstraint(
             "detection_score_before IS NULL "
-            "OR (detection_score_before >= 0 AND detection_score_before <= 1)",
+            "OR (detection_score_before >= 0 "
+            "AND detection_score_before <= 1)",
             name="ck_humanization_runs_detection_before",
         ),
         CheckConstraint(
             "detection_score_after IS NULL "
-            "OR (detection_score_after >= 0 AND detection_score_after <= 1)",
+            "OR (detection_score_after >= 0 "
+            "AND detection_score_after <= 1)",
             name="ck_humanization_runs_detection_after",
         ),
         CheckConstraint(
@@ -182,6 +223,21 @@ class HumanizationRun(Base, UUIDPKMixin, CreatedAtMixin):
             "ix_humanization_runs_report_created",
             "report_id",
             "created_at",
+        ),
+        Index(
+            "ix_humanization_runs_mv",
+            "manuscript_version_id",
+            postgresql_where=text("manuscript_version_id IS NOT NULL"),
+        ),
+        Index(
+            "ux_humanization_runs_m32_completed",
+            "manuscript_version_id", "context_hash",
+            "m32_version", "mode",
+            unique=True,
+            postgresql_where=text(
+                "stage = 'manuscript' AND status = 'success' "
+                "AND manuscript_version_id IS NOT NULL"
+            ),
         ),
     )
 
@@ -200,6 +256,7 @@ class HumanizationIteration(Base, UUIDPKMixin, CreatedAtMixin):
     - rewritten segments
     - resulting score
     - cost
+    - M32: preservation result, QA impact, acceptance flag
     """
 
     __tablename__ = "humanization_iterations"
@@ -243,6 +300,17 @@ class HumanizationIteration(Base, UUIDPKMixin, CreatedAtMixin):
         nullable=True,
     )
 
+    # --- M32 extensions (nullable, additive) ---
+    preservation_result: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True,
+    )
+    qa_impact: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True,
+    )
+    accepted: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True,
+    )
+
     __table_args__ = (
         UniqueConstraint(
             "humanization_run_id",
@@ -255,7 +323,8 @@ class HumanizationIteration(Base, UUIDPKMixin, CreatedAtMixin):
         ),
         CheckConstraint(
             "detection_score_mean IS NULL "
-            "OR (detection_score_mean >= 0 AND detection_score_mean <= 1)",
+            "OR (detection_score_mean >= 0 "
+            "AND detection_score_mean <= 1)",
             name="ck_humanization_iterations_score_range",
         ),
         CheckConstraint(
@@ -301,8 +370,6 @@ class HumanizationRewrite(Base, UUIDPKMixin, CreatedAtMixin):
         nullable=True,
     )
 
-    # Segment IDs are generated by the Humanization service and therefore
-    # remain application-level identifiers for now.
     segment_id: Mapped[str] = mapped_column(
         Text,
         nullable=False,

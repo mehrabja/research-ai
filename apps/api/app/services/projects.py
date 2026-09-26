@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ProjectNotFound
+from app.core.exceptions import ProjectNotFound, QuotaExceeded
 from app.db.models.project import Project, ProjectEvent
 from app.db.models.report import Report
 from app.domain.project import (
@@ -23,6 +23,9 @@ from app.domain.project import (
     normalize_optional_text,
     normalize_string_list,
 )
+from app.services import entitlements as entitlements_service
+from app.services import workspaces as workspaces_service
+from app.services.audit import emit_audit
 
 
 def _emit(
@@ -62,9 +65,26 @@ def create_project(
         raise InvalidProjectPayloadError(f"unknown status: {status}")
     if status == ProjectStatus.ARCHIVED.value:
         raise InvalidProjectPayloadError("cannot create project as archived")
-
+    workspace = workspaces_service.ensure_default_workspace(
+        db, user_id=user_id
+    )
+    try:
+        entitlements_service.check_and_reserve_project_slot(
+            db, workspace_id=workspace.id
+        )
+    except QuotaExceeded as exc:
+        emit_audit(
+            "QUOTA_DENIED",
+            user_id=str(user_id),
+            workspace_id=str(workspace.id),
+            feature=exc.feature,
+            limit=exc.limit,
+            current=exc.current,
+        )
+        raise
     project = Project(
         user_id=user_id,
+        workspace_id=workspace.id,
         name=normalize_name(name),
         description=normalize_optional_text(description, field="description"),
         domain=normalize_optional_text(domain, field="domain"),

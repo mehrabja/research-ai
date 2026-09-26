@@ -20,6 +20,7 @@ from app.db.models.project import Project, ProjectEvent
 from app.db.models.project_file import ProjectFile, ProjectFileEvent
 from app.db.models.report import Report
 from app.db.models.user import User
+from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
 from app.domain.file import FileKind, FileStatus
 from app.services import files as files_service
@@ -57,6 +58,12 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
         )
         db.execute(delete(Report).where(Report.user_id.in_(user_ids)))
         db.execute(delete(Project).where(Project.user_id.in_(user_ids)))
+        # M37: purge owned workspaces before deleting user
+        db.execute(
+            delete(Workspace).where(
+                Workspace.owner_user_id.in_(user_ids)
+            )
+        )
         db.execute(delete(User).where(User.id.in_(user_ids)))
         db.commit()
 

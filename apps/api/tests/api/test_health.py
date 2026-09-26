@@ -52,13 +52,11 @@ def test_health_db_returns_503_when_db_fails() -> None:
         app.dependency_overrides.clear()
 
     assert response.status_code == 503
-    assert response.json() == {
-        "error": {
-            "code": "DATABASE_UNAVAILABLE",
-            "message": "Database is unavailable.",
-        }
-    }
-
+    body = response.json()
+    assert body["error"]["code"] == "DATABASE_UNAVAILABLE"
+    assert body["error"]["message"] == "Database is unavailable."
+    # M36: request_id is now part of the error envelope.
+    assert body["error"]["request_id"]
 
 def test_health_db_failure_does_not_leak_details() -> None:
     class _BrokenSession:

@@ -451,3 +451,619 @@ class ResearchPlanConfigurationInvalid(AppError):
     code = "RESEARCH_PLAN_CONFIGURATION_INVALID"
     status_code = 500
     message = "Research plan configuration is invalid."
+class KnowledgeGraphNotFound(AppError):
+    code = "KNOWLEDGE_GRAPH_NOT_FOUND"
+    status_code = 404
+    message = "Knowledge graph not found."
+
+
+class KnowledgeGraphInvalid(AppError):
+    code = "KNOWLEDGE_GRAPH_INVALID"
+    status_code = 409
+    message = "Knowledge graph is invalid."
+
+
+class KnowledgeGraphGenerationFailed(AppError):
+    code = "KNOWLEDGE_GRAPH_GENERATION_FAILED"
+    status_code = 500
+    message = "Knowledge graph generation failed."
+
+
+class KnowledgeGraphGenerationForbidden(AppError):
+    code = "KNOWLEDGE_GRAPH_GENERATION_FORBIDDEN"
+    status_code = 403
+    message = "Knowledge graph generation is not permitted."
+
+
+class KnowledgeGraphConfigurationInvalid(AppError):
+    code = "KNOWLEDGE_GRAPH_CONFIGURATION_INVALID"
+    status_code = 500
+    message = "Knowledge graph configuration is invalid."
+class RetrievalAdvancedNotFound(AppError):
+    code = "RETRIEVAL_NOT_FOUND"
+    status_code = 404
+    message = "Retrieval run not found."
+
+
+class RetrievalAdvancedInvalid(AppError):
+    code = "RETRIEVAL_INVALID"
+    status_code = 409
+    message = "Retrieval request is invalid."
+
+
+class RetrievalAdvancedConfigurationInvalid(AppError):
+    code = "RETRIEVAL_CONFIGURATION_INVALID"
+    status_code = 500
+    message = "Retrieval configuration is invalid."
+
+
+class ResearchMemoryNotFound(AppError):
+    code = "RESEARCH_MEMORY_NOT_FOUND"
+    status_code = 404
+    message = "Research memory not found."
+# --- Manuscript Architect (Milestone 27) ----------------------------------
+class ManuscriptNotFound(AppError):
+    code = "MANUSCRIPT_NOT_FOUND"
+    status_code = 404
+    message = "Manuscript not found."
+
+
+class ManuscriptVersionNotFound(AppError):
+    code = "MANUSCRIPT_VERSION_NOT_FOUND"
+    status_code = 404
+    message = "Manuscript version not found."
+
+
+class ManuscriptSectionNotFound(AppError):
+    code = "MANUSCRIPT_SECTION_NOT_FOUND"
+    status_code = 404
+    message = "Manuscript section not found."
+
+
+class ManuscriptGenerationFailed(AppError):
+    code = "MANUSCRIPT_GENERATION_FAILED"
+    status_code = 500
+    message = "Manuscript generation failed."
+
+
+class ManuscriptGenerationForbidden(AppError):
+    code = "MANUSCRIPT_GENERATION_FORBIDDEN"
+    status_code = 403
+    message = "Manuscript generation is not permitted."
+
+
+class ManuscriptConfigurationInvalid(AppError):
+    code = "MANUSCRIPT_CONFIGURATION_INVALID"
+    status_code = 500
+    message = "Manuscript configuration is invalid."
+
+
+class ManuscriptInvalid(AppError):
+    code = "MANUSCRIPT_INVALID"
+    status_code = 409
+    message = "Manuscript architecture is invalid."
+
+
+class ManuscriptDependencyCycle(AppError):
+    code = "MANUSCRIPT_DEPENDENCY_CYCLE"
+    status_code = 409
+    message = "Manuscript dependency cycle detected."
+
+
+class ManuscriptResearchPlanMissing(AppError):
+    code = "MANUSCRIPT_RESEARCH_PLAN_MISSING"
+    status_code = 409
+    message = "A ready research plan is required to build a manuscript."
+
+
+class ManuscriptBudgetInvalid(AppError):
+    code = "MANUSCRIPT_BUDGET_INVALID"
+    status_code = 422
+    message = "Manuscript budget is invalid."
+
+
+class ManuscriptUnmappedRequirement(AppError):
+    code = "MANUSCRIPT_UNMAPPED_REQUIREMENT"
+    status_code = 409
+    message = "Required evidence requirement has no valid M26 intent."
+
+# --- Section Research (Milestone 28) --------------------------------------
+class SectionResearchNotFound(AppError):
+    code = "SECTION_RESEARCH_NOT_FOUND"
+    status_code = 404
+    message = "Section research run not found."
+
+
+class SectionResearchInvalid(AppError):
+    code = "SECTION_RESEARCH_INVALID"
+    status_code = 409
+    message = "Section research is invalid."
+
+
+class SectionResearchContractInvalid(AppError):
+    code = "SECTION_RESEARCH_CONTRACT_INVALID"
+    status_code = 409
+    message = "Section research contract is invalid."
+
+
+class SectionResearchGenerationFailed(AppError):
+    code = "SECTION_RESEARCH_GENERATION_FAILED"
+    status_code = 500
+    message = "Section research generation failed."
+
+
+class SectionResearchConfigurationInvalid(AppError):
+    code = "SECTION_RESEARCH_CONFIGURATION_INVALID"
+    status_code = 500
+    message = "Section research configuration is invalid."
+
+
+class SectionResearchStale(AppError):
+    code = "SECTION_RESEARCH_STALE"
+    status_code = 409
+    message = "Section research context is stale."
+# --- Technical Intelligence (Milestone 29) --------------------------------
+class TechnicalIntelligenceNotFound(AppError):
+    code = "TECHNICAL_INTELLIGENCE_NOT_FOUND"
+    status_code = 404
+    message = "Technical intelligence run not found."
+
+
+class TechnicalIntelligenceInvalid(AppError):
+    code = "TECHNICAL_INTELLIGENCE_INVALID"
+    status_code = 409
+    message = "Technical intelligence request is invalid."
+
+
+class TechnicalIntelligenceConfigurationInvalid(AppError):
+    code = "TECHNICAL_INTELLIGENCE_CONFIGURATION_INVALID"
+    status_code = 500
+    message = "Technical intelligence configuration is invalid."
+
+
+class TechnicalIntelligenceGenerationFailed(AppError):
+    code = "TECHNICAL_INTELLIGENCE_GENERATION_FAILED"
+    status_code = 500
+    message = "Technical intelligence generation failed."
+
+
+class TechnicalIntelligenceStale(AppError):
+    code = "TECHNICAL_INTELLIGENCE_STALE"
+    status_code = 409
+    message = "Technical intelligence context is stale."
+
+
+class TechnicalIntelligenceProvenanceMissing(AppError):
+    code = "TECHNICAL_INTELLIGENCE_PROVENANCE_MISSING"
+    status_code = 500
+    message = "Technical evidence is missing provenance."
+# --- Citation Engine (Milestone 30) ---------------------------------------
+class CitationNotFound(AppError):
+    code = "CITATION_NOT_FOUND"
+    status_code = 404
+    message = "Citation run not found."
+
+
+class CitationInvalid(AppError):
+    code = "CITATION_INVALID"
+    status_code = 409
+    message = "Citation request is invalid."
+
+
+class CitationConfigurationInvalid(AppError):
+    code = "CITATION_CONFIGURATION_INVALID"
+    status_code = 500
+    message = "Citation configuration is invalid."
+
+
+class CitationGenerationFailed(AppError):
+    code = "CITATION_GENERATION_FAILED"
+    status_code = 500
+    message = "Citation generation failed."
+
+
+class CitationStale(AppError):
+    code = "CITATION_STALE"
+    status_code = 409
+    message = "Citation context is stale."
+
+
+class CitationProvenanceMissing(AppError):
+    code = "CITATION_PROVENANCE_MISSING"
+    status_code = 500
+    message = "Citation evidence is missing provenance."
+
+
+class CitationSourceMissing(AppError):
+    code = "CITATION_SOURCE_MISSING"
+    status_code = 500
+    message = "Citation source is missing or unresolved."
+# --- Academic QA (Milestone 31) ------------------------------------------
+class AcademicQANotFound(AppError):
+    code = "ACADEMIC_QA_NOT_FOUND"
+    status_code = 404
+    message = "Academic QA run not found."
+
+
+class AcademicQAInvalid(AppError):
+    code = "ACADEMIC_QA_INVALID"
+    status_code = 409
+    message = "Academic QA request is invalid."
+
+
+class AcademicQAConfigurationInvalid(AppError):
+    code = "ACADEMIC_QA_CONFIGURATION_INVALID"
+    status_code = 500
+    message = "Academic QA configuration is invalid."
+
+
+class AcademicQAGenerationFailed(AppError):
+    code = "ACADEMIC_QA_GENERATION_FAILED"
+    status_code = 500
+    message = "Academic QA generation failed."
+
+
+class AcademicQAStale(AppError):
+    code = "ACADEMIC_QA_STALE"
+    status_code = 409
+    message = "Academic QA context is stale."
+# --- Advanced Humanization (Milestone 32) --------------------------------
+class ManuscriptHumanizationNotFound(AppError):
+    code = "MANUSCRIPT_HUMANIZATION_NOT_FOUND"
+    status_code = 404
+    message = "Manuscript humanization run not found."
+
+
+class ManuscriptHumanizationInvalid(AppError):
+    code = "MANUSCRIPT_HUMANIZATION_INVALID"
+    status_code = 409
+    message = "Manuscript humanization request is invalid."
+
+
+class ManuscriptHumanizationConfigurationInvalid(AppError):
+    code = "MANUSCRIPT_HUMANIZATION_CONFIGURATION_INVALID"
+    status_code = 500
+    message = "Manuscript humanization configuration is invalid."
+
+
+class ManuscriptHumanizationFailed(AppError):
+    code = "MANUSCRIPT_HUMANIZATION_FAILED"
+    status_code = 500
+    message = "Manuscript humanization failed."
+
+
+class ManuscriptHumanizationStale(AppError):
+    code = "MANUSCRIPT_HUMANIZATION_STALE"
+    status_code = 409
+    message = "Manuscript humanization context is stale."
+
+
+class ManuscriptHumanizationConflict(AppError):
+    code = "MANUSCRIPT_HUMANIZATION_CONFLICT"
+    status_code = 409
+    message = "Manuscript humanization conflict."
+# --- Publication Targets (Milestone 33) ----------------------------------
+class PublicationTargetNotFound(AppError):
+    code = "PUBLICATION_TARGET_NOT_FOUND"
+    status_code = 404
+    message = "Publication target not found."
+
+
+class PublicationTargetInvalid(AppError):
+    code = "PUBLICATION_TARGET_INVALID"
+    status_code = 409
+    message = "Publication target is invalid."
+
+
+class PublicationTargetConflict(AppError):
+    code = "PUBLICATION_TARGET_CONFLICT"
+    status_code = 409
+    message = "Publication target version conflict."
+
+
+class PublicationComplianceNotFound(AppError):
+    code = "PUBLICATION_COMPLIANCE_NOT_FOUND"
+    status_code = 404
+    message = "Publication compliance run not found."
+
+
+class PublicationComplianceInvalid(AppError):
+    code = "PUBLICATION_COMPLIANCE_INVALID"
+    status_code = 409
+    message = "Publication compliance request is invalid."
+
+
+class PublicationComplianceBlocked(AppError):
+    code = "PUBLICATION_COMPLIANCE_BLOCKED"
+    status_code = 409
+    message = "Publication compliance is blocked."
+
+
+class PublicationComplianceConfigurationInvalid(AppError):
+    code = "PUBLICATION_COMPLIANCE_CONFIGURATION_INVALID"
+    status_code = 500
+    message = "Publication compliance configuration is invalid."
+
+
+class PublicationComplianceFailed(AppError):
+    code = "PUBLICATION_COMPLIANCE_FAILED"
+    status_code = 500
+    message = "Publication compliance run failed."
+
+
+class PublicationComplianceStale(AppError):
+    code = "PUBLICATION_COMPLIANCE_STALE"
+    status_code = 409
+    message = "Publication compliance context is stale."
+# --- Collaboration (Milestone 34) ----------------------------------------
+class CollaborationForbidden(AppError):
+    code = "COLLABORATION_FORBIDDEN"
+    status_code = 403
+    message = "Collaboration action is not permitted."
+
+
+class CollaborationNotFound(AppError):
+    code = "COLLABORATION_NOT_FOUND"
+    status_code = 404
+    message = "Collaboration resource not found."
+
+
+class CollaborationConflict(AppError):
+    code = "COLLABORATION_CONFLICT"
+    status_code = 409
+    message = "Collaboration state conflict."
+
+
+class CollaborationInvalid(AppError):
+    code = "COLLABORATION_INVALID"
+    status_code = 409
+    message = "Collaboration request is invalid."
+
+
+class CollaborationConfigurationInvalid(AppError):
+    code = "COLLABORATION_CONFIGURATION_INVALID"
+    status_code = 500
+    message = "Collaboration configuration is invalid."
+
+
+class CollaborationMemberConflict(AppError):
+    code = "COLLABORATION_MEMBER_CONFLICT"
+    status_code = 409
+    message = "Member already exists or role change is invalid."
+
+
+class VersionConflict(AppError):
+    code = "VERSION_CONFLICT"
+    status_code = 409
+    message = "The version you are editing has changed."
+# --- Agentic Orchestration (Milestone 35) --------------------------------
+class OrchestrationNotFound(AppError):
+    code = "ORCHESTRATION_NOT_FOUND"
+    status_code = 404
+    message = "Orchestration run not found."
+
+
+class OrchestrationInvalid(AppError):
+    code = "ORCHESTRATION_INVALID"
+    status_code = 409
+    message = "Orchestration request is invalid."
+
+
+class OrchestrationBlocked(AppError):
+    code = "ORCHESTRATION_BLOCKED"
+    status_code = 409
+    message = "Orchestration is blocked."
+
+
+class OrchestrationApprovalRequired(AppError):
+    code = "ORCHESTRATION_APPROVAL_REQUIRED"
+    status_code = 409
+    message = "Orchestration requires human approval."
+
+
+class OrchestrationBudgetExceeded(AppError):
+    code = "ORCHESTRATION_BUDGET_EXCEEDED"
+    status_code = 409
+    message = "Orchestration budget exceeded."
+
+
+class OrchestrationStale(AppError):
+    code = "ORCHESTRATION_STALE"
+    status_code = 409
+    message = "Orchestration context is stale."
+
+
+class OrchestrationConflict(AppError):
+    code = "ORCHESTRATION_CONFLICT"
+    status_code = 409
+    message = "Orchestration state conflict."
+
+
+class OrchestrationConfigurationInvalid(AppError):
+    code = "ORCHESTRATION_CONFIGURATION_INVALID"
+    status_code = 500
+    message = "Orchestration configuration is invalid."
+
+
+class OrchestrationFailed(AppError):
+    code = "ORCHESTRATION_FAILED"
+    status_code = 500
+    message = "Orchestration run failed."
+
+
+class OrchestrationUnknownTool(AppError):
+    code = "ORCHESTRATION_UNKNOWN_TOOL"
+    status_code = 400
+    message = "Unknown orchestration tool."
+# --- Manuscript Prose Generation (Milestone 28.5) ------------------------
+class ManuscriptProseNotFound(AppError):
+    code = "MANUSCRIPT_PROSE_NOT_FOUND"
+    status_code = 404
+    message = "Manuscript prose not found."
+
+
+class ManuscriptProseInvalid(AppError):
+    code = "MANUSCRIPT_PROSE_INVALID"
+    status_code = 409
+    message = "Manuscript prose request is invalid."
+
+
+class ManuscriptProseConfigurationInvalid(AppError):
+    code = "MANUSCRIPT_PROSE_CONFIGURATION_INVALID"
+    status_code = 500
+    message = "Manuscript prose configuration is invalid."
+
+
+class ManuscriptProseFailed(AppError):
+    code = "MANUSCRIPT_PROSE_FAILED"
+    status_code = 500
+    message = "Manuscript prose generation failed."
+
+
+class ManuscriptProseStale(AppError):
+    code = "MANUSCRIPT_PROSE_STALE"
+    status_code = 409
+    message = "Manuscript prose context is stale."
+
+
+class ManuscriptProseInsufficientEvidence(AppError):
+    code = "MANUSCRIPT_PROSE_INSUFFICIENT_EVIDENCE"
+    status_code = 409
+    message = "Manuscript prose cannot be generated without evidence."
+
+
+class ManuscriptProseValidationFailed(AppError):
+    code = "MANUSCRIPT_PROSE_VALIDATION_FAILED"
+    status_code = 422
+    message = "Generated manuscript prose did not pass validation."
+
+
+class ManuscriptProseConflict(AppError):
+    code = "MANUSCRIPT_PROSE_CONFLICT"
+    status_code = 409
+    message = "Manuscript prose state conflict."
+# --- M37 SaaS foundation ------------------------------------------------
+class QuotaExceeded(AppError):
+    """A workspace entitlement limit has been reached.
+
+    Carries ``feature``, ``limit``, ``current`` for tests and logs.
+    The HTTP response is the standard error envelope (code
+    ``QUOTA_EXCEEDED``, status 409).
+    """
+
+    code = "QUOTA_EXCEEDED"
+    status_code = 409
+
+    def __init__(
+        self,
+        *,
+        feature: str,
+        limit: int,
+        current: int,
+    ) -> None:
+        message = (
+            f"Workspace quota exceeded for {feature}: "
+            f"{current} >= {limit}."
+        )
+        super().__init__(message)
+        self.feature = feature
+        self.limit = limit
+        self.current = current
+# --- M37 SaaS foundation — workspaces & invitations --------------------
+class WorkspaceNotFound(AppError):
+    """Raised when a workspace is missing or the caller has no access.
+
+    404 (not 403) to hide existence — same convention as cross-user
+    project access in this repository.
+    """
+    code = "WORKSPACE_NOT_FOUND"
+    status_code = 404
+    message = "Workspace not found."
+
+
+class InvitationNotFound(AppError):
+    code = "INVITATION_NOT_FOUND"
+    status_code = 404
+    message = "Invitation not found."
+
+
+class InvitationExpired(AppError):
+    code = "INVITATION_EXPIRED"
+    status_code = 410
+    message = "Invitation has expired."
+
+
+class InvitationRevoked(AppError):
+    code = "INVITATION_REVOKED"
+    status_code = 410
+    message = "Invitation has been revoked."
+
+
+class InvitationAlreadyAccepted(AppError):
+    code = "INVITATION_ALREADY_ACCEPTED"
+    status_code = 409
+    message = "Invitation has already been accepted."
+
+
+class InvitationEmailMismatch(AppError):
+    code = "INVITATION_EMAIL_MISMATCH"
+    status_code = 403
+    message = "This invitation is addressed to a different email."
+
+
+class InvitationRoleInvalid(AppError):
+    code = "INVITATION_ROLE_INVALID"
+    status_code = 422
+    message = "Invitation role is not assignable."
+
+
+class InsufficientRole(AppError):
+    code = "INSUFFICIENT_ROLE"
+    status_code = 403
+    message = "Your workspace role does not allow this action."
+
+
+class MembershipExists(AppError):
+    code = "MEMBERSHIP_EXISTS"
+    status_code = 409
+    message = "This user is already a member of the workspace."
+
+
+class LastOwner(AppError):
+    code = "LAST_OWNER"
+    status_code = 409
+    message = "The workspace must always have an owner."
+class OwnerRoleImmutable(AppError):
+    """The owner's role cannot be changed directly.
+
+    Ownership must be transferred first (which atomically sets the
+    old owner to admin and the target to owner).
+    """
+    code = "OWNER_ROLE_IMMUTABLE"
+    status_code = 409
+    message = (
+        "Transfer ownership before changing the owner's role."
+    )
+# --- M37 SaaS foundation — usage metering ------------------------------
+class UsageInvalidMetric(AppError):
+    code = "USAGE_INVALID_METRIC"
+    status_code = 422
+    message = "Usage metric is not registered."
+
+
+class UsageInvalidSourceType(AppError):
+    code = "USAGE_INVALID_SOURCE_TYPE"
+    status_code = 422
+    message = "Usage source_type is not registered."
+
+
+class UsageInvalidQuantity(AppError):
+    code = "USAGE_INVALID_QUANTITY"
+    status_code = 422
+    message = "Usage quantity must be strictly positive."
+
+
+class UsageWorkspaceMissing(AppError):
+    code = "USAGE_WORKSPACE_MISSING"
+    status_code = 500
+    message = "Usage event must be tied to a workspace."

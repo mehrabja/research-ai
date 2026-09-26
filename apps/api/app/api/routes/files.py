@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
+from app.api.rate_limit_deps import enforce_user_rate_limit
 from app.core.config import get_settings
 from app.db.models.user import User
 from app.db.session import get_db
@@ -28,6 +29,14 @@ files_router = APIRouter(prefix="/files", tags=["files"])
     response_model=ProjectFileRead,
     status_code=status.HTTP_201_CREATED,
     summary="Upload a file into a project",
+    dependencies=[
+        Depends(
+            enforce_user_rate_limit(
+                "files_upload",
+                setting_name="rate_limit_upload_per_minute",
+            )
+        )
+    ],
 )
 def upload_file(
     project_id: uuid.UUID,
@@ -35,6 +44,7 @@ def upload_file(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ProjectFileRead:
+    # بدنه بدون تغییر
     settings = get_settings()
     chunk_size = settings.file_chunk_stream_size
 
@@ -118,10 +128,10 @@ def download_file(
     headers = {
         "Content-Disposition":
             f'attachment; filename="{pf.normalized_filename}"',
+        "Content-Length": str(pf.size_bytes),
         "X-Content-Type-Options": "nosniff",
     }
     return StreamingResponse(stream, media_type=media, headers=headers)
-
 
 @files_router.delete(
     "/{file_id}",

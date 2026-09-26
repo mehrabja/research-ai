@@ -1,14 +1,16 @@
-"""M21 — Classification orchestrator.
+"""M21/M22 — Classification orchestrator.
 
 Flow:
   1. Build context (pure reads)
   2. Compute context_hash
   3. Lock row, skip-if-unchanged, classify, write result
-  4. On failure: savepoint rollback + guarded `failed` state write
+  4. Persist immutable ClassificationRun (M22)
+  5. On failure: savepoint rollback + guarded `failed` state write + run
 """
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from typing import Any
 
@@ -25,6 +27,7 @@ from app.core.exceptions import (
 from app.db.models.project import Project, ProjectEvent
 from app.db.models.research_classification import (
     ClassificationEvidence,
+    ClassificationRun,
     ProjectClassification,
 )
 from app.services.classification.context import (
@@ -34,6 +37,9 @@ from app.services.classification.context import (
 )
 from app.services.classification.domain_classifier import classify_domain
 from app.services.classification.evidence import EvidenceCollector
+from app.services.classification.explanation import (
+    build_classification_explanation,
+)
 from app.services.classification.paper_type_classifier import (
     classify_paper_type,
 )
@@ -66,6 +72,43 @@ def _emit_project_event(
             event_meta=event_meta,
         )
     )
+
+
+def _create_run(
+    db: Session,
+    *,
+    project_id: uuid.UUID,
+    classification_id: uuid.UUID | None,
+    context_hash: str | None,
+    classifier_version: str,
+    taxonomy_version: str,
+    status: str,
+    domain_code: str | None,
+    paper_type_code: str | None,
+    research_design_code: str | None,
+    confidence_summary: dict[str, Any] | None,
+    explanation: dict[str, Any] | None,
+    error_message: str | None,
+    duration_ms: int | None,
+) -> ClassificationRun:
+    """Append a run row. Never updated after creation."""
+    run = ClassificationRun(
+        project_id=project_id,
+        classification_id=classification_id,
+        context_hash=context_hash,
+        classifier_version=classifier_version,
+        taxonomy_version=taxonomy_version,
+        status=status,
+        domain_code=domain_code,
+        paper_type_code=paper_type_code,
+        research_design_code=research_design_code,
+        confidence_summary=confidence_summary,
+        explanation=explanation,
+        error_message=error_message,
+        duration_ms=duration_ms,
+    )
+    db.add(run)
+    return run
 
 
 def _replace_evidence(
@@ -115,9 +158,7 @@ def _lock_or_create(
             classifier_version=settings.classification_classifier_version,
             taxonomy_version=settings.classification_taxonomy_version,
         )
-        .on_conflict_do_nothing(
-            index_elements=["project_id"],
-        )
+        .on_conflict_do_nothing(index_elements=["project_id"])
     )
     db.execute(stmt)
     db.flush()
@@ -146,9 +187,7 @@ def get_or_create_classification(
     ):
         return existing
 
-    return classify_project(
-        db, project_id=project_id, user_id=user_id
-    )
+    return classify_project(db, project_id=project_id, user_id=user_id)
 
 
 def _determine_needs_review(
@@ -194,8 +233,9 @@ def _write_result(
     context_hash: str,
     needs_review: bool,
     status: str,
-    user_id: uuid.UUID | None,
 ) -> None:
+    """Update the current-state row. The audit trail lives in
+    ClassificationRun, so no events are emitted here."""
     settings = get_settings()
     db.execute(
         delete(ClassificationEvidence).where(
@@ -232,16 +272,12 @@ def _write_result(
     row.paper_type_alternatives = (
         paper_result.alternatives if pt_code else None
     )
-    row.paper_type_secondary = (
-        paper_result.secondary if pt_code else None
-    )
+    row.paper_type_secondary = paper_result.secondary if pt_code else None
 
     rd_code = design_result.primary_code or "unknown"
     if get_research_design(db, code=rd_code) is None:
         rd_code = (
-            "unknown"
-            if get_research_design(db, code="unknown")
-            else None
+            "unknown" if get_research_design(db, code="unknown") else None
         )
     row.research_design_code = rd_code
     row.research_design_source = (
@@ -271,18 +307,6 @@ def _write_result(
         "has_explicit_domain": bool(ctx.explicit_domain),
     }
 
-    _emit_project_event(
-        db,
-        project_id=row.project_id,
-        user_id=user_id,
-        event_type="classification_recomputed",
-        event_meta={
-            "status": status,
-            "needs_review": needs_review,
-            "classifier_version": row.classifier_version,
-        },
-    )
-
 
 def _write_failure(
     db: Session,
@@ -290,9 +314,17 @@ def _write_failure(
     project_id: uuid.UUID,
     user_id: uuid.UUID | None,
     error: Exception,
+    context_hash: str | None,
+    duration_ms: int,
 ) -> None:
-    """Guarded failure write: only marks ``pending`` rows as failed,
-    so a concurrent successful classification is never clobbered."""
+    """Record a failed classification attempt.
+
+    * Always creates an immutable ``ClassificationRun(status='failed')``
+      so every attempt is auditable.
+    * Only transitions the current-state row to ``failed`` when it is
+      still ``pending`` — a concurrent success (``completed`` /
+      ``needs_review``) is never clobbered.
+    """
     settings = get_settings()
     try:
         row = db.execute(
@@ -301,11 +333,11 @@ def _write_failure(
             .with_for_update()
         ).scalar_one_or_none()
 
+        # Ensure a current-state row exists so the run can link to it.
         if row is None:
             row = ProjectClassification(
                 project_id=project_id,
-                status="failed",
-                error_message=str(error)[:500],
+                status="pending",
                 classifier_version=(
                     settings.classification_classifier_version
                 ),
@@ -323,13 +355,27 @@ def _write_failure(
                     )
                     .with_for_update()
                 ).scalar_one()
-                if row.status != "pending":
-                    return
-                row.status = "failed"
-                row.error_message = str(error)[:500]
-        else:
-            if row.status != "pending":
-                return
+
+        # Always record the failed attempt.
+        _create_run(
+            db,
+            project_id=project_id,
+            classification_id=row.id,
+            context_hash=context_hash,
+            classifier_version=settings.classification_classifier_version,
+            taxonomy_version=settings.classification_taxonomy_version,
+            status="failed",
+            domain_code=None,
+            paper_type_code=None,
+            research_design_code=None,
+            confidence_summary=None,
+            explanation=None,
+            error_message=str(error)[:500],
+            duration_ms=duration_ms,
+        )
+
+        # Only transition the current-state row if it is still pending.
+        if row.status == "pending":
             row.status = "failed"
             row.error_message = str(error)[:500]
 
@@ -338,14 +384,17 @@ def _write_failure(
             project_id=project_id,
             user_id=user_id,
             event_type="classification_failed",
-            event_meta={"error": str(error)[:200]},
+            event_meta={
+                "error": str(error)[:200],
+                "context_hash": context_hash,
+                "duration_ms": duration_ms,
+            },
         )
     except Exception:  # noqa: BLE001
         logger.exception(
             "classification_failure_persist_failed project_id=%s",
             project_id,
         )
-
 
 def classify_project(
     db: Session,
@@ -366,32 +415,83 @@ def classify_project(
     if project is None:
         raise ClassificationNotFound("project not found")
 
+    started_at = time.perf_counter()
+
     # Phase 1: context + hash
     try:
         ctx = build_context(db, project=project)
         context_hash = compute_context_hash(ctx)
     except Exception as exc:  # noqa: BLE001
+        duration_ms = int((time.perf_counter() - started_at) * 1000)
         db.rollback()
         _write_failure(
-            db, project_id=project_id, user_id=user_id, error=exc
+            db,
+            project_id=project_id,
+            user_id=user_id,
+            error=exc,
+            context_hash=None,
+            duration_ms=duration_ms,
         )
         if commit:
             db.commit()
         raise
+
+    _emit_project_event(
+        db,
+        project_id=project_id,
+        user_id=user_id,
+        event_type="classification_started",
+        event_meta={
+            "context_hash": context_hash,
+            "classifier_version": settings.classification_classifier_version,
+        },
+    )
 
     # Phase 2: locked write
     savepoint = db.begin_nested()
     try:
         row = _lock_or_create(db, project_id=project_id)
 
+        # Skip-if-unchanged: same context + version → record a
+        # ``skipped`` run so the audit trail shows the check happened.
         if (
             row.context_hash == context_hash
-            and row.status == "completed"
+            and row.status in ("completed", "needs_review")
             and row.classifier_version
             == settings.classification_classifier_version
             and row.taxonomy_version
             == settings.classification_taxonomy_version
         ):
+            duration_ms = int(
+                (time.perf_counter() - started_at) * 1000
+            )
+            _create_run(
+                db,
+                project_id=project_id,
+                classification_id=row.id,
+                context_hash=context_hash,
+                classifier_version=row.classifier_version,
+                taxonomy_version=row.taxonomy_version,
+                status="skipped",
+                domain_code=None,
+                paper_type_code=None,
+                research_design_code=None,
+                confidence_summary=None,
+                explanation=None,
+                error_message=None,
+                duration_ms=duration_ms,
+            )
+            _emit_project_event(
+                db,
+                project_id=project_id,
+                user_id=user_id,
+                event_type="classification_skipped",
+                event_meta={
+                    "context_hash": context_hash,
+                    "classifier_version": row.classifier_version,
+                    "duration_ms": duration_ms,
+                },
+            )
             savepoint.commit()
             if commit:
                 db.commit()
@@ -435,10 +535,54 @@ def classify_project(
             context_hash=context_hash,
             needs_review=needs_review,
             status=status,
-            user_id=user_id,
         )
         _replace_evidence(
             db, classification_id=row.id, collector=collector
+        )
+
+        explanation = build_classification_explanation(
+            collector=collector,
+            domain_code=domain_result.primary_code,
+            paper_type_code=paper_result.primary_code,
+            research_design_code=design_result.primary_code,
+        )
+
+        duration_ms = int((time.perf_counter() - started_at) * 1000)
+
+        _create_run(
+            db,
+            project_id=project_id,
+            classification_id=row.id,
+            context_hash=context_hash,
+            classifier_version=settings.classification_classifier_version,
+            taxonomy_version=settings.classification_taxonomy_version,
+            status=status,
+            domain_code=domain_result.primary_code,
+            paper_type_code=paper_result.primary_code,
+            research_design_code=design_result.primary_code,
+            confidence_summary={
+                "domain": domain_result.primary_confidence,
+                "paper_type": paper_result.primary_confidence,
+                "research_design": design_result.primary_confidence,
+            },
+            explanation=explanation,
+            error_message=None,
+            duration_ms=duration_ms,
+        )
+
+        _emit_project_event(
+            db,
+            project_id=project_id,
+            user_id=user_id,
+            event_type="classification_completed",
+            event_meta={
+                "status": status,
+                "context_hash": context_hash,
+                "classifier_version": (
+                    settings.classification_classifier_version
+                ),
+                "duration_ms": duration_ms,
+            },
         )
 
         savepoint.commit()
@@ -452,11 +596,17 @@ def classify_project(
     except Exception as exc:  # noqa: BLE001
         if savepoint.is_active:
             savepoint.rollback()
+        duration_ms = int((time.perf_counter() - started_at) * 1000)
         logger.exception(
             "classification_failed project_id=%s", project_id
         )
         _write_failure(
-            db, project_id=project_id, user_id=user_id, error=exc
+            db,
+            project_id=project_id,
+            user_id=user_id,
+            error=exc,
+            context_hash=context_hash,
+            duration_ms=duration_ms,
         )
         if commit:
             db.commit()
@@ -590,11 +740,7 @@ def enqueue_recompute_if_enabled(
     project_id: uuid.UUID,
     user_id: uuid.UUID | None,
 ) -> None:
-    """Best-effort enqueue. Never raises.
-
-    Called from file/report/project hooks; the idempotency key is
-    ``(project_id, context_hash)`` so identical contexts collapse.
-    """
+    """Best-effort enqueue. Never raises."""
     settings = get_settings()
     if not settings.classification_enabled:
         return

@@ -3,6 +3,11 @@
 Ownership filtering lives inside the SQL query, not only in the route.
 This makes ownership part of the data-access boundary and prevents
 cross-user access even if a future caller bypasses the HTTP route.
+
+M37:
+  * ``create_report`` enforces ``reports.monthly`` (Phase 2-G) and
+    emits a ``reports_created`` usage event (Phase 2-A3) in the same
+    transaction.
 """
 from __future__ import annotations
 
@@ -16,11 +21,16 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import (
     ProjectNotFound,
     ProjectReportAttachForbiddenError,
+    QuotaExceeded,
     ReportNotFound,
 )
 from app.db.models.project import Project
 from app.db.models.report import Report
 from app.domain.project import EDITABLE_PROJECT_STATUSES
+from app.services import entitlements as entitlements_service
+from app.services import usage as usage_service
+from app.services import workspaces as workspaces_service
+from app.services.audit import emit_audit
 
 
 def create_report(
@@ -30,6 +40,7 @@ def create_report(
     data: dict[str, Any],
 ) -> Report:
     project_id = data.get("project_id")
+    project: Project | None = None
     if project_id is not None:
         project = db.execute(
             select(Project).where(
@@ -43,6 +54,31 @@ def create_report(
         if project.status not in EDITABLE_PROJECT_STATUSES:
             raise ProjectReportAttachForbiddenError()
 
+    # Resolve workspace BEFORE quota check.
+    if project is not None:
+        workspace_id = project.workspace_id
+    else:
+        workspace = workspaces_service.ensure_default_workspace(
+            db, user_id=user_id
+        )
+        workspace_id = workspace.id
+
+    # Monthly quota check (M37 Phase 2-G).
+    try:
+        entitlements_service.check_and_reserve_reports_monthly_slot(
+            db, workspace_id=workspace_id
+        )
+    except QuotaExceeded as exc:
+        emit_audit(
+            "QUOTA_DENIED",
+            user_id=str(user_id),
+            workspace_id=str(workspace_id),
+            feature=exc.feature,
+            limit=exc.limit,
+            current=exc.current,
+        )
+        raise
+
     # status is server-controlled. The database server_default remains
     # authoritative and initializes new reports as "draft".
     report = Report(
@@ -52,6 +88,21 @@ def create_report(
 
     try:
         db.add(report)
+        db.flush()  # populate report.id
+
+        usage_service.record_event(
+            db,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            metric="reports_created",
+            quantity=1,
+            idempotency_key=usage_service.report_created_key(
+                report.id
+            ),
+            source_type="report",
+            source_id=report.id,
+        )
+
         db.commit()
         db.refresh(report)
     except Exception:
@@ -59,6 +110,7 @@ def create_report(
         raise
 
     return report
+
 
 def list_reports(
     db: Session,
@@ -150,3 +202,12 @@ def soft_delete_report(
     except Exception:
         db.rollback()
         raise
+
+
+__all__ = [
+    "create_report",
+    "get_report",
+    "list_reports",
+    "soft_delete_report",
+    "update_report",
+]

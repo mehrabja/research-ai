@@ -742,6 +742,14 @@ def register_all_handlers() -> None:
             "research_classification", handle_research_classification
         )
 
+    from app.workers.literature_handlers import (
+        handle_literature_analyze,
+    )
+    if "literature_analyze" not in registered_types():
+        register_handler(
+            "literature_analyze", handle_literature_analyze
+        )
+
 __all__ = [
     "EXECUTABLE_JOB_TYPES",
     "InvalidEmbeddingPayloadError",

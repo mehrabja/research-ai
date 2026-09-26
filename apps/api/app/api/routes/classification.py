@@ -1,4 +1,4 @@
-"""M21 — Classification routes."""
+"""M21/M22 — Classification routes."""
 from __future__ import annotations
 
 import uuid
@@ -10,13 +10,17 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user
 from app.db.models.research_classification import (
     ClassificationEvidence,
+    ClassificationRun,
 )
 from app.db.models.research_taxonomy import ResearchDomain
 from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.research_classification import (
+    ClassificationExplanationResponse,
+    ClassificationHistoryResponse,
     ClassificationOverride,
     ClassificationRead,
+    ClassificationRunRead,
     EvidenceItemRead,
     EvidenceListResponse,
     _DomainSummary,
@@ -172,4 +176,92 @@ def list_evidence(
         total=total,
         limit=limit,
         offset=offset,
+    )
+
+
+@router.get(
+    "/{project_id}/classification/history",
+    response_model=ClassificationHistoryResponse,
+    summary="List classification runs (immutable audit history)",
+)
+def list_classification_history(
+    project_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> ClassificationHistoryResponse:
+    get_project(db, user_id=current_user.id, project_id=project_id)
+    base = select(ClassificationRun).where(
+        ClassificationRun.project_id == project_id
+    )
+    total = int(
+        db.execute(
+            select(func.count()).select_from(base.subquery())
+        ).scalar_one()
+    )
+    rows = (
+        db.execute(
+            base.order_by(
+                ClassificationRun.created_at.desc(),
+                ClassificationRun.id.desc(),
+            )
+            .limit(limit)
+            .offset(offset)
+        )
+        .scalars()
+        .all()
+    )
+    return ClassificationHistoryResponse(
+        items=[ClassificationRunRead.model_validate(r) for r in rows],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get(
+    "/{project_id}/classification/explanation",
+    response_model=ClassificationExplanationResponse,
+    summary="Get the latest classification explanation",
+)
+def get_classification_explanation(
+    project_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ClassificationExplanationResponse:
+    get_project(db, user_id=current_user.id, project_id=project_id)
+    row = orchestrator.get_or_create_classification(
+        db, project_id=project_id, user_id=current_user.id
+    )
+    latest = db.execute(
+        select(ClassificationRun)
+        .where(
+            ClassificationRun.project_id == project_id,
+            ClassificationRun.status.in_(
+                ("completed", "needs_review")
+            ),
+        )
+        .order_by(
+            ClassificationRun.created_at.desc(),
+            ClassificationRun.id.desc(),
+        )
+        .limit(1)
+    ).scalar_one_or_none()
+
+    if latest is None:
+        return ClassificationExplanationResponse(
+            classification_id=row.id,
+            context_hash=row.context_hash,
+            status=row.status,
+            created_at=None,
+            explanation=None,
+        )
+
+    return ClassificationExplanationResponse(
+        classification_id=latest.classification_id,
+        context_hash=latest.context_hash,
+        status=latest.status,
+        created_at=latest.created_at,
+        explanation=latest.explanation,
     )

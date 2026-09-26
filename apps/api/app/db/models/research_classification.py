@@ -1,15 +1,19 @@
-"""M21 — Classification ORM models (aggregate + evidence)."""
+"""M21/M22 — Classification ORM models (aggregate + evidence + runs)."""
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    DateTime,
     Float,
     ForeignKey,
     Index,
+    Integer,
     Text,
+    func,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -110,8 +114,8 @@ class ProjectClassification(Base, UUIDPKMixin, TimestampMixin):
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('pending','completed','needs_review','failed')",
-            name="ck_project_classifications_status",
+            "status IN ('completed','needs_review','failed','skipped')",
+            name="ck_classification_runs_status",
         ),
         CheckConstraint(
             "domain_source IS NULL OR "
@@ -163,12 +167,8 @@ class ProjectClassification(Base, UUIDPKMixin, TimestampMixin):
             name="ck_project_classifications_design_conf",
         ),
         Index("ix_project_classifications_status", "status"),
-        Index(
-            "ix_project_classifications_paper_type", "paper_type_code"
-        ),
-        Index(
-            "ix_project_classifications_design", "research_design_code"
-        ),
+        Index("ix_project_classifications_paper_type", "paper_type_code"),
+        Index("ix_project_classifications_design", "research_design_code"),
         Index(
             "ix_project_classifications_context_hash",
             "project_id",
@@ -180,10 +180,10 @@ class ProjectClassification(Base, UUIDPKMixin, TimestampMixin):
 class ClassificationEvidence(Base, UUIDPKMixin, CreatedAtMixin):
     __tablename__ = "classification_evidence"
 
-    classification_id: Mapped[uuid.UUID] = mapped_column(
+    classification_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("project_classifications.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
     target: Mapped[str] = mapped_column(Text, nullable=False)
     signal_type: Mapped[str] = mapped_column(Text, nullable=False)
@@ -209,5 +209,77 @@ class ClassificationEvidence(Base, UUIDPKMixin, CreatedAtMixin):
             "ix_classification_evidence_class_target",
             "classification_id",
             "target",
+        ),
+    )
+
+
+class ClassificationRun(Base):
+    """Append-only history of classification executions (M22).
+
+    Rows are never updated (enforced by a DB trigger). They are
+    deleted only via ``ON DELETE CASCADE`` from ``projects`` or in
+    test cleanup.
+    """
+    __tablename__ = "classification_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    classification_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("project_classifications.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+
+    context_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    classifier_version: Mapped[str] = mapped_column(Text, nullable=False)
+    taxonomy_version: Mapped[str] = mapped_column(Text, nullable=False)
+
+    status: Mapped[str] = mapped_column(Text, nullable=False)
+
+    domain_code: Mapped[str | None] = mapped_column(Text, nullable=True)
+    paper_type_code: Mapped[str | None] = mapped_column(Text, nullable=True)
+    research_design_code: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )
+
+    confidence_summary: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True
+    )
+    explanation: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('completed','failed','skipped')",
+            name="ck_classification_runs_status",
+        ),
+        CheckConstraint(
+            "duration_ms IS NULL OR duration_ms >= 0",
+            name="ck_classification_runs_duration",
+        ),
+        Index(
+            "ix_classification_runs_project_created",
+            "project_id",
+            "created_at",
+        ),
+        Index(
+            "ix_classification_runs_context_hash",
+            "project_id",
+            "context_hash",
         ),
     )

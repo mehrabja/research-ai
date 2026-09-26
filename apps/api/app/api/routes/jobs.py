@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
+from app.api.rate_limit_deps import enforce_user_rate_limit
 from app.core.exceptions import (
     InvalidJobStateError,
     UnknownJobTypeError,
@@ -88,12 +89,25 @@ def _parse_generation_payload(payload: dict) -> uuid.UUID:
         ) from exc
 
 
-@router.post("", response_model=JobResponse, status_code=201)
+@router.post(
+    "",
+    response_model=JobResponse,
+    status_code=201,
+    dependencies=[
+        Depends(
+            enforce_user_rate_limit(
+                "jobs_enqueue",
+                setting_name="rate_limit_enqueue_per_minute",
+            )
+        )
+    ],
+)
 def enqueue_job(
     payload: JobEnqueueRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Job:
+    # بدنه بدون تغییر
     if payload.job_type in RESERVED_JOB_TYPES:
         raise UnknownJobTypeError(
             f"job_type {payload.job_type!r} is reserved but not "

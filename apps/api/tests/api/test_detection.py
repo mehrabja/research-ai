@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import bindparam, delete, text
 
 from app.db.models.user import User
+from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
 from app.main import app
 from app.services.rate_limit import set_login_rate_limiter
@@ -55,6 +56,12 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
             "DELETE FROM reports WHERE user_id IN :ids"
         ).bindparams(bindparam("ids", expanding=True))
         db.execute(stmt, {"ids": user_ids})
+        # M37: purge owned workspaces before deleting user
+        db.execute(
+            delete(Workspace).where(
+                Workspace.owner_user_id.in_(user_ids)
+            )
+        )
         db.execute(delete(User).where(User.id.in_(user_ids)))
         db.commit()
 

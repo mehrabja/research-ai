@@ -1,4 +1,4 @@
-"""M21 — Classification schemas."""
+"""M21/M22 — Classification schemas."""
 from __future__ import annotations
 
 import uuid
@@ -13,6 +13,9 @@ ClassificationSourceLiteral = Literal[
 ClassificationMethodLiteral = Literal["explicit", "heuristic", "llm"]
 ClassificationStatusLiteral = Literal[
     "pending", "completed", "needs_review", "failed"
+]
+ClassificationRunStatusLiteral = Literal[
+    "completed", "needs_review", "failed", "skipped"
 ]
 
 
@@ -74,7 +77,6 @@ class ClassificationRead(BaseModel):
 
 
 class EvidenceItemRead(BaseModel):
-    # ``from_attributes`` lets us validate ORM objects directly.
     model_config = ConfigDict(
         extra="forbid", from_attributes=True
     )
@@ -100,3 +102,46 @@ class ClassificationOverride(BaseModel):
     domain_code: str | None = Field(default=None, max_length=200)
     paper_type_code: str | None = Field(default=None, max_length=200)
     research_design_code: str | None = Field(default=None, max_length=200)
+
+
+# --- M22: history + explanation -------------------------------------
+
+
+class ClassificationRunRead(BaseModel):
+    """Immutable run record (one row per classification execution)."""
+    model_config = ConfigDict(
+        extra="forbid", from_attributes=True
+    )
+
+    id: uuid.UUID
+    project_id: uuid.UUID
+    classification_id: uuid.UUID | None
+    context_hash: str | None
+    classifier_version: str
+    taxonomy_version: str
+    status: ClassificationRunStatusLiteral
+    domain_code: str | None
+    paper_type_code: str | None
+    research_design_code: str | None
+    confidence_summary: dict[str, Any] | None
+    explanation: dict[str, Any] | None
+    error_message: str | None
+    duration_ms: int | None
+    created_at: datetime
+
+
+class ClassificationHistoryResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[ClassificationRunRead]
+    total: int
+    limit: int
+    offset: int
+
+
+class ClassificationExplanationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    classification_id: uuid.UUID | None
+    context_hash: str | None
+    status: str
+    created_at: datetime | None
+    explanation: dict[str, Any] | None

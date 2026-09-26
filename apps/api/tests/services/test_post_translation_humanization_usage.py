@@ -26,6 +26,7 @@ from app.db.models.report import (
     ReviewEvent,
 )
 from app.db.models.user import User
+from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
 from app.domain.humanization import default_post_translation_policy
 from app.services import post_translation_humanization as m17
@@ -100,6 +101,12 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
             )
         )
         db.execute(delete(Report).where(Report.id.in_(report_ids)))
+        # M37: purge owned workspaces before deleting user
+        db.execute(
+            delete(Workspace).where(
+                Workspace.owner_user_id.in_(user_ids)
+            )
+        )
         db.execute(delete(User).where(User.id.in_(user_ids)))
         db.commit()
 
