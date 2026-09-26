@@ -100,6 +100,9 @@ def search_sources(
     limit: int | None = Query(default=None, ge=1),
     year: int | None = Query(default=None, ge=1000, le=2200),
     open_access: bool = Query(default=False),
+    year_from: int | None = Query(default=None, ge=1000, le=2200),
+    year_to: int | None = Query(default=None, ge=1000, le=2200),
+    min_citations: int | None = Query(default=None, ge=0),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     provider: SourceSearchProvider = Depends(_default_provider),
@@ -113,6 +116,9 @@ def search_sources(
         provider=provider,
         year=year,
         open_access_only=open_access,
+        year_from=year_from,
+        year_to=year_to,
+        min_citations=min_citations,
     )
     settings = get_settings()
     effective_limit = (
