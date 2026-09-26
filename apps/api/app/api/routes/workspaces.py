@@ -355,8 +355,19 @@ def _current_usage_for_feature(
             db, workspace_id=workspace_id
         )
     if feature == FEATURE_STORAGE_BYTES:
-        # Storage aggregation is not wired in M37.
-        return 0
+        from app.db.models.project_file import ProjectFile
+        from app.db.models.project import Project
+        return int(
+            db.execute(
+                select(func.coalesce(func.sum(ProjectFile.size_bytes), 0))
+                .select_from(ProjectFile)
+                .join(Project, Project.id == ProjectFile.project_id)
+                .where(
+                    Project.workspace_id == workspace_id,
+                    ProjectFile.deleted_at.is_(None),
+                )
+            ).scalar_one()
+        )
     if feature == FEATURE_REPORTS_MONTHLY:
         return usage_service.get_period_usage(
             db,
