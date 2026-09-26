@@ -9,7 +9,9 @@ from sqlalchemy import delete, select
 
 from app.db.models.membership import WorkspaceMembership
 from app.db.models.project import Project, ProjectEvent
+from app.db.models.plan import Plan
 from app.db.models.report import Report
+from app.db.models.subscription import Subscription
 from app.db.session import SessionLocal
 from app.main import app
 from tests._m37_cleanup import purge_test_users
@@ -53,6 +55,25 @@ def _workspace(token: str) -> uuid.UUID:
     )
     assert r.status_code == 201, r.text
     return uuid.UUID(r.json()["id"])
+
+
+def _upgrade_workspace_to_pro(workspace_id: uuid.UUID) -> None:
+    with SessionLocal() as db:
+        plan = db.execute(
+            select(Plan).where(Plan.code == "pro")
+        ).scalar_one()
+        subscription = db.execute(
+            select(Subscription).where(
+                Subscription.workspace_id == workspace_id,
+                Subscription.status.in_((
+                    "trialing",
+                    "active",
+                    "past_due",
+                )),
+            ).with_for_update()
+        ).scalar_one()
+        subscription.plan_id = plan.id
+        db.commit()
 
 
 def _cleanup_users(uids: list[uuid.UUID]) -> None:
@@ -121,6 +142,7 @@ def test_non_admin_cannot_revoke_invitation() -> None:
     try:
         _owner, owner_token, _ = _reg(uids, "m38-owner")
         workspace_id = _workspace(owner_token)
+        _upgrade_workspace_to_pro(workspace_id)
 
         member_email = f"member-{uuid.uuid4().hex[:10]}@example.com"
         r = client.post(
@@ -180,6 +202,7 @@ def test_transfer_ownership_updates_pointer_and_roles() -> None:
         target_id, target_token, _ = _reg(uids, "m38-target", email=target_email)
 
         workspace_id = _workspace(owner_token)
+        _upgrade_workspace_to_pro(workspace_id)
 
         r = client.post(
             f"/api/v1/workspaces/{workspace_id}/members/invitations",
