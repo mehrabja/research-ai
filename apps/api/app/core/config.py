@@ -84,9 +84,9 @@ class Settings(BaseSettings):
     request_id_accept_incoming: bool = True
 
     max_request_bytes: int = Field(
-        default=10 * 1024 * 1024,
+        default=525 * 1024 * 1024,
         ge=1024,
-        le=100 * 1024 * 1024,
+        le=525 * 1024 * 1024,
     )
 
     rate_limit_enabled: bool = True
@@ -139,7 +139,6 @@ class Settings(BaseSettings):
     )
     database_url: str = Field(..., repr=False)
     # --- M37: SaaS / Billing -------------------------------------------
-    billing_provider: Literal["none", "fake"] = "none"
     # --- M39 security / external provider configuration -------------
     jwt_refresh_token_expire_days: int = Field(default=30, ge=1, le=365)
     auth_refresh_cookie_name: str = "research_ai_refresh"
@@ -215,7 +214,9 @@ class Settings(BaseSettings):
         default=20.0, ge=1.0, le=120.0
     )
     document_max_bytes: int = Field(
-        default=20 * 1024 * 1024, ge=1024, le=200 * 1024 * 1024
+        default=500 * 1024 * 1024,
+        ge=1024,
+        le=500 * 1024 * 1024,
     )
     document_max_redirects: int = Field(default=5, ge=0, le=10)
 
@@ -309,7 +310,7 @@ class Settings(BaseSettings):
     #
     # Note: extraction jobs use the global ``job_processing_timeout_seconds``
     # (M10) for lease expiry. There is no per-job-type timeout today.
-    file_storage_backend: Literal["local"] = "local"
+    file_storage_backend: Literal["local", "s3"] = "local"
     file_storage_local_root: str = "storage/files"
     file_chunk_stream_size: int = Field(
         default=1 * 1024 * 1024, ge=4096, le=16 * 1024 * 1024
