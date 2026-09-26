@@ -8,8 +8,17 @@ from typing import Literal
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-REPO_ROOT: Path = Path(__file__).resolve().parents[4]
+def _resolve_repo_root() -> Path:
+    current = Path(__file__).resolve()
 
+    for parent in current.parents:
+        if (parent / ".env.example").exists() or (parent / ".git").exists():
+            return parent
+
+    return current.parents[2]
+
+
+REPO_ROOT: Path = _resolve_repo_root()
 DEV_JWT_SECRET: str = "dev-insecure-secret-change-me-before-production"
 _MIN_JWT_SECRET_BYTES: int = 32
 
