@@ -15,10 +15,13 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.core.config import get_settings
+from app.db.models.project import Project
+from app.db.models.report import Report
 from app.db.models.user import User
 from app.db.session import get_db
 from app.domain.source import SourceCandidate
@@ -34,6 +37,7 @@ from app.schemas.sources import (
 )
 from app.services import extraction as extraction_service
 from app.services import sources as sources_service
+from app.services import usage as usage_service
 
 router = APIRouter(
     prefix="/reports",
@@ -100,6 +104,9 @@ def search_sources(
     limit: int | None = Query(default=None, ge=1),
     year: int | None = Query(default=None, ge=1000, le=2200),
     open_access: bool = Query(default=False),
+    year_from: int | None = Query(default=None, ge=1000, le=2200),
+    year_to: int | None = Query(default=None, ge=1000, le=2200),
+    min_citations: int | None = Query(default=None, ge=0),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     provider: SourceSearchProvider = Depends(_default_provider),
@@ -113,7 +120,27 @@ def search_sources(
         provider=provider,
         year=year,
         open_access_only=open_access,
+        year_from=year_from,
+        year_to=year_to,
+        min_citations=min_citations,
     )
+    workspace_id = db.execute(
+        select(Project.workspace_id)
+        .join(Report, Report.project_id == Project.id)
+        .where(Report.id == report_id)
+    ).scalar_one_or_none()
+    if workspace_id is not None:
+        usage_service.record_event(
+            db,
+            workspace_id=workspace_id,
+            user_id=current_user.id,
+            metric="search_requests",
+            quantity=1,
+            source_type="provider_call",
+            metadata={"provider": provider.provider_name},
+        )
+        db.commit()
+
     settings = get_settings()
     effective_limit = (
         settings.source_search_limit_default if limit is None else limit
