@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -55,6 +55,7 @@ router = APIRouter(
 )
 def create_report(
     payload: ReportCreate,
+    workspace_id: uuid.UUID | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Report:
@@ -62,6 +63,7 @@ def create_report(
         db,
         user_id=current_user.id,
         data=payload.model_dump(),
+        workspace_id=workspace_id,
     )
 
 
@@ -71,12 +73,14 @@ def create_report(
     summary="List the current user's active reports",
 )
 def list_reports(
+    workspace_id: uuid.UUID | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[Report]:
     return reports_service.list_reports(
         db,
         user_id=current_user.id,
+        workspace_id=workspace_id,
     )
 
 
