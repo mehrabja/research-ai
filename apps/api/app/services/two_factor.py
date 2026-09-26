@@ -37,6 +37,13 @@ def verify_code(secret: str, code: str, window: int = 1) -> bool:
     counter = int(time.time()) // 30
     return any(hmac.compare_digest(_hotp(secret, counter + delta), code) for delta in range(-window, window + 1))
 
+def decrypt_secret(ciphertext: str) -> str:
+    try:
+        return _fernet().decrypt(ciphertext.encode()).decode()
+    except InvalidToken as exc:
+        raise TwoFactorError("stored 2FA secret cannot be decrypted") from exc
+
+
 def issuer() -> str:
     return get_settings().auth_totp_issuer
 
