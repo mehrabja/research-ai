@@ -1,6 +1,8 @@
 """M27 — Manuscript Architect routes."""
 from __future__ import annotations
 
+import hashlib
+import json
 import uuid
 
 from fastapi import APIRouter, Depends, Query, Response
@@ -13,6 +15,7 @@ from app.core.exceptions import (
     ManuscriptNotFound,
     ManuscriptSectionNotFound,
 )
+from app.db.models.manuscript_draft import ManuscriptDraft
 from app.db.models.manuscript import (
     Manuscript,
     ManuscriptSection,
@@ -25,6 +28,8 @@ from app.schemas.manuscript import (
     ManuscriptCurrentRead,
     ManuscriptGenerateRequest,
     ManuscriptGenerateResponse,
+    ManuscriptDraftRead,
+    ManuscriptDraftUpdateRequest,
     ManuscriptRead,
     ManuscriptSectionDependencyRead,
     ManuscriptSectionRead,
@@ -260,3 +265,52 @@ def get_section(
     if row is None:
         raise ManuscriptSectionNotFound()
     return ManuscriptSectionRead.model_validate(row)
+
+
+@router.get("/{report_id}/manuscript/draft", response_model=ManuscriptDraftRead)
+def get_manuscript_draft(
+    report_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ManuscriptDraftRead:
+    reports_service.get_report(db, user_id=current_user.id, report_id=report_id)
+    ms = _current_manuscript(db, report_id=report_id)
+    draft = db.execute(
+        select(ManuscriptDraft).where(ManuscriptDraft.manuscript_id == ms.id)
+    ).scalar_one_or_none()
+    if draft is None:
+        raise ManuscriptNotFound("No autosaved draft exists.")
+    return ManuscriptDraftRead.model_validate(draft)
+
+@router.patch("/{report_id}/manuscript/draft", response_model=ManuscriptDraftRead)
+def autosave_manuscript_draft(
+    report_id: uuid.UUID,
+    body: ManuscriptDraftUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ManuscriptDraftRead:
+    reports_service.get_report(db, user_id=current_user.id, report_id=report_id)
+    ms = _current_manuscript(db, report_id=report_id)
+    draft = db.execute(
+        select(ManuscriptDraft).where(ManuscriptDraft.manuscript_id == ms.id)
+    ).scalar_one_or_none()
+    digest = hashlib.sha256(
+        json.dumps(body.sections, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+    if draft is None:
+        draft = ManuscriptDraft(
+            manuscript_id=ms.id,
+            updated_by=current_user.id,
+            base_version_id=body.base_version_id or ms.current_version_id,
+            sections=body.sections,
+            draft_hash=digest,
+        )
+        db.add(draft)
+    else:
+        draft.updated_by = current_user.id
+        draft.base_version_id = body.base_version_id or draft.base_version_id
+        draft.sections = body.sections
+        draft.draft_hash = digest
+    db.commit()
+    db.refresh(draft)
+    return ManuscriptDraftRead.model_validate(draft)
