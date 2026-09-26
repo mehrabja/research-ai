@@ -17,6 +17,8 @@ def upgrade() -> None:
     op.create_table(
         "auth_sessions",
         sa.Column("id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), primary_key=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("user_id", sa.UUID(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
         sa.Column("token_hash", sa.Text(), nullable=False, unique=True),
         sa.Column("csrf_token_hash", sa.Text(), nullable=False),
