@@ -240,3 +240,19 @@ def cancel_job(
         db, job_id=job_id, user_id=current_user.id
     )
     return JobCancelResponse(job=JobResponse.model_validate(job))
+
+
+@router.post(
+    "/{job_id}/retry",
+    response_model=JobResponse,
+)
+def retry_failed_job(
+    job_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Job:
+    return jobs_service.retry_job(
+        db,
+        job_id=job_id,
+        user_id=current_user.id,
+    )
