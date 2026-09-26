@@ -38,8 +38,10 @@ def create_report(
     *,
     user_id: uuid.UUID,
     data: dict[str, Any],
+    workspace_id: uuid.UUID | None = None,
 ) -> Report:
     project_id = data.get("project_id")
+    requested_workspace_id = workspace_id
     project: Project | None = None
     if project_id is not None:
         project = db.execute(
@@ -53,26 +55,52 @@ def create_report(
             raise ProjectNotFound()
         if project.status not in EDITABLE_PROJECT_STATUSES:
             raise ProjectReportAttachForbiddenError()
+        if (
+            requested_workspace_id is not None
+            and project.workspace_id != requested_workspace_id
+        ):
+            raise ProjectNotFound()
 
     # Resolve workspace BEFORE quota check.
     if project is not None:
-        workspace_id = project.workspace_id
+        effective_workspace_id = project.workspace_id
     else:
-        workspace = workspaces_service.ensure_default_workspace(
+        workspace = (
+            workspaces_service.get_workspace_for_user(
+                db,
+                workspace_id=requested_workspace_id,
+                user_id=user_id,
+            )[0]
+            if requested_workspace_id is not None
+            else workspaces_service.ensure_default_workspace(
+                db, user_id=user_id
+            )
+        )
+        default_workspace = workspaces_service.ensure_default_workspace(
             db, user_id=user_id
         )
-        workspace_id = workspace.id
+        if workspace.id != default_workspace.id:
+            raise ProjectNotFound(
+                "A report without a project must use the default workspace."
+            )
+        effective_workspace_id = workspace.id
+
+    workspaces_service.get_workspace_for_user(
+        db,
+        workspace_id=effective_workspace_id,
+        user_id=user_id,
+    )
 
     # Monthly quota check (M37 Phase 2-G).
     try:
         entitlements_service.check_and_reserve_reports_monthly_slot(
-            db, workspace_id=workspace_id
+            db, workspace_id=effective_workspace_id
         )
     except QuotaExceeded as exc:
         emit_audit(
             "QUOTA_DENIED",
             user_id=str(user_id),
-            workspace_id=str(workspace_id),
+            workspace_id=str(effective_workspace_id),
             feature=exc.feature,
             limit=exc.limit,
             current=exc.current,
@@ -92,7 +120,7 @@ def create_report(
 
         usage_service.record_event(
             db,
-            workspace_id=workspace_id,
+            workspace_id=effective_workspace_id,
             user_id=user_id,
             metric="reports_created",
             quantity=1,
@@ -116,12 +144,36 @@ def list_reports(
     db: Session,
     *,
     user_id: uuid.UUID,
+    workspace_id: uuid.UUID | None = None,
 ) -> list[Report]:
+    default_workspace = workspaces_service.ensure_default_workspace(
+        db, user_id=user_id
+    )
+    workspace = (
+        workspaces_service.get_workspace_for_user(
+            db,
+            workspace_id=workspace_id,
+            user_id=user_id,
+        )[0]
+        if workspace_id is not None
+        else default_workspace
+    )
+
+    if workspace.id == default_workspace.id:
+        workspace_filter = (
+            (Project.workspace_id == workspace.id)
+            | (Report.project_id.is_(None))
+        )
+    else:
+        workspace_filter = Project.workspace_id == workspace.id
+
     stmt = (
         select(Report)
+        .outerjoin(Project, Project.id == Report.project_id)
         .where(
             Report.user_id == user_id,
             Report.deleted_at.is_(None),
+            workspace_filter,
         )
         .order_by(
             Report.updated_at.desc(),
@@ -153,6 +205,23 @@ def get_report(
         # Same response for missing, foreign, and soft-deleted reports.
         raise ReportNotFound()
 
+    if report.project_id is None:
+        effective_workspace_id = (
+            workspaces_service.ensure_default_workspace(
+                db, user_id=report.user_id
+            ).id
+        )
+    else:
+        project = db.get(Project, report.project_id)
+        if project is None:
+            raise ReportNotFound()
+        effective_workspace_id = project.workspace_id
+
+    workspaces_service.get_workspace_for_user(
+        db,
+        workspace_id=effective_workspace_id,
+        user_id=user_id,
+    )
     return report
 
 
