@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 
 import jwt
-from fastapi import Depends, Request
+from fastapi import Cookie, Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -19,18 +19,20 @@ _bearer = HTTPBearer(auto_error=False)
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
+    access_cookie: str | None = Cookie(default=None, alias="research_ai_access_token"),
 ) -> User:
-    if credentials is None:
+    token = credentials.credentials if credentials is not None else access_cookie
+    if not token:
         raise AuthenticationRequired()
 
-    if credentials.scheme.lower() != "bearer":
+    if credentials is not None and credentials.scheme.lower() != "bearer":
         raise AuthenticationRequired()
 
     if not credentials.credentials:
         raise AuthenticationRequired()
 
     try:
-        payload = decode_access_token(credentials.credentials)
+        payload = decode_access_token(token)
     except jwt.PyJWTError:
         raise AuthenticationRequired()
 
