@@ -23,6 +23,10 @@ from app.db.base import Base, CreatedAtMixin, TimestampMixin, UUIDPKMixin
 class ProjectFile(Base, UUIDPKMixin, TimestampMixin):
     __tablename__ = "project_files"
 
+    folder_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("file_folders.id", ondelete="SET NULL"), nullable=True
+    )
+
     project_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("projects.id", ondelete="CASCADE"),
