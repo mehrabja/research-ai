@@ -47,6 +47,9 @@ class SourceSearchProvider(Protocol):
         limit: int,
         year: int | None = None,
         open_access_only: bool = False,
+        year_from: int | None = None,
+        year_to: int | None = None,
+        min_citations: int | None = None,
     ) -> list[SourceCandidate]: ...
 
 
