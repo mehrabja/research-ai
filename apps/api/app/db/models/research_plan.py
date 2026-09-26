@@ -92,6 +92,9 @@ class ResearchPlan(Base, UUIDPKMixin, TimestampMixin):
     budget: Mapped[dict] = mapped_column(
         JSONB, nullable=False, server_default=text("'{}'::jsonb")
     )
+    plan_meta: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True
+    )
     completeness_score: Mapped[Decimal | None] = mapped_column(
         Numeric, nullable=True
     )
