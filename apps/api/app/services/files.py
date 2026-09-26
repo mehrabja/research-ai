@@ -32,6 +32,7 @@ from app.core.exceptions import (
     ProjectNotFound,
     StorageUnavailable,
 )
+from app.db.models.file_folder import FileFolder
 from app.db.models.project import Project
 from app.db.models.project_file import ProjectFile, ProjectFileEvent
 from app.domain.file import (
@@ -148,6 +149,7 @@ def upload_file(
     original_filename: str,
     client_mime: str | None,
     upload_stream: Iterator[bytes],
+    folder_id: uuid.UUID | None = None,
 ) -> ProjectFile:
     """Upload a file. Commits internally; caller does not manage txn.
 
@@ -167,6 +169,16 @@ def upload_file(
         raise ProjectNotFound()
     if project.status not in EDITABLE_PROJECT_STATUSES:
         raise ProjectArchivedForUpload()
+
+    if folder_id is not None:
+        folder = db.execute(
+            select(FileFolder).where(
+                FileFolder.id == folder_id,
+                FileFolder.project_id == project_id,
+            )
+        ).scalar_one_or_none()
+        if folder is None:
+            raise ProjectNotFound()
 
     # 2. Filename (domain error -> AppError boundary).
     try:
@@ -223,6 +235,7 @@ def upload_file(
         pf = ProjectFile(
             id=file_id,
             project_id=project_id,
+            folder_id=folder_id,
             uploaded_by=user_id,
             original_filename=original_filename,
             normalized_filename=normalized,
@@ -557,4 +570,49 @@ def mark_extraction_failed(
         project_id=pf.project_id,
         user_id=user_id,
         reason="extraction_failed",
+    )
+
+
+def move_file(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    file_id: uuid.UUID,
+    folder_id: uuid.UUID | None,
+) -> ProjectFile:
+    pf = get_file(db, user_id=user_id, file_id=file_id)
+    if folder_id is not None:
+        folder = db.execute(
+            select(FileFolder).where(
+                FileFolder.id == folder_id,
+                FileFolder.project_id == pf.project_id,
+            )
+        ).scalar_one_or_none()
+        if folder is None:
+            raise FileNotFound()
+    pf.folder_id = folder_id
+    _emit_event(
+        db,
+        project_file_id=pf.id,
+        user_id=user_id,
+        event_type="file_processing_completed",
+        event_meta={"action": "folder_moved", "folder_id": str(folder_id) if folder_id else None},
+    )
+    db.commit()
+    db.refresh(pf)
+    return pf
+
+def signed_url(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    file_id: uuid.UUID,
+    expires_seconds: int = 300,
+) -> str | None:
+    pf = get_file(db, user_id=user_id, file_id=file_id)
+    if pf.deleted_at is not None:
+        raise FileNotFound()
+    return get_storage_provider().presign_get(
+        key=pf.storage_key,
+        expires_seconds=expires_seconds,
     )
