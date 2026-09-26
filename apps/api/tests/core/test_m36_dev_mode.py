@@ -20,7 +20,8 @@ def _dev(**overrides) -> Settings:
     return Settings(**base)
 
 
-def test_dev_accepts_default_jwt() -> None:
+def test_dev_accepts_default_jwt(monkeypatch) -> None:
+    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
     s = _dev()
     assert s.jwt_secret_key == DEV_JWT_SECRET
 
