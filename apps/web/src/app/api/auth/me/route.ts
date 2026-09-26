@@ -1,0 +1,1 @@
+import{NextResponse}from"next/server";import{getServerUser}from"@/lib/server/auth";export async function GET(){const user=await getServerUser();return user?NextResponse.json(user):NextResponse.json({detail:"Not authenticated."},{status:401})}

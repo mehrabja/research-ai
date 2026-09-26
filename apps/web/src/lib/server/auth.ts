@@ -1,0 +1,5 @@
+import{cookies}from"next/headers";import{NextResponse}from"next/server";
+const COOKIE="research_ai_access_token";export type User={id:string;email:string};
+export async function getServerUser():Promise<User|null>{const token=(await cookies()).get(COOKIE)?.value;if(!token)return null;const base=process.env.BACKEND_API_URL??"http://localhost:8000";const res=await fetch(base+"/api/v1/auth/me",{headers:{authorization:"Bearer "+token},cache:"no-store"});if(!res.ok)return null;return res.json()}
+export function setAccessCookie(res:NextResponse,token:string){res.cookies.set({name:COOKIE,value:token,httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:1800})}
+export function clearAccessCookie(res:NextResponse){res.cookies.set({name:COOKIE,value:"",httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:0})}
