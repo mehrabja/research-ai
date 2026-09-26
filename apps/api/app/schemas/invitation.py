@@ -30,6 +30,11 @@ class InvitationCreated(BaseModel):
     token: str  # raw token, returned exactly once
 
 
+class InvitationListResponse(BaseModel):
+    items: list[InvitationRead]
+    total: int
+
+
 class MemberRead(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
