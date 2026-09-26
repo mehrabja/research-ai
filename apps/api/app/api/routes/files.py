@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Iterator
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -41,6 +41,7 @@ files_router = APIRouter(prefix="/files", tags=["files"])
 def upload_file(
     project_id: uuid.UUID,
     file: UploadFile = File(...),
+    folder_id: uuid.UUID | None = Form(default=None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ProjectFileRead:
@@ -62,6 +63,7 @@ def upload_file(
         original_filename=file.filename or "",
         client_mime=file.content_type,
         upload_stream=_stream(),
+        folder_id=folder_id,
     )
     return ProjectFileRead.model_validate(pf)
 
@@ -144,3 +146,36 @@ def delete_file(
     db: Session = Depends(get_db),
 ) -> None:
     files_service.delete_file(db, user_id=current_user.id, file_id=file_id)
+
+
+@files_router.get("/{file_id}/signed-url")
+def get_signed_url(
+    file_id: uuid.UUID,
+    expires_seconds: int = Query(default=300, ge=30, le=3600),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str | None]:
+    return {
+        "url": files_service.signed_url(
+            db,
+            user_id=current_user.id,
+            file_id=file_id,
+            expires_seconds=expires_seconds,
+        )
+    }
+
+@files_router.patch("/{file_id}/folder", response_model=ProjectFileRead)
+def move_to_folder(
+    file_id: uuid.UUID,
+    folder_id: uuid.UUID | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ProjectFileRead:
+    return ProjectFileRead.model_validate(
+        files_service.move_file(
+            db,
+            user_id=current_user.id,
+            file_id=file_id,
+            folder_id=folder_id,
+        )
+    )
