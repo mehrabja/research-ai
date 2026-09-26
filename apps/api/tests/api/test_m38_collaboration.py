@@ -74,6 +74,41 @@ def _upgrade_workspace_to_pro(workspace_id: uuid.UUID) -> None:
         db.commit()
 
 
+def _project(
+    token: str,
+    workspace_id: uuid.UUID,
+    name: str,
+) -> uuid.UUID:
+    r = client.post(
+        f"/api/v1/projects?workspace_id={workspace_id}",
+        headers=_auth(token),
+        json={"name": name},
+    )
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["workspace_id"] == str(workspace_id)
+    return uuid.UUID(body["id"])
+
+
+def _report(
+    token: str,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    topic: str,
+) -> uuid.UUID:
+    r = client.post(
+        f"/api/v1/reports?workspace_id={workspace_id}",
+        headers=_auth(token),
+        json={
+            "topic": topic,
+            "output_language": "en",
+            "project_id": str(project_id),
+        },
+    )
+    assert r.status_code == 201, r.text
+    return uuid.UUID(r.json()["id"])
+
+
 def _cleanup_users(uids: list[uuid.UUID]) -> None:
     if not uids:
         return
@@ -254,5 +289,173 @@ def test_transfer_ownership_updates_pointer_and_roles() -> None:
             json={"target_user_id": str(owner_id)},
         )
         assert r.status_code == 403, r.text
+    finally:
+        _cleanup_users(uids)
+
+
+
+def test_project_and_report_workspace_isolation() -> None:
+    uids: list[uuid.UUID] = []
+    try:
+        _owner, owner_token, _ = _reg(uids, "m38-tenant-owner")
+        workspace_one = _workspace(owner_token)
+        workspace_two = _workspace(owner_token)
+
+        project_one = _project(
+            owner_token,
+            workspace_one,
+            "Workspace One Project",
+        )
+        project_two = _project(
+            owner_token,
+            workspace_two,
+            "Workspace Two Project",
+        )
+
+        r = client.get(
+            f"/api/v1/projects?workspace_id={workspace_one}",
+            headers=_auth(owner_token),
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["total"] == 1
+        assert r.json()["items"][0]["id"] == str(project_one)
+        assert r.json()["items"][0]["workspace_id"] == str(workspace_one)
+
+        r = client.get(
+            f"/api/v1/projects?workspace_id={workspace_two}",
+            headers=_auth(owner_token),
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["total"] == 1
+        assert r.json()["items"][0]["id"] == str(project_two)
+        assert r.json()["items"][0]["workspace_id"] == str(workspace_two)
+
+        r = client.get(
+            "/api/v1/projects",
+            headers=_auth(owner_token),
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["total"] == 1
+        assert r.json()["items"][0]["id"] == str(project_one)
+
+        report_one = _report(
+            owner_token,
+            workspace_one,
+            project_one,
+            "Workspace One Report",
+        )
+        report_two = _report(
+            owner_token,
+            workspace_two,
+            project_two,
+            "Workspace Two Report",
+        )
+
+        r = client.get(
+            f"/api/v1/reports?workspace_id={workspace_one}",
+            headers=_auth(owner_token),
+        )
+        assert r.status_code == 200, r.text
+        assert [item["id"] for item in r.json()] == [str(report_one)]
+
+        r = client.get(
+            f"/api/v1/reports?workspace_id={workspace_two}",
+            headers=_auth(owner_token),
+        )
+        assert r.status_code == 200, r.text
+        assert [item["id"] for item in r.json()] == [str(report_two)]
+
+        r = client.get(
+            "/api/v1/reports",
+            headers=_auth(owner_token),
+        )
+        assert r.status_code == 200, r.text
+        assert [item["id"] for item in r.json()] == [str(report_one)]
+
+        r = client.get(
+            f"/api/v1/projects/{project_one}?workspace_id={workspace_two}",
+            headers=_auth(owner_token),
+        )
+        assert r.status_code == 404, r.text
+
+        r = client.patch(
+            f"/api/v1/projects/{project_one}?workspace_id={workspace_two}",
+            headers=_auth(owner_token),
+            json={"name": "wrong workspace"},
+        )
+        assert r.status_code == 404, r.text
+
+        r = client.get(
+            f"/api/v1/projects/{project_one}/reports?workspace_id={workspace_two}",
+            headers=_auth(owner_token),
+        )
+        assert r.status_code == 404, r.text
+
+        r = client.post(
+            f"/api/v1/reports?workspace_id={workspace_two}",
+            headers=_auth(owner_token),
+            json={
+                "topic": "Wrong workspace attachment",
+                "output_language": "en",
+                "project_id": str(project_one),
+            },
+        )
+        assert r.status_code == 404, r.text
+
+        _outsider, outsider_token, _ = _reg(uids, "m38-tenant-outsider")
+
+        r = client.get(
+            f"/api/v1/projects?workspace_id={workspace_one}",
+            headers=_auth(outsider_token),
+        )
+        assert r.status_code == 404, r.text
+
+        r = client.get(
+            f"/api/v1/projects/{project_one}",
+            headers=_auth(outsider_token),
+        )
+        assert r.status_code == 404, r.text
+
+        r = client.get(
+            f"/api/v1/reports?workspace_id={workspace_one}",
+            headers=_auth(outsider_token),
+        )
+        assert r.status_code == 404, r.text
+
+        r = client.get(
+            f"/api/v1/reports/{report_one}",
+            headers=_auth(outsider_token),
+        )
+        assert r.status_code == 404, r.text
+    finally:
+        _cleanup_users(uids)
+
+
+def test_orphan_report_is_restricted_to_default_workspace() -> None:
+    uids: list[uuid.UUID] = []
+    try:
+        _owner, owner_token, _ = _reg(uids, "m38-orphan-owner")
+        default_workspace = _workspace(owner_token)
+        other_workspace = _workspace(owner_token)
+
+        r = client.post(
+            f"/api/v1/reports?workspace_id={other_workspace}",
+            headers=_auth(owner_token),
+            json={
+                "topic": "No project report",
+                "output_language": "en",
+            },
+        )
+        assert r.status_code == 404, r.text
+
+        r = client.post(
+            f"/api/v1/reports?workspace_id={default_workspace}",
+            headers=_auth(owner_token),
+            json={
+                "topic": "Default workspace report",
+                "output_language": "en",
+            },
+        )
+        assert r.status_code == 201, r.text
     finally:
         _cleanup_users(uids)
