@@ -68,8 +68,8 @@ def create_project(
     db: Session,
     *,
     user_id: uuid.UUID,
-    workspace_id: uuid.UUID | None = None,
     name: str,
+    workspace_id: uuid.UUID | None = None,
     description: str | None = None,
     domain: str | None = None,
     research_objective: str | None = None,
@@ -241,8 +241,8 @@ def update_project(
     *,
     user_id: uuid.UUID,
     project_id: uuid.UUID,
-    workspace_id: uuid.UUID | None = None,
     updates: dict[str, Any],
+    workspace_id: uuid.UUID | None = None,
     commit: bool = True,
 ) -> Project:
     project = get_project(
