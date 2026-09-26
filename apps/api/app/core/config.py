@@ -86,7 +86,7 @@ class Settings(BaseSettings):
     max_request_bytes: int = Field(
         default=525 * 1024 * 1024,
         ge=1024,
-        le=100 * 1024 * 1024,
+        le=525 * 1024 * 1024,
     )
 
     rate_limit_enabled: bool = True
@@ -296,7 +296,7 @@ class Settings(BaseSettings):
     #
     # Note: extraction jobs use the global ``job_processing_timeout_seconds``
     # (M10) for lease expiry. There is no per-job-type timeout today.
-    file_storage_backend: Literal["local"] = "local"
+    file_storage_backend: Literal["local", "s3"] = "local"
     file_storage_local_root: str = "storage/files"
     file_chunk_stream_size: int = Field(
         default=1 * 1024 * 1024, ge=4096, le=16 * 1024 * 1024
