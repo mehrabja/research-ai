@@ -13,7 +13,8 @@ class RegisterRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str = Field(..., min_length=1, max_length=256)
+    password: str = Field(min_length=1, max_length=256)
+    two_factor_code: str | None = Field(default=None, min_length=6, max_length=6)
     two_factor_code: str | None = Field(default=None, min_length=6, max_length=6)
 
 
@@ -22,9 +23,12 @@ class UserResponse(BaseModel):
 
     id: uuid.UUID
     email: str
+    email_verified_at: object | None = None
+    is_platform_admin: bool = False
 
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    expires_in: int | None = None
     expires_in: int | None = None
