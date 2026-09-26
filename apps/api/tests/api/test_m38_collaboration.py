@@ -2,14 +2,12 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Iterator
-
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 
 from app.db.models.membership import WorkspaceMembership
-from app.db.models.project import Project, ProjectEvent
 from app.db.models.plan import Plan
+from app.db.models.project import Project, ProjectEvent
 from app.db.models.report import Report
 from app.db.models.subscription import Subscription
 from app.db.session import SessionLocal
