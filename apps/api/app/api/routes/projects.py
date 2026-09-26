@@ -33,12 +33,14 @@ def _to_read(db: Session, *, user_id: uuid.UUID, project) -> ProjectRead:
 @router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
 def create_project(
     body: ProjectCreate,
+    workspace_id: uuid.UUID | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ProjectRead:
     project = projects_service.create_project(
         db,
         user_id=current_user.id,
+        workspace_id=workspace_id,
         name=body.name,
         description=body.description,
         domain=body.domain,
@@ -54,6 +56,7 @@ def create_project(
 
 @router.get("", response_model=ProjectListResponse)
 def list_projects(
+    workspace_id: uuid.UUID | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     status_filter: str | None = Query(default=None, alias="status"),
@@ -64,6 +67,7 @@ def list_projects(
     rows, total = projects_service.list_projects(
         db,
         user_id=current_user.id,
+        workspace_id=workspace_id,
         status=status_filter,
         include_archived=include_archived,
         limit=limit,
@@ -71,6 +75,7 @@ def list_projects(
     )
     items = [
         ProjectListItem(
+            workspace_id=p.workspace_id,
             id=p.id,
             name=p.name,
             domain=p.domain,
@@ -100,6 +105,7 @@ def get_project(
 def update_project(
     project_id: uuid.UUID,
     body: ProjectUpdate,
+    workspace_id: uuid.UUID | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ProjectRead:
@@ -109,6 +115,7 @@ def update_project(
         db,
         user_id=current_user.id,
         project_id=project_id,
+        workspace_id=workspace_id,
         updates=updates,
     )
     return _to_read(db, user_id=current_user.id, project=project)
@@ -117,11 +124,15 @@ def update_project(
 @router.post("/{project_id}/archive", response_model=ProjectRead)
 def archive_project(
     project_id: uuid.UUID,
+    workspace_id: uuid.UUID | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ProjectRead:
     project = projects_service.archive_project(
-        db, user_id=current_user.id, project_id=project_id
+        db,
+        user_id=current_user.id,
+        project_id=project_id,
+        workspace_id=workspace_id,
     )
     return _to_read(db, user_id=current_user.id, project=project)
 
@@ -129,6 +140,7 @@ def archive_project(
 @router.get("/{project_id}/reports", response_model=ProjectReportListResponse)
 def list_project_reports(
     project_id: uuid.UUID,
+    workspace_id: uuid.UUID | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=200),
@@ -138,6 +150,7 @@ def list_project_reports(
         db,
         user_id=current_user.id,
         project_id=project_id,
+        workspace_id=workspace_id,
         limit=limit,
         offset=offset,
     )
