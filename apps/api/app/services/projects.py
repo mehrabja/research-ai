@@ -77,6 +77,7 @@ def create_project(
     hypotheses: Sequence[str] | None = None,
     scope: str | None = None,
     constraints: str | None = None,
+    provider_policy: dict[str, Any] | None = None,
     status: str = ProjectStatus.DRAFT.value,
     commit: bool = True,
 ) -> Project:
@@ -120,6 +121,7 @@ def create_project(
         ),
         scope=normalize_optional_text(scope, field="scope"),
         constraints=normalize_optional_text(constraints, field="constraints"),
+        provider_policy=provider_policy,
         status=status,
     )
     db.add(project)
@@ -276,6 +278,15 @@ def update_project(
             )
             changed.append(field)
 
+    if "provider_policy" in updates:
+        value = updates["provider_policy"]
+        if value is not None and not isinstance(value, dict):
+            raise InvalidProjectPayloadError(
+                "provider_policy must be an object"
+            )
+        project.provider_policy = value
+        changed.append("provider_policy")
+
     for field in ("research_questions", "hypotheses"):
         if field in updates:
             project.__setattr__(
@@ -410,6 +421,7 @@ def build_project_payload(
         "hypotheses": list(project.hypotheses or []),
         "scope": project.scope,
         "constraints": project.constraints,
+        "provider_policy": project.provider_policy,
         "status": project.status,
         "report_count": count_project_reports(
             db, user_id=user_id, project_id=project.id
