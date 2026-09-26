@@ -14,6 +14,7 @@ from app.db.session import get_db
 from app.schemas.knowledge_graph import (
     KnowledgeGraphBuildResponse,
     KnowledgeGraphGenerateRequest,
+    KnowledgeGraphEdgeRead,
     KnowledgeGraphNeighborRead,
     KnowledgeGraphNodeRead,
     KnowledgeGraphQueryRequest,
@@ -181,3 +182,50 @@ def run_query(
         relation_types=body.relation_types,
     )
     return KnowledgeGraphQueryResponse.model_validate(result)
+
+
+@router.get("/{project_id}/knowledge-graph/export")
+def export_graph(
+    project_id: uuid.UUID,
+    format: str = Query(default="json", pattern="^(json|csv)$"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from fastapi.responses import PlainTextResponse
+    from sqlalchemy import select
+    from app.db.models.knowledge_graph import KnowledgeGraphEdge, KnowledgeGraphNode, KnowledgeGraphVersion
+
+    get_project(db, user_id=current_user.id, project_id=project_id)
+    graph = queries_svc.get_graph(db, project_id=project_id)
+    nodes = db.execute(
+        select(KnowledgeGraphNode).where(
+            KnowledgeGraphNode.graph_version_id == graph.id,
+            KnowledgeGraphNode.project_id == project_id,
+        )
+    ).scalars().all()
+    edges = db.execute(
+        select(KnowledgeGraphEdge).where(
+            KnowledgeGraphEdge.graph_version_id == graph.id,
+            KnowledgeGraphEdge.project_id == project_id,
+        )
+    ).scalars().all()
+    if format == "csv":
+        lines = ["type,id,label,source_node_id,target_node_id,relation_type,provenance_type,confidence"]
+        for n in nodes:
+            label = (n.label or "").replace('"', '""')
+            lines.append(f'node,{n.id},"{label}",,,,')
+        for e in edges:
+            lines.append(f'edge,{e.id},"",{e.source_node_id},{e.target_node_id},{e.relation_type},{e.provenance_type},{float(e.confidence) if e.confidence is not None else ""}')
+        return PlainTextResponse(
+            "\n".join(lines),
+            media_type="text/csv",
+            headers={"Content-Disposition": 'attachment; filename="knowledge-graph.csv"'},
+        )
+    return {
+        "project_id": str(project_id),
+        "graph_version_id": str(graph.id),
+        "version": graph.version,
+        "context_hash": graph.context_hash,
+        "nodes": [KnowledgeGraphNodeRead.model_validate(n).model_dump(mode="json") for n in nodes],
+        "edges": [KnowledgeGraphEdgeRead.model_validate(e).model_dump(mode="json") for e in edges],
+    }
