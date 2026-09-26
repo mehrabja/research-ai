@@ -137,3 +137,13 @@ class ResearchPlanVersionListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class ResearchPlanUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    research_objective: str | None = Field(default=None, max_length=20000)
+    research_questions: list[Any] | None = None
+    hypotheses: list[Any] | None = None
+    budget: dict[str, Any] | None = None
+    plan_meta: dict[str, Any] | None = None
