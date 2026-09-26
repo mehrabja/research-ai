@@ -140,6 +140,14 @@ class Settings(BaseSettings):
     database_url: str = Field(..., repr=False)
     # --- M37: SaaS / Billing -------------------------------------------
     billing_provider: Literal["none", "fake", "stripe"] = "none"
+    stripe_api_key: str = Field(default="", repr=False)
+    stripe_webhook_secret: str = Field(default="", repr=False)
+    stripe_api_base_url: str = "https://api.stripe.com"
+    stripe_price_id_pro: str = Field(default="", repr=False)
+    stripe_price_id_team: str = Field(default="", repr=False)
+    stripe_success_url: str = "http://localhost:3000/settings/billing?status=success&session_id={CHECKOUT_SESSION_ID}"
+    stripe_cancel_url: str = "http://localhost:3000/settings/billing?status=cancelled"
+    stripe_portal_return_url: str = "http://localhost:3000/settings/billing"
     # --- M39 SaaS hardening --------------------------------------------
     jwt_refresh_token_expire_days: int = Field(default=30, ge=1, le=365)
     auth_refresh_cookie_name: str = "research_ai_refresh"
