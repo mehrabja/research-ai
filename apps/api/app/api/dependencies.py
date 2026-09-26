@@ -12,6 +12,7 @@ from app.core.exceptions import AuthenticationRequired
 from app.core.security import decode_access_token
 from app.db.models.user import User
 from app.db.session import get_db
+from app.services.api_tokens import resolve_token
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -28,6 +29,9 @@ def get_current_user(
 
     if not credentials.credentials:
         raise AuthenticationRequired()
+
+    if credentials.credentials.startswith("rai_"):
+        return resolve_token(db, raw=credentials.credentials).user
 
     try:
         payload = decode_access_token(credentials.credentials)
