@@ -270,7 +270,6 @@ def update_project(
         "research_objective",
         "scope",
         "constraints",
-        "provider_policy",
     ):
         if field in updates:
             project.__setattr__(
@@ -278,6 +277,13 @@ def update_project(
                 normalize_optional_text(updates[field], field=field),
             )
             changed.append(field)
+
+    if "provider_policy" in updates:
+        value = updates["provider_policy"]
+        if value is not None and not isinstance(value, dict):
+            raise InvalidProjectPayloadError("provider_policy must be an object")
+        project.provider_policy = value
+        changed.append("provider_policy")
 
     for field in ("research_questions", "hypotheses"):
         if field in updates:
