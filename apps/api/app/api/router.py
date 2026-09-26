@@ -5,6 +5,11 @@ from fastapi import APIRouter
 
 from app.api.routes.academic_qa import router as academic_qa_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.folders import router as folders_router
+from app.api.routes.notifications import router as notifications_router
+from app.api.routes.oauth import router as oauth_router
+from app.api.routes.search import router as search_router
+from app.api.routes.settings import router as settings_router
 from app.api.routes.citations import router as citations_router
 from app.api.routes.classification import (
     router as classification_router,
@@ -60,6 +65,11 @@ api_router = APIRouter()
 api_router.include_router(projects_router)
 api_router.include_router(health_router)
 api_router.include_router(auth_router)
+api_router.include_router(oauth_router)
+api_router.include_router(notifications_router)
+api_router.include_router(search_router)
+api_router.include_router(settings_router)
+api_router.include_router(folders_router)
 api_router.include_router(reports_router)
 api_router.include_router(sources_router)
 api_router.include_router(embeddings_router)
