@@ -253,3 +253,17 @@ __all__ = [
     "record_humanization_usage",
     "report_created_key",
 ]
+
+
+def generation_units_for(
+    input_tokens: int | None,
+    output_tokens: int | None,
+) -> int:
+    """Convert provider token usage into product AI-generation units.
+
+    One unit represents up to 1,000 provider tokens, rounded up, with a
+    minimum of one unit for a successful billable operation. This is an
+    internal product-metering policy; it is not a provider invoice amount.
+    """
+    total = max(0, int(input_tokens or 0)) + max(0, int(output_tokens or 0))
+    return max(1, (total + 999) // 1000)
