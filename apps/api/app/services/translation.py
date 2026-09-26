@@ -28,6 +28,7 @@ from app.integrations.translation.base import (
     TranslationTimeoutError,
 )
 from app.services.report_status import update_report_status
+from app.services import usage as usage_service
 from app.services.translation_profile import TranslationProfile
 
 logger = logging.getLogger(__name__)
@@ -513,6 +514,38 @@ def translate_report(
         output_tokens=last_result.output_tokens,
         idempotency_key=f"translation:{locked_run.id}:provider_call",
     )
+
+    workspace_id = db.execute(
+        select(Report.id)
+        .where(Report.id == report_id)
+    ).scalar_one_or_none()
+    # Resolve workspace through the owning project without changing report semantics.
+    from app.db.models.project import Project
+    workspace_id = db.execute(
+        select(Project.workspace_id)
+        .join(Report, Report.project_id == Project.id)
+        .where(Report.id == report_id)
+    ).scalar_one_or_none()
+    if workspace_id is not None:
+        usage_service.record_event(
+            db,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            metric="ai_generation_units",
+            quantity=usage_service.generation_units_for(
+                last_result.input_tokens,
+                last_result.output_tokens,
+            ),
+            idempotency_key=f"translation:{locked_run.id}:billable",
+            source_type="provider_call",
+            source_id=locked_run.id,
+            metadata={
+                "provider": last_result.provider,
+                "model": last_result.model,
+                "input_tokens": last_result.input_tokens,
+                "output_tokens": last_result.output_tokens,
+            },
+        )
 
     locked_run.status = "success"
     locked_run.completed_at = datetime.now(UTC)
