@@ -32,6 +32,7 @@ from app.domain.membership import MEMBERSHIP_ACTIVE
 from app.domain.plan import (
     FEATURE_PROJECTS_MAX,
     FEATURE_REPORTS_MONTHLY,
+    FEATURE_STORAGE_BYTES,
 )
 
 # --------------------------------------------------------------------------
@@ -226,3 +227,45 @@ __all__ = [
     "lock_workspace_quota",
     "resolve_active_plan",
 ]
+
+
+def current_storage_bytes(db: Session, *, workspace_id: uuid.UUID) -> int:
+    from app.db.models.project_file import ProjectFile
+    q = (
+        select(func.coalesce(func.sum(ProjectFile.size_bytes), 0))
+        .select_from(ProjectFile)
+        .join(Project, Project.id == ProjectFile.project_id)
+        .where(
+            Project.workspace_id == workspace_id,
+            ProjectFile.deleted_at.is_(None),
+        )
+    )
+    return int(db.execute(q).scalar_one())
+
+
+def check_and_reserve_storage(
+    db: Session,
+    *,
+    workspace_id: uuid.UUID,
+    additional_bytes: int,
+) -> None:
+    if additional_bytes < 0:
+        raise ValueError("additional_bytes must be non-negative")
+    lock_workspace_quota(
+        db, workspace_id=workspace_id, feature=FEATURE_STORAGE_BYTES
+    )
+    plan = resolve_active_plan(db, workspace_id=workspace_id)
+    if plan is None:
+        return
+    limit = get_limit(
+        db, plan_id=plan.id, feature=FEATURE_STORAGE_BYTES
+    )
+    if limit is None:
+        return
+    current = current_storage_bytes(db, workspace_id=workspace_id)
+    if current + additional_bytes > limit:
+        raise QuotaExceeded(
+            feature=FEATURE_STORAGE_BYTES,
+            limit=limit,
+            current=current,
+        )
