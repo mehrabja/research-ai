@@ -290,6 +290,34 @@ def fail_job(
     db.commit()
 
 
+def retry_failed_job(
+    db: Session, *, job_id: uuid.UUID, user_id: uuid.UUID | None
+) -> Job:
+    job = db.execute(
+        select(Job).where(Job.id == job_id).with_for_update()
+    ).scalar_one_or_none()
+    if job is None or (user_id is not None and job.user_id != user_id):
+        raise JobNotFoundError()
+    if job.status != "failed":
+        raise InvalidJobStateError(
+            f"cannot retry job in status {job.status!r}"
+        )
+    validate_job_transition("failed", "queued")
+    job.status = "queued"
+    job.attempt_count = 0
+    job.available_at = datetime.now(UTC)
+    job.started_at = None
+    job.completed_at = None
+    job.failed_at = None
+    job.heartbeat_at = None
+    job.worker_id = None
+    job.last_error_code = None
+    job.last_error_message = None
+    db.commit()
+    db.refresh(job)
+    return job
+
+
 def cancel_job(
     db: Session, *, job_id: uuid.UUID, user_id: uuid.UUID | None
 ) -> Job:
@@ -416,4 +444,5 @@ __all__ = [
     "heartbeat_job",
     "list_jobs",
     "reclaim_stale_jobs",
+    "retry_failed_job",
 ]
