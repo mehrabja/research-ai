@@ -32,7 +32,6 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     # Multipart uploads (Milestone 19)
-    "python-multipart>=0.0.9,<1.0",
     "pytest>=8.1,<9.0",
     "pytest-asyncio>=0.23,<1.0",
     # --- Extraction & Chunking (Milestone 8) ---
