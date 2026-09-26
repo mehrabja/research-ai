@@ -53,6 +53,7 @@ class ProjectUpdate(BaseModel):
 
 
 class ProjectRead(BaseModel):
+    workspace_id: uuid.UUID
     id: uuid.UUID
     name: str
     description: str | None
@@ -70,6 +71,7 @@ class ProjectRead(BaseModel):
 
 
 class ProjectListItem(BaseModel):
+    workspace_id: uuid.UUID
     id: uuid.UUID
     name: str
     domain: str | None
