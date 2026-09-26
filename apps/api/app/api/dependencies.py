@@ -31,7 +31,11 @@ def get_current_user(
         raise AuthenticationRequired()
 
     if credentials.credentials.startswith("rai_"):
-        return resolve_token(db, raw=credentials.credentials).user
+        token = resolve_token(db, raw=credentials.credentials)
+        user = db.get(User, token.user_id)
+        if user is None or not user.is_active:
+            raise AuthenticationRequired()
+        return user
 
     try:
         payload = decode_access_token(credentials.credentials)
