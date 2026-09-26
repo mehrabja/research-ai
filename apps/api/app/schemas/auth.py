@@ -14,6 +14,7 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=1, max_length=256)
+    two_factor_code: str | None = Field(default=None, min_length=6, max_length=6)
 
 
 class UserResponse(BaseModel):
@@ -26,3 +27,4 @@ class UserResponse(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    expires_in: int | None = None
