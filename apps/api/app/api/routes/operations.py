@@ -2,18 +2,17 @@
 from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
-from sqlalchemy import func, select, union_all
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, Query
 from app.api.dependencies import get_current_user
-from app.db.models.job import Job
+from app.db.models.jobs import Job
 from app.db.models.project import Project, ProjectEvent
 from app.db.models.project_file import ProjectFile
 from app.db.models.report import Report, ReportEvent
 from app.db.models.source import Source
 from app.db.models.user import User
 from app.db.session import get_db
-from app.domain.workspace import WORKSPACE_STATUS_ACTIVE
 from app.schemas.operations import AuditEventListResponse, AuditEventRead, DashboardSummary, ProjectExportManifest
 from app.services import entitlements as entitlements_service
 from app.services import usage as usage_service
