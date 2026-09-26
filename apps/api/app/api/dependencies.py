@@ -54,3 +54,11 @@ def get_current_user(
 
 def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
+
+
+def require_platform_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if not current_user.is_platform_admin:
+        raise AuthenticationRequired()
+    return current_user
