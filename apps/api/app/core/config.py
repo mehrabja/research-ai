@@ -140,6 +140,53 @@ class Settings(BaseSettings):
     database_url: str = Field(..., repr=False)
     # --- M37: SaaS / Billing -------------------------------------------
     billing_provider: Literal["none", "fake"] = "none"
+    # --- M39 security / external provider configuration -------------
+    jwt_refresh_token_expire_days: int = Field(default=30, ge=1, le=365)
+    auth_refresh_cookie_name: str = "research_ai_refresh"
+    auth_csrf_cookie_name: str = "research_ai_csrf"
+    auth_refresh_secure_cookie: bool = True
+    auth_refresh_same_site: Literal["lax", "strict", "none"] = "lax"
+    auth_refresh_require_csrf: bool = True
+    auth_password_reset_ttl_minutes: int = Field(default=30, ge=5, le=1440)
+    auth_email_verification_ttl_hours: int = Field(default=24, ge=1, le=168)
+    auth_totp_issuer: str = "Research AI"
+
+    oauth_google_client_id: str = Field(default="", repr=False)
+    oauth_google_client_secret: str = Field(default="", repr=False)
+    oauth_github_client_id: str = Field(default="", repr=False)
+    oauth_github_client_secret: str = Field(default="", repr=False)
+    oauth_redirect_base_url: str = ""
+    frontend_base_url: str = "http://localhost:3000"
+
+    email_provider: Literal["none", "smtp", "resend"] = "none"
+    email_from_address: str = "no-reply@example.invalid"
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str = Field(default="", repr=False)
+    smtp_password: str = Field(default="", repr=False)
+    smtp_use_tls: bool = True
+    resend_api_key: str = Field(default="", repr=False)
+    resend_base_url: str = "https://api.resend.com"
+
+    billing_provider: Literal["none", "fake", "stripe"] = "none"
+    stripe_api_key: str = Field(default="", repr=False)
+    stripe_webhook_secret: str = Field(default="", repr=False)
+    stripe_api_base_url: str = "https://api.stripe.com"
+    stripe_price_id_pro: str = Field(default="", repr=False)
+    stripe_price_id_team: str = Field(default="", repr=False)
+    stripe_success_url: str = "http://localhost:3000/settings/billing?status=success&session_id={CHECKOUT_SESSION_ID}"
+    stripe_cancel_url: str = "http://localhost:3000/settings/billing?status=cancelled"
+    stripe_portal_return_url: str = "http://localhost:3000/settings/billing"
+
+    storage_backend: Literal["local", "s3"] = "local"
+    storage_s3_bucket: str = ""
+    storage_s3_region: str = ""
+    storage_s3_endpoint_url: str = ""
+    storage_s3_access_key_id: str = Field(default="", repr=False)
+    storage_s3_secret_access_key: str = Field(default="", repr=False)
+    storage_s3_prefix: str = "research-ai"
+    global_search_max_results: int = Field(default=50, ge=1, le=200)
+    file_folder_max_depth: int = Field(default=8, ge=1, le=50)
     # --- Advanced Humanization (Milestone 32) -------------------------
     manuscript_humanization_enabled: bool = True
     manuscript_humanization_async_jobs: bool = False
