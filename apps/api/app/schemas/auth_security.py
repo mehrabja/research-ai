@@ -61,3 +61,8 @@ class TotpVerifyRequest(BaseModel):
 class TotpStatusResponse(BaseModel):
     enabled: bool
     recovery_codes_remaining: int
+
+
+class OAuthStartResponse(BaseModel):
+    provider: str
+    authorization_url: str
