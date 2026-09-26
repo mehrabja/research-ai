@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 def _resolve_repo_root() -> Path:
     current = Path(__file__).resolve()
 
@@ -896,6 +897,7 @@ class Settings(BaseSettings):
                 "classification_confidence_threshold"
             )
         return self
+
     @model_validator(mode="after")
     def _validate_m36_security(self) -> Settings:
         """Fail-closed guards that only apply to production."""
@@ -919,6 +921,7 @@ class Settings(BaseSettings):
         if not self.backup_directory.strip():
             raise ValueError("backup_directory must not be empty")
         return self
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

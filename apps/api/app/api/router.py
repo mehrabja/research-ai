@@ -1,7 +1,6 @@
 """Aggregate API router."""
 from __future__ import annotations
 
-from app.api.routes.invitations import router as invitations_router
 from fastapi import APIRouter
 
 from app.api.routes.academic_qa import router as academic_qa_router
@@ -20,6 +19,7 @@ from app.api.routes.files import router as project_files_router
 from app.api.routes.health import router as health_router
 from app.api.routes.humanization import router as humanization_router
 from app.api.routes.intelligence import router as intelligence_router
+from app.api.routes.invitations import router as invitations_router
 from app.api.routes.jobs import router as jobs_router
 from app.api.routes.knowledge_graph import (
     router as knowledge_graph_router,

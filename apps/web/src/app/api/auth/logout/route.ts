@@ -1,0 +1,1 @@
+import{NextResponse}from"next/server";import{clearAccessCookie}from"@/lib/server/auth";export async function POST(){const out=NextResponse.json({ok:true});clearAccessCookie(out);return out}
