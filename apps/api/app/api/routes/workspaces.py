@@ -247,6 +247,85 @@ def create_invitation(
     )
 
 
+@router.get(
+    "/{workspace_id}/members/invitations",
+    response_model=InvitationListResponse,
+)
+def list_workspace_invitations(
+    workspace_id: uuid.UUID,
+    state: str | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> InvitationListResponse:
+    rows = invitations_service.list_invitations(
+        db,
+        workspace_id=workspace_id,
+        actor_user_id=current_user.id,
+        state=state,
+    )
+    items = [
+        InvitationRead(
+            id=inv.id,
+            workspace_id=inv.workspace_id,
+            email=inv.email,
+            role=inv.role,
+            state=compute_state(
+                accepted_at=inv.accepted_at,
+                revoked_at=inv.revoked_at,
+                expires_at=inv.expires_at,
+            ),
+            expires_at=inv.expires_at,
+            accepted_at=inv.accepted_at,
+            revoked_at=inv.revoked_at,
+            created_at=inv.created_at,
+        )
+        for inv in rows
+    ]
+    return InvitationListResponse(items=items, total=len(items))
+
+
+@router.delete(
+    "/{workspace_id}/members/invitations/{invitation_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def revoke_workspace_invitation(
+    workspace_id: uuid.UUID,
+    invitation_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    existing = db.get(WorkspaceInvitation, invitation_id)
+    if existing is None or existing.workspace_id != workspace_id:
+        raise InvitationNotFound()
+    invitations_service.revoke_invitation(
+        db,
+        invitation_id=invitation_id,
+        actor_user_id=current_user.id,
+    )
+    db.commit()
+
+
+@router.post(
+    "/{workspace_id}/transfer-ownership",
+    response_model=WorkspaceRead,
+)
+def transfer_workspace_ownership(
+    workspace_id: uuid.UUID,
+    body: WorkspaceTransferRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> WorkspaceRead:
+    ws = memberships_service.transfer_ownership(
+        db,
+        workspace_id=workspace_id,
+        actor_user_id=current_user.id,
+        target_user_id=body.target_user_id,
+    )
+    db.commit()
+    db.refresh(ws)
+    return WorkspaceRead.model_validate(ws)
+
+
 # ---------------------------------------------------------------------------
 # Usage / plan / subscription
 # ---------------------------------------------------------------------------
