@@ -40,6 +40,7 @@ from app.integrations.generation.base import (
     GenerationTimeoutError,
 )
 from app.services import report_status as report_status_service
+from app.services import usage as usage_service
 from app.services import report_versions as report_versions_service
 from app.services import retrieval as retrieval_service
 from app.services.embedding_profile import (
@@ -412,6 +413,34 @@ def _persist_success_atomic(
             )
         )
         db.flush()
+
+        from app.db.models.project import Project
+        from app.db.models.report import Report as ReportModel
+        workspace_id = db.execute(
+            select(Project.workspace_id)
+            .join(ReportModel, ReportModel.project_id == Project.id)
+            .where(ReportModel.id == report_id)
+        ).scalar_one_or_none()
+        if workspace_id is not None:
+            usage_service.record_event(
+                db,
+                workspace_id=workspace_id,
+                user_id=user_id,
+                metric="ai_generation_units",
+                quantity=usage_service.generation_units_for(
+                    provider_result.input_tokens,
+                    provider_result.output_tokens,
+                ),
+                idempotency_key=f"generation:{attempt_id}:billable",
+                source_type="provider_call",
+                source_id=attempt_id,
+                metadata={
+                    "provider": provider_result.provider,
+                    "model": provider_result.model,
+                    "input_tokens": provider_result.input_tokens,
+                    "output_tokens": provider_result.output_tokens,
+                },
+            )
 
         report_status_service.update_report_status(
             db,
