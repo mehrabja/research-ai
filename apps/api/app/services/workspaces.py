@@ -309,3 +309,20 @@ __all__ = [
     "list_workspaces_for_user",
     "update_workspace",
 ]
+
+
+def set_workspace_status(
+    db: Session,
+    *,
+    workspace_id: uuid.UUID,
+    status: str,
+) -> Workspace:
+    from app.domain.workspace import WORKSPACE_STATUS_ACTIVE, WORKSPACE_STATUS_SUSPENDED
+    if status not in (WORKSPACE_STATUS_ACTIVE, WORKSPACE_STATUS_SUSPENDED):
+        raise ValueError("invalid workspace status")
+    row = db.get(Workspace, workspace_id)
+    if row is None:
+        raise WorkspaceNotFound()
+    row.status = status
+    db.flush()
+    return row
