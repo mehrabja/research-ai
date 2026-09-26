@@ -12,6 +12,7 @@ from app.api.routes.oauth import router as oauth_router
 from app.api.routes.search import router as search_router
 from app.api.routes.settings import router as settings_router
 from app.api.routes.citations import router as citations_router
+from app.api.routes.billing import router as billing_router
 from app.api.routes.classification import (
     router as classification_router,
 )
@@ -65,6 +66,7 @@ from app.api.routes.workspaces import router as workspaces_router
 
 api_router = APIRouter()
 api_router.include_router(admin_router)
+api_router.include_router(billing_router)
 api_router.include_router(projects_router)
 api_router.include_router(health_router)
 api_router.include_router(auth_router)
