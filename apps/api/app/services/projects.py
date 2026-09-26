@@ -46,10 +46,29 @@ def _emit(
     )
 
 
+def _resolve_workspace(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    workspace_id: uuid.UUID | None,
+):
+    if workspace_id is None:
+        return workspaces_service.ensure_default_workspace(
+            db, user_id=user_id
+        )
+    workspace, _ = workspaces_service.get_workspace_for_user(
+        db,
+        workspace_id=workspace_id,
+        user_id=user_id,
+    )
+    return workspace
+
+
 def create_project(
     db: Session,
     *,
     user_id: uuid.UUID,
+    workspace_id: uuid.UUID | None = None,
     name: str,
     description: str | None = None,
     domain: str | None = None,
@@ -65,8 +84,10 @@ def create_project(
         raise InvalidProjectPayloadError(f"unknown status: {status}")
     if status == ProjectStatus.ARCHIVED.value:
         raise InvalidProjectPayloadError("cannot create project as archived")
-    workspace = workspaces_service.ensure_default_workspace(
-        db, user_id=user_id
+    workspace = _resolve_workspace(
+        db,
+        user_id=user_id,
+        workspace_id=workspace_id,
     )
     try:
         entitlements_service.check_and_reserve_project_slot(
@@ -119,15 +140,29 @@ def create_project(
 
 
 def get_project(
-    db: Session, *, user_id: uuid.UUID, project_id: uuid.UUID
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    project_id: uuid.UUID,
+    workspace_id: uuid.UUID | None = None,
 ) -> Project:
+    filters: list[Any] = [
+        Project.id == project_id,
+        Project.user_id == user_id,
+    ]
+    if workspace_id is not None:
+        filters.append(Project.workspace_id == workspace_id)
+
     project = db.execute(
-        select(Project).where(
-            Project.id == project_id, Project.user_id == user_id
-        )
+        select(Project).where(*filters)
     ).scalar_one_or_none()
     if project is None:
         raise ProjectNotFound()
+    workspaces_service.get_workspace_for_user(
+        db,
+        workspace_id=project.workspace_id,
+        user_id=user_id,
+    )
     return project
 
 
@@ -135,6 +170,7 @@ def list_projects(
     db: Session,
     *,
     user_id: uuid.UUID,
+    workspace_id: uuid.UUID | None = None,
     status: str | None = None,
     include_archived: bool = True,
     limit: int = 50,
@@ -144,7 +180,15 @@ def list_projects(
 
     Uses a single correlated subquery — no N+1.
     """
-    filters: list[Any] = [Project.user_id == user_id]
+    workspace = _resolve_workspace(
+        db,
+        user_id=user_id,
+        workspace_id=workspace_id,
+    )
+    filters: list[Any] = [
+        Project.user_id == user_id,
+        Project.workspace_id == workspace.id,
+    ]
     if status is not None:
         filters.append(Project.status == status)
     elif not include_archived:
@@ -197,10 +241,16 @@ def update_project(
     *,
     user_id: uuid.UUID,
     project_id: uuid.UUID,
+    workspace_id: uuid.UUID | None = None,
     updates: dict[str, Any],
     commit: bool = True,
 ) -> Project:
-    project = get_project(db, user_id=user_id, project_id=project_id)
+    project = get_project(
+        db,
+        user_id=user_id,
+        project_id=project_id,
+        workspace_id=workspace_id,
+    )
     if project.status == ProjectStatus.ARCHIVED.value:
         raise InvalidProjectStatusTransitionError(
             "archived project cannot be edited"
@@ -260,9 +310,15 @@ def archive_project(
     *,
     user_id: uuid.UUID,
     project_id: uuid.UUID,
+    workspace_id: uuid.UUID | None = None,
     commit: bool = True,
 ) -> Project:
-    project = get_project(db, user_id=user_id, project_id=project_id)
+    project = get_project(
+        db,
+        user_id=user_id,
+        project_id=project_id,
+        workspace_id=workspace_id,
+    )
     if project.status == ProjectStatus.ARCHIVED.value:
         return project  # idempotent — no duplicate event
     previous = project.status
@@ -308,11 +364,17 @@ def list_project_reports(
     *,
     user_id: uuid.UUID,
     project_id: uuid.UUID,
+    workspace_id: uuid.UUID | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[list[Report], int]:
     # Ownership enforced at service boundary.
-    get_project(db, user_id=user_id, project_id=project_id)
+    get_project(
+        db,
+        user_id=user_id,
+        project_id=project_id,
+        workspace_id=workspace_id,
+    )
 
     base = select(Report).where(
         Report.project_id == project_id,
@@ -338,6 +400,7 @@ def build_project_payload(
     db: Session, *, user_id: uuid.UUID, project: Project
 ) -> dict[str, Any]:
     return {
+        "workspace_id": project.workspace_id,
         "id": project.id,
         "name": project.name,
         "description": project.description,
