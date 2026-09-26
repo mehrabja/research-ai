@@ -151,3 +151,23 @@ class ManuscriptValidationRead(BaseModel):
     validation_status: str
     validation_errors: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+
+
+class ManuscriptDraftRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    id: uuid.UUID
+    manuscript_id: uuid.UUID
+    updated_by: uuid.UUID | None
+    base_version_id: uuid.UUID | None
+    sections: list[Any] | None
+    draft_hash: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ManuscriptDraftUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    base_version_id: uuid.UUID | None = None
+    sections: list[Any] = Field(default_factory=list)
