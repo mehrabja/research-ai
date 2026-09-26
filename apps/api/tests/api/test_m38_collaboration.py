@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 
@@ -13,7 +14,6 @@ from app.db.models.subscription import Subscription
 from app.db.session import SessionLocal
 from app.main import app
 from tests._m37_cleanup import purge_test_users
-
 
 client = TestClient(app)
 
