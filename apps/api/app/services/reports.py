@@ -17,6 +17,7 @@ from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.exceptions import (
     ProjectNotFound,
@@ -159,6 +160,7 @@ def list_reports(
         else default_workspace
     )
 
+    workspace_filter: ColumnElement[bool]
     if workspace.id == default_workspace.id:
         workspace_filter = (
             (Project.workspace_id == workspace.id)
