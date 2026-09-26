@@ -11,6 +11,10 @@ class WorkspaceCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=120)
 
 
+class WorkspaceTransferRequest(BaseModel):
+    target_user_id: uuid.UUID
+
+
 class WorkspaceUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
     settings: dict[str, Any] | None = None
