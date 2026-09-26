@@ -77,6 +77,7 @@ def create_project(
     hypotheses: Sequence[str] | None = None,
     scope: str | None = None,
     constraints: str | None = None,
+    provider_policy: dict[str, Any] | None = None,
     status: str = ProjectStatus.DRAFT.value,
     commit: bool = True,
 ) -> Project:
@@ -120,6 +121,7 @@ def create_project(
         ),
         scope=normalize_optional_text(scope, field="scope"),
         constraints=normalize_optional_text(constraints, field="constraints"),
+        provider_policy=provider_policy,
         status=status,
     )
     db.add(project)
@@ -268,6 +270,7 @@ def update_project(
         "research_objective",
         "scope",
         "constraints",
+        "provider_policy",
     ):
         if field in updates:
             project.__setattr__(
@@ -410,6 +413,7 @@ def build_project_payload(
         "hypotheses": list(project.hypotheses or []),
         "scope": project.scope,
         "constraints": project.constraints,
+        "provider_policy": project.provider_policy,
         "status": project.status,
         "report_count": count_project_reports(
             db, user_id=user_id, project_id=project.id
