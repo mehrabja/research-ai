@@ -1,5 +1,7 @@
 """Register every model so ``Base.metadata`` is complete for Alembic."""
 
+from app.db.models.api_token import ApiToken
+from app.db.models.auth import AuthSession, AuthToken, OAuthAccount, OAuthState, TwoFactorAuth
 from app.db.models.academic_qa import (
     AcademicQAFinding,
     AcademicQARun,
@@ -7,6 +9,9 @@ from app.db.models.academic_qa import (
 
 # M37 — SaaS foundation
 from app.db.models.billing_event import BillingEvent  # noqa: F401
+from app.db.models.file_folder import FileFolder
+from app.db.models.manuscript_draft import ManuscriptDraft
+from app.db.models.notification import Notification, NotificationPreference
 from app.db.models.citation import (
     CitationIdentity,
     CitationRun,
