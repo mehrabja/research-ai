@@ -25,6 +25,7 @@ from app.schemas.research_plan import (
     ResearchPlanDependencyRead,
     ResearchPlanGenerateRequest,
     ResearchPlanGenerateResponse,
+    ResearchPlanUpdateRequest,
     ResearchPlanRead,
     ResearchPlanSectionRead,
     ResearchPlanValidationRead,
@@ -282,3 +283,41 @@ def validate_plan(
         validation_errors=list(vres.errors),
         completeness_score=vres.score,
     )
+
+
+@router.patch(
+    "/{project_id}/research-plan",
+    response_model=ResearchPlanRead,
+)
+def update_plan(
+    project_id: uuid.UUID,
+    body: ResearchPlanUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ResearchPlanRead:
+    get_project(
+        db,
+        user_id=current_user.id,
+        project_id=project_id,
+    )
+    plan = _load_current_plan(
+        db,
+        project_id=project_id,
+    )
+
+    if body.research_objective is not None:
+        plan.research_objective_snapshot = body.research_objective
+    if body.research_questions is not None:
+        plan.research_questions_snapshot = body.research_questions
+    if body.hypotheses is not None:
+        plan.hypotheses_snapshot = body.hypotheses
+    if body.budget is not None:
+        plan.budget = body.budget
+    if body.plan_meta is not None:
+        plan.plan_meta = body.plan_meta
+
+    plan.validation_status = "pending"
+    plan.validation_errors = None
+    db.commit()
+    db.refresh(plan)
+    return _plan_to_read(db, plan)
