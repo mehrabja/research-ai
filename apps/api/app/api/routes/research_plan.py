@@ -25,6 +25,7 @@ from app.schemas.research_plan import (
     ResearchPlanDependencyRead,
     ResearchPlanGenerateRequest,
     ResearchPlanGenerateResponse,
+    ResearchPlanUpdateRequest,
     ResearchPlanRead,
     ResearchPlanSectionRead,
     ResearchPlanValidationRead,
@@ -94,7 +95,12 @@ def _load_current_plan(
         select(ResearchPlan)
         .where(
             ResearchPlan.project_id == project_id,
-            ResearchPlan.status == ResearchPlanStatus.READY.value,
+            ResearchPlan.status.in_(
+                (
+                    ResearchPlanStatus.READY.value,
+                    ResearchPlanStatus.DRAFT.value,
+                )
+            ),
         )
         .order_by(ResearchPlan.version.desc())
         .limit(1)
@@ -282,3 +288,133 @@ def validate_plan(
         validation_errors=list(vres.errors),
         completeness_score=vres.score,
     )
+
+
+@router.patch(
+    "/{project_id}/research-plan",
+    response_model=ResearchPlanRead,
+)
+def update_plan(
+    project_id: uuid.UUID,
+    body: ResearchPlanUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ResearchPlanRead:
+    get_project(db, user_id=current_user.id, project_id=project_id)
+    current = _load_current_plan(db, project_id=project_id)
+    latest_version = int(
+        db.execute(
+            select(func.coalesce(func.max(ResearchPlan.version), 0))
+            .where(ResearchPlan.project_id == project_id)
+        ).scalar_one()
+    )
+    plan = ResearchPlan(
+        project_id=project_id,
+        version=latest_version + 1,
+        status=ResearchPlanStatus.DRAFT.value,
+        planner_version=current.planner_version,
+        planning_mode=current.planning_mode,
+        context_hash=current.context_hash,
+        literature_run_id=current.literature_run_id,
+        domain_id=current.domain_id,
+        paper_type_code=current.paper_type_code,
+        research_design_code=current.research_design_code,
+        research_objective_snapshot=(
+            body.research_objective
+            if body.research_objective is not None
+            else current.research_objective_snapshot
+        ),
+        research_questions_snapshot=(
+            body.research_questions
+            if body.research_questions is not None
+            else current.research_questions_snapshot
+        ),
+        hypotheses_snapshot=(
+            body.hypotheses
+            if body.hypotheses is not None
+            else current.hypotheses_snapshot
+        ),
+        budget=body.budget if body.budget is not None else dict(current.budget or {}),
+        plan_meta=body.plan_meta if body.plan_meta is not None else dict(current.plan_meta or {}),
+        validation_status="pending",
+        validation_errors=None,
+        coverage_summary=current.coverage_summary,
+        supersedes_plan_id=current.id,
+        created_by=current_user.id,
+    )
+    db.add(plan)
+    db.flush()
+
+    old_sections = list(
+        db.execute(
+            select(ResearchPlanSection)
+            .where(ResearchPlanSection.plan_id == current.id)
+            .order_by(ResearchPlanSection.display_order.asc())
+        ).scalars().all()
+    )
+    old_reqs = list(
+        db.execute(
+            select(ResearchEvidenceRequirement)
+            .where(ResearchEvidenceRequirement.plan_id == current.id)
+        ).scalars().all()
+    )
+    old_deps = list(
+        db.execute(
+            select(ResearchPlanDependency)
+            .where(ResearchPlanDependency.plan_id == current.id)
+        ).scalars().all()
+    )
+
+    section_map: dict[uuid.UUID, ResearchPlanSection] = {}
+    for old in old_sections:
+        clone = ResearchPlanSection(
+            plan_id=plan.id,
+            section_key=old.section_key,
+            title=old.title,
+            purpose=old.purpose,
+            section_type=old.section_type,
+            display_order=old.display_order,
+            required=old.required,
+            word_budget=old.word_budget,
+            budget_weight=old.budget_weight,
+            evidence_coverage_target=old.evidence_coverage_target,
+            status=old.status,
+            section_meta=old.section_meta,
+        )
+        db.add(clone)
+        db.flush()
+        section_map[old.id] = clone
+
+    for old in old_reqs:
+        db.add(
+            ResearchEvidenceRequirement(
+                plan_id=plan.id,
+                section_id=section_map[old.section_id].id,
+                requirement_key=old.requirement_key,
+                requirement_type=old.requirement_type,
+                description=old.description,
+                required=old.required,
+                priority=old.priority,
+                min_sources=old.min_sources,
+                max_sources=old.max_sources,
+                preferred_paper_types=old.preferred_paper_types,
+                preferred_research_designs=old.preferred_research_designs,
+                max_age_years=old.max_age_years,
+                full_text_required=old.full_text_required,
+                min_relevance_score=old.min_relevance_score,
+                coverage_weight=old.coverage_weight,
+                requirement_meta=old.requirement_meta,
+            )
+        )
+    for old in old_deps:
+        db.add(
+            ResearchPlanDependency(
+                plan_id=plan.id,
+                upstream_section_id=section_map[old.upstream_section_id].id,
+                downstream_section_id=section_map[old.downstream_section_id].id,
+                dependency_type=old.dependency_type,
+                dependency_meta=old.dependency_meta,
+            )
+        )
+    db.commit()
+    return _plan_to_read(db, plan)
