@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
+from app.core.exceptions import InvitationNotFound
 from app.db.models.invitation import WorkspaceInvitation
 from app.db.models.membership import WorkspaceMembership
 from app.db.models.plan import Plan, PlanEntitlement
