@@ -49,7 +49,9 @@ from app.domain.file import (
     storage_key_for,
 )
 from app.domain.project import EDITABLE_PROJECT_STATUSES
+from app.services import entitlements as entitlements_service
 from app.services import jobs as jobs_service
+from app.services import usage as usage_service
 from app.services.file_storage import get_storage_provider
 
 logger = logging.getLogger(__name__)
@@ -208,7 +210,7 @@ def upload_file(
             hasher.update(chunk)
             yield chunk
 
-    provider = get_storage_provider()
+    entitlements_service.check_and_reserve_storage(\n        db, workspace_id=project.workspace_id, additional_bytes=0\n    )\n\n    provider = get_storage_provider()
     provider.put_stream(key=storage_key, chunks=_hashing_stream())
 
     # Everything from here until commit is inside a single cleanup
@@ -250,11 +252,10 @@ def upload_file(
             status=FileStatus.UPLOADED.value,
             extraction_status=initial_extraction.value,
         )
+        entitlements_service.check_and_reserve_storage(\n            db, workspace_id=project.workspace_id, additional_bytes=total\n        )
         db.add(pf)
         db.flush()
-        _emit_event(
-            db,
-            project_file_id=pf.id,
+        usage_service.record_event(\n            db,\n            workspace_id=project.workspace_id,\n            user_id=user_id,\n            metric="files_uploaded",\n            quantity=1,\n            idempotency_key=usage_service.file_uploaded_key(pf.id),\n            source_type="file",\n            source_id=pf.id,\n            metadata={"size_bytes": total},\n        )\n        _emit_event(\n            db,\n            project_file_id=pf.id,
             user_id=user_id,
             event_type="file_uploaded",
             event_meta={
@@ -264,8 +265,7 @@ def upload_file(
                 "detected_mime": detected_mime,
             },
         )
-        db.commit()
-        db.refresh(pf)
+        usage_service.record_event(\n            db,\n            workspace_id=project.workspace_id,\n            user_id=user_id,\n            metric="storage_bytes",\n            quantity=max(1, total),\n            idempotency_key=f"storage:{pf.id}",\n            source_type="file",\n            source_id=pf.id,\n        )\n        db.commit()\n        db.refresh(pf)
     except IntegrityError as exc:
         db.rollback()
         _best_effort_delete(storage_key)
