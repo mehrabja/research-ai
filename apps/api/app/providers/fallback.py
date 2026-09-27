@@ -64,6 +64,11 @@ class FallbackProvider:
     def providers(self) -> tuple[Any, ...]:
         return self._providers
 
+    def __getattr__(self, name: str) -> Any:
+        # Provider capability metadata (dimensions, limits, etc.) is
+        # delegated to the primary provider.
+        return getattr(self._providers[0], name)
+
     def _call(self, method: str, *args: Any, **kwargs: Any) -> Any:
         last_error: BaseException | None = None
         for provider in self._providers:
