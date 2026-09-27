@@ -8,7 +8,7 @@ from app.core.config import get_settings
 from app.domain.source import SourceCandidate
 from app.integrations.sources.base import (
     SourceProviderInvalidResponseError,
-    SourceProviderProviderUnavailableError,
+    SourceProviderUnavailableError,
 )
 
 
@@ -46,12 +46,20 @@ class OpenAlexProvider:
         try:
             with urllib.request.urlopen(req, timeout=self._timeout) as response:
                 payload = json.loads(response.read().decode("utf-8"))
-        except Exception as exc:
-            raise RuntimeError(f"OpenAlex request failed: {type(exc).__name__}") from exc
+        except (TimeoutError, urllib.error.URLError, OSError) as exc:
+            raise SourceProviderUnavailableError(
+                f"OpenAlex request failed: {type(exc).__name__}"
+            ) from exc
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise SourceProviderInvalidResponseError(
+                "OpenAlex returned invalid JSON"
+            ) from exc
 
         results = payload.get("results") if isinstance(payload, dict) else None
         if not isinstance(results, list):
-            return []
+            raise SourceProviderInvalidResponseError(
+                "OpenAlex response missing results list"
+            )
 
         candidates: list[SourceCandidate] = []
         for item in results:
