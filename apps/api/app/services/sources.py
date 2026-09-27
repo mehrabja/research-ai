@@ -98,6 +98,8 @@ def search_source_candidates(
     max_citations: int | None = None,
     author: str | None = None,
     venue: str | None = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
 ) -> list[SourceCandidate]:
     """Discovery only. Never persists anything.
 
