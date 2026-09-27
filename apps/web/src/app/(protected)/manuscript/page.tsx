@@ -1,0 +1,2 @@
+import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
+export default function ManuscriptPage(){return <WorkspaceFeaturePage active="manuscript" title="Manuscript" description="Immutable manuscript versions, section architecture, prose generation, and editor drafts are represented by backend contracts."/>}
