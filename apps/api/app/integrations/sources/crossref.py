@@ -95,6 +95,23 @@ class CrossrefProvider:
             date_parts = issued.get("date-parts") or [[]]
             year_value = date_parts[0][0] if date_parts and date_parts[0] else None
             url_value = item.get("URL")
+            container_titles = item.get("container-title") or []
+            source_meta = {
+                "journal": (
+                    container_titles[0]
+                    if container_titles and isinstance(container_titles[0], str)
+                    else None
+                ),
+                "is_open_access": bool(
+                    item.get("link")
+                    and any(
+                        isinstance(link, dict)
+                        and str(link.get("content-type") or "").lower()
+                        in {"application/pdf", "text/html"}
+                        for link in (item.get("link") or [])
+                    )
+                ),
+            }
 
             candidates.append(
                 SourceCandidate(
@@ -107,6 +124,7 @@ class CrossrefProvider:
                     url=url_value if isinstance(url_value, str) else None,
                     abstract=None,
                     citation_count=None,
+                    source_meta=source_meta,
                 )
             )
         return candidates
