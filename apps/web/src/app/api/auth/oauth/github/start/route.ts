@@ -1,0 +1,2 @@
+import{NextResponse}from"next/server";
+export async function GET(){const base=process.env.BACKEND_API_URL??"http://localhost:8000";const res=await fetch(base+"/api/v1/auth/oauth/github/start",{cache:"no-store"});const body=await res.json();return NextResponse.redirect(body.authorization_url)}
