@@ -52,27 +52,8 @@ def get_current_translation_profile_id() -> str:
 
 
 def build_translation_provider(profile: TranslationProfile):
-    from app.core.config import get_settings
-    from app.integrations.generation.openai import OpenAIGenerationProvider
-    from app.integrations.translation.openai import OpenAITranslationProvider
-
-    s = get_settings()
-    if profile.provider != "openai":
-        raise ValueError(
-            f"unsupported translation provider {profile.provider!r}"
-        )
-
-    gen_provider = OpenAIGenerationProvider(
-        model=profile.model,
-        base_url=s.generation_openai_base_url or None,
-        api_key=s.generation_openai_api_key or None,
-        timeout_seconds=profile.timeout_seconds,
-        max_retries=profile.max_retries,
-        retry_base_seconds=profile.retry_base_seconds,
-        retry_max_seconds=profile.retry_max_seconds,
-        retry_jitter_fraction=profile.retry_jitter_fraction,
+    from app.services.provider_registry import (
+        build_translation_provider as build_registry_translation_provider,
     )
-    return OpenAITranslationProvider(
-        generation_provider=gen_provider,
-        model_name=profile.model,
-    )
+
+    return build_registry_translation_provider(profile)
