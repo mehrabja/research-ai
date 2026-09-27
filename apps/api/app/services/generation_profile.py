@@ -7,7 +7,7 @@ from app.domain.generation import (
     build_generation_profile_id,
 )
 from app.integrations.generation.base import GenerationProvider
-from app.integrations.generation.openai import OpenAIGenerationProvider
+from app.services.provider_registry import build_generation_provider as build_registry_generation_provider
 
 
 def get_current_generation_profile() -> GenerationProfile:
@@ -28,8 +28,8 @@ def get_current_generation_profile_id() -> str:
 def build_generation_provider(
     profile: GenerationProfile | None = None,
 ) -> GenerationProvider:
-    return OpenAIGenerationProvider(
-        model=(profile or get_current_generation_profile()).model
+    return build_registry_generation_provider(
+        profile or get_current_generation_profile()
     )
 
 
