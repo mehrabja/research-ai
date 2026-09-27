@@ -6,7 +6,7 @@ import hmac
 import json
 import time
 
-from fastapi import APIRouter, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -74,7 +74,7 @@ async def stripe_webhook(
         default=None,
         alias="Stripe-Signature",
     ),
-    db: Session = None,
+    db: Session = Depends(get_db),
 ):
     settings = get_settings()
     if not settings.stripe_webhook_secret:
