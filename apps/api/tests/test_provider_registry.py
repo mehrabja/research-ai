@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.core.config import get_settings
 from app.services.provider_registry import (
     ProviderDefinition,
     ProviderNotConfiguredError,
@@ -11,6 +12,7 @@ from app.services.provider_registry import (
 
 def test_registry_preserves_configured_order(monkeypatch) -> None:
     monkeypatch.setenv("PROVIDER_GENERATION_CHAIN", "openai,backup")
+    get_settings.cache_clear()
     registry = ProviderRegistry()
     registry.register(
         ProviderDefinition("backup", "generation", lambda _: "backup")
@@ -26,6 +28,7 @@ def test_registry_preserves_configured_order(monkeypatch) -> None:
 
 def test_registry_rejects_missing_registered_provider(monkeypatch) -> None:
     monkeypatch.setenv("PROVIDER_GENERATION_CHAIN", "missing")
+    get_settings.cache_clear()
     registry = ProviderRegistry()
     with pytest.raises(ProviderNotConfiguredError):
         registry.candidates("generation")
