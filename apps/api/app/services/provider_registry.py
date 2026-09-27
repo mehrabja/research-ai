@@ -8,7 +8,8 @@ cycles and to keep provider SDK/network initialization out of module import.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from app.core.config import get_settings
 from app.domain.embeddings import EmbeddingProfile
