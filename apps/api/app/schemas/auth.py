@@ -106,3 +106,19 @@ class APITokenCreateResponse(BaseModel):
 
 class TwoFactorDisableRequest(BaseModel):
     code: str = Field(..., min_length=6, max_length=6)
+
+
+class SessionRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    created_at: object
+    last_used_at: object | None = None
+    expires_at: object
+    revoked_at: object | None = None
+    user_agent: str | None = None
+
+
+class RefreshResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
