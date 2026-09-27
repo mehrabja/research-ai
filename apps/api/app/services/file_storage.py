@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from pathlib import Path
 
-from app.core.config import REPO_ROOT, get_settings
+from app.core.config import get_settings
 from app.core.exceptions import StorageUnavailable
 
 
