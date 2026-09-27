@@ -23,6 +23,19 @@ class User(Base, UUIDPKMixin, TimestampMixin):
         DateTime(timezone=True),
         nullable=True,
     )
+    mfa_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+    )
+    mfa_secret: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    mfa_recovery_code_hashes: Mapped[list[str] | None] = mapped_column(
+        JSONB,
+        nullable=True,
+    )
 
     __table_args__ = (
         # Case-insensitive uniqueness without citext.
