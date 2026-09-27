@@ -6,6 +6,10 @@ import urllib.request
 
 from app.core.config import get_settings
 from app.domain.source import SourceCandidate
+from app.integrations.sources.base import (
+    SourceProviderInvalidResponseError,
+    SourceProviderProviderUnavailableError,
+)
 
 
 class OpenAlexProvider:
