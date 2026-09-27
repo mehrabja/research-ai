@@ -700,6 +700,93 @@ def _humanize_post_translation(ctx: JobContext) -> None:
 # ---------------------------------------------------------------------------
 # Registration
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# M39 — email delivery
+# ---------------------------------------------------------------------------
+class InvalidEmailPayloadError(AppError):
+    code = "INVALID_EMAIL_PAYLOAD"
+    status_code = 400
+    message = "Email job payload is invalid."
+
+
+def _email_user_id(ctx: JobContext) -> uuid.UUID:
+    raw = (ctx.payload or {}).get("user_id")
+    if not isinstance(raw, str):
+        raise InvalidEmailPayloadError("user_id is required")
+    try:
+        return uuid.UUID(raw)
+    except (ValueError, TypeError) as exc:
+        raise InvalidEmailPayloadError("user_id must be a UUID") from exc
+
+
+def _frontend_link(path: str, token: str) -> str:
+    settings = get_settings()
+    base = settings.frontend_base_url.rstrip("/")
+    if not base:
+        raise AppError(
+            "FRONTEND_BASE_URL must be configured for email delivery."
+        )
+    from urllib.parse import quote
+
+    return f"{base}/{path}?token={quote(token, safe='')}"
+
+
+def _send_email_verification(ctx: JobContext) -> None:
+    from app.db.models.user import User
+    from app.services.auth_tokens import issue_email_verification_token
+    from app.services.email_provider import build_email_provider
+    from app.integrations.email import EmailMessagePayload
+
+    user_id = _email_user_id(ctx)
+    with SessionLocal() as db:
+        user = db.get(User, user_id)
+        if user is None or not user.is_active or user.email_verified_at is not None:
+            return
+        token = issue_email_verification_token(db, user_id=user_id)
+        link = _frontend_link("verify-email", token)
+        provider = build_email_provider()
+        provider.send(
+            EmailMessagePayload(
+                to=user.email,
+                subject="Verify your Research AI email",
+                text=(
+                    "Verify your email address by opening this link:\n"
+                    f"{link}\n"
+                    "This link expires according to the account security policy."
+                ),
+            )
+        )
+        db.commit()
+
+
+def _send_password_reset(ctx: JobContext) -> None:
+    from app.db.models.user import User
+    from app.services.auth_tokens import issue_password_reset_token
+    from app.services.email_provider import build_email_provider
+    from app.integrations.email import EmailMessagePayload
+
+    user_id = _email_user_id(ctx)
+    with SessionLocal() as db:
+        user = db.get(User, user_id)
+        if user is None or not user.is_active:
+            return
+        token = issue_password_reset_token(db, user_id=user_id)
+        link = _frontend_link("reset-password", token)
+        provider = build_email_provider()
+        provider.send(
+            EmailMessagePayload(
+                to=user.email,
+                subject="Reset your Research AI password",
+                text=(
+                    "Reset your password by opening this link:\n"
+                    f"{link}\n"
+                    "If you did not request this, you can ignore this email."
+                ),
+            )
+        )
+        db.commit()
+
+
 def register_all_handlers() -> None:
 
     if JobTypes.TEST_NOOP not in registered_types():
@@ -724,6 +811,11 @@ def register_all_handlers() -> None:
         register_handler(
             JobTypes.HUMANIZE_POST_TRANSLATION, _humanize_post_translation
         )
+
+    if JobTypes.SEND_EMAIL_VERIFICATION not in registered_types():
+        register_handler(JobTypes.SEND_EMAIL_VERIFICATION, _send_email_verification)
+    if JobTypes.SEND_PASSWORD_RESET not in registered_types():
+        register_handler(JobTypes.SEND_PASSWORD_RESET, _send_password_reset)
 
     from app.workers.intelligence_handlers import (
         handle_code_analyze,
