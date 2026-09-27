@@ -78,8 +78,8 @@ def get_dashboard_stats(
         db.execute(
             select(func.count(Claim.id))
             .join(CitationRun, CitationRun.id == Claim.citation_run_id)
-            .join(Project, Project.id == Report.project_id)
             .join(Report, Report.id == CitationRun.report_id)
+            .join(Project, Project.id == Report.project_id)
             .where(Project.workspace_id.in_(workspace_ids))
         ).scalar_one()
     )
