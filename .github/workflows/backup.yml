@@ -1,0 +1,33 @@
+name: scheduled-postgres-backup
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 2 * * *"
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Backup database
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          chmod +x scripts/backup_postgres.sh
+          BACKUP_DIR=./backups bash scripts/backup_postgres.sh
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-ai-postgres-backup-${{ github.run_id }}
+          path: backups/*.dump
+          retention-days: 14
