@@ -1,2 +1,2 @@
 import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
-export default function UsagePage(){return <WorkspaceFeaturePage active="usage" title="Usage" description="Current period usage and entitlement gauges are calculated from the authoritative workspace usage contract."/>
+export default function UsagePage(){return <WorkspaceFeaturePage active="usage" title="Usage" description="Current period usage and entitlement gauges are calculated from the authoritative workspace usage contract."/>}
