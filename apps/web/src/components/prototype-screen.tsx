@@ -102,7 +102,32 @@ function Notifications(){
 }
 
 function Jobs(){const {ws}=useCtx();const qc=useQueryClient();const q=useQuery({queryKey:["jobs",ws.workspaceId],queryFn:()=>api.jobs(ws.workspaceId),enabled:Boolean(ws.workspaceId),refetchInterval:5000});const retry=useMutation({mutationFn:(id:string)=>api.retryJob(id),onSuccess:()=>qc.invalidateQueries({queryKey:["jobs",ws.workspaceId]})});const cancel=useMutation({mutationFn:(id:string)=>api.cancelJob(id),onSuccess:()=>qc.invalidateQueries({queryKey:["jobs",ws.workspaceId]})});return <><Head route="jobs"/><Card>{rows(q.data).map(x=>{const id=value(x.id);const st=value(x.status);return <div className="list-item" key={id}><div className="row"><div><div className="title">{value(x.job_type,"Job")}</div><div className="meta">{st} · {value(x.error_code)}</div></div><div className="actions">{st==="failed"&&<button className="btn" onClick={()=>retry.mutate(id)}>Retry</button>}{["queued","processing","retrying"].includes(st)&&<button className="btn" onClick={()=>cancel.mutate(id)}>Cancel</button>}</div></div></div>})}</Card></>}
-function Team(){const {ws}=useCtx();const q=useQuery({queryKey:["members",ws.workspaceId],queryFn:()=>api.members(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});return <><Head route="team"/><Card><Table data={rows(q.data?.items)}/></Card></>}
+function Team(){
+  const {ws}=useCtx();
+  const q=useQuery({queryKey:["members",ws.workspaceId],queryFn:()=>api.members(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});
+  const qc=useQueryClient();
+  const [email,setEmail]=useState("");const [role,setRole]=useState("member");const [error,setError]=useState("");
+  const invite=useMutation({
+    mutationFn:()=>api.invite(ws.workspaceId!,{email,role}),
+    onSuccess:()=>{setEmail("");setError("");void qc.invalidateQueries({queryKey:["members",ws.workspaceId]});},
+    onError:e=>setError(e instanceof Error?e.message:"Invitation failed."),
+  });
+  const changeRole=useMutation({
+    mutationFn:(x:{userId:string;role:string})=>api.changeMemberRole(ws.workspaceId!,x.userId,x.role),
+    onSuccess:()=>void qc.invalidateQueries({queryKey:["members",ws.workspaceId]}),
+  });
+  const remove=useMutation({
+    mutationFn:(id:string)=>api.removeMember(ws.workspaceId!,id),
+    onSuccess:()=>void qc.invalidateQueries({queryKey:["members",ws.workspaceId]}),
+  });
+  return <><Head route="team"/><div className="grid grid-2">
+    <Card><h3>Invite collaborator</h3><p className="muted small">Invitation state is persisted by the workspace membership service and delivered asynchronously when email is configured.</p><div className="field" style={{marginTop:14}}><label>Email</label><input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="researcher@lab.edu"/></div><div className="field" style={{marginTop:12}}><label>Role</label><select className="input" value={role} onChange={e=>setRole(e.target.value)}><option value="member">Member</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select></div><button className="btn primary" style={{marginTop:12}} disabled={!ws.workspaceId||!email||invite.isPending} onClick={()=>invite.mutate()}>{invite.isPending?"Sending…":"Send invitation"}</button>{error&&<div className="notice error" style={{marginTop:12}}>{error}</div>}</Card>
+    <Card><h3>Role matrix</h3><div className="list" style={{marginTop:10}}>{[["Owner","workspace ownership"],["Admin","members, billing and settings"],["Member","research and content"],["Viewer","read-only access"]].map(([a,b])=><div className="list-item" key={a}><div className="row"><b>{a}</b><span className="muted small">{b}</span></div></div>)}</div></Card>
+  </div>
+  <Card style={{marginTop:16}}><h3>Members</h3><div className="table-wrap"><table className="table"><thead><tr><th>Member</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>{q.data?.items?.map(m=>{const x=m as unknown as Obj;const id=value(x.user_id);const rle=value(x.role);return <tr key={id}><td>{value(x.email??x.user_id)}</td><td><select className="input" value={rle} onChange={e=>changeRole.mutate({userId:id,role:e.target.value})} disabled={changeRole.isPending||rle==="owner"}><option value="owner">Owner</option><option value="admin">Admin</option><option value="member">Member</option><option value="viewer">Viewer</option></select></td><td>{value(x.status,"active")}</td><td><button className="btn" disabled={remove.isPending||rle==="owner"} onClick={()=>remove.mutate(id)}>Remove</button></td></tr>})}</tbody></table></div></Card>
+  </>;
+}
+
 function Billing(){const {ws}=useCtx();const u=useQuery({queryKey:["usage",ws.workspaceId],queryFn:()=>api.usage(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});const p=useQuery({queryKey:["plan",ws.workspaceId],queryFn:()=>api.planSubscription(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});const i=useQuery({queryKey:["invoices",ws.workspaceId],queryFn:()=>api.billingInvoices(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});const [code,setCode]=useState("pro");const checkout=useMutation({mutationFn:()=>api.billingCheckout(ws.workspaceId!,code)});return <><Head route="usage-billing"/><div className="grid grid-4"><Metric label="Plan" value={row(p.data).code??row(p.data).name}/><Metric label="AI units" value={row(u.data).ai_generation_units}/><Metric label="Storage bytes" value={row(u.data).storage_bytes}/><Metric label="Invoices" value={rows(i.data).length}/></div><div className="grid grid-2" style={{marginTop:16}}><Card><h3>Checkout</h3><select className="input" value={code} onChange={e=>setCode(e.target.value)}><option value="pro">Pro</option><option value="team">Team</option></select><button className="btn primary" style={{marginTop:12}} onClick={()=>checkout.mutate()} disabled={!ws.workspaceId||checkout.isPending}>Open checkout</button></Card><Card><h3>Invoices</h3><pre className="code" style={{whiteSpace:"pre-wrap",fontSize:11}}>{JSON.stringify(i.data??[],null,2)}</pre></Card></div></>}
 function Settings(){const sessions=useQuery({queryKey:["sessions"],queryFn:api.sessions});const tokens=useQuery({queryKey:["tokens"],queryFn:api.apiTokens});const tf=useQuery({queryKey:["2fa"],queryFn:api.twoFactor});return <><Head route="settings"/><div className="grid grid-2"><Card id="security"><h3>Two-factor</h3><div className="tag">{Boolean(row(tf.data).enabled)?"Enabled":"Not enabled"}</div></Card><Card><h3>Sessions</h3><Table data={rows(sessions.data)}/></Card><Card><h3>API tokens</h3><Table data={rows(tokens.data)}/></Card><Card id="notifications"><h3>Notification settings</h3><p className="muted small">Notification preferences and unread state are served by the backend notification API.</p></Card></div></>}
 
