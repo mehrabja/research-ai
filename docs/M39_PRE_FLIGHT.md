@@ -19,7 +19,7 @@ Status vocabulary:
 
 ## M39 gate
 
-**RED for M40 entry.**
+**Implementation sweep completed; runtime verification remains separate.**
 
 ### Provider interfaces
 
@@ -35,7 +35,7 @@ Not verified/configured:
 - Central project-wide provider registry/resolver is now present in `apps/api/app/providers`.
 - Generation/embedding/translation/detection/source factories now route through the registry.
 - Ordered transient-failure fallback is supported through `PROVIDER_FALLBACKS`.
-- Billing domain only declares `none` and `fake`.
+- Billing now declares `none`, `fake`, and `stripe`; Stripe adapter and webhook route are implemented.
 
 ### Resilience
 
@@ -45,7 +45,7 @@ Implemented:
 - Durable job retry/reclaim primitives exist.
 
 Known Limitation:
-- No common cross-capability fallback policy/resolver is present.
+- Ordered cross-provider fallback is implemented for generation, embedding, translation, detection, and source discovery.
 
 ### Usage
 
@@ -55,8 +55,8 @@ Implemented:
 - Legacy provider-aware `usage_logs` remain in generation/embedding/translation paths.
 
 Known Limitations:
-- Storage aggregation is explicitly marked as not wired in the workspace usage route.
-- A unified authoritative distinction between provider usage, product usage, and billable usage is not yet implemented.
+- Storage aggregation is now enforced through workspace quota checks and active-byte aggregation.
+- Provider operations now write authoritative workspace usage events; legacy usage logs remain as compatibility history.
 
 ### Billing
 
@@ -67,18 +67,18 @@ Implemented:
 - Idempotent billing-event inbox model/service.
 
 Not Configured / Missing:
-- Only `none` and `fake` providers.
+- Stripe is implemented; live credentials and runtime webhook delivery are still environment concerns.
 - Fake billing provider is in-memory and test-oriented.
-- No billing HTTP route.
-- No authenticated webhook route.
-- No real checkout/session creation flow.
+- Workspace checkout, cancel/resume, and plan-change routes exist.
+- Stripe signature verification and idempotent billing-event ingestion exist.
+- Stripe Checkout session creation exists.
 - No invoice API/state workflow.
 
 ### Email
 
 Missing:
-- No email provider integration was found.
-- No verification/reset/invitation transactional email provider or delivery job layer was found.
+- Resend and no-op email providers exist.
+- Verification/reset email delivery is integrated with idempotent delivery records.
 
 ### Storage
 
@@ -88,9 +88,9 @@ Implemented:
 - Upload/download/delete lifecycle.
 
 Not Configured / Not production-ready:
-- `get_storage_provider()` always returns `LocalStorageProvider`.
-- Configuration only permits `file_storage_backend=local`.
-- No production object-storage adapter was found.
+- `get_storage_provider()` resolves local or S3 storage through the provider registry.
+- `file_storage_backend` supports `local` and `s3`.
+- An S3-compatible adapter with multipart uploads is implemented.
 
 ### Authentication
 
@@ -105,8 +105,8 @@ Missing:
 - Session rotation/revocation model.
 - Password reset.
 - Email verification.
-- OAuth Google/GitHub.
-- 2FA.
+- OAuth Google/GitHub with one-time persistent state.
+- TOTP 2FA with recovery codes.
 - API token subsystem.
 
 Known Limitation:
@@ -151,10 +151,10 @@ Implemented:
 - Humanization and translation preservation logic.
 
 Missing / Partial:
-- Claim-centric evidence contract is not exposed as an independent API contract.
-- Knowledge graph export endpoint is absent.
-- Research-plan edit/save/restore endpoints are absent.
-- Manuscript autosave/edit/restore contract is absent.
+- Claim-centric evidence matrix API is exposed.
+- Knowledge graph JSON export endpoint exists.
+- Research-plan edit/save/restore endpoints exist.
+- Manuscript autosave/edit/restore contract exists.
 
 ## M38 frontend status
 
@@ -168,7 +168,7 @@ The design archive contains 21 product pages plus a loading screen. The current 
 - /reports/[reportId]
 - /settings/team
 
-Therefore the current frontend is **partial** against the 21-page product contract.
+The frontend route surface has been expanded across the product areas in the design contract; remaining verification is runtime/typecheck/build evidence.
 
 Current frontend stack:
 - Next.js 16
@@ -191,9 +191,9 @@ Implemented:
 - CI workflow containing ruff, mypy, backend tests, a smoke script, frontend unit tests, and API image build.
 
 Known Limitations:
-- CI does not currently run the frontend production build, frontend typecheck, frontend E2E suite, or migration upgrade/downgrade verification.
+- CI now includes frontend E2E plus repository migration checks; runtime migration/production smoke evidence remains deployment work.
 - The health/readiness implementation checks application/DB/job-table availability but does not provide evidence of an independently healthy worker fleet.
-- Root README.md and Makefile are empty.
+- Root README.md and Makefile now document setup and verification commands.
 
 ## Migration graph
 
@@ -201,9 +201,9 @@ Static migration inspection found:
 - Main chain reaches revision `0032`.
 - `14b3d4303f3f_add_report_soft_delete.py` declares `down_revision = "0001_initial_schema"`.
 
-No later join migration was found in the repository tree.
+A merge revision `0042` now joins the legacy report soft-delete branch into the implementation chain.
 
-Conclusion: the Alembic graph is **multi-head by static inspection** unless an external/runtime configuration joins the branches. Runtime `alembic heads` was not executed in F00.
+Conclusion: the repository now contains an explicit merge revision; runtime `alembic heads`/upgrade is still a deployment verification step.
 
 ## Production-critical gaps found
 
