@@ -7,8 +7,8 @@ cycles and to keep provider SDK/network initialization out of module import.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from app.core.config import get_settings
@@ -20,7 +20,6 @@ ProviderCapability = Literal["generation", "embedding", "translation"]
 
 if TYPE_CHECKING:
     from app.services.translation_profile import TranslationProfile
-
 
 
 class GenerationProviderFallback:
@@ -165,7 +164,6 @@ class EmbeddingProviderFallback:
 
 class ProviderResolutionError(RuntimeError):
     """Base error for provider-policy resolution."""
-
 
 
 class ProviderNotConfiguredError(ProviderResolutionError):
