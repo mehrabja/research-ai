@@ -45,6 +45,7 @@ from app.domain.invitation import (
 from app.domain.membership import MEMBERSHIP_ACTIVE, ROLE_ADMIN
 from app.services import memberships as memberships_service
 from app.services.audit import emit_audit
+from app.services import notifications as notifications_service
 
 # --------------------------------------------------------------------------
 # Create
@@ -98,6 +99,15 @@ def create_invitation(
     db.add(inv)
     db.flush()
 
+    notifications_service.create_notification(
+        db,
+        user_id=invited_by_user_id,
+        workspace_id=workspace_id,
+        kind="member_invited",
+        title="Invitation created",
+        body=f"An invitation for {normalized} was created with role {role}.",
+        data={"invitation_id": str(inv.id), "email": normalized, "role": role},
+    )
     emit_audit(
         "MEMBER_INVITED",
         user_id=str(invited_by_user_id),
@@ -181,6 +191,15 @@ def accept_invitation(
     inv.accepted_at = datetime.now(tz=inv.expires_at.tzinfo)
     db.flush()
 
+    notifications_service.create_notification(
+        db,
+        user_id=user_id,
+        workspace_id=inv.workspace_id,
+        kind="invitation_accepted",
+        title="Invitation accepted",
+        body=f"You joined the workspace as {inv.role}.",
+        data={"invitation_id": str(inv.id), "role": inv.role},
+    )
     emit_audit(
         "INVITATION_ACCEPTED",
         user_id=str(user_id),
