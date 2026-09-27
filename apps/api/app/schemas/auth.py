@@ -45,3 +45,20 @@ class SessionResponse(BaseModel):
 class SessionListResponse(BaseModel):
     items: list[SessionResponse]
     total: int
+
+
+class EmailTokenRequest(BaseModel):
+    token: str = Field(..., min_length=20, max_length=512)
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    token: str = Field(..., min_length=20, max_length=512)
+    new_password: str = Field(..., min_length=15, max_length=256)
+
+
+class MessageResponse(BaseModel):
+    message: str
