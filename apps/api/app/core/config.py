@@ -139,7 +139,12 @@ class Settings(BaseSettings):
     )
     database_url: str = Field(..., repr=False)
     # --- M37: SaaS / Billing -------------------------------------------
-    billing_provider: Literal["none", "fake"] = "none"
+    billing_provider: Literal["none", "fake", "stripe"] = "none"
+    stripe_secret_key: str = Field(default="", repr=False)
+    stripe_webhook_secret: str = Field(default="", repr=False)
+    stripe_success_url: str = ""
+    stripe_cancel_url: str = ""
+    stripe_price_map_json: str = ""
     # M39 provider routing: comma-separated ordered provider chains.
     provider_generation_chain: str = "openai"
     provider_embedding_chain: str = "openai"
