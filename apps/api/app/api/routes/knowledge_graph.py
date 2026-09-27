@@ -3,10 +3,9 @@ from __future__ import annotations
 
 import uuid
 
-import json
-
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -183,7 +182,7 @@ def export_graph(
     graph = queries_svc.get_graph(db, project_id=project_id)
     nodes = list(
         db.execute(
-            __import__("sqlalchemy").select(KnowledgeGraphNode)
+            select(KnowledgeGraphNode)
             .where(KnowledgeGraphNode.graph_version_id == graph.id)
             .order_by(KnowledgeGraphNode.id.asc())
             .limit(graph.node_count + 1)
@@ -194,7 +193,7 @@ def export_graph(
 
     edges = list(
         db.execute(
-            __import__("sqlalchemy").select(KnowledgeGraphEdge)
+            select(KnowledgeGraphEdge)
             .where(KnowledgeGraphEdge.graph_version_id == graph.id)
             .order_by(KnowledgeGraphEdge.id.asc())
             .limit(graph.edge_count + 1)
