@@ -431,7 +431,46 @@ export const api = {
         reportId +
         "/manuscript",
     ),
+  generateManuscript: (
+    reportId: string,
+    force = false,
+    async = true,
+  ) =>
+    request<Schema["ManuscriptGenerateResponse"]>(
+      "reports/" +
+        reportId +
+        "/manuscript/generate",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          force,
+          async,
+        }),
+      },
+    ),
 
+  validateManuscript: (
+    reportId: string,
+  ) =>
+    request<Schema["ManuscriptValidationRead"]>(
+      "reports/" +
+        reportId +
+        "/manuscript/validate",
+      {
+        method: "POST",
+      },
+    ),
+
+  manuscriptSection: (
+    reportId: string,
+    sectionKey: string,
+  ) =>
+    request<Schema["ManuscriptSectionRead"]>(
+      "reports/" +
+        reportId +
+        "/manuscript/sections/" +
+        encodeURIComponent(sectionKey),
+    ),
   citations: (reportId: string) =>
     request<Citation>(
       "reports/" +
@@ -445,7 +484,25 @@ export const api = {
         reportId +
         "/academic-qa/current",
     ),
-
+  enqueueTranslation: (
+    reportId: string,
+    body: {
+      source_version_id: string;
+      target_language: string;
+    },
+  ) =>
+    request<{
+      job_id: string;
+      status: string;
+    }>(
+      "reports/" +
+        reportId +
+        "/translation/enqueue",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    ),
   evidenceMatrix: (reportId: string) =>
     request<EvidenceMatrix>(
       "reports/" +
@@ -1463,7 +1520,196 @@ export const api = {
         method: "POST",
       },
     ),
+  addProjectMember: (
+    projectId: string,
+    body: {
+      user_id: string;
+      role: string;
+    },
+  ) =>
+    request<ProjectMember>(
+      "projects/" +
+        projectId +
+        "/members",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    ),
 
+  changeProjectMemberRole: (
+    projectId: string,
+    memberId: string,
+    role: string,
+  ) =>
+    request<ProjectMember>(
+      "projects/" +
+        projectId +
+        "/members/" +
+        memberId,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          role,
+        }),
+      },
+    ),
+
+  removeProjectMember: (
+    projectId: string,
+    memberId: string,
+  ) =>
+    request<null>(
+      "projects/" +
+        projectId +
+        "/members/" +
+        memberId,
+      {
+        method: "DELETE",
+      },
+    ),
+
+  manuscriptVersions: (
+    reportId: string,
+    manuscriptId: string,
+    limit = 100,
+    offset = 0,
+  ) =>
+    request<{
+      items: Array<
+        Schema["app__schemas__collaboration__ManuscriptVersionRead"]
+      >;
+      total: number;
+      limit: number;
+      offset: number;
+    }>(
+      "reports/" +
+        reportId +
+        "/manuscripts/" +
+        manuscriptId +
+        "/versions?limit=" +
+        encodeURIComponent(
+          String(limit),
+        ) +
+        "&offset=" +
+        encodeURIComponent(
+          String(offset),
+        ),
+    ),
+
+  branches: (
+    reportId: string,
+    manuscriptId: string,
+    limit = 100,
+    offset = 0,
+  ) =>
+    request<{
+      items: Schema["ManuscriptBranchRead"][];
+      total: number;
+      limit: number;
+      offset: number;
+    }>(
+      "reports/" +
+        reportId +
+        "/manuscripts/" +
+        manuscriptId +
+        "/branches?limit=" +
+        encodeURIComponent(
+          String(limit),
+        ) +
+        "&offset=" +
+        encodeURIComponent(
+          String(offset),
+        ),
+    ),
+
+  createBranch: (
+    reportId: string,
+    body: {
+      manuscript_id: string;
+      name: string;
+      head_version_id: string;
+      is_default?: boolean;
+    },
+  ) =>
+    request<Schema["ManuscriptBranchRead"]>(
+      "reports/" +
+        reportId +
+        "/manuscript-branches",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    ),
+
+  mergeBranches: (
+    reportId: string,
+    body: {
+      source_branch_id: string;
+      target_branch_id: string;
+      new_version_id: string;
+      note?: string | null;
+    },
+  ) =>
+    request<Schema["ManuscriptBranchRead"]>(
+      "reports/" +
+        reportId +
+        "/manuscript-branches/merge",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    ),
+
+  createComment: (
+    reportId: string,
+    versionId: string,
+    body: {
+      body: string;
+      manuscript_section_id?: string | null;
+      parent_comment_id?: string | null;
+      anchor?: Record<string, unknown> | null;
+    },
+  ) =>
+    request<ManuscriptComment>(
+      "reports/" +
+        reportId +
+        "/manuscript-versions/" +
+        versionId +
+        "/comments",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    ),
+
+  createReviewTask: (
+    reportId: string,
+    versionId: string,
+    body: {
+      manuscript_version_id: string;
+      title: string;
+      description?: string | null;
+      severity?: string;
+      assignee_user_id?: string | null;
+      scope?: Record<string, unknown> | null;
+      related_section_id?: string | null;
+      related_qa_finding_id?: string | null;
+      related_citation_id?: string | null;
+      due_at?: string | null;
+    },
+  ) =>
+    request<ManuscriptReviewTask>(
+      "reports/" +
+        reportId +
+        "/manuscript-versions/" +
+        versionId +
+        "/reviews",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    ),
   providerMatrix: () =>
     request<{
       capabilities: Array<{
