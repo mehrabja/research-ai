@@ -4,7 +4,8 @@ from app.db.models.ai_operation import AIOperation
 from app.db.models.auth_tokens import (
     EmailVerificationToken,
     PasswordResetToken,
-)\nfrom app.db.models.academic_qa import (
+)\nfrom app.db.models.auth_action_token import AuthActionToken
+from app.db.models.academic_qa import (
     AcademicQAFinding,
     AcademicQARun,
 )
@@ -267,6 +268,7 @@ __all__ = [
     "WorkspaceInvitation",
     "WorkspaceMembership",
     "UserSession",
+    "AuthActionToken",
     "APIToken",
     "UserTwoFactor",
     "AIOperation",
