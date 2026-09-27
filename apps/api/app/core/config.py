@@ -204,6 +204,9 @@ class Settings(BaseSettings):
     document_max_bytes: int = Field(
         default=20 * 1024 * 1024, ge=1024, le=200 * 1024 * 1024
     )
+    file_upload_max_bytes: int = Field(
+        default=500 * 1024 * 1024, ge=1024, le=1024 * 1024 * 1024
+    )
     document_max_redirects: int = Field(default=5, ge=0, le=10)
 
     # --- Chunking ---------------------------------------------------------
