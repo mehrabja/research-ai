@@ -24,6 +24,8 @@ from app.schemas.research_plan import (
     ResearchPlanCoverageRead,
     ResearchPlanDependencyRead,
     ResearchPlanGenerateRequest,
+    ResearchPlanPatchRequest,
+    ResearchPlanRestoreRequest,
     ResearchPlanGenerateResponse,
     ResearchPlanRead,
     ResearchPlanSectionRead,
@@ -40,6 +42,7 @@ from app.services.research_planning import (
 from app.services.research_planning import (
     validation as validation_svc,
 )
+from app.services.research_planning import revisions as revisions_svc
 
 router = APIRouter(prefix="/projects", tags=["research-plan"])
 
@@ -203,6 +206,46 @@ def list_versions(
         items=[_plan_to_read(db, r) for r in rows],
         total=total, limit=limit, offset=offset,
     )
+
+
+@router.patch(
+    "/{project_id}/research-plan",
+    response_model=ResearchPlanRead,
+)
+def save_plan_revision(
+    project_id: uuid.UUID,
+    body: ResearchPlanPatchRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ResearchPlanRead:
+    plan = revisions_svc.save_revision(
+        db,
+        project_id=project_id,
+        user_id=current_user.id,
+        body=body.model_dump(exclude_unset=True),
+    )
+    db.commit()
+    return _plan_to_read(db, plan)
+
+
+@router.post(
+    "/{project_id}/research-plan/restore",
+    response_model=ResearchPlanRead,
+)
+def restore_plan_version(
+    project_id: uuid.UUID,
+    body: ResearchPlanRestoreRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ResearchPlanRead:
+    plan = revisions_svc.restore_version(
+        db,
+        project_id=project_id,
+        user_id=current_user.id,
+        target_version=body.target_version,
+    )
+    db.commit()
+    return _plan_to_read(db, plan)
 
 
 @router.get(
