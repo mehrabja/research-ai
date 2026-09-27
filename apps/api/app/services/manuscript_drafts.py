@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ManuscriptNotFound
+from app.core.exceptions import ManuscriptDraftConflictError, ManuscriptNotFound
 from app.db.models.manuscript import (
     Manuscript,
     ManuscriptSection,
@@ -18,7 +18,7 @@ from app.db.models.manuscript_draft import ManuscriptDraft, ManuscriptDraftHisto
 from app.services.reports import get_report
 
 
-class ManuscriptDraftConflict(Exception):
+class ManuscriptDraftConflict(ManuscriptDraftConflictError):
     """Optimistic-lock conflict on a draft."""
 
 
