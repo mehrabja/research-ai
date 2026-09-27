@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.schemas.auth import TokenResponse, UserResponse
+from app.schemas.auth import TokenResponse
 from app.schemas.oauth import OAuthCallbackRequest, OAuthStartResponse
 from app.services import oauth as oauth_service
 from app.api.dependencies import get_current_user, get_client_ip
