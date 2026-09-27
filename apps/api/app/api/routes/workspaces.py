@@ -669,11 +669,18 @@ def change_workspace_plan(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SubscriptionRead:
+    settings = get_settings()
+    provider = (
+        billing_service.get_billing_provider()
+        if settings.billing_provider != "none"
+        else None
+    )
     sub = billing_service.change_plan(
         db,
         workspace_id=workspace_id,
         actor_user_id=current_user.id,
         new_plan_id=plan_id,
+        provider=provider,
     )
     db.commit()
     db.refresh(sub)
