@@ -290,6 +290,48 @@ def fail_job(
     db.commit()
 
 
+def retry_job(
+    db: Session,
+    *,
+    job_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+) -> Job:
+    """Manually requeue a terminal failed/cancelled job.
+
+    Manual retry starts a fresh execution budget while preserving the
+    original payload and idempotency key. The same job record remains
+    the audit boundary.
+    """
+    now = datetime.now(UTC)
+    stmt = select(Job).where(Job.id == job_id).with_for_update()
+    if user_id is not None:
+        stmt = stmt.where(Job.user_id == user_id)
+    job = db.execute(stmt).scalar_one_or_none()
+    if job is None:
+        db.rollback()
+        raise JobNotFoundError()
+    if job.status not in ("failed", "cancelled"):
+        db.rollback()
+        raise InvalidJobStateError(
+            f"cannot manually retry job in status {job.status!r}"
+        )
+    validate_job_transition(job.status, "queued")
+    job.status = "queued"
+    job.attempt_count = 0
+    job.available_at = now
+    job.worker_id = None
+    job.heartbeat_at = None
+    job.started_at = None
+    job.completed_at = None
+    job.failed_at = None
+    job.last_error_code = None
+    job.last_error_message = None
+    job.updated_at = now
+    db.commit()
+    db.refresh(job)
+    return job
+
+
 def cancel_job(
     db: Session, *, job_id: uuid.UUID, user_id: uuid.UUID | None
 ) -> Job:
@@ -416,4 +458,5 @@ __all__ = [
     "heartbeat_job",
     "list_jobs",
     "reclaim_stale_jobs",
+    "retry_job",
 ]
