@@ -49,6 +49,7 @@ from app.domain.file import (
 )
 from app.domain.project import EDITABLE_PROJECT_STATUSES
 from app.services import jobs as jobs_service
+from app.services.file_folders import validate_folder_for_file
 from app.services.file_storage import get_storage_provider
 
 logger = logging.getLogger(__name__)
@@ -148,6 +149,7 @@ def upload_file(
     original_filename: str,
     client_mime: str | None,
     upload_stream: Iterator[bytes],
+    folder_id: uuid.UUID | None = None,
 ) -> ProjectFile:
     """Upload a file. Commits internally; caller does not manage txn.
 
@@ -167,6 +169,12 @@ def upload_file(
         raise ProjectNotFound()
     if project.status not in EDITABLE_PROJECT_STATUSES:
         raise ProjectArchivedForUpload()
+    validate_folder_for_file(
+        db,
+        project_id=project_id,
+        user_id=user_id,
+        folder_id=folder_id,
+    )
 
     # 2. Filename (domain error -> AppError boundary).
     try:
@@ -223,6 +231,7 @@ def upload_file(
         pf = ProjectFile(
             id=file_id,
             project_id=project_id,
+            folder_id=folder_id,
             uploaded_by=user_id,
             original_filename=original_filename,
             normalized_filename=normalized,
@@ -330,6 +339,7 @@ def list_files(
     project_id: uuid.UUID,
     status: str | None = None,
     file_kind: str | None = None,
+    folder_id: uuid.UUID | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[list[ProjectFile], int]:
@@ -349,6 +359,8 @@ def list_files(
         base = base.where(ProjectFile.status == status)
     if file_kind:
         base = base.where(ProjectFile.file_kind == file_kind)
+    if folder_id is not None:
+        base = base.where(ProjectFile.folder_id == folder_id)
 
     total = int(
         db.execute(
