@@ -97,6 +97,7 @@ from app.db.models.pipeline import (
 from app.db.models.plan import Plan, PlanEntitlement  # noqa: F401
 from app.db.models.project import Project, ProjectEvent
 from app.db.models.project_file import ProjectFile, ProjectFileEvent
+from app.db.models.project_folder import ProjectFolder  # noqa: F401
 from app.db.models.publication import (
     PublicationComplianceFinding,
     PublicationComplianceRun,
@@ -182,6 +183,7 @@ __all__ = [
     "ProjectEvent",
     "ProjectFile",
     "ProjectFileEvent",
+    "ProjectFolder",
     "CodeAnalysis",
     "CodeSymbol",
     "CodeDependency",
