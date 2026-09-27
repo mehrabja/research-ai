@@ -1,8 +1,6 @@
 """M37 — BillingProvider contract.
 
-No real provider (Stripe / Paddle / PayPal / Braintree) is
-implemented in M37.  The contract exists so later milestones can
-plug in a real provider without changing business services.
+The billing contract is provider-neutral. Stripe is implemented on this branch; other billing backends can be added without changing business services.
 """
 from __future__ import annotations
 
