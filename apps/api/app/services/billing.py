@@ -165,7 +165,7 @@ def transition_status(
         user_id=str(actor_user_id) if actor_user_id else None,
         workspace_id=str(workspace_id),
         subscription_id=str(sub.id),
-        from_role=sub.status,
+        from_role=previous_status,
         to_role=new_status,
     )
     return sub
