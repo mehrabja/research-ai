@@ -19,7 +19,11 @@ from app.services.reports import get_report
 
 
 class ManuscriptDraftConflict(ManuscriptDraftConflictError):
-    """Optimistic-lock conflict on a draft."""
+    """Optimistic-lock conflict that exposes the authoritative draft."""
+
+    def __init__(self, message: str, draft: ManuscriptDraft) -> None:
+        self.draft = draft
+        super().__init__(message)
 
 
 def _current_manuscript(
@@ -84,10 +88,11 @@ def autosave(
     draft = get_or_create_draft(db, report_id=report_id, user_id=user_id)
     if revision != draft.revision:
         raise ManuscriptDraftConflict(
-            f"draft revision conflict: expected {revision}, current {draft.revision}"
+            f"draft revision conflict: expected {revision}, current {draft.revision}",
+            draft,
         )
     if base_version_id is not None and draft.base_version_id != base_version_id:
-        raise ManuscriptDraftConflict("draft base version changed")
+        raise ManuscriptDraftConflict("draft base version changed", draft)
 
     draft.revision += 1
     draft.content = content
@@ -119,7 +124,8 @@ def save_version(
     draft = get_or_create_draft(db, report_id=report_id, user_id=user_id)
     if draft.revision != expected_revision:
         raise ManuscriptDraftConflict(
-            f"draft revision conflict: expected {expected_revision}, current {draft.revision}"
+            f"draft revision conflict: expected {expected_revision}, current {draft.revision}",
+            draft,
         )
 
     current = db.get(ManuscriptVersion, ms.current_version_id)
