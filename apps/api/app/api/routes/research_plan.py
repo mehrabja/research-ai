@@ -30,9 +30,9 @@ from app.schemas.research_plan import (
     ResearchPlanValidationRead,
     ResearchPlanVersionListResponse,
 )
-)
 from app.schemas.research_plan_mutations import ResearchPlanPatch
 from app.services.projects import get_project
+from app.services.research_plan_mutations import save_research_plan
 from app.services.research_planning import (
     jobs as jobs_svc,
 )
@@ -238,10 +238,7 @@ def save_plan(
     db: Session = Depends(get_db),
 ) -> ResearchPlanRead:
     get_project(db, user_id=current_user.id, project_id=project_id)
-    plan = __import__(
-        "app.services.research_plan_mutations",
-        fromlist=["save_research_plan"],
-    ).save_research_plan(
+    plan = save_research_plan(
         db,
         project_id=project_id,
         user_id=current_user.id,
