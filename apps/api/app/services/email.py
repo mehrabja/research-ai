@@ -7,7 +7,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models.email_delivery import EmailDelivery
-from app.email.resend import ResendEmailProvider
 
 
 class EmailDeliveryService:
