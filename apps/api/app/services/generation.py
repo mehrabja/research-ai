@@ -15,6 +15,7 @@ from app.core.exceptions import (
     NoEvidenceAvailableError,
 )
 from app.db.models.pipeline import GenerationRun
+from app.db.models.project import Project
 from app.db.models.report import Report
 from app.domain.generation import (
     AttemptState,
@@ -49,6 +50,7 @@ from app.services.embedding_profile import (
 from app.services.generation_profile import (
     get_current_generation_profile,
 )
+from app.services.usage_contract import ProviderUsage, record_provider_usage
 from app.services.generation_prompt import (
     build_evidence_set,
     build_system_prompt,
@@ -397,6 +399,29 @@ def _persist_success_atomic(
             content=provider_result.text,
             change_type="generated",
             commit=False,
+        )
+
+        project = db.get(Project, report.project_id)
+        if project is None:
+            raise InvalidJobStateError("report project not found")
+        total_tokens = (provider_result.total_tokens or 0)
+        record_provider_usage(
+            db,
+            workspace_id=project.workspace_id,
+            user_id=user_id,
+            source_id=None,
+            usage=ProviderUsage(
+                capability="generation",
+                operation="report_generation",
+                provider=provider_result.provider,
+                model=provider_result.model,
+                input_tokens=provider_result.input_tokens or 0,
+                output_tokens=provider_result.output_tokens or 0,
+                units=max(1, total_tokens),
+                request_id=getattr(provider_result, "request_id", None),
+                metadata={"report_id": str(report_id)},
+            ),
+            idempotency_key=f"generation:{attempt_id}:provider_call",
         )
 
         from app.db.models.ops import UsageLog
