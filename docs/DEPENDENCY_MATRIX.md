@@ -5,25 +5,25 @@ Date: 2026-09-27
 | Phase | Depends on | Primary blocker(s) found now | F00 result |
 |---|---|---|---|
 | F00 | Repository + design archive | None | Baseline recorded |
-| F01 Provider/Usage Architecture | F00 | Provider registry/resolver absent; usage split incomplete | Ready to implement / implementation in progress |
-| F02 Authentication | F01 + F20 email/OAuth activation when enabled | No session/refresh, reset, verification | Dependent |
-| F03 Workspace/RBAC/Notifications | F02 | Notifications and suspend/reactivate missing | Dependent |
-| F04 Storage/File Intelligence | F01/F03 + F20 storage provider | Local-only provider; 20 MiB vs 500 MB mismatch | Dependent |
-| F05 Search/Discovery | F01 + workspace context + F20 discovery providers as needed | Global search/filter/provenance gaps | Dependent |
-| F06 Evidence/Knowledge | F05 + existing RAG | Independent claim matrix/export gaps | Dependent |
-| F07 Research Planning | F06 | Plan mutation/restore missing | Dependent |
-| F08 Manuscript/AI Studio | F01 + F06 + F07 | Autosave/conflict contract missing | Dependent |
-| F09 Humanization/Translation | F01 + F08 + F20 detector | Real detector provider missing | Dependent |
-| F10 Jobs/Collaboration | F03 + F08 | Retry endpoint missing | Dependent |
-| F11 Billing/Email | F01 + F03 + F20 email/billing | Real provider, webhook, email all absent | Major blocker |
-| F12 Settings/Security/Audit | F02/F03/F11 | 2FA/API tokens/notification settings missing | Dependent |
-| F13 Frontend Production Port | F02-F12 contracts | Current UI is only partial; design archive is static | Major dependent work |
-| F14 Frontend Integration Hardening | F13 | Real API state handling not complete | Dependent |
-| F15 Security/Reliability/Observability | F01-F14 + F20 | Provider/webhook/storage/session gaps | Cannot close yet |
-| F16 CI/CD/Deployment/Backup | F15 + database state | CI gaps and static migration multi-head | Blocked |
-| F17 Production Smoke | F02-F16 + F20 credentials | External services not configured | Blocked |
-| F18 Chaos/Recovery | F17 | No staging/live integration evidence yet | Blocked |
-| F19 Final Audit | F17/F18 | All prior gates | Not reachable |
+| F01 Provider/Usage Architecture | F00 | Provider registry, fallback routing, unified provider usage contract implemented; additional real providers have been added | Implemented |
+| F02 Authentication | F01/F20 | Persistent sessions, reset, verification, OAuth, MFA, API tokens implemented; external credentials still optional | Implemented |
+| F03 Workspace/RBAC/Notifications | F02 | Notifications and workspace lifecycle APIs implemented | Implemented |
+| F04 Storage/File Intelligence | F01/F03/F20 | S3-compatible storage, folders, upload quota and 500 MB streaming ceiling implemented | Implemented |
+| F05 Search/Discovery | F01/F03/F20 | Workspace search and richer source discovery filters/providers implemented | Implemented |
+| F06 Evidence/Knowledge | F05/existing RAG | Evidence matrix and bounded graph export implemented | Implemented |
+| F07 Research Planning | F06 | Versioned save/restore implemented | Implemented |
+| F08 Manuscript/AI Studio | F01/F06/F07 | Draft autosave/conflict/commit implemented | Implemented |
+| F09 Humanization/Translation | F01/F08/F20 | Existing transformation flows now share registry; external detector adapter added | Implemented |
+| F10 Jobs/Collaboration | F03/F08 | Durable retry and activity surfaces implemented | Implemented |
+| F11 Billing/Email | F01/F03/F20 | Stripe/Resend adapters, checkout, webhook inbox and auth email workflows implemented | Implemented |
+| F12 Settings/Security/Audit | F02/F03/F11 | MFA, API tokens, OAuth and session controls implemented | Implemented |
+| F13 Frontend Production Port | F02-F12 | Route surface, BFF refresh, OAuth callbacks, notification/search/integration UI implemented | Implemented |
+| F14 Frontend Integration Hardening | F13 | Typed API error handling, provider matrix, auth retry and backend-scoped data routes implemented | Implemented |
+| F15 Security/Reliability/Observability | F01-F14/F20 | workspace provider metering and optional Sentry initialized; live external verification remains | Implemented (code) |
+| F16 CI/CD/Deployment/Backup | F15 | frontend E2E gate, migration merge check, backup/restore/smoke scripts and developer verification commands added | Implemented (code) |
+| F17 Production Smoke | F02-F16/F20 credentials | Requires configured external services and runtime API smoke execution | Pending runtime |
+| F18 Chaos/Recovery | F17 | Requires staging runtime and failure-injection evidence | Pending runtime |
+| F19 Final Audit | F17/F18 | Requires runtime smoke and recovery evidence | Pending runtime |
 
 ## Cross-cutting operational phase
 
