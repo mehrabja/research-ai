@@ -296,7 +296,14 @@ class Settings(BaseSettings):
     #
     # Note: extraction jobs use the global ``job_processing_timeout_seconds``
     # (M10) for lease expiry. There is no per-job-type timeout today.
-    file_storage_backend: Literal["local"] = "local"
+    file_storage_backend: Literal["local", "s3"] = "local"
+    file_storage_s3_bucket: str = ""
+    file_storage_s3_region: str = ""
+    file_storage_s3_access_key_id: str = Field(default="", repr=False)
+    file_storage_s3_secret_access_key: str = Field(default="", repr=False)
+    file_storage_s3_endpoint_url: str = ""
+    file_storage_s3_prefix: str = "research-ai"
+    file_storage_s3_signed_url_expire_seconds: int = Field(default=900, ge=60, le=86400)
     file_storage_local_root: str = "storage/files"
     file_chunk_stream_size: int = Field(
         default=1 * 1024 * 1024, ge=4096, le=16 * 1024 * 1024
