@@ -247,6 +247,12 @@ def autosave_manuscript(
             content=body.content,
             base_version_id=body.base_version_id,
         )
+    except ManuscriptDraftConflict as exc:
+        return ManuscriptDraftSaveResponse(
+            draft=ManuscriptDraftRead.model_validate(exc.draft),
+            saved=False,
+            conflict=True,
+        )
     return ManuscriptDraftSaveResponse(
         draft=ManuscriptDraftRead.model_validate(draft),
         saved=True,
