@@ -14,6 +14,7 @@ from app.api.routes.collaboration import (
 )
 from app.api.routes.detection import router as detection_router
 from app.api.routes.embeddings import router as embeddings_router
+from app.api.routes.evidence import router as evidence_router
 from app.api.routes.file_folders import router as file_folders_router
 from app.api.routes.files import files_router
 from app.api.routes.files import router as project_files_router
@@ -96,4 +97,4 @@ api_router.include_router(workspaces_router)
 api_router.include_router(invitations_router)
 
 api_router.include_router(notifications_router)
-\napi_router.include_router(search_router)\n\napi_router.include_router(billing_router)\n
+\napi_router.include_router(search_router)\n\napi_router.include_router(billing_router)\n\napi_router.include_router(evidence_router)\n
