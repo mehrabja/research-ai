@@ -74,7 +74,7 @@ class Settings(BaseSettings):
         "GET,POST,PUT,PATCH,DELETE,OPTIONS"
     )
     cors_allowed_headers: str = (
-        "Authorization,Content-Type,X-Request-ID"
+        "Authorization,Content-Type,X-Request-ID,X-API-Key"
     )
     cors_exposed_headers: str = "X-Request-ID"
 
