@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
-from app.db.models.manuscript import ManuscriptVersion
 from app.db.models.user import User
 from app.db.session import get_db
+from app.schemas.manuscript import ManuscriptVersionRead
 from app.schemas.manuscript_draft import (
     ManuscriptDraftRead,
     ManuscriptDraftWriteRequest,
@@ -20,8 +20,6 @@ from app.services.manuscript_drafts import (
     discard,
     get_draft,
 )
-from app.services.reports import get_report
-
 router = APIRouter(prefix="/reports", tags=["manuscript-drafts"])
 
 
@@ -58,7 +56,7 @@ def save_draft(
 
 @router.post(
     "/{report_id}/manuscript/draft/commit",
-    response_model=ManuscriptVersion,
+    response_model=ManuscriptVersionRead,
     status_code=status.HTTP_201_CREATED,
 )
 def save_draft_as_version(
@@ -75,6 +73,22 @@ def save_draft_as_version(
         revision=body.revision,
     )
     db.commit()
-    db.commit()
     db.refresh(version)
     return version
+
+
+@router.delete(
+    "/{report_id}/manuscript/draft",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def discard_manuscript_draft(
+    report_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    discard(
+        db,
+        report_id=report_id,
+        user_id=current_user.id,
+    )
+    db.commit()
