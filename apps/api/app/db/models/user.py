@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy import Boolean, DateTime, Index, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
+from datetime import datetime
 
 from app.db.base import Base, TimestampMixin, UUIDPKMixin
 
@@ -12,6 +13,9 @@ class User(Base, UUIDPKMixin, TimestampMixin):
     email: Mapped[str] = mapped_column(Text, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     full_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
