@@ -26,12 +26,14 @@ from app.core.exceptions import QuotaExceeded
 from app.db.models.membership import WorkspaceMembership
 from app.db.models.plan import Plan, PlanEntitlement
 from app.db.models.project import Project
+from app.db.models.project_file import ProjectFile
 from app.db.models.subscription import Subscription
 from app.domain.billing import ACTIVE_SUBSCRIPTION_STATUSES
 from app.domain.membership import MEMBERSHIP_ACTIVE
 from app.domain.plan import (
     FEATURE_PROJECTS_MAX,
     FEATURE_REPORTS_MONTHLY,
+    FEATURE_STORAGE_BYTES,
 )
 
 # --------------------------------------------------------------------------
@@ -146,6 +148,63 @@ def lock_workspace_quota(
 # Enforcement
 # --------------------------------------------------------------------------
 
+
+
+def count_active_storage_bytes(
+    db: Session, *, workspace_id: uuid.UUID
+) -> int:
+    """Current bytes of active (non-deleted) project files."""
+    value = db.execute(
+        select(func.coalesce(func.sum(ProjectFile.size_bytes), 0))
+        .join(Project, Project.id == ProjectFile.project_id)
+        .where(
+            Project.workspace_id == workspace_id,
+            ProjectFile.deleted_at.is_(None),
+        )
+    ).scalar_one()
+    return int(value or 0)
+
+
+def check_and_reserve_storage_bytes(
+    db: Session, *,
+    workspace_id: uuid.UUID,
+    additional_bytes: int,
+) -> None:
+    """Enforce the storage gauge under a workspace advisory lock.
+
+    The caller must hold this transaction until its file row is
+    committed or rolled back. Concurrent uploads are serialized by
+    the same (workspace, feature) advisory lock.
+    """
+    if additional_bytes < 0:
+        raise ValueError("additional_bytes must be >= 0")
+    lock_workspace_quota(
+        db,
+        workspace_id=workspace_id,
+        feature=FEATURE_STORAGE_BYTES,
+    )
+    plan = resolve_active_plan(db, workspace_id=workspace_id)
+    if plan is None:
+        return
+    limit = get_limit(
+        db,
+        plan_id=plan.id,
+        feature=FEATURE_STORAGE_BYTES,
+    )
+    if limit is None:
+        return
+    current = count_active_storage_bytes(
+        db,
+        workspace_id=workspace_id,
+    )
+    if current + additional_bytes > limit:
+        raise QuotaExceeded(
+            feature=FEATURE_STORAGE_BYTES,
+            limit=limit,
+            current=current,
+        )
+
+
 def check_and_reserve_project_slot(
     db: Session, *, workspace_id: uuid.UUID
 ) -> None:
@@ -222,6 +281,8 @@ __all__ = [
     "check_and_reserve_reports_monthly_slot",
     "count_active_members",
     "count_active_projects",
+    "count_active_storage_bytes",
+    "check_and_reserve_storage_bytes",
     "get_limit",
     "lock_workspace_quota",
     "resolve_active_plan",
