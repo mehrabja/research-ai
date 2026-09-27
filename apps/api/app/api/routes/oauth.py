@@ -7,7 +7,7 @@ from app.db.session import get_db
 from app.schemas.auth import TokenResponse
 from app.schemas.oauth import OAuthCallbackRequest, OAuthStartResponse
 from app.services import oauth as oauth_service
-from app.api.dependencies import get_client_user, get_client_ip
+from app.api.dependencies import get_current_user, get_client_ip
 
 router = APIRouter(prefix="/auth/oauth", tags=["oauth"])
 
