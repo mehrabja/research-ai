@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -33,10 +34,10 @@ class SessionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    created_at: object
-    last_used_at: object | None
-    expires_at: object
-    revoked_at: object | None
+    created_at: datetime
+    last_used_at: datetime | None
+    expires_at: datetime
+    revoked_at: datetime | None
     user_agent: str | None
     ip_address: str | None
 
