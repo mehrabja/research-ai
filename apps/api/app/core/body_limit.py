@@ -103,6 +103,26 @@ class BodyLimitMiddleware:
             await self.app(scope, receive, send)
             return
 
+        # File uploads are streamed and size-checked by the upload service;
+        # buffering them here would defeat large-file support and duplicate
+        # the authoritative document_max_bytes policy.
+        settings = None
+        try:
+            from app.core.config import get_settings
+            settings = get_settings()
+        except Exception:
+            settings = None
+        path = str(scope.get("path") or "")
+        method = str(scope.get("method") or "").upper()
+        if (
+            settings is not None
+            and settings.body_limit_stream_uploads
+            and method == "POST"
+            and path.endswith(settings.body_limit_stream_upload_suffix)
+        ):
+            await self.app(scope, receive, send)
+            return
+
         try:
             declared = _parse_declared_length(scope)
         except ValueError:
