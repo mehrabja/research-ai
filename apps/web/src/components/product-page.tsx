@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ProductShell } from "@/components/product-shell";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/client-api";
 
