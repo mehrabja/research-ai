@@ -83,6 +83,7 @@ from app.db.models.manuscript_prose import (
 from app.db.models.membership import WorkspaceMembership  # noqa: F401
 from app.db.models.metric import Metric
 from app.db.models.oauth_account import OAuthAccount  # noqa: F401
+from app.db.models.oauth_state import OAuthState  # noqa: F401
 from app.db.models.ops import (
     CreditTransaction,
     ModelPricing,
@@ -266,4 +267,5 @@ __all__ = [
     "EmailDelivery",
     "APIToken",
     "OAuthAccount",
+    "OAuthState",
 ]
