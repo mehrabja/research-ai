@@ -83,5 +83,5 @@ jobs:
       - run: npm run build
       - run: npm run start &
       - run: |
-          npx wait-on http://127.0.0.1:3000
+          node -e 'fetch("http://127.0.0.1:3000").then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))'
       - run: npm run test:e2e
