@@ -1,36 +1,34 @@
 """M16 — Translation provider contract + typed errors."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Protocol
 
+from app.integrations.base import (
+    ProviderAuthenticationError,
+    ProviderError,
+    ProviderInputTooLargeError,
+    ProviderInvalidRequestError,
+    ProviderInvalidResponseError,
+    ProviderRetryableError,
+)
 
-class TranslationProviderError(Exception): ...
+
+class TranslationProviderError(ProviderError):
+    """Base translation provider error."""
 
 
-class TranslationRateLimitError(TranslationProviderError): ...
-
-
-class TranslationProviderUnavailableError(TranslationProviderError): ...
-
-
+class TranslationRateLimitError(ProviderRetryableError, TranslationProviderError): ...
+class TranslationProviderUnavailableError(ProviderRetryableError, TranslationProviderError): ...
 class TranslationTimeoutError(TranslationProviderUnavailableError): ...
-
-
-class TranslationAuthenticationError(TranslationProviderError): ...
-
-
-class TranslationInvalidRequestError(TranslationProviderError): ...
-
-
-class TranslationInvalidResponseError(TranslationProviderError): ...
-
-
-class TranslationInputTooLargeError(TranslationProviderError): ...
+class TranslationAuthenticationError(ProviderAuthenticationError, TranslationProviderError): ...
+class TranslationInvalidRequestError(ProviderInvalidRequestError, TranslationProviderError): ...
+class TranslationInvalidResponseError(ProviderInvalidResponseError, TranslationProviderError): ...
+class TranslationInputTooLargeError(ProviderInputTooLargeError, TranslationProviderError): ...
 
 
 @dataclass(frozen=True)
+class TranslationProviderResult:
 class TranslationProviderResult:
     translated_text: str
     provider: str
