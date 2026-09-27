@@ -133,7 +133,7 @@ def begin_enrollment(
         + f"?secret={secret}&issuer={_ISSUER.replace(' ', '%20')}"
         + f"&algorithm=SHA1&digits={_DIGITS}&period={_STEP_SECONDS}"
     )
-    return row, uri, raw_recovery
+    return row, secret, uri, raw_recovery
 
 
 def confirm_enrollment(
