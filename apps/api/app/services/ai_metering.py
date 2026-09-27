@@ -140,6 +140,12 @@ def execute_metered_provider_call(
                 success=False,
                 duration_ms=max(0, int((monotonic() - started) * 1000)),
                 error_code=_error_code(exc),
+                metadata={
+                    "capability": capability,
+                    "attempted_providers": list(
+                        getattr(provider, "attempted_providers", [])
+                    ),
+                },
             )
             db.commit()
         raise
@@ -155,6 +161,14 @@ def execute_metered_provider_call(
             input_units=in_units,
             output_units=out_units,
             duration_ms=max(0, int((monotonic() - started) * 1000)),
+            provider=getattr(result, "provider", None),
+            model=getattr(result, "model", None),
+            metadata={
+                "capability": capability,
+                "attempted_providers": list(
+                    getattr(provider, "attempted_providers", [])
+                ),
+            },
         )
         db.commit()
 
