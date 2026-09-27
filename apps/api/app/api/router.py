@@ -44,6 +44,7 @@ from app.api.routes.projects import router as projects_router
 from app.api.routes.publication import router as publication_router
 from app.api.routes.rag import router as rag_router
 from app.api.routes.reports import router as reports_router
+from app.api.routes.search import router as search_router
 from app.api.routes.research_plan import (
     router as research_plan_router,
 )
@@ -63,6 +64,7 @@ api_router.include_router(projects_router)
 api_router.include_router(health_router)
 api_router.include_router(auth_router)
 api_router.include_router(reports_router)
+api_router.include_router(search_router)
 api_router.include_router(sources_router)
 api_router.include_router(embeddings_router)
 api_router.include_router(jobs_router)
