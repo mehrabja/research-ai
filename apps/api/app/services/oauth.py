@@ -15,6 +15,7 @@ from app.core.config import get_settings
 from app.core.exceptions import InvalidCredentials
 from app.core.security import create_access_token, hash_password
 from app.db.models.oauth_account import OAuthAccount
+from app.db.models.oauth_state import OAuthState
 from app.db.models.user import User
 from app.services.auth import create_refresh_session, get_user_by_email
 
@@ -60,6 +61,41 @@ def verify_state(provider: str, state: str) -> bool:
     ).hexdigest()
     return hmac.compare_digest(expected, signature)
 
+
+
+
+def store_state(db: Session, *, provider: str, state: str) -> OAuthState:
+    from datetime import UTC, datetime, timedelta
+
+    row = OAuthState(
+        provider=provider,
+        state_hash=hashlib.sha256(state.encode("utf-8")).hexdigest(),
+        expires_at=datetime.now(UTC) + timedelta(minutes=10),
+    )
+    db.add(row)
+    db.flush()
+    return row
+
+
+def consume_state(db: Session, *, provider: str, state: str) -> bool:
+    from datetime import UTC, datetime
+
+    digest = hashlib.sha256(state.encode("utf-8")).hexdigest()
+    row = db.execute(
+        select(OAuthState)
+        .where(
+            OAuthState.provider == provider,
+            OAuthState.state_hash == digest,
+            OAuthState.consumed_at.is_(None),
+            OAuthState.expires_at > datetime.now(UTC),
+        )
+        .with_for_update()
+    ).scalar_one_or_none()
+    if row is None:
+        return False
+    row.consumed_at = datetime.now(UTC)
+    db.flush()
+    return True
 
 def authorization_url(provider: str, state: str) -> str:
     settings = get_settings()
