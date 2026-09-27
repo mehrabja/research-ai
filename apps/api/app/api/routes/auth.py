@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_client_ip, get_current_user
+from app.core.auth_exceptions import RefreshTokenInvalid
 from app.core.exceptions import (
     AuthenticationRateLimited,
     InvalidCredentials,
@@ -218,6 +219,26 @@ def logout_all(
     )
     db.commit()
     return MessageResponse(message="All sessions have been revoked.")
+
+
+@router.delete(
+    "/sessions/{session_id}",
+    response_model=MessageResponse,
+    summary="Revoke one refresh session",
+)
+def revoke_session(
+    session_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    if not auth_service.revoke_session_by_id(
+        db,
+        user_id=current_user.id,
+        session_id=session_id,
+    ):
+        raise RefreshTokenInvalid()
+    db.commit()
+    return MessageResponse(message="Session revoked.")
 
 
 @router.get(
