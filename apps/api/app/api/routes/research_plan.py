@@ -30,6 +30,8 @@ from app.schemas.research_plan import (
     ResearchPlanValidationRead,
     ResearchPlanVersionListResponse,
 )
+)
+from app.schemas.research_plan_mutations import ResearchPlanPatch
 from app.services.projects import get_project
 from app.services.research_planning import (
     jobs as jobs_svc,
@@ -222,6 +224,30 @@ def get_coverage(
         coverage_state=str(summary.get("coverage_state", "unknown")),
         per_requirement=list(summary.get("per_requirement") or []),
     )
+
+
+
+@router.patch(
+    "/{project_id}/research-plan",
+    response_model=ResearchPlanRead,
+)
+def save_plan(
+    project_id: uuid.UUID,
+    body: ResearchPlanPatch,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ResearchPlanRead:
+    get_project(db, user_id=current_user.id, project_id=project_id)
+    plan = __import__(
+        "app.services.research_plan_mutations",
+        fromlist=["save_research_plan"],
+    ).save_research_plan(
+        db,
+        project_id=project_id,
+        user_id=current_user.id,
+        patch=body,
+    )
+    return _plan_to_read(db, plan)
 
 
 @router.post(
