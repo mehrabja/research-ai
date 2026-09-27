@@ -1,0 +1,22 @@
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+
+class SearchResult(BaseModel):
+    id: uuid.UUID
+    resource_type: Literal["project", "report", "source", "file"]
+    title: str
+    snippet: str | None = None
+    updated_at: datetime
+
+
+class SearchResponse(BaseModel):
+    query: str
+    workspace_id: uuid.UUID
+    items: list[SearchResult]
+    total: int
