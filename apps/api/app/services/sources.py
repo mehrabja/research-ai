@@ -285,6 +285,7 @@ def create_source_from_candidate(
             external_source_id=candidate.external_source_id,
             citation_count=candidate.citation_count,
             abstract=candidate.abstract,
+            source_meta=candidate.source_meta,
             status="metadata_only",
         )
         db.add(source)
