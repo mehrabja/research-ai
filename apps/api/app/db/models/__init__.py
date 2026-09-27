@@ -117,6 +117,7 @@ from app.db.models.research_memory import (
     ResearchMemory,
     ResearchMemoryLink,
 )
+from app.db.models.security import APIToken, UserTwoFactor
 from app.db.models.session import UserSession
 from app.db.models.research_plan import (
     ResearchEvidenceRequirement,
@@ -261,6 +262,8 @@ __all__ = [
     "WorkspaceInvitation",
     "WorkspaceMembership",
     "UserSession",
+    "APIToken",
+    "UserTwoFactor",
     "AIOperation",
     "Notification",
     "NotificationPreference",
