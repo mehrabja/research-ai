@@ -39,7 +39,7 @@ Baseline commit: 106ca1fd2b5b1b86e4e9521ffa9c33f3d8ddfa91
 | Jobs | Yes | Durable DB queue | Job model | Jobs | Implemented |
 | Job retry UI/API | Yes | Durable queue | Job state | Jobs retry endpoint | Implemented (code) |
 | Collaboration/reviews | Yes | Internal | Review/comment/version models | Collaboration | Implemented/Partial |
-| Usage | Yes | Workspace usage events + legacy usage logs | UsageEvent/UsageLog | Usage & Billing | Partial |
+| Usage | Yes | Workspace usage events for AI/search plus legacy compatibility adapters | UsageEvent/UsageLog | Usage & Billing | Implemented in code |
 | Billing model | Yes | Fake/none only | Subscription/BillingEvent | Usage & Billing | Partial |
 | Real checkout | Yes | Stripe REST | Subscription/BillingEvent | Billing API | Implemented (code) |
 | Billing webhook | Yes | Stripe signature verification | BillingEvent | Webhook route | Implemented (code) |
