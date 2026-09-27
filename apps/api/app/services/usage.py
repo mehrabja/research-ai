@@ -168,7 +168,7 @@ def record_event(
         source_type=source_type,
         source_id=source_id,
         occurred_at=occurred,
-        event_metadata=metadata,
+        event_metadata={**(metadata or {}), "usage_class": usage_class},
     )
 
     # SQLAlchemy 2.0 typing for the
@@ -228,7 +228,9 @@ def get_period_usage(
     if usage_class is not None:
         if usage_class not in {"provider", "internal", "billable"}:
             raise UsageInvalidSourceType()
-        conditions.append(UsageEvent.usage_class == usage_class)
+        conditions.append(
+            UsageEvent.event_metadata["usage_class"].astext == usage_class
+        )
     total = db.execute(
         select(func.coalesce(func.sum(UsageEvent.quantity), 0)).where(*conditions)
     ).scalar_one()
