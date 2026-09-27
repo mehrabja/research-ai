@@ -55,7 +55,6 @@ class GenerationInputTooLargeError(
 
 
 class GenerationProvider(Protocol):
-class GenerationProvider(Protocol):
     provider_name: str
     model_name: str
 
