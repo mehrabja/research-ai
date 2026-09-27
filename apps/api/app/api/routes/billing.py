@@ -322,6 +322,23 @@ async def stripe_webhook(
                         sub.plan_id = plan.id
 
     if (
+        event_type in {
+            "invoice.payment_failed",
+            "invoice.payment_action_required",
+        }
+        and isinstance(stripe_customer_id, str)
+    ):
+        sub = db.execute(
+            select(Subscription).where(
+                Subscription.provider == "stripe",
+                Subscription.provider_customer_id == stripe_customer_id,
+                Subscription.status.in_(("trialing", "active", "past_due")),
+            ).with_for_update()
+        ).scalar_one_or_none()
+        if sub is not None:
+            sub.status = "past_due"
+
+    if (
         event_type.startswith("customer.subscription.")
         and isinstance(stripe_subscription_id, str)
     ):
