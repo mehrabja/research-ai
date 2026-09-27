@@ -6,7 +6,10 @@ import urllib.request
 
 from app.core.config import get_settings
 from app.domain.source import SourceCandidate
-from app.integrations.sources.base import SourceProviderInvalidResponseError
+from app.integrations.sources.base import (
+    SourceProviderInvalidResponseError,
+    SourceProviderUnavailableError,
+)
 
 
 class CrossrefProvider:
@@ -46,12 +49,20 @@ class CrossrefProvider:
             req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=self._timeout) as response:
                 payload = json.loads(response.read().decode("utf-8"))
-        except Exception as exc:
-            raise RuntimeError(f"Crossref request failed: {type(exc).__name__}") from exc
+        except (TimeoutError, urllib.error.URLError, OSError) as exc:
+            raise SourceProviderUnavailableError(
+                f"Crossref request failed: {type(exc).__name__}"
+            ) from exc
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise SourceProviderInvalidResponseError(
+                "Crossref returned invalid JSON"
+            ) from exc
 
         items = ((payload.get("message") or {}).get("items") or [])
         if not isinstance(items, list):
-            return []
+            raise SourceProviderInvalidResponseError(
+                "Crossref response missing items list"
+            )
 
         candidates: list[SourceCandidate] = []
         for item in items:
