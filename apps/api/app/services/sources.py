@@ -32,6 +32,7 @@ from app.integrations.sources.base import (
 )
 from app.services.report_events import create_source_added_event
 from app.services.reports import get_report
+from app.services.usage_contract import ProviderUsage, record_provider_usage
 
 logger = logging.getLogger(__name__)
 
