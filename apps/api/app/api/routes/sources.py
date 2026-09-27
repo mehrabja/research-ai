@@ -133,6 +133,10 @@ def search_sources(
         venue=venue,
         year_from=year_from,
         year_to=year_to,
+        publication_type=publication_type,
+        language=language,
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
     settings = get_settings()
     effective_limit = (
