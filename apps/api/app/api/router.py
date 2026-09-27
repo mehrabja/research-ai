@@ -44,6 +44,7 @@ from app.api.routes.post_translation_humanization import (
     router as post_translation_humanization_router,
 )
 from app.api.routes.projects import router as projects_router
+from app.api.routes.providers import router as providers_router
 from app.api.routes.publication import router as publication_router
 from app.api.routes.rag import router as rag_router
 from app.api.routes.reports import router as reports_router
@@ -65,6 +66,7 @@ from app.api.routes.webhooks import router as webhooks_router
 
 api_router = APIRouter()
 api_router.include_router(projects_router)
+api_router.include_router(providers_router)
 api_router.include_router(health_router)
 api_router.include_router(auth_router)
 api_router.include_router(mfa_router)
