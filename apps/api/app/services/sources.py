@@ -179,8 +179,34 @@ def search_source_candidates(
                 oa = meta.get("is_open_access")
                 if oa is False:
                     continue
+            if publication_type:
+                meta = candidate.source_meta or {}
+                type_value = str(meta.get("publication_type") or "").lower()
+                if type_value and publication_type.lower() not in type_value:
+                    continue
+            if language:
+                meta = candidate.source_meta or {}
+                lang_value = str(meta.get("language") or "").lower()
+                if lang_value and language.lower() != lang_value:
+                    continue
             filtered.append(candidate)
         candidates = filtered
+
+        if sort_by == "citations":
+            def sort_key(candidate: SourceCandidate):
+                return candidate.citation_count if candidate.citation_count is not None else -1
+        elif sort_by == "year":
+            def sort_key(candidate: SourceCandidate):
+                return candidate.year if candidate.year is not None else -1
+        elif sort_by == "title":
+            def sort_key(candidate: SourceCandidate):
+                return candidate.title.lower()
+        else:
+            def sort_key(candidate: SourceCandidate):
+                return 0
+
+        if sort_by != "relevance":
+            candidates.sort(key=sort_key, reverse=sort_order == "desc")
         report = get_report(
             db,
             user_id=user_id,
@@ -200,7 +226,7 @@ def search_source_candidates(
                     model=None,
                     metric="search_requests",
                     units=1,
-                    metadata={"query_length": len(q), "result_count": len(candidates), "min_citations": min_citations, "max_citations": max_citations, "author": author, "venue": venue, "year_from": year_from, "year_to": year_to, "open_access_only": open_access_only},
+                    metadata={"query_length": len(q), "result_count": len(candidates), "min_citations": min_citations, "max_citations": max_citations, "author": author, "venue": venue, "year_from": year_from, "year_to": year_to, "publication_type": publication_type, "language": language, "sort_by": sort_by, "sort_order": sort_order, "open_access_only": open_access_only},
                 ),
                 idempotency_key=f"source-search:{uuid.uuid4()}",
             )
