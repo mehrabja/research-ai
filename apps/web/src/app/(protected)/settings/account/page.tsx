@@ -1,0 +1,2 @@
+import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
+export default function AccountPage(){return <WorkspaceFeaturePage active="settings" title="Account" description="Authenticated account state, verification, sessions, password reset, and API credentials are managed through the auth service."/>
