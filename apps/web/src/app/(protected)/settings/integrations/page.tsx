@@ -1,0 +1,2 @@
+import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
+export default function IntegrationsPage(){return <WorkspaceFeaturePage active="settings" title="Integrations" description="Provider configuration stays server-side; this surface exposes the connected integration boundary without embedding credentials in the client."/>}
