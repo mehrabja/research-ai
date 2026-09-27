@@ -405,6 +405,16 @@ def resolve_provider(
     if len(chain) == 1:
         return chain[0]
 
+    fallback_capabilities = {
+        ProviderCapability.GENERATION,
+        ProviderCapability.EMBEDDING,
+        ProviderCapability.TRANSLATION,
+        ProviderCapability.DETECTION,
+        ProviderCapability.SOURCE_DISCOVERY,
+    }
+    if capability not in fallback_capabilities:
+        return chain[0]
+
     from app.providers.fallback import FallbackProvider
     return FallbackProvider(chain)
 
