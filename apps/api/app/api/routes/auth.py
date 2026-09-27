@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import uuid
 
+import jwt
 from fastapi import APIRouter, Cookie, Depends, Header, Request, Response, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -15,7 +17,7 @@ from app.core.exceptions import (
     EmailNotVerified,
     InvalidCredentials,
 )
-from app.core.security import create_access_token
+from app.core.security import create_access_token, decode_access_token
 from app.db.models.security import UserTwoFactor
 from app.db.models.user import User
 from app.db.session import get_db
@@ -65,6 +67,7 @@ from app.services.two_factor import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+_bearer = HTTPBearer(auto_error=False)
 
 
 def _set_session_cookies(
