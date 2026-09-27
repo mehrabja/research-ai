@@ -91,6 +91,8 @@ class OpenAlexProvider:
             host_venue = item.get("host_venue") or {}
             source_meta = {
                 "venue": host_venue.get("display_name"),
+                "publication_type": item.get("type"),
+                "language": item.get("language"),
                 "is_open_access": bool(
                     (item.get("open_access") or {}).get("is_oa")
                 ),
