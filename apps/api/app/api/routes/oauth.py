@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -15,12 +15,18 @@ router = APIRouter(prefix="/auth/oauth", tags=["oauth"])
 @router.get("/{provider}/start", response_model=OAuthStartResponse)
 def oauth_start(
     provider: str,
-    state: str | None = Query(default=None),
+    db: Session = Depends(get_db),
 ) -> OAuthStartResponse:
     provider = provider.strip().lower()
     if provider not in oauth_service.SUPPORTED:
         raise oauth_service.InvalidCredentials()
-    resolved_state = state or oauth_service.make_state(provider)
+    resolved_state = oauth_service.make_state(provider)
+    oauth_service.store_state(
+        db,
+        provider=provider,
+        state=resolved_state,
+    )
+    db.commit()
     return OAuthStartResponse(
         provider=provider,
         authorization_url=oauth_service.authorization_url(provider, resolved_state),
@@ -36,7 +42,15 @@ def oauth_callback(
     db: Session = Depends(get_db),
 ) -> TokenResponse:
     provider = provider.strip().lower()
-    if provider not in oauth_service.SUPPORTED or not oauth_service.verify_state(provider, body.state):
+    if provider not in oauth_service.SUPPORTED:
+        raise oauth_service.InvalidCredentials()
+    if not oauth_service.verify_state(provider, body.state):
+        raise oauth_service.InvalidCredentials()
+    if not oauth_service.consume_state(
+        db,
+        provider=provider,
+        state=body.state,
+    ):
         raise oauth_service.InvalidCredentials()
     profile = oauth_service.exchange_code(provider, body.code)
     _user, access, refresh = oauth_service.login_or_create_oauth_user(
