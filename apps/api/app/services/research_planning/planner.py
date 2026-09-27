@@ -131,25 +131,29 @@ def _llm_available(settings) -> bool:
         return False
     if getattr(settings, "research_plan_llm_required", False):
         return True
+
     provider = getattr(settings, "generation_provider", "openai")
     if provider == "openai":
         return bool(getattr(settings, "generation_openai_api_key", ""))
+    if provider == "openrouter":
+        return bool(getattr(settings, "openrouter_api_key", ""))
     return False
 
 
 def _make_llm_provider(settings):
-    """Build the LLM provider used for plan refinement.
-
-    The OpenAI provider requires an explicit model + api_key. We
-    reuse M12 settings; if the class signature changes, this is the
-    single place to adjust.
-    """
-    from app.integrations.generation.openai import (
-        OpenAIGenerationProvider,
+    """Build the generation provider through the central registry."""
+    from app.providers.registry import (
+        ProviderCapability,
+        ProviderContext,
+        resolve_provider,
     )
-    return OpenAIGenerationProvider(
-        api_key=settings.generation_openai_api_key,
-        model=settings.generation_model,
+    from app.services.generation_profile import get_current_generation_profile
+
+    profile = get_current_generation_profile()
+    return resolve_provider(
+        capability=ProviderCapability.GENERATION,
+        preferred=settings.generation_provider,
+        context=ProviderContext(profile=profile),
     )
 
 
