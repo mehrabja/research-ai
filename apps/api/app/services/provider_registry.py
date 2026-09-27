@@ -23,6 +23,146 @@ if TYPE_CHECKING:
 
 
 
+class GenerationProviderFallback:
+    def __init__(self, providers: tuple[Any, ...]) -> None:
+        self._providers = providers
+        self.provider_name = getattr(providers[0], "provider_name", "router")
+        self.model_name = getattr(providers[0], "model_name", "")
+        self.last_used_provider_name = self.provider_name
+        self.attempted_providers: list[str] = []
+
+    def generate(self, **kwargs: Any) -> Any:
+        from app.integrations.generation.base import (
+            GenerationProviderUnavailableError,
+            GenerationRateLimitError,
+            GenerationTimeoutError,
+        )
+        last: Exception | None = None
+        for provider in self._providers:
+            name = getattr(provider, "provider_name", self.provider_name)
+            self.attempted_providers.append(name)
+            try:
+                result = provider.generate(**kwargs)
+                self.last_used_provider_name = getattr(result, "provider", name)
+                return result
+            except (
+                GenerationRateLimitError,
+                GenerationTimeoutError,
+                GenerationProviderUnavailableError,
+            ) as exc:
+                last = exc
+                continue
+        assert last is not None
+        raise last
+
+
+class TranslationProviderFallback:
+    def __init__(self, providers: tuple[Any, ...]) -> None:
+        self._providers = providers
+        self.provider_name = getattr(providers[0], "provider_name", "router")
+        self.model_name = getattr(providers[0], "model_name", "")
+        self.last_used_provider_name = self.provider_name
+        self.attempted_providers: list[str] = []
+
+    def translate(self, **kwargs: Any) -> Any:
+        from app.integrations.translation.base import (
+            TranslationProviderUnavailableError,
+            TranslationRateLimitError,
+            TranslationTimeoutError,
+        )
+        last: Exception | None = None
+        for provider in self._providers:
+            name = getattr(provider, "provider_name", self.provider_name)
+            self.attempted_providers.append(name)
+            try:
+                result = provider.translate(**kwargs)
+                self.last_used_provider_name = getattr(result, "provider", name)
+                return result
+            except (
+                TranslationRateLimitError,
+                TranslationTimeoutError,
+                TranslationProviderUnavailableError,
+            ) as exc:
+                last = exc
+                continue
+        assert last is not None
+        raise last
+
+
+class EmbeddingProviderFallback:
+    def __init__(self, providers: tuple[Any, ...]) -> None:
+        dimensions = {
+            getattr(p, "dimensions", None) for p in providers
+        }
+        if len(dimensions) != 1:
+            raise ProviderNotConfiguredError(
+                "embedding fallback providers must share vector dimensions"
+            )
+        self._providers = providers
+        first = providers[0]
+        self.provider_name = getattr(first, "provider_name", "router")
+        self.model_name = getattr(first, "model_name", "")
+        self.dimensions = getattr(first, "dimensions")
+        self.max_batch_size = min(
+            getattr(p, "max_batch_size", 1) for p in providers
+        )
+        self.max_input_tokens_per_item = getattr(
+            first, "max_input_tokens_per_item", None
+        )
+        self.max_input_tokens_per_request = getattr(
+            first, "max_input_tokens_per_request", None
+        )
+        self.last_used_provider_name = self.provider_name
+        self.attempted_providers: list[str] = []
+
+    def estimate_input_tokens(self, text: str) -> int | None:
+        return self._providers[0].estimate_input_tokens(text)
+
+    def embed_documents(self, texts: Any) -> Any:
+        from app.integrations.embeddings.base import (
+            EmbeddingProviderUnavailableError,
+            EmbeddingRateLimitError,
+        )
+        last: Exception | None = None
+        for provider in self._providers:
+            name = getattr(provider, "provider_name", self.provider_name)
+            self.attempted_providers.append(name)
+            try:
+                result = provider.embed_documents(texts)
+                self.last_used_provider_name = getattr(result, "provider", name)
+                return result
+            except (
+                EmbeddingRateLimitError,
+                EmbeddingProviderUnavailableError,
+            ) as exc:
+                last = exc
+                continue
+        assert last is not None
+        raise last
+
+    def embed_query(self, text: str) -> list[float]:
+        from app.integrations.embeddings.base import (
+            EmbeddingProviderUnavailableError,
+            EmbeddingRateLimitError,
+        )
+        last: Exception | None = None
+        for provider in self._providers:
+            name = getattr(provider, "provider_name", self.provider_name)
+            self.attempted_providers.append(name)
+            try:
+                vector = provider.embed_query(text)
+                self.last_used_provider_name = name
+                return vector
+            except (
+                EmbeddingRateLimitError,
+                EmbeddingProviderUnavailableError,
+            ) as exc:
+                last = exc
+                continue
+        assert last is not None
+        raise last
+
+
 class ProviderResolutionError(RuntimeError):
     """Base error for provider-policy resolution."""
 
@@ -116,7 +256,15 @@ class ProviderRegistry:
         config: Any = None,
     ) -> Any:
         definitions = self.candidates(capability, requested=requested)
-        return definitions[0].factory(config)
+        providers = tuple(d.factory(config) for d in definitions)
+        if len(providers) == 1:
+            return providers[0]
+        router_types = {
+            "generation": GenerationProviderFallback,
+            "embedding": EmbeddingProviderFallback,
+            "translation": TranslationProviderFallback,
+        }
+        return router_types[capability](providers)
 
 
 def _build_generation(config: GenerationProfile | None) -> Any:
