@@ -14,6 +14,7 @@ from app.core.security import (
     verify_password,
 )
 from app.db.models.user import User
+from app.services.workspaces import create_workspace
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,8 @@ def register_user(
     *,
     email: str,
     password: str,
+    full_name: str | None = None,
+    workspace_name: str | None = None,
 ) -> User:
     if get_user_by_email(db, email) is not None:
         raise UserAlreadyExists()
@@ -37,10 +40,18 @@ def register_user(
     user = User(
         email=email,
         password_hash=hash_password(password),
+        full_name=full_name.strip()[:200] if full_name and full_name.strip() else None,
     )
 
     try:
         db.add(user)
+        db.flush()
+        owner_name = (workspace_name or "").strip() or f"{email.split("@", 1)[0]}'s workspace"
+        create_workspace(
+            db,
+            name=owner_name,
+            owner_user_id=user.id,
+        )
         db.commit()
         db.refresh(user)
     except IntegrityError as exc:
