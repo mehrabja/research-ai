@@ -36,11 +36,10 @@ from app.schemas.auth import (
     UserResponse,
 )
 from app.services.auth import authenticate_user, get_user_by_email, register_user
-from app.services.auth_tokens import (
-    issue_email_verification_token,
-    issue_password_reset_token,
-    reset_password,
-    verify_email,
+from app.services.auth_tokens import reset_password, verify_email
+from app.services.email_jobs import (
+    enqueue_password_reset_email,
+    enqueue_verification_email,
 )
 from app.services.rate_limit import get_login_rate_limiter
 from app.services.oauth import begin_oauth, complete_oauth
@@ -124,7 +123,7 @@ def register(
     db: Session = Depends(get_db),
 ) -> User:
     user = register_user(db, email=payload.email, password=payload.password)
-    issue_email_verification_token(db, user_id=user.id)
+    enqueue_verification_email(db, user_id=user.id)
     db.commit()
     return user
 
@@ -291,7 +290,7 @@ def resend_verification(
 ) -> MessageResponse:
     user = get_user_by_email(db, payload.email)
     if user is not None and user.is_active and user.email_verified_at is None:
-        issue_email_verification_token(db, user_id=user.id)
+        enqueue_verification_email(db, user_id=user.id)
         db.commit()
     return MessageResponse(
         message=(
@@ -307,7 +306,7 @@ def request_password_reset(
 ) -> MessageResponse:
     user = get_user_by_email(db, payload.email)
     if user is not None and user.is_active:
-        issue_password_reset_token(db, user_id=user.id)
+        enqueue_password_reset_email(db, user_id=user.id)
         db.commit()
     return MessageResponse(
         message=(
