@@ -17,7 +17,7 @@ class OpenAlexProvider:
 
     def __init__(self) -> None:
         settings = get_settings()
-        self._mailto = settings.openalex_api_key or settings.crossref_mailto
+        self._mailto = settings.crossref_mailto
         self._base_url = "https://api.openalex.org/works"
         self._timeout = 20.0
 
