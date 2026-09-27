@@ -9,6 +9,7 @@ from typing import Protocol
 
 
 
+
 from app.domain.generation import GenerationProviderResult
 from app.integrations.base import ProviderError
 from app.integrations.base import ProviderRetryableError, ProviderAuthenticationError, ProviderInvalidRequestError, ProviderInvalidResponseError, ProviderInputTooLargeError
@@ -41,7 +42,7 @@ class GenerationInvalidRequestError(ProviderInvalidRequestError, GenerationProvi
     """Non-retryable."""
 
 
-class GenerationInvalidResponseError(GenerationProviderError):
+class GenerationInvalidResponseError(ProviderInvalidResponseError, GenerationProviderError):
     """Non-retryable."""
 
 
