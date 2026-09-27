@@ -97,4 +97,9 @@ api_router.include_router(workspaces_router)
 api_router.include_router(invitations_router)
 
 api_router.include_router(notifications_router)
-\napi_router.include_router(search_router)\n\napi_router.include_router(billing_router)\n\napi_router.include_router(evidence_router)\n
+
+api_router.include_router(search_router)
+
+api_router.include_router(billing_router)
+
+api_router.include_router(evidence_router)
