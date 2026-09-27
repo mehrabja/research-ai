@@ -144,4 +144,20 @@ def search_workspace(
     )
 
     items.sort(key=lambda item: (item["updated_at"], str(item["id"])), reverse=True)
+    record_provider_usage(
+        db,
+        workspace_id=workspace_id,
+        user_id=user_id,
+        source_id=None,
+        usage=ProviderUsage(
+            capability="source_discovery",
+            operation="workspace_search",
+            provider="database",
+            model=None,
+            units=1,
+            metadata={"query_length": len(q), "result_count": len(items)},
+        ),
+        idempotency_key=f"workspace-search:{workspace_id}:{q}",
+    )
+    db.commit()
     return items[:limit], len(items)
