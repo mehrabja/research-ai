@@ -34,9 +34,9 @@ from app.api.routes.manuscript_humanization import (
     router as manuscript_humanization_router,
 )
 from app.api.routes.manuscript_prose import (
-
     router as manuscript_prose_router,
 )
+from app.api.routes.notifications import router as notifications_router
 from app.api.routes.orchestration import (
     router as orchestration_router,
 )
