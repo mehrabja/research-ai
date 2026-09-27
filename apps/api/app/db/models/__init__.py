@@ -10,7 +10,8 @@ from app.db.models.auth_tokens import (
 )
 
 # M37 — SaaS foundation
-from app.db.models.billing_event import BillingEvent  # noqa: F401
+from app.db.models.billing_event import BillingEvent
+from app.db.models.billing_invoice import BillingInvoice  # noqa: F401
 from app.db.models.citation import (
     CitationIdentity,
     CitationRun,
@@ -257,6 +258,7 @@ __all__ = [
     "ManuscriptProseParagraph",
     "ManuscriptProseSentence",
     "BillingEvent",
+    "BillingInvoice",
     "Plan",
     "PlanEntitlement",
     "Subscription",
