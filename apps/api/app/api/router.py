@@ -21,6 +21,7 @@ from app.api.routes.humanization import router as humanization_router
 from app.api.routes.intelligence import router as intelligence_router
 from app.api.routes.invitations import router as invitations_router
 from app.api.routes.jobs import router as jobs_router
+from app.api.routes.notifications import router as notifications_router
 from app.api.routes.knowledge_graph import (
     router as knowledge_graph_router,
 )
@@ -64,6 +65,7 @@ api_router.include_router(reports_router)
 api_router.include_router(sources_router)
 api_router.include_router(embeddings_router)
 api_router.include_router(jobs_router)
+api_router.include_router(notifications_router)
 api_router.include_router(detection_router)
 api_router.include_router(humanization_router)
 api_router.include_router(reviews_router)
