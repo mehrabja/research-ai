@@ -23,13 +23,14 @@ def _copy_plan(
     status: str,
     overrides: dict | None = None,
 ) -> ResearchPlan:
-    next_version = int(
-        db.execute(
-            select(func.coalesce(func.max(ResearchPlan.version), 0))
-            .where(ResearchPlan.project_id == source.project_id)
-            .with_for_update()
-        ).scalar_one()
-    ) + 1
+    latest = db.execute(
+        select(ResearchPlan)
+        .where(ResearchPlan.project_id == source.project_id)
+        .order_by(ResearchPlan.version.desc())
+        .limit(1)
+        .with_for_update()
+    ).scalar_one_or_none()
+    next_version = (latest.version if latest is not None else 0) + 1
 
     overrides = overrides or {}
     plan = ResearchPlan(
