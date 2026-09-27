@@ -61,3 +61,8 @@ class ProjectFileListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class ProjectFileMoveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    folder_id: uuid.UUID | None = None
