@@ -35,7 +35,7 @@ _ALLOWED: dict[str, frozenset[str]] = {
     "processing": frozenset({"completed", "retrying", "failed"}),
     "retrying": frozenset({"processing", "cancelled"}),
     "completed": frozenset(),
-    "failed": frozenset(),
+    "failed": frozenset({"queued"}),
     "cancelled": frozenset(),
 }
 
