@@ -18,7 +18,7 @@ from app.db.models.manuscript_draft import ManuscriptDraft, ManuscriptDraftHisto
 from app.services.reports import get_report
 
 
-class ManuscriptDraftConflict(RuntimeError):
+class ManuscriptDraftConflict(Exception):
     """Optimistic-lock conflict on a draft."""
 
 
