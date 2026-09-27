@@ -137,3 +137,17 @@ class ResearchPlanVersionListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class ResearchPlanPatchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    research_objective_snapshot: str | None = None
+    research_questions_snapshot: list[Any] | None = None
+    hypotheses_snapshot: list[Any] | None = None
+    budget: dict[str, Any] | None = None
+    planning_mode: str | None = None
+
+
+class ResearchPlanRestoreRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    target_version: int = Field(..., ge=1)
