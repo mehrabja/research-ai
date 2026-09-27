@@ -171,6 +171,7 @@ class Settings(BaseSettings):
     auth_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     auth_refresh_cookie_name: str = "research_ai_refresh"
     auth_csrf_cookie_name: str = "research_ai_csrf"
+    two_factor_encryption_key: str = Field(default="", repr=False)
 
     # Login throttling
     login_rate_limit: int = Field(default=5, ge=1)
@@ -915,6 +916,8 @@ class Settings(BaseSettings):
     def _validate_m36_security(self) -> Settings:
         """Fail-closed guards that only apply to production."""
         if self.app_env.lower() == "production":
+            if not self.two_factor_encryption_key.strip():
+                raise ValueError("TWO_FACTOR_ENCRYPTION_KEY must be configured in production.")
             if self.debug:
                 raise ValueError(
                     "debug must be False when APP_ENV=production."
