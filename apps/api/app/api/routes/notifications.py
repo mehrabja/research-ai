@@ -11,6 +11,8 @@ from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.notification import (
     NotificationListResponse,
+    NotificationPreferenceRead,
+    NotificationPreferenceUpdate,
     NotificationRead,
 )
 from app.services import notifications as notification_service
@@ -81,3 +83,31 @@ def read_all_notifications(
         workspace_id=workspace_id,
     )
     db.commit()
+
+
+@router.get("/preferences", response_model=NotificationPreferenceRead)
+def read_preferences(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> NotificationPreferenceRead:
+    return NotificationPreferenceRead(
+        preferences=notification_service.get_preferences(
+            db,
+            user_id=current_user.id,
+        )
+    )
+
+
+@router.patch("/preferences", response_model=NotificationPreferenceRead)
+def patch_preferences(
+    body: NotificationPreferenceUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> NotificationPreferenceRead:
+    preferences = notification_service.update_preferences(
+        db,
+        user_id=current_user.id,
+        preferences=body.preferences,
+    )
+    db.commit()
+    return NotificationPreferenceRead(preferences=preferences)
