@@ -47,7 +47,6 @@ class DetectionInputTooLargeError(ProviderInputTooLargeError, DetectionProviderE
 
 
 class DetectionProvider(Protocol):
-class DetectionProvider(Protocol):
     provider_name: str
     model_name: str
 
