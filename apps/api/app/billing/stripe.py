@@ -127,6 +127,8 @@ class StripeBillingProvider:
                 "line_items[0][quantity]": "1",
                 "success_url": success_url,
                 "cancel_url": cancel_url,
+                "metadata[plan_code]": plan_code,
+                "subscription_data[metadata][plan_code]": plan_code,
             },
             idempotency_key=idempotency_key,
         )
