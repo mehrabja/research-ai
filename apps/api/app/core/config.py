@@ -162,6 +162,12 @@ class Settings(BaseSettings):
     jwt_audience: str = "research-ai-api"
     jwt_type: str = "access+jwt"
     jwt_clock_skew_seconds: int = Field(default=30, ge=0)
+    # M39 session/auth cookies
+    refresh_token_expire_days: int = Field(default=30, ge=1, le=365)
+    auth_cookie_secure: bool = True
+    auth_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
+    auth_refresh_cookie_name: str = "research_ai_refresh"
+    auth_csrf_cookie_name: str = "research_ai_csrf"
 
     # Login throttling
     login_rate_limit: int = Field(default=5, ge=1)
