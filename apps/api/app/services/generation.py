@@ -401,7 +401,10 @@ def _persist_success_atomic(
             commit=False,
         )
 
-        project = db.get(Project, report.project_id)
+        project_id = db.execute(
+            select(Report.project_id).where(Report.id == report_id)
+        ).scalar_one_or_none()
+        project = db.get(Project, project_id) if project_id is not None else None
         if project is None:
             raise InvalidJobStateError("report project not found")
         total_tokens = (provider_result.total_tokens or 0)
