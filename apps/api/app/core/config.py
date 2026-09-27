@@ -893,10 +893,25 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate_file_config(self) -> Settings:
-        if self.file_storage_backend not in ("local",):
-            raise ValueError("file_storage_backend must be 'local'")
-        if not self.file_storage_local_root.strip():
+        if self.file_storage_backend == "local" and not self.file_storage_local_root.strip():
             raise ValueError("file_storage_local_root must not be empty")
+        if self.file_storage_backend == "s3":
+            if not self.storage_bucket.strip():
+                raise ValueError(
+                    "storage_bucket must not be empty when file_storage_backend='s3'"
+                )
+            if not self.storage_endpoint.strip():
+                raise ValueError(
+                    "storage_endpoint must not be empty when file_storage_backend='s3'"
+                )
+            if not self.storage_access_key_id.strip():
+                raise ValueError(
+                    "storage_access_key_id must not be empty when file_storage_backend='s3'"
+                )
+            if not self.storage_secret_access_key.strip():
+                raise ValueError(
+                    "storage_secret_access_key must not be empty when file_storage_backend='s3'"
+                )
         if self.file_chunk_stream_size > self.document_max_bytes:
             raise ValueError(
                 "file_chunk_stream_size must be <= document_max_bytes"
