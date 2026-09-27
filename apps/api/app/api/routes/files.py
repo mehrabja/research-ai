@@ -12,6 +12,7 @@ from app.api.dependencies import get_current_user
 from app.api.rate_limit_deps import enforce_user_rate_limit
 from app.core.config import get_settings
 from app.db.models.user import User
+from app.services import file_folders as file_folders_service
 from app.db.session import get_db
 from app.schemas.project_file import (
     ProjectFileListItem,
@@ -41,6 +42,7 @@ files_router = APIRouter(prefix="/files", tags=["files"])
 def upload_file(
     project_id: uuid.UUID,
     file: UploadFile = File(...),
+    folder_id: uuid.UUID | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ProjectFileRead:
@@ -62,6 +64,7 @@ def upload_file(
         original_filename=file.filename or "",
         client_mime=file.content_type,
         upload_stream=_stream(),
+        folder_id=folder_id,
     )
     return ProjectFileRead.model_validate(pf)
 
@@ -79,6 +82,7 @@ def list_files(
     kind: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    folder_id: uuid.UUID | None = Query(default=None),
 ) -> ProjectFileListResponse:
     rows, total = files_service.list_files(
         db,
@@ -88,6 +92,7 @@ def list_files(
         file_kind=kind,
         limit=limit,
         offset=offset,
+        folder_id=folder_id,
     )
     return ProjectFileListResponse(
         items=[ProjectFileListItem.model_validate(r) for r in rows],
