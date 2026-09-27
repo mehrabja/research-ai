@@ -1,4 +1,4 @@
-"""Authentication and persistent-session routes."""
+"""Authentication, OAuth and persistent-session routes."""
 from __future__ import annotations
 
 import uuid
@@ -16,7 +16,7 @@ from app.core.exceptions import (
     InvalidCredentials,
 )
 from app.core.security import create_access_token
-from app.db.models.session import UserSession
+from app.db.models.security import UserTwoFactor
 from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.auth import (
@@ -37,12 +37,14 @@ from app.schemas.auth import (
     TwoFactorStatusResponse,
     UserResponse,
 )
+from app.services.api_tokens import create_token, list_tokens, revoke_token
 from app.services.auth import authenticate_user, get_user_by_email, register_user
 from app.services.auth_tokens import reset_password, verify_email
 from app.services.email_jobs import (
     enqueue_password_reset_email,
     enqueue_verification_email,
 )
+from app.services.oauth import begin_oauth, complete_oauth
 from app.services.rate_limit import get_login_rate_limiter
 from app.services.session import (
     CSRF_COOKIE_NAME,
@@ -55,24 +57,11 @@ from app.services.session import (
     revoke_session,
     rotate_session,
 )
-from app.services.oauth import begin_oauth, complete_oauth
 from app.services.two_factor import (
     begin_enrollment,
     confirm_enrollment,
     disable as disable_two_factor,
     verify_second_factor,
-)
-from app.services.api_tokens import create_token, list_tokens, revoke_token
-from app.db.models.security import UserTwoFactor
-from app.services.session import (
-    CSRF_COOKIE_NAME,
-    REFRESH_COOKIE_NAME,
-    create_session,
-    list_active_sessions,
-    revoke_all_other_sessions,
-    revoke_by_refresh_token,
-    revoke_session,
-    rotate_session,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -122,8 +111,7 @@ def _require_csrf(
     csrf_header: str | None,
 ) -> None:
     if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
-        from app.core.exceptions import AuthenticationRequired
-        raise AuthenticationRequired()
+        raise AuthenticationRequired("CSRF validation failed.")
 
 
 @router.post(
@@ -135,7 +123,11 @@ def register(
     payload: RegisterRequest,
     db: Session = Depends(get_db),
 ) -> User:
-    user = register_user(db, email=payload.email, password=payload.password)
+    user = register_user(
+        db,
+        email=payload.email,
+        password=payload.password,
+    )
     enqueue_verification_email(db, user_id=user.id)
     db.commit()
     return user
@@ -167,11 +159,14 @@ def login(
     except InvalidCredentials:
         limiter.record_failure(email_key, ip_key)
         raise
-    else:
-        limiter.record_success(email_key)
+
+    limiter.record_success(email_key)
 
     settings = get_settings()
-    if settings.auth_require_email_verification and user.email_verified_at is None:
+    if (
+        settings.auth_require_email_verification
+        and user.email_verified_at is None
+    ):
         raise EmailNotVerified()
 
     verify_second_factor(
@@ -187,7 +182,7 @@ def login(
         user_agent=request.headers.get("user-agent"),
         ip_address=get_client_ip(request),
     )
-    csrf_token = uuid.uuid4().hex + uuid.uuid4().hex
+    csrf_token = new_csrf_token()
     db.commit()
 
     _set_session_cookies(
@@ -203,89 +198,11 @@ def login(
     )
 
 
-
-@router.get("/2fa", response_model=TwoFactorStatusResponse)
-def get_two_factor_status(
+@router.get("/me", response_model=UserResponse)
+def me(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> TwoFactorStatusResponse:
-    row = db.get(UserTwoFactor, current_user.id)
-    return {"enabled": bool(row and row.enabled_at is not None)}
-
-
-@router.post(
-    "/2fa/enroll",
-    response_model=TwoFactorEnrollmentResponse,
-)
-def enroll_two_factor(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> TwoFactorEnrollmentResponse:
-    row, secret, uri, recovery_codes = begin_enrollment(
-        db,
-        user_id=current_user.id,
-        email=current_user.email,
-    )
-    db.commit()
-    return {
-        "enabled": bool(row.enabled_at),
-        "secret": secret,
-        "provisioning_uri": uri,
-        "recovery_codes": recovery_codes,
-    }
-
-
-@router.post("/2fa/confirm", response_model=__import__("app.schemas.auth", fromlist=["TwoFactorStatusResponse"]).TwoFactorStatusResponse)
-def confirm_two_factor(
-    payload: TwoFactorConfirmRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> TwoFactorStatusResponse:
-    confirm_enrollment(db, user_id=current_user.id, code=payload.code)
-    return {"enabled": True}
-
-
-@router.post("/2fa/disable", response_model=__import__("app.schemas.auth", fromlist=["TwoFactorStatusResponse"]).TwoFactorStatusResponse)
-def disable_two_factor_route(
-    payload: TwoFactorDisableRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> TwoFactorStatusResponse:
-    disable_two_factor(db, user_id=current_user.id, code=payload.code)
-    return {"enabled": False}
-
-
-@router.post("/api-tokens", response_model=APITokenCreateResponse)
-def create_api_token(
-    payload: APITokenCreateRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> APITokenCreateResponse:
-    row, raw = create_token(
-        db,
-        user_id=current_user.id,
-        name=payload.name,
-        scopes=payload.scopes,
-        expires_days=payload.expires_days,
-    )
-    return {"token": raw, "item": row}
-
-
-@router.get("/api-tokens", response_model=list[APITokenRead])
-def list_api_tokens(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> list[APITokenRead]:
-    return list_tokens(db, user_id=current_user.id)
-
-
-@router.delete("/api-tokens/{token_id}", status_code=status.HTTP_204_NO_CONTENT)
-def revoke_api_token(
-    token_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    revoke_token(db, user_id=current_user.id, token_id=token_id)
+) -> User:
+    return current_user
 
 
 @router.post("/verify-email", response_model=UserResponse)
@@ -302,12 +219,18 @@ def resend_verification(
     db: Session = Depends(get_db),
 ) -> MessageResponse:
     user = get_user_by_email(db, payload.email)
-    if user is not None and user.is_active and user.email_verified_at is None:
+    if (
+        user is not None
+        and user.is_active
+        and user.email_verified_at is None
+    ):
         enqueue_verification_email(db, user_id=user.id)
         db.commit()
+
     return MessageResponse(
         message=(
-            "If the account exists and needs verification, an email will be sent."
+            "If the account exists and needs verification, "
+            "an email will be sent."
         )
     )
 
@@ -321,10 +244,9 @@ def request_password_reset(
     if user is not None and user.is_active:
         enqueue_password_reset_email(db, user_id=user.id)
         db.commit()
+
     return MessageResponse(
-        message=(
-            "If the account exists, a password reset email will be sent."
-        )
+        message="If the account exists, a password reset email will be sent."
     )
 
 
@@ -344,21 +266,32 @@ def confirm_password_reset(
 @router.post("/refresh", response_model=TokenResponse)
 def refresh(
     response: Response,
-    refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
-    csrf_cookie: str | None = Cookie(default=None, alias=CSRF_COOKIE_NAME),
-    csrf_header: str | None = Header(default=None, alias="X-CSRF-Token"),
+    refresh_token: str | None = Cookie(
+        default=None,
+        alias=REFRESH_COOKIE_NAME,
+    ),
+    csrf_cookie: str | None = Cookie(
+        default=None,
+        alias=CSRF_COOKIE_NAME,
+    ),
+    csrf_header: str | None = Header(
+        default=None,
+        alias="X-CSRF-Token",
+    ),
     db: Session = Depends(get_db),
 ) -> TokenResponse:
     _require_csrf(csrf_cookie, csrf_header)
-    session, new_refresh = rotate_session(
+    session, new_refresh_token = rotate_session(
         db,
         raw_refresh_token=refresh_token or "",
     )
+    csrf_token = new_csrf_token()
     db.commit()
+
     _set_session_cookies(
         response,
-        refresh_token=new_refresh,
-        csrf_token=csrf_cookie or "",
+        refresh_token=new_refresh_token,
+        csrf_token=csrf_token,
     )
     return TokenResponse(
         access_token=create_access_token(subject=str(session.user_id)),
@@ -370,15 +303,26 @@ def refresh(
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(
     response: Response,
-    refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
-    csrf_cookie: str | None = Cookie(default=None, alias=CSRF_COOKIE_NAME),
-    csrf_header: str | None = Header(default=None, alias="X-CSRF-Token"),
+    refresh_token: str | None = Cookie(
+        default=None,
+        alias=REFRESH_COOKIE_NAME,
+    ),
+    csrf_cookie: str | None = Cookie(
+        default=None,
+        alias=CSRF_COOKIE_NAME,
+    ),
+    csrf_header: str | None = Header(
+        default=None,
+        alias="X-CSRF-Token",
+    ),
     db: Session = Depends(get_db),
 ) -> None:
     _require_csrf(csrf_cookie, csrf_header)
-    if refresh_token:
-        revoke_by_refresh_token(db, raw_refresh_token=refresh_token)
-        db.commit()
+    revoke_by_refresh_token(
+        db,
+        raw_refresh_token=refresh_token or "",
+    )
+    db.commit()
     _clear_session_cookies(response)
 
 
@@ -387,11 +331,20 @@ def sessions(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SessionListResponse:
-    items = list_active_sessions(db, user_id=current_user.id)
-    return SessionListResponse(items=items, total=len(items))
+    items = list_active_sessions(
+        db,
+        user_id=current_user.id,
+    )
+    return SessionListResponse(
+        items=items,
+        total=len(items),
+    )
 
 
-@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/sessions/{session_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 def delete_session(
     session_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
@@ -405,108 +358,181 @@ def delete_session(
     db.commit()
 
 
-@router.post("/sessions/revoke-others", status_code=status.HTTP_204_NO_CONTENT)
+@router.post(
+    "/sessions/revoke-others",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 def revoke_others(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> None:
-    revoke_all_other_sessions(db, user_id=current_user.id)
-    db.commit()
-
-
-@router.get("/me", response_model=UserResponse)
-def me(
-    current_user: User = Depends(get_current_user),
-) -> User:
-    return current_user
-
-
-def _require_csrf(
-    *,
-    csrf_cookie: str | None,
-    csrf_header: str | None,
-) -> None:
-    if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
-        raise AuthenticationRequired("CSRF validation failed.")
-
-
-@router.post("/refresh", response_model=RefreshResponse)
-def refresh(
-    response: Response,
-    refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
-    csrf_cookie: str | None = Cookie(default=None, alias=CSRF_COOKIE_NAME),
-    csrf_header: str | None = Header(default=None, alias="X-CSRF-Token"),
-    db: Session = Depends(get_db),
-) -> RefreshResponse:
-    _require_csrf(csrf_cookie=csrf_cookie, csrf_header=csrf_header)
-    session, new_refresh = rotate_session(db, raw_refresh_token=refresh_token or "")
-    user = db.get(User, session.user_id)
-    if user is None or not user.is_active:
-        db.rollback()
-        raise AuthenticationRequired()
-    token = create_access_token(subject=str(user.id))
-    new_csrf = new_csrf_token()
-    db.commit()
-    settings = __import__("app.core.config", fromlist=["get_settings"]).get_settings()
-    response.set_cookie(
-        REFRESH_COOKIE_NAME,
-        new_refresh,
-        httponly=True,
-        secure=settings.csrf_cookie_secure,
-        samesite=settings.session_cookie_samesite,
-        path="/api/v1/auth",
-        max_age=settings.refresh_token_expire_days * 86400,
+    revoke_all_other_sessions(
+        db,
+        user_id=current_user.id,
     )
-    response.set_cookie(
-        CSRF_COOKIE_NAME,
-        new_csrf,
-        httponly=False,
-        secure=settings.csrf_cookie_secure,
-        samesite=settings.session_cookie_samesite,
-        path="/api/v1/auth",
-        max_age=settings.refresh_token_expire_days * 86400,
+    db.commit()
+
+
+@router.get("/oauth/{provider}/start")
+def oauth_start(
+    provider: str,
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    return RedirectResponse(
+        url=begin_oauth(db, provider=provider.lower()),
+        status_code=status.HTTP_307_TEMPORARY_REDIRECT,
     )
-    return RefreshResponse(access_token=token)
 
 
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(
+@router.get(
+    "/oauth/{provider}/callback",
+    response_model=TokenResponse,
+)
+def oauth_callback(
+    provider: str,
+    code: str,
+    state: str,
+    request: Request,
     response: Response,
-    refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
-    csrf_cookie: str | None = Cookie(default=None, alias=CSRF_COOKIE_NAME),
-    csrf_header: str | None = Header(default=None, alias="X-CSRF-Token"),
+    db: Session = Depends(get_db),
+) -> TokenResponse:
+    user, refresh_token, session_id = complete_oauth(
+        db,
+        provider=provider.lower(),
+        state=state,
+        code=code,
+        user_agent=request.headers.get("user-agent"),
+        ip_address=get_client_ip(request),
+    )
+    _set_session_cookies(
+        response,
+        refresh_token=refresh_token,
+        csrf_token=new_csrf_token(),
+    )
+    return TokenResponse(
+        access_token=create_access_token(subject=str(user.id)),
+        token_type="bearer",
+        session_id=session_id,
+    )
+
+
+@router.get("/2fa", response_model=TwoFactorStatusResponse)
+def get_two_factor_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TwoFactorStatusResponse:
+    row = db.get(UserTwoFactor, current_user.id)
+    return TwoFactorStatusResponse(
+        enabled=bool(row and row.enabled_at is not None),
+    )
+
+
+@router.post(
+    "/2fa/enroll",
+    response_model=TwoFactorEnrollmentResponse,
+)
+def enroll_two_factor(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TwoFactorEnrollmentResponse:
+    row, secret, provisioning_uri, recovery_codes = begin_enrollment(
+        db,
+        user_id=current_user.id,
+        email=current_user.email,
+    )
+    db.commit()
+    return TwoFactorEnrollmentResponse(
+        enabled=bool(row.enabled_at),
+        secret=secret,
+        provisioning_uri=provisioning_uri,
+        recovery_codes=recovery_codes,
+    )
+
+
+@router.post(
+    "/2fa/confirm",
+    response_model=TwoFactorStatusResponse,
+)
+def confirm_two_factor(
+    payload: TwoFactorConfirmRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TwoFactorStatusResponse:
+    confirm_enrollment(
+        db,
+        user_id=current_user.id,
+        code=payload.code,
+    )
+    return TwoFactorStatusResponse(enabled=True)
+
+
+@router.post(
+    "/2fa/disable",
+    response_model=TwoFactorStatusResponse,
+)
+def disable_two_factor_route(
+    payload: TwoFactorDisableRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TwoFactorStatusResponse:
+    disable_two_factor(
+        db,
+        user_id=current_user.id,
+        code=payload.code,
+    )
+    return TwoFactorStatusResponse(enabled=False)
+
+
+@router.post(
+    "/api-tokens",
+    response_model=APITokenCreateResponse,
+)
+def create_api_token(
+    payload: APITokenCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> APITokenCreateResponse:
+    row, raw = create_token(
+        db,
+        user_id=current_user.id,
+        name=payload.name,
+        scopes=payload.scopes,
+        expires_days=payload.expires_days,
+    )
+    return APITokenCreateResponse(
+        token=raw,
+        item=row,
+    )
+
+
+@router.get(
+    "/api-tokens",
+    response_model=list[APITokenRead],
+)
+def list_api_tokens(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[APITokenRead]:
+    return list_tokens(
+        db,
+        user_id=current_user.id,
+    )
+
+
+@router.delete(
+    "/api-tokens/{token_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def revoke_api_token(
+    token_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> None:
-    _require_csrf(csrf_cookie=csrf_cookie, csrf_header=csrf_header)
-    revoke_by_refresh_token(db, raw_refresh_token=refresh_token or "")
-    db.commit()
-    response.delete_cookie(REFRESH_COOKIE_NAME, path="/api/v1/auth")
-    response.delete_cookie(CSRF_COOKIE_NAME, path="/api/v1/auth")
+    revoke_token(
+        db,
+        user_id=current_user.id,
+        token_id=token_id,
+    )
 
 
-@router.get("/sessions", response_model=list[SessionRead])
-def sessions(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> list[UserSession]:
-    return list_active_sessions(db, user_id=current_user.id)
-
-
-@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
-def revoke(
-    session_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> None:
-    revoke_session(db, user_id=current_user.id, session_id=session_id)
-    db.commit()
-
-
-@router.post("/sessions/revoke-others", response_model=dict[str, int])
-def revoke_others(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> dict[str, int]:
-    count = revoke_all_other_sessions(db, user_id=current_user.id)
-    db.commit()
-    return {"revoked": count}
+__all__ = ["router"]
