@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
+from app.core.config import get_settings
 from app.core.exceptions import InvitationNotFound
 from app.db.models.invitation import WorkspaceInvitation
 from app.db.models.membership import WorkspaceMembership
@@ -393,8 +394,9 @@ def _current_usage_for_feature(
             db, workspace_id=workspace_id
         )
     if feature == FEATURE_STORAGE_BYTES:
-        # Storage aggregation is not wired in M37.
-        return 0
+        return entitlements_service.count_active_storage_bytes(
+            db, workspace_id=workspace_id
+        )
     if feature == FEATURE_REPORTS_MONTHLY:
         return usage_service.get_period_usage(
             db,
@@ -516,6 +518,165 @@ def get_subscription(
     sub = billing_service.require_live_subscription(
         db, workspace_id=workspace_id
     )
+    plan = db.get(Plan, sub.plan_id)
+    return SubscriptionRead(
+        id=sub.id,
+        workspace_id=sub.workspace_id,
+        plan_id=sub.plan_id,
+        plan_code=plan.code if plan else "",
+        status=sub.status,
+        current_period_start=sub.current_period_start,
+        current_period_end=sub.current_period_end,
+        provider=sub.provider,
+        cancel_at_period_end=sub.cancel_at_period_end,
+        created_at=sub.created_at,
+    )
+
+
+@router.post(
+    "/{workspace_id}/subscription/checkout",
+)
+def create_subscription_checkout(
+    workspace_id: uuid.UUID,
+    plan_code: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    memberships_service.require_minimum_role(
+        db,
+        workspace_id=workspace_id,
+        user_id=current_user.id,
+        minimum="owner",
+    )
+    settings = get_settings()
+    if settings.billing_provider != "stripe":
+        raise billing_service.BillingOperationUnavailable(
+            "Stripe billing is not configured."
+        )
+    from app.billing.stripe import StripeBillingProvider
+    provider = StripeBillingProvider()
+    ws, _ = workspaces_service.get_workspace_for_user(
+        db, workspace_id=workspace_id, user_id=current_user.id
+    )
+    sub = billing_service.require_live_subscription(
+        db, workspace_id=workspace_id
+    )
+    customer_id = sub.provider_customer_id
+    if not customer_id:
+        customer_id = provider.create_customer(
+            workspace_id=ws.id,
+            owner_user_id=current_user.id,
+            idempotency_key=f"stripe-customer:{workspace_id}",
+        )
+        sub.provider_customer_id = customer_id
+        db.flush()
+    session = provider.create_checkout_session(
+        customer_id=customer_id,
+        plan_code=plan_code,
+        success_url=settings.stripe_success_url,
+        cancel_url=settings.stripe_cancel_url,
+        idempotency_key=f"stripe-checkout:{workspace_id}:{plan_code}",
+    )
+    db.commit()
+    return {
+        "provider": "stripe",
+        "checkout_session_id": session.get("id"),
+        "checkout_url": session.get("url"),
+    }
+
+
+@router.post(
+    "/{workspace_id}/subscription/cancel",
+    response_model=SubscriptionRead,
+)
+def cancel_workspace_subscription(
+    workspace_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SubscriptionRead:
+    settings = get_settings()
+    provider = None
+    if settings.billing_provider == "stripe":
+        from app.billing.stripe import StripeBillingProvider
+        provider = StripeBillingProvider()
+    sub = billing_service.cancel_subscription(
+        db,
+        workspace_id=workspace_id,
+        actor_user_id=current_user.id,
+        provider=provider,
+    )
+    db.commit()
+    db.refresh(sub)
+    plan = db.get(Plan, sub.plan_id)
+    return SubscriptionRead(
+        id=sub.id,
+        workspace_id=sub.workspace_id,
+        plan_id=sub.plan_id,
+        plan_code=plan.code if plan else "",
+        status=sub.status,
+        current_period_start=sub.current_period_start,
+        current_period_end=sub.current_period_end,
+        provider=sub.provider,
+        cancel_at_period_end=sub.cancel_at_period_end,
+        created_at=sub.created_at,
+    )
+
+
+@router.post(
+    "/{workspace_id}/subscription/resume",
+    response_model=SubscriptionRead,
+)
+def resume_workspace_subscription(
+    workspace_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SubscriptionRead:
+    settings = get_settings()
+    provider = None
+    if settings.billing_provider == "stripe":
+        from app.billing.stripe import StripeBillingProvider
+        provider = StripeBillingProvider()
+    sub = billing_service.resume_subscription(
+        db,
+        workspace_id=workspace_id,
+        actor_user_id=current_user.id,
+        provider=provider,
+    )
+    db.commit()
+    db.refresh(sub)
+    plan = db.get(Plan, sub.plan_id)
+    return SubscriptionRead(
+        id=sub.id,
+        workspace_id=sub.workspace_id,
+        plan_id=sub.plan_id,
+        plan_code=plan.code if plan else "",
+        status=sub.status,
+        current_period_start=sub.current_period_start,
+        current_period_end=sub.current_period_end,
+        provider=sub.provider,
+        cancel_at_period_end=sub.cancel_at_period_end,
+        created_at=sub.created_at,
+    )
+
+
+@router.post(
+    "/{workspace_id}/subscription/change-plan",
+    response_model=SubscriptionRead,
+)
+def change_workspace_plan(
+    workspace_id: uuid.UUID,
+    plan_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SubscriptionRead:
+    sub = billing_service.change_plan(
+        db,
+        workspace_id=workspace_id,
+        actor_user_id=current_user.id,
+        new_plan_id=plan_id,
+    )
+    db.commit()
+    db.refresh(sub)
     plan = db.get(Plan, sub.plan_id)
     return SubscriptionRead(
         id=sub.id,
