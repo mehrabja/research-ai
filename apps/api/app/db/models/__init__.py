@@ -80,6 +80,7 @@ from app.db.models.manuscript_prose import (
     ManuscriptProseSentence,
 )
 from app.db.models.membership import WorkspaceMembership  # noqa: F401
+from app.db.models.api_token import APIToken  # noqa: F401
 from app.db.models.metric import Metric
 from app.db.models.ops import (
     CreditTransaction,
