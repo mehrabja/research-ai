@@ -49,6 +49,18 @@ def _dispose(label: str, module: str, attr: str) -> None:
 def create_app() -> FastAPI:
     settings = get_settings()
 
+    if settings.sentry_dsn:
+        try:
+            import sentry_sdk
+            sentry_sdk.init(
+                dsn=settings.sentry_dsn,
+                environment=settings.app_env,
+                traces_sample_rate=0.0,
+                send_default_pii=False,
+            )
+        except Exception:
+            logger.exception("sentry_initialization_failed")
+
     level = settings.log_level or (
         "DEBUG" if settings.debug else "INFO"
     )
