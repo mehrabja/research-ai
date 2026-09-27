@@ -29,6 +29,7 @@ from app.api.routes.manuscript import router as manuscript_router
 from app.api.routes.manuscript_humanization import (
     router as manuscript_humanization_router,
 )
+from app.api.routes.notifications import router as notifications_router
 from app.api.routes.manuscript_prose import (
     router as manuscript_prose_router,
 )
@@ -89,3 +90,5 @@ api_router.include_router(collaboration_router)
 api_router.include_router(orchestration_router)
 api_router.include_router(workspaces_router)
 api_router.include_router(invitations_router)
+
+api_router.include_router(notifications_router)
