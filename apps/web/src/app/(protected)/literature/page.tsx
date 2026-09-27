@@ -1,0 +1,2 @@
+import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
+export default function LiteraturePage(){return <WorkspaceFeaturePage active="literature" title="Literature" description="Literature discovery, clustering, gaps, screening, and analysis are workspace-scoped backend capabilities."/>}
