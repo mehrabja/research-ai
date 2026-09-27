@@ -41,6 +41,8 @@ members:(w:string)=>request<{items:Member[];total:number}>("workspaces/"+w+"/mem
 notifications:(w:string)=>request<{items:Array<{id:string;kind:string;title:string;body:string;read_at:string|null;created_at:string}>;total:number;unread:number}>("notifications?workspace_id="+encodeURIComponent(w)),
 readNotification:(id:string)=>request<object>("notifications/"+id+"/read",{method:"POST"}),
 readAllNotifications:(w:string)=>request<null>("notifications/read-all?workspace_id="+encodeURIComponent(w),{method:"POST"}),
+notificationPreferences:()=>request<{preferences:Record<string,boolean>}>("notifications/preferences"),
+updateNotificationPreferences:(preferences:Record<string,boolean>)=>request<{preferences:Record<string,boolean>}>("notifications/preferences",{method:"PATCH",body:JSON.stringify({preferences})}),
 createAPIToken:(b:{name:string;expires_at?:string|null})=>request<{id:string;name:string;token:string;token_prefix:string;expires_at:string|null}>("auth/api-tokens",{method:"POST",body:JSON.stringify(b)}),
 apiTokens:()=>request<Array<{id:string;name:string;token_prefix:string;last_used_at:string|null;expires_at:string|null;revoked_at:string|null;created_at:string}>>("auth/api-tokens"),
 revokeAPIToken:(id:string)=>request<null>("auth/api-tokens/"+id,{method:"DELETE"}),
