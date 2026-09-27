@@ -1,5 +1,8 @@
 """Register every model so ``Base.metadata`` is complete for Alembic."""
 
+from app.db.models.auth_session import AuthSession  # noqa: F401
+from app.db.models.auth_token import AuthOneTimeToken  # noqa: F401
+
 from app.db.models.academic_qa import (
     AcademicQAFinding,
     AcademicQARun,
@@ -252,4 +255,6 @@ __all__ = [
     "Workspace",
     "WorkspaceInvitation",
     "WorkspaceMembership",
+    "AuthSession",
+    "AuthOneTimeToken",
 ]
