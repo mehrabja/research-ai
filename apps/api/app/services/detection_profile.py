@@ -6,13 +6,8 @@ from app.domain.detection import (
     DetectionProfile,
     build_detection_profile_id,
 )
-from app.integrations.detection.base import (
-    DetectionProvider,
-    DetectionProviderError,
-)
-from app.integrations.detection.heuristic import (
-    HeuristicDetectionProvider,
-)
+from app.integrations.detection.base import DetectionProvider
+from app.providers.registry import ProviderCapability, ProviderContext, resolve_provider
 
 
 def get_current_detection_profile() -> DetectionProfile:
@@ -34,10 +29,10 @@ def build_detection_provider(
     profile: DetectionProfile | None = None,
 ) -> DetectionProvider:
     p = profile or get_current_detection_profile()
-    if p.provider == "heuristic":
-        return HeuristicDetectionProvider()
-    raise DetectionProviderError(
-        f"unknown detection provider: {p.provider!r}"
+    return resolve_provider(
+        capability=ProviderCapability.DETECTION,
+        preferred=p.provider,
+        context=ProviderContext(profile=p),
     )
 
 
