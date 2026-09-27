@@ -1,0 +1,2 @@
+import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
+export default function PlanningPage(){return <WorkspaceFeaturePage active="planning" title="Research Planning" description="Versioned research plans, validation, coverage, evidence requirements, and restore workflows are available from the planning surface."/>}
