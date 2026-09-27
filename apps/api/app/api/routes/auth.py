@@ -116,11 +116,23 @@ def login(
     if user.mfa_enabled:
         if not payload.mfa_code:
             raise MFARequired()
-        if not user.mfa_secret or not mfa_service.verify_code(
-            user.mfa_secret,
-            payload.mfa_code,
-        ):
-            raise MFAInvalid()
+        valid_mfa = bool(
+            user.mfa_secret
+            and mfa_service.verify_code(
+                user.mfa_secret,
+                payload.mfa_code,
+            )
+        )
+        if not valid_mfa:
+            valid_recovery, remaining = mfa_service.consume_recovery_code(
+                list(user.mfa_recovery_code_hashes or []),
+                payload.mfa_code,
+            )
+            if valid_recovery:
+                user.mfa_recovery_code_hashes = remaining
+                db.commit()
+            else:
+                raise MFAInvalid()
 
     token = create_access_token(subject=str(user.id))
     _session, refresh_token = auth_service.create_refresh_session(
