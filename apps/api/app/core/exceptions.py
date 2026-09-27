@@ -1103,3 +1103,21 @@ class TwoFactorNotEnabled(AppError):
     code = "TWO_FACTOR_NOT_ENABLED"
     status_code = 409
     message = "Two-factor authentication is not enabled."
+
+
+class OAuthNotConfigured(AppError):
+    code = "OAUTH_NOT_CONFIGURED"
+    status_code = 503
+    message = "The requested OAuth provider is not configured."
+
+
+class OAuthProviderError(AppError):
+    code = "OAUTH_PROVIDER_ERROR"
+    status_code = 502
+    message = "The external OAuth provider could not complete authentication."
+
+
+class OAuthStateInvalid(AppError):
+    code = "OAUTH_STATE_INVALID"
+    status_code = 400
+    message = "The OAuth state is invalid or expired."
