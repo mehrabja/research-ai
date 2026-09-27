@@ -172,6 +172,12 @@ class Settings(BaseSettings):
     auth_refresh_cookie_name: str = "research_ai_refresh"
     auth_csrf_cookie_name: str = "research_ai_csrf"
     two_factor_encryption_key: str = Field(default="", repr=False)
+    google_oauth_client_id: str = ""
+    google_oauth_client_secret: str = Field(default="", repr=False)
+    google_oauth_redirect_uri: str = ""
+    github_oauth_client_id: str = ""
+    github_oauth_client_secret: str = Field(default="", repr=False)
+    github_oauth_redirect_uri: str = ""
 
     # Login throttling
     login_rate_limit: int = Field(default=5, ge=1)
