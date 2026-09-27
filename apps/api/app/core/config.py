@@ -357,7 +357,7 @@ class Settings(BaseSettings):
         default=50, ge=2, le=1000
     )
     data_xlsx_max_uncompressed_bytes: int = Field(
-        default=100 * 1024 * 1024, ge=1024, le=1024 * 1024 * 1024
+        default=500 * 1024 * 1024, ge=1024, le=1024 * 1024 * 1024
     )
 
     source_discovery_provider: str = "semantic_scholar"
