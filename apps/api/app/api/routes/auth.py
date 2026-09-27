@@ -16,6 +16,7 @@ from app.core.exceptions import (
 )
 from app.core.security import create_access_token
 from app.db.models.user import User
+from app.db.models.session import UserSession
 from app.db.session import get_db
 from app.schemas.auth import (
     APITokenCreateRequest,
@@ -42,6 +43,17 @@ from app.services.email_jobs import (
     enqueue_verification_email,
 )
 from app.services.rate_limit import get_login_rate_limiter
+from app.services.session import (
+    CSRF_COOKIE_NAME,
+    REFRESH_COOKIE_NAME,
+    create_session,
+    list_active_sessions,
+    new_csrf_token,
+    revoke_all_other_sessions,
+    revoke_by_refresh_token,
+    revoke_session,
+    rotate_session,
+)
 from app.services.oauth import begin_oauth, complete_oauth
 from app.services.two_factor import (
     begin_enrollment,
@@ -406,3 +418,95 @@ def me(
     current_user: User = Depends(get_current_user),
 ) -> User:
     return current_user
+
+
+def _require_csrf(
+    *,
+    csrf_cookie: str | None,
+    csrf_header: str | None,
+) -> None:
+    if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+        from app.core.exceptions import AuthenticationRequired
+        raise AuthenticationRequired("CSRF validation failed.")
+
+
+@router.post("/refresh", response_model=RefreshResponse)
+def refresh(
+    response: Response,
+    refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
+    csrf_cookie: str | None = Cookie(default=None, alias=CSRF_COOKIE_NAME),
+    csrf_header: str | None = Header(default=None, alias="X-CSRF-Token"),
+    db: Session = Depends(get_db),
+) -> RefreshResponse:
+    _require_csrf(csrf_cookie=csrf_cookie, csrf_header=csrf_header)
+    session, new_refresh = rotate_session(db, raw_refresh_token=refresh_token or "")
+    user = db.get(User, session.user_id)
+    if user is None or not user.is_active:
+        db.rollback()
+        raise AuthenticationRequired()
+    token = create_access_token(subject=str(user.id))
+    new_csrf = new_csrf_token()
+    db.commit()
+    settings = __import__("app.core.config", fromlist=["get_settings"]).get_settings()
+    response.set_cookie(
+        REFRESH_COOKIE_NAME,
+        new_refresh,
+        httponly=True,
+        secure=settings.csrf_cookie_secure,
+        samesite=settings.session_cookie_samesite,
+        path="/api/v1/auth",
+        max_age=settings.refresh_token_expire_days * 86400,
+    )
+    response.set_cookie(
+        CSRF_COOKIE_NAME,
+        new_csrf,
+        httponly=False,
+        secure=settings.csrf_cookie_secure,
+        samesite=settings.session_cookie_samesite,
+        path="/api/v1/auth",
+        max_age=settings.refresh_token_expire_days * 86400,
+    )
+    return RefreshResponse(access_token=token)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(
+    response: Response,
+    refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
+    csrf_cookie: str | None = Cookie(default=None, alias=CSRF_COOKIE_NAME),
+    csrf_header: str | None = Header(default=None, alias="X-CSRF-Token"),
+    db: Session = Depends(get_db),
+) -> None:
+    _require_csrf(csrf_cookie=csrf_cookie, csrf_header=csrf_header)
+    revoke_by_refresh_token(db, raw_refresh_token=refresh_token or "")
+    db.commit()
+    response.delete_cookie(REFRESH_COOKIE_NAME, path="/api/v1/auth")
+    response.delete_cookie(CSRF_COOKIE_NAME, path="/api/v1/auth")
+
+
+@router.get("/sessions", response_model=list[SessionRead])
+def sessions(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[UserSession]:
+    return list_active_sessions(db, user_id=current_user.id)
+
+
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+def revoke(
+    session_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    revoke_session(db, user_id=current_user.id, session_id=session_id)
+    db.commit()
+
+
+@router.post("/sessions/revoke-others", response_model=dict[str, int])
+def revoke_others(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, int]:
+    count = revoke_all_other_sessions(db, user_id=current_user.id)
+    db.commit()
+    return {"revoked": count}
