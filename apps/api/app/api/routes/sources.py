@@ -108,6 +108,8 @@ def search_sources(
     max_citations: int | None = Query(default=None, ge=0),
     author: str | None = Query(default=None, min_length=1, max_length=200),
     venue: str | None = Query(default=None, min_length=1, max_length=200),
+    year_from: int | None = Query(default=None, ge=1000, le=2200),
+    year_to: int | None = Query(default=None, ge=1000, le=2200),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     provider: SourceSearchProvider = Depends(_default_provider),
