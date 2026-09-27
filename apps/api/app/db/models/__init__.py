@@ -265,4 +265,6 @@ __all__ = [
     "AuthSession",
     "AuthOneTimeToken",
     "Notification",
+    "EmailDelivery",
+    "APIToken",
 ]
