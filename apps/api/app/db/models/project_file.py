@@ -37,6 +37,10 @@ class ProjectFile(Base, UUIDPKMixin, TimestampMixin):
     original_filename: Mapped[str] = mapped_column(Text, nullable=False)
     normalized_filename: Mapped[str] = mapped_column(Text, nullable=False)
     extension: Mapped[str | None] = mapped_column(Text, nullable=True)
+    folder_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("project_folders.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     storage_key: Mapped[str] = mapped_column(Text, nullable=False)
     storage_provider: Mapped[str] = mapped_column(Text, nullable=False)
@@ -105,6 +109,7 @@ class ProjectFile(Base, UUIDPKMixin, TimestampMixin):
         ),
         Index("ix_project_files_project_status", "project_id", "status"),
         Index("ix_project_files_project_kind", "project_id", "file_kind"),
+        Index("ix_project_files_folder", "project_id", "folder_id", "created_at"),
         Index(
             "ux_project_files_project_sha256_active",
             "project_id",
