@@ -261,6 +261,7 @@ def build_default_registry() -> ProviderRegistry:
     def billing_factory(ctx: ProviderContext) -> Any:
         from app.billing.fake import FakeBillingProvider
         return FakeBillingProvider()
+
     def stripe_billing_factory(ctx: ProviderContext) -> Any:
         from app.billing.stripe import StripeBillingProvider
         return StripeBillingProvider()
