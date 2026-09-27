@@ -1,10 +1,11 @@
 "use client";
 import Link from "next/link";
-import {useMemo,useState} from "react";
+import {useEffect,useMemo,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {useSearchParams} from "next/navigation";
 import {AppShell,useWorkspace} from "./app-shell";
 import {api} from "@/lib/api/client";
+import type {SourceCandidate} from "@/lib/api/generated";
 
 type Obj=Record<string,unknown>;
 const META:Record<string,{eyebrow:string;title:string;description:string}>={
