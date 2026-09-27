@@ -86,8 +86,8 @@ def execute_metered_provider_call(
     user_id: uuid.UUID | None,
     operation: str,
     capability: str,
-    provider: str | None,
-    model: str | None,
+    provider: Any,
+    model: str | None = None,
     project_id: uuid.UUID | None = None,
     report_id: uuid.UUID | None = None,
     job_id: uuid.UUID | None = None,
@@ -101,14 +101,26 @@ def execute_metered_provider_call(
     Terminal state and provider usage are persisted afterwards in a
     separate transaction.
     """
+    provider_name = (
+        provider if isinstance(provider, str) else getattr(provider, "provider_name", None)
+    )
+    model_name = (
+        model
+        if model is not None
+        else (
+            provider if isinstance(provider, str)
+            else getattr(provider, "model_name", None)
+        )
+    )
+
     with SessionLocal() as db:
         op = start_operation(
             db,
             workspace_id=workspace_id,
             user_id=user_id,
             operation=operation,
-            provider=provider,
-            model=model,
+            provider=provider_name,
+            model=model_name,
             project_id=project_id,
             report_id=report_id,
             job_id=job_id,
