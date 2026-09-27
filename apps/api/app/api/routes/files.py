@@ -16,6 +16,7 @@ from app.db.session import get_db
 from app.schemas.project_file import (
     ProjectFileListItem,
     ProjectFileListResponse,
+    ProjectFileMoveRequest,
     ProjectFileRead,
 )
 from app.services import files as files_service
@@ -136,6 +137,28 @@ def download_file(
         "X-Content-Type-Options": "nosniff",
     }
     return StreamingResponse(stream, media_type=media, headers=headers)
+
+@files_router.patch(
+    "/{file_id}",
+    response_model=ProjectFileRead,
+    summary="Move a file between project folders",
+)
+def move_file(
+    file_id: uuid.UUID,
+    body: ProjectFileMoveRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ProjectFileRead:
+    pf = files_service.move_file(
+        db,
+        user_id=current_user.id,
+        file_id=file_id,
+        folder_id=body.folder_id,
+    )
+    db.commit()
+    db.refresh(pf)
+    return ProjectFileRead.model_validate(pf)
+
 
 @files_router.delete(
     "/{file_id}",
