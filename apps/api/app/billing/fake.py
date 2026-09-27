@@ -65,6 +65,18 @@ class FakeBillingProvider:
             self._idem[idempotency_key] = sid
         return sid
 
+    def update_subscription_plan(
+        self,
+        *,
+        subscription_id: str,
+        plan_code: str,
+        idempotency_key: str | None = None,
+    ) -> None:
+        sub = self._subscriptions.get(subscription_id)
+        if sub is None:
+            raise ValueError(f"unknown subscription: {subscription_id}")
+        sub["plan_code"] = plan_code
+
     def cancel_subscription(
         self,
         *,
