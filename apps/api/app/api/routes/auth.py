@@ -26,6 +26,7 @@ from app.schemas.auth import (
     VerifyEmailRequest,
 )
 from app.services import auth as auth_service
+from app.services.email import EmailDeliveryService
 from app.services.rate_limit import get_login_rate_limiter
 from app.services.rate_limit import get_login_rate_limiter
 
@@ -53,10 +54,25 @@ def register(
     # The raw token is intentionally not returned by the API. F11 email
     # delivery will send the token through the configured transactional
     # email provider.
-    auth_service.issue_email_verification_token(
+    verification_token = auth_service.issue_email_verification_token(
         db,
         user_id=user.id,
     )
+    from app.core.config import get_settings
+    settings = get_settings()
+    if settings.email_provider != "none":
+        EmailDeliveryService().send(
+            db,
+            user_id=user.id,
+            to_email=user.email,
+            template="email_verification",
+            subject="Verify your Research-AI email",
+            html=(
+                "<p>Verify your email address.</p>"
+                f"<p>Verification token: <code>{verification_token}</code></p>"
+            ),
+            idempotency_key=f"email-verification:{user.id}:{verification_token}",
+        )
     db.commit()
     db.refresh(user)
     return user
@@ -233,10 +249,25 @@ def request_password_reset(
 ) -> MessageResponse:
     user = auth_service.get_user_by_email(db, payload.email)
     if user is not None and user.is_active:
-        auth_service.issue_password_reset_token(
+        reset_token = auth_service.issue_password_reset_token(
             db,
             user_id=user.id,
         )
+        from app.core.config import get_settings
+        settings = get_settings()
+        if settings.email_provider != "none":
+            EmailDeliveryService().send(
+                db,
+                user_id=user.id,
+                to_email=user.email,
+                template="password_reset",
+                subject="Reset your Research-AI password",
+                html=(
+                    "<p>Password reset requested.</p>"
+                    f"<p>Reset token: <code>{reset_token}</code></p>"
+                ),
+                idempotency_key=f"password-reset:{user.id}:{reset_token}",
+            )
         db.commit()
 
     # Deliberately identical regardless of account existence.
@@ -275,10 +306,25 @@ def resend_verification(
 ) -> MessageResponse:
     user = auth_service.get_user_by_email(db, payload.email)
     if user is not None and user.is_active and user.email_verified_at is None:
-        auth_service.issue_email_verification_token(
+        verification_token = auth_service.issue_email_verification_token(
             db,
             user_id=user.id,
         )
+        from app.core.config import get_settings
+        settings = get_settings()
+        if settings.email_provider != "none":
+            EmailDeliveryService().send(
+                db,
+                user_id=user.id,
+                to_email=user.email,
+                template="email_verification",
+                subject="Verify your Research-AI email",
+                html=(
+                    "<p>Verify your email address.</p>"
+                    f"<p>Verification token: <code>{verification_token}</code></p>"
+                ),
+                idempotency_key=f"email-verification:{user.id}:{verification_token}",
+            )
         db.commit()
     return MessageResponse(
         message="If the account requires verification, instructions will be sent."
