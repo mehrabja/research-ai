@@ -7,7 +7,9 @@ from app.domain.generation import (
     build_generation_profile_id,
 )
 from app.integrations.generation.base import GenerationProvider
-from app.services.provider_registry import build_generation_provider as _build_registry_generation_provider
+from app.services.provider_registry import (
+    build_generation_provider as _build_registry_generation_provider,
+)
 
 
 def get_current_generation_profile() -> GenerationProfile:
