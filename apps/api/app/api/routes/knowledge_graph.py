@@ -22,6 +22,7 @@ from app.schemas.knowledge_graph import (
     KnowledgeGraphSummaryRead,
 )
 from app.services.knowledge_graph import builder as builder_svc
+from app.services.knowledge_graph import export as export_svc
 from app.services.knowledge_graph import jobs as jobs_svc
 from app.services.knowledge_graph import queries as queries_svc
 from app.services.projects import get_project
@@ -181,3 +182,32 @@ def run_query(
         relation_types=body.relation_types,
     )
     return KnowledgeGraphQueryResponse.model_validate(result)
+
+
+@router.get(
+    "/{project_id}/knowledge-graph/export",
+    summary="Export the active knowledge graph",
+)
+def export_graph(
+    project_id: uuid.UUID,
+    format: str = Query(default="json", pattern="^(json|csv)$"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    get_project(db, user_id=current_user.id, project_id=project_id)
+    body, media_type = export_svc.export_graph(
+        db,
+        project_id=project_id,
+        export_format=format,  # type: ignore[arg-type]
+    )
+    suffix = "json" if format == "json" else "csv"
+    return Response(
+        content=body,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="knowledge-graph-{project_id}.{suffix}"'
+            ),
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
