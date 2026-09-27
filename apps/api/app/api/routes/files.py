@@ -79,6 +79,7 @@ def list_files(
     db: Session = Depends(get_db),
     status_filter: str | None = Query(default=None, alias="status"),
     kind: str | None = Query(default=None),
+    folder_id: uuid.UUID | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> ProjectFileListResponse:
