@@ -126,7 +126,6 @@ def change_plan(
         return sub
 
     old_plan_id = sub.plan_id
-    old_plan = db.get(Plan, old_plan_id)
     if provider is not None and sub.provider_subscription_id:
         new_plan = db.get(Plan, new_plan_id)
         if new_plan is None:
