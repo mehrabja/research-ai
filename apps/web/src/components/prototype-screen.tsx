@@ -96,6 +96,31 @@ function Files(){
 function Plan(){const {projectId}=useCtx();const q=useQuery({queryKey:["plan",projectId],queryFn:()=>api.plan(projectId!),enabled:Boolean(projectId)});const v=useQuery({queryKey:["plan-v",projectId],queryFn:()=>api.planVersions(projectId!),enabled:Boolean(projectId)});const val=useMutation({mutationFn:()=>api.validatePlan(projectId!)});return <><Head route="plan" actions={<button className="btn primary" disabled={!projectId||val.isPending} onClick={()=>val.mutate()}>{val.isPending?"Validating…":"Validate plan"}</button>}/><div className="grid grid-2"><Card><h3>Current plan</h3><pre className="code" style={{whiteSpace:"pre-wrap",fontSize:11}}>{JSON.stringify(q.data??{},null,2)}</pre></Card><Card><h3>Versions</h3><pre className="code" style={{whiteSpace:"pre-wrap",fontSize:11}}>{JSON.stringify(v.data??{},null,2)}</pre>{val.data&&<div className="notice" style={{marginTop:12}}>{JSON.stringify(val.data)}</div>}</Card></div></>}
 function Manuscript(){const {reportId}=useCtx();const q=useQuery({queryKey:["manuscript",reportId],queryFn:()=>api.manuscript(reportId!),enabled:Boolean(reportId)});return <><Head route="manuscript" actions={<Link className="btn" href="/collaboration">Review</Link>}/><div className="editor"><div className="title">{value((q.data as unknown as Obj|null)?.title,"Untitled manuscript")}</div><p>{value((q.data as unknown as Obj|null)?.abstract,"No current manuscript content is available.")}</p><div className="notice" style={{marginTop:18}}>Autosave API is available and revision-aware. Content is never replaced without a version contract.</div></div></>}
 function Generate(){const {reportId}=useCtx();const [brief,setBrief]=useState("");const m=useMutation({mutationFn:()=>api.enqueueJob("generate_report",{report_id:reportId},reportId)});return <><Head route="generate"/><div className="grid grid-2"><Card><div className="field"><label>Generation brief</label><textarea className="input textarea" value={brief} onChange={e=>setBrief(e.target.value)} placeholder="Describe what should be generated…"/></div><div className="actions" style={{marginTop:12}}><span className="tag primary">Evidence grounded</span><span className="tag">Durable job</span></div><button className="btn primary" style={{marginTop:14}} disabled={!reportId||m.isPending} onClick={()=>m.mutate()}>{m.isPending?"Queueing…":"Queue generation"}</button></Card><Card><h3>Context</h3><div className="notice">{reportId?"Report "+reportId:"Select a report before generating."}</div></Card></div></>}
+function Humanize(){
+  const {reportId}=useCtx();
+  const [versionId,setVersionId]=useState("");
+  const [detectionRunId,setDetectionRunId]=useState("");
+  const [policyVersion,setPolicyVersion]=useState("");
+  const m=useMutation({mutationFn:()=>api.humanize(reportId!,{
+    version_id:versionId,
+    detection_run_id:detectionRunId,
+    ...(policyVersion.trim()?{policy_version:policyVersion.trim()}:{})
+  })});
+  return <><Head route="humanize"/><div className="grid grid-2">
+    <Card><h3>Source version</h3><p className="muted small">Use an approved report version plus its completed detection run. The backend preserves citations, URLs, DOIs, numbers and evidence markers.</p>
+      <div className="field" style={{marginTop:14}}><label>Version UUID</label><input className="input" value={versionId} onChange={e=>setVersionId(e.target.value)} placeholder="Report version UUID"/></div>
+      <div className="field" style={{marginTop:12}}><label>Detection run UUID</label><input className="input" value={detectionRunId} onChange={e=>setDetectionRunId(e.target.value)} placeholder="Detection run UUID"/></div>
+      <div className="field" style={{marginTop:12}}><label>Policy version <span className="muted tiny">optional</span></label><input className="input" value={policyVersion} onChange={e=>setPolicyVersion(e.target.value)} placeholder="Current policy"/></div>
+      <button className="btn primary" style={{marginTop:14}} disabled={!reportId||!versionId||!detectionRunId||m.isPending} onClick={()=>m.mutate()}>{m.isPending?"Queueing…":"Queue humanization"}</button>
+      {m.isError&&<div className="notice error" style={{marginTop:12}}>Humanization request failed. Check the version and detection run belong to this report.</div>}
+      {m.data&&<div className="notice success" style={{marginTop:12}}>Job queued: {text((m.data as Obj).job_id)}</div>}
+    </Card>
+    <Card><h3>Preservation contract</h3><div className="stack" style={{marginTop:12}}>
+      {["Evidence markers","URLs and DOIs","Numbers","Terminology","Factual meaning"].map(x=><div className="row" key={x}><span>{x}</span><span className="tag success">Protected</span></div>)}
+    </div></Card>
+  </div></>;
+}
+
 function Translate(){const {reportId}=useCtx();const [version,setVersion]=useState("");const [lang,setLang]=useState("fa");const m=useMutation({mutationFn:()=>api.translate(reportId!,{source_version_id:version,target_language:lang})});return <><Head route="translate"/><Card><div className="grid grid-3"><div className="field"><label>Approved source version</label><input className="input" value={version} onChange={e=>setVersion(e.target.value)} placeholder="UUID"/></div><div className="field"><label>Target</label><select className="input" value={lang} onChange={e=>setLang(e.target.value)}><option value="fa">Persian</option><option value="en">English</option><option value="de">German</option></select></div><div className="actions" style={{alignItems:"end"}}><button className="btn primary" disabled={!reportId||!version||m.isPending} onClick={()=>m.mutate()}>{m.isPending?"Queueing…":"Translate"}</button></div></div></Card></>}
 function Collaboration(){const {ws}=useCtx();const q=useQuery({queryKey:["members",ws.workspaceId],queryFn:()=>api.members(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});return <><Head route="collaboration" actions={<Link className="btn" href="/team">Team</Link>}/><Card><h3>Members</h3><Table data={rows(q.data?.items)}/></Card></>}
 function Notifications(){
