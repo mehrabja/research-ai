@@ -66,6 +66,8 @@ class JobTypes(StrEnum):
     HUMANIZE_REPORT = "humanize_report"
     TRANSLATE_REPORT = "translate_report"
     HUMANIZE_POST_TRANSLATION = "humanize_post_translation"
+    SEND_EMAIL_VERIFICATION = "send_email_verification"
+    SEND_PASSWORD_RESET = "send_password_reset"
 
 EXECUTABLE_JOB_TYPES: frozenset[str] = frozenset({
     JobTypes.TEST_NOOP,
@@ -75,6 +77,8 @@ EXECUTABLE_JOB_TYPES: frozenset[str] = frozenset({
     JobTypes.HUMANIZE_REPORT.value,
     JobTypes.TRANSLATE_REPORT.value,
     JobTypes.HUMANIZE_POST_TRANSLATION.value,
+    JobTypes.SEND_EMAIL_VERIFICATION.value,
+    JobTypes.SEND_PASSWORD_RESET.value,
 })
 
 RESERVED_JOB_TYPES: frozenset[str] = frozenset()
