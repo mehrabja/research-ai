@@ -7,6 +7,7 @@ from typing import Protocol
 
 
 
+
 from app.domain.generation import GenerationProviderResult
 from app.integrations.base import ProviderError
 from app.integrations.base import ProviderRetryableError, ProviderAuthenticationError, ProviderInvalidRequestError, ProviderInvalidResponseError, ProviderInputTooLargeError
@@ -31,7 +32,7 @@ class GenerationTimeoutError(GenerationProviderUnavailableError):
     """Retryable (specific timeout)."""
 
 
-class GenerationAuthenticationError(GenerationProviderError):
+class GenerationAuthenticationError(ProviderAuthenticationError, GenerationProviderError):
     """Non-retryable."""
 
 
