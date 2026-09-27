@@ -97,6 +97,8 @@ class CrossrefProvider:
             url_value = item.get("URL")
             container_titles = item.get("container-title") or []
             source_meta = {
+                "publication_type": item.get("type"),
+                "language": item.get("language"),
                 "journal": (
                     container_titles[0]
                     if container_titles and isinstance(container_titles[0], str)
