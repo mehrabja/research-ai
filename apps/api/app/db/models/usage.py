@@ -59,6 +59,9 @@ class UsageEvent(Base, UUIDPKMixin, CreatedAtMixin):
         nullable=True,
     )
     metric: Mapped[str] = mapped_column(Text, nullable=False)
+    usage_class: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default=text("'internal'")
+    )
     quantity: Mapped[int] = mapped_column(BigInteger, nullable=False)
     idempotency_key: Mapped[str | None] = mapped_column(
         Text, nullable=True
@@ -80,6 +83,10 @@ class UsageEvent(Base, UUIDPKMixin, CreatedAtMixin):
 
     __table_args__ = (
         _in_check("metric", USAGE_METRICS, "ck_usage_events_metric"),
+        CheckConstraint(
+            "usage_class IN ('provider','internal','billable')",
+            name="ck_usage_events_class",
+        ),
         CheckConstraint(
             "source_type IS NULL OR "
             + "source_type IN ("
