@@ -148,7 +148,7 @@ def search_source_candidates(
                     units=1,
                     metadata={"query_length": len(q), "result_count": len(candidates)},
                 ),
-                idempotency_key=f"search:{report_id}:{q}:{year}:{open_access_only}",
+                idempotency_key=f"source-search:{uuid.uuid4()}",
             )
             db.commit()
         return candidates
