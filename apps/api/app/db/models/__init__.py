@@ -60,6 +60,7 @@ from app.db.models.literature import (
     LiteratureIntelligenceRun,
     ProjectLiteratureItem,
 )
+from app.db.models.manuscript_draft import ManuscriptDraft, ManuscriptDraftHistory
 from app.db.models.manuscript import (
     Manuscript,
     ManuscriptRun,
@@ -211,6 +212,8 @@ __all__ = [
     "ResearchMemory",
     "ResearchMemoryLink",
     "Manuscript",
+    "ManuscriptDraft",
+    "ManuscriptDraftHistory",
     "ManuscriptVersion",
     "ManuscriptSection",
     "ManuscriptSectionDependency",
