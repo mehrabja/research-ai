@@ -37,3 +37,8 @@ M40 must not be declared GREEN from the current source state.
 
 No live production credentials, checkout, webhook, email delivery, object-storage bucket, or production AI/search environment was claimed from source inspection.
 
+
+
+## Current code state
+
+The implementation branch now includes F02–F20 code surfaces on top of the existing M37 backend foundation. Do not interpret this document as runtime certification: F17–F19 still require a real database, object storage, provider credentials, browser execution, webhook delivery, and recovery evidence.
