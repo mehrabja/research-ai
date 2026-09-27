@@ -1,0 +1,24 @@
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel
+
+
+class NotificationRead(BaseModel):
+    id: uuid.UUID
+    workspace_id: uuid.UUID | None
+    kind: str
+    title: str
+    body: str
+    data: dict[str, Any] | None
+    read_at: datetime | None
+    created_at: datetime
+
+
+class NotificationListResponse(BaseModel):
+    items: list[NotificationRead]
+    total: int
+    unread: int
