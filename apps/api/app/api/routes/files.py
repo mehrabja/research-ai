@@ -41,6 +41,7 @@ files_router = APIRouter(prefix="/files", tags=["files"])
 def upload_file(
     project_id: uuid.UUID,
     file: UploadFile = File(...),
+    folder_id: uuid.UUID | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ProjectFileRead:
