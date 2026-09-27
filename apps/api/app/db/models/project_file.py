@@ -28,6 +28,11 @@ class ProjectFile(Base, UUIDPKMixin, TimestampMixin):
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
     )
+    folder_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("project_file_folders.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     uploaded_by: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT"),
@@ -105,6 +110,7 @@ class ProjectFile(Base, UUIDPKMixin, TimestampMixin):
         ),
         Index("ix_project_files_project_status", "project_id", "status"),
         Index("ix_project_files_project_kind", "project_id", "file_kind"),
+        Index("ix_project_files_project_folder", "project_id", "folder_id"),
         Index(
             "ux_project_files_project_sha256_active",
             "project_id",
