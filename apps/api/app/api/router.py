@@ -15,6 +15,7 @@ from app.api.routes.collaboration import (
 from app.api.routes.detection import router as detection_router
 from app.api.routes.embeddings import router as embeddings_router
 from app.api.routes.files import files_router
+from app.api.routes.folders import router as folders_router
 from app.api.routes.files import router as project_files_router
 from app.api.routes.health import router as health_router
 from app.api.routes.humanization import router as humanization_router
@@ -73,6 +74,7 @@ api_router.include_router(translation_router)
 api_router.include_router(post_translation_humanization_router)
 api_router.include_router(project_files_router)
 api_router.include_router(files_router)
+api_router.include_router(folders_router)
 api_router.include_router(intelligence_router)
 api_router.include_router(classification_router)
 api_router.include_router(literature_router)
