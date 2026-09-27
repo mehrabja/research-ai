@@ -32,6 +32,7 @@ from app.core.exceptions import (
     SourceNotReadyForEmbedding,
 )
 from app.db.models.ops import UsageLog
+from app.db.models.project import Project
 from app.db.models.source import Chunk
 from app.domain.embeddings import (
     EmbeddingProfile,
@@ -47,6 +48,7 @@ from app.integrations.embeddings.base import (
     EmbeddingProviderUnavailableError,
     EmbeddingRateLimitError,
 )
+from app.services.ai_metering import execute_metered_provider_call
 from app.services.reports import get_report
 from app.services.sources import get_source_for_report
 
@@ -280,7 +282,17 @@ def embed_source(
     provider: EmbeddingProvider,
     profile: EmbeddingProfile,
 ) -> EmbeddingRunResult:
-    get_report(db, user_id=user_id, report_id=report_id)
+    report = get_report(db, user_id=user_id, report_id=report_id)
+    project = db.get(Project, report.project_id) if report.project_id else None
+    if project is not None:
+        workspace_id = project.workspace_id
+    else:
+        from app.services.workspaces import get_default_workspace_for_user
+        workspace = get_default_workspace_for_user(db, user_id=user_id)
+        if workspace is None:
+            raise RuntimeError("embedding source has no workspace context")
+        workspace_id = workspace.id
+
     source = get_source_for_report(
         db, user_id=user_id, report_id=report_id, source_id=source_id
     )
@@ -355,8 +367,19 @@ def embed_source(
 
         for batch in batches:
             try:
-                result = provider.embed_documents(
-                    [c.content for c in batch]
+                result = execute_metered_provider_call(
+                    lambda: provider.embed_documents(
+                        [c.content for c in batch]
+                    ),
+                    workspace_id=workspace_id,
+                    user_id=user_id,
+                    operation="source.embedding.provider_call",
+                    capability="embedding",
+                    provider=provider,
+                    model=profile.model,
+                    project_id=report.project_id,
+                    report_id=report_id,
+                    input_units=lambda value: value.usage.input_tokens,
                 )
             except EmbeddingInputTooLargeError as exc:
                 _mark_failed(db, batch, "input_too_large")
