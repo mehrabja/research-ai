@@ -34,6 +34,7 @@ from app.core.exceptions import (
 )
 from app.db.models.project import Project
 from app.db.models.project_file import ProjectFile, ProjectFileEvent
+from app.db.models.project_folder import ProjectFolder
 from app.domain.file import (
     ExtractionStatus,
     FileKind,
@@ -149,6 +150,7 @@ def upload_file(
     original_filename: str,
     client_mime: str | None,
     upload_stream: Iterator[bytes],
+    folder_id: uuid.UUID | None = None,
 ) -> ProjectFile:
     """Upload a file. Commits internally; caller does not manage txn.
 
@@ -200,6 +202,18 @@ def upload_file(
     provider = get_storage_provider()
     provider.put_stream(key=storage_key, chunks=_hashing_stream())
 
+    # Folder, when supplied, must belong to this project/user boundary.
+    if folder_id is not None:
+        folder = db.execute(
+            select(ProjectFolder).where(
+                ProjectFolder.id == folder_id,
+                ProjectFolder.project_id == project_id,
+            )
+        ).scalar_one_or_none()
+        if folder is None:
+            _best_effort_delete(storage_key)
+            raise FileNotFound("folder not found")
+
     # Everything from here until commit is inside a single cleanup
     # boundary. Any failure (I/O on read-back, MIME probe, DB,
     # event emission) must remove the storage object.
@@ -234,6 +248,7 @@ def upload_file(
             original_filename=original_filename,
             normalized_filename=normalized,
             extension=ext,
+            folder_id=folder_id,
             storage_key=storage_key,
             storage_provider=settings.file_storage_backend,
             size_bytes=total,
@@ -337,6 +352,7 @@ def list_files(
     project_id: uuid.UUID,
     status: str | None = None,
     file_kind: str | None = None,
+    folder_id: uuid.UUID | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[list[ProjectFile], int]:
@@ -356,6 +372,8 @@ def list_files(
         base = base.where(ProjectFile.status == status)
     if file_kind:
         base = base.where(ProjectFile.file_kind == file_kind)
+    if folder_id is not None:
+        base = base.where(ProjectFile.folder_id == folder_id)
 
     total = int(
         db.execute(
