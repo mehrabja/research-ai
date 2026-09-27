@@ -27,6 +27,7 @@ from app.services.session import (
     create_session,
     list_active_sessions,
     revoke_all_other_sessions,
+    revoke_by_refresh_token,
     revoke_session,
     rotate_session,
 )
@@ -181,14 +182,8 @@ def logout(
 ) -> None:
     _require_csrf(csrf_cookie, csrf_header)
     if refresh_token:
-        try:
-            session, _ = rotate_session(db, raw_refresh_token=refresh_token)
-            session.revoked_at = __import__("datetime").datetime.now(
-                __import__("datetime").UTC
-            )
-            db.commit()
-        except Exception:
-            db.rollback()
+        revoke_by_refresh_token(db, raw_refresh_token=refresh_token)
+        db.commit()
     _clear_session_cookies(response)
 
 
