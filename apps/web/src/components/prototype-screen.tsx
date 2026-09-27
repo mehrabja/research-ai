@@ -217,7 +217,20 @@ function Translate(){
 }
 
 function Collaboration(){
-  const {ws}=useCtx();const q=useQuery({queryKey:["members",ws.workspaceId],queryFn:()=>api.members(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});return <><Head route="collaboration" actions={<Link className="btn primary" href="/team">Manage team</Link>}/><Card><h3>Workspace members</h3><Table data={rows(q.data?.items)}/></Card></>;
+  const {ws,reportId}=useCtx();
+  const manuscript=useQuery({queryKey:["collab-manuscript",reportId],queryFn:()=>api.manuscript(reportId!),enabled:Boolean(reportId)});
+  const versionId=value(row(row(manuscript.data).version).id,"");
+  const comments=useQuery({queryKey:["comments",reportId,versionId],queryFn:()=>api.manuscriptComments(reportId!,versionId),enabled:Boolean(reportId&&versionId)});
+  const reviews=useQuery({queryKey:["reviews",reportId,versionId],queryFn:()=>api.reviewTasks(reportId!,versionId),enabled:Boolean(reportId&&versionId)});
+  const qc=useQueryClient();
+  const [comment,setComment]=useState("");
+  const [reviewTitle,setReviewTitle]=useState("");
+  const addComment=useMutation({mutationFn:()=>api.addManuscriptComment(reportId!,versionId,{body:comment}),onSuccess:()=>{setComment("");void qc.invalidateQueries({queryKey:["comments",reportId,versionId]})}});
+  const addReview=useMutation({mutationFn:()=>api.createReviewTask(reportId!,versionId,{manuscript_version_id:versionId,title:reviewTitle,severity:"info"}),onSuccess:()=>{setReviewTitle("");void qc.invalidateQueries({queryKey:["reviews",reportId,versionId]})}});
+  return <><Head route="collaboration"/><div className="grid grid-2">
+    <Card><h3>Comments</h3><textarea className="input textarea" style={{minHeight:130,marginTop:12}} value={comment} onChange={e=>setComment(e.target.value)} placeholder="Add a review comment…"/><button className="btn primary" style={{marginTop:10}} disabled={!versionId||!comment.trim()||addComment.isPending} onClick={()=>addComment.mutate()}>{addComment.isPending?"Posting…":"Add comment"}</button><div className="list" style={{marginTop:14}}>{rows(comments.data?.items).map(x=><div className="list-item" key={value(x.id)}><div className="title">{value(x.body)}</div><div className="meta">{value(x.status)} · {value(x.author_user_id)}</div></div>)}</div></Card>
+    <Card><h3>Review tasks</h3><div className="row" style={{marginTop:12}}><input className="input" value={reviewTitle} onChange={e=>setReviewTitle(e.target.value)} placeholder="Review task title"/><button className="btn" disabled={!versionId||!reviewTitle.trim()||addReview.isPending} onClick={()=>addReview.mutate()}>{addReview.isPending?"Creating…":"Create"}</button></div><div className="list" style={{marginTop:14}}>{rows(reviews.data?.items).map(x=><div className="list-item" key={value(x.id)}><div className="row"><div><div className="title">{value(x.title)}</div><div className="meta">{value(x.status)} · {value(x.severity)}</div></div><span className="tag">{value(x.assignee_user_id,"Unassigned")}</span></div></div>)}</div></Card>
+  </div><Card style={{marginTop:16}}><h3>Workspace</h3><div className="muted small">Review actions are tenant-scoped by the backend. Current manuscript version: <span className="mono">{versionId||"—"}</span> · Workspace: <span className="mono">{ws.workspaceId||"—"}</span></div></Card></>;
 }
 
 function Generic({route}:{route:string}){
