@@ -65,6 +65,9 @@ def finish_operation(
     duration_ms: int | None = None,
     estimated_cost_usd: Decimal | None = None,
     error_code: str | None = None,
+    provider: str | None = None,
+    model: str | None = None,
+    metadata: dict | None = None,
 ) -> AIOperation:
     row = db.get(AIOperation, operation_id)
     if row is None:
@@ -75,6 +78,14 @@ def finish_operation(
     row.duration_ms = duration_ms
     row.estimated_cost_usd = estimated_cost_usd
     row.error_code = error_code
+    if provider is not None:
+        row.provider = provider
+    if model is not None:
+        row.model = model
+    if metadata is not None:
+        current = dict(row.operation_metadata or {})
+        current.update(metadata)
+        row.operation_metadata = current
     row.completed_at = datetime.now(UTC)
     db.flush()
     return row
