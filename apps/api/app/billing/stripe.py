@@ -131,6 +131,35 @@ class StripeBillingProvider:
             idempotency_key=idempotency_key,
         )
 
+    def update_subscription_plan(
+        self,
+        *,
+        subscription_id: str,
+        plan_code: str,
+        idempotency_key: str | None = None,
+    ) -> None:
+        price_id = self._price_ids.get(plan_code)
+        if not price_id:
+            raise RuntimeError(
+                f"No Stripe price configured for plan {plan_code!r}"
+            )
+        current = self.get_subscription(subscription_id)
+        if not current:
+            raise RuntimeError("Stripe subscription not found")
+        items = current.get("items", {}).get("data") or []
+        item_id = items[0].get("id") if items else None
+        if not isinstance(item_id, str):
+            raise RuntimeError("Stripe subscription has no billable item")
+        self._post(
+            f"subscriptions/{subscription_id}",
+            data={
+                f"items[0][id]": item_id,
+                f"items[0][price]": price_id,
+                "proration_behavior": "create_prorations",
+            },
+            idempotency_key=idempotency_key,
+        )
+
     def cancel_subscription(
         self,
         *,
