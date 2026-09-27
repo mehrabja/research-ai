@@ -11,7 +11,7 @@ export default function LoginPage(){
   <label className="block text-sm space-y-2">MFA code <span className="muted">(when enabled)</span><input className="input" inputMode="numeric" value={m} onChange={x=>setM(x.target.value)} autoComplete="one-time-code"/></label>
   {err&&<div className="text-sm" style={{color:"var(--danger)"}}>{err}</div>}
   <button className="btn btn-primary w-full" disabled={busy}>{busy?"Signing in…":"Sign in"}</button>
-  <div className="grid grid-cols-2 gap-2"><a className="btn btn-secondary text-center" href="/api/backend/auth/oauth/google/start">Google</a><a className="btn btn-secondary text-center" href="/api/backend/auth/oauth/github/start">GitHub</a></div>
+  <div className="grid grid-cols-2 gap-2"><a className="btn btn-secondary text-center" href="/api/auth/oauth/google/start">Google</a><a className="btn btn-secondary text-center" href="/api/auth/oauth/github/start">GitHub</a></div>
   <p className="muted text-sm">No account? <a className="underline text-white" href="/register">Create one</a></p>
   <a className="muted text-xs underline" href="/password-reset">Forgot password?</a>
  </form></main>
