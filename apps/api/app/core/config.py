@@ -169,6 +169,13 @@ class Settings(BaseSettings):
     login_rate_limit: int = Field(default=5, ge=1)
     login_rate_window_seconds: int = Field(default=300, ge=1)
 
+    # --- F02: persistent authentication ---------------------------------
+    auth_require_verified_email: bool = False
+    auth_refresh_token_expire_days: int = Field(default=30, ge=1, le=365)
+    auth_password_reset_expire_minutes: int = Field(default=30, ge=5, le=1440)
+    auth_email_verification_expire_hours: int = Field(default=24, ge=1, le=168)
+    auth_max_sessions: int = Field(default=10, ge=1, le=100)
+
     # --- Document extraction (Milestone 8) --------------------------------
     document_fetch_timeout_seconds: float = Field(
         default=20.0, ge=1.0, le=120.0
