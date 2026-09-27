@@ -14,6 +14,7 @@ from app.core.config import get_settings
 from app.domain.embeddings import EmbeddingProfile
 from app.domain.generation import GenerationProfile
 
+
 ProviderCapability = Literal["generation", "embedding", "translation"]
 
 if TYPE_CHECKING:
@@ -21,12 +22,8 @@ if TYPE_CHECKING:
 
 
 
-
-
 class ProviderResolutionError(RuntimeError):
     """Base error for provider-policy resolution."""
-
-
 
 
 
@@ -43,7 +40,9 @@ class ProviderDefinition:
 
 class ProviderRegistry:
     def __init__(self) -> None:
-        self._definitions: dict[tuple[ProviderCapability, str], ProviderDefinition] = {}
+        self._definitions: dict[
+            tuple[ProviderCapability, str], ProviderDefinition
+        ] = {}
 
     def register(self, definition: ProviderDefinition) -> None:
         key = (definition.capability, definition.name)
@@ -53,20 +52,28 @@ class ProviderRegistry:
             )
         self._definitions[key] = definition
 
-    def definitions(self, capability: ProviderCapability) -> tuple[ProviderDefinition, ...]:
+    def definitions(
+        self, capability: ProviderCapability
+    ) -> tuple[ProviderDefinition, ...]:
         return tuple(
             d for (cap, _), d in self._definitions.items()
             if cap == capability and d.enabled
         )
 
-    def configured_chain(self, capability: ProviderCapability) -> tuple[str, ...]:
+    def configured_chain(
+        self, capability: ProviderCapability
+    ) -> tuple[str, ...]:
         settings = get_settings()
         raw = {
             "generation": settings.provider_generation_chain,
             "embedding": settings.provider_embedding_chain,
             "translation": settings.provider_translation_chain,
         }[capability]
-        names = tuple(name.strip().lower() for name in raw.split(",") if name.strip())
+        names = tuple(
+            name.strip().lower()
+            for name in raw.split(",")
+            if name.strip()
+        )
         if not names:
             raise ProviderNotConfiguredError(
                 f"no providers configured for capability {capability!r}"
@@ -94,8 +101,9 @@ class ProviderRegistry:
                 d.name for d in self.definitions(capability)
             ) or "none"
             raise ProviderNotConfiguredError(
-                f"no registered provider for {capability!r}; requested/configured="
-                f"{ordered_names!r}; registered={available}"
+                f"no registered provider for {capability!r}; "
+                f"requested/configured={ordered_names!r}; "
+                f"registered={available}"
             )
         return tuple(result)
 
@@ -204,16 +212,26 @@ def get_provider_registry() -> ProviderRegistry:
     return build_provider_registry()
 
 
-def build_generation_provider(profile: GenerationProfile | None = None) -> Any:
+def build_generation_provider(
+    profile: GenerationProfile | None = None,
+) -> Any:
     registry = get_provider_registry()
     requested = profile.provider if profile is not None else None
-    return cast(Any, registry.resolve("generation", requested=requested, config=profile))
+    return cast(
+        Any,
+        registry.resolve("generation", requested=requested, config=profile),
+    )
 
 
-def build_embedding_provider(profile: EmbeddingProfile | None = None) -> Any:
+def build_embedding_provider(
+    profile: EmbeddingProfile | None = None,
+) -> Any:
     registry = get_provider_registry()
     requested = profile.provider if profile is not None else None
-    return cast(Any, registry.resolve("embedding", requested=requested, config=profile))
+    return cast(
+        Any,
+        registry.resolve("embedding", requested=requested, config=profile),
+    )
 
 
 def build_translation_provider(profile: TranslationProfile) -> Any:
