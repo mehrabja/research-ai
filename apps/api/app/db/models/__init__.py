@@ -1,13 +1,13 @@
 """Register every model so ``Base.metadata`` is complete for Alembic."""
 
+from app.db.models.academic_qa import (
+    AcademicQAFinding,
+    AcademicQARun,
+)
 from app.db.models.ai_operation import AIOperation
 from app.db.models.auth_tokens import (
     EmailVerificationToken,
     PasswordResetToken,
-)
-from app.db.models.academic_qa import (
-    AcademicQAFinding,
-    AcademicQARun,
 )
 
 # M37 — SaaS foundation
@@ -122,8 +122,6 @@ from app.db.models.research_memory import (
     ResearchMemory,
     ResearchMemoryLink,
 )
-from app.db.models.security import APIToken, UserTwoFactor
-from app.db.models.session import UserSession
 from app.db.models.research_plan import (
     ResearchEvidenceRequirement,
     ResearchPlan,
@@ -131,6 +129,8 @@ from app.db.models.research_plan import (
     ResearchPlanRun,
     ResearchPlanSection,
 )
+from app.db.models.security import APIToken, UserTwoFactor
+from app.db.models.session import UserSession
 from app.db.models.research_taxonomy import (
     PaperType,
     ResearchDesign,
