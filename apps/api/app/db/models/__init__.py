@@ -9,7 +9,6 @@ from app.db.models.academic_qa import (
     AcademicQAFinding,
     AcademicQARun,
 )
-from app.db.models.auth_action_token import AuthActionToken
 
 # M37 — SaaS foundation
 from app.db.models.billing_event import BillingEvent
@@ -102,7 +101,6 @@ from app.db.models.pipeline import (
 )
 from app.db.models.plan import Plan, PlanEntitlement  # noqa: F401
 from app.db.models.project import Project, ProjectEvent
-from app.db.models.provider_operation import ProviderOperation
 from app.db.models.project_file import ProjectFile, ProjectFileEvent
 from app.db.models.publication import (
     PublicationComplianceFinding,
@@ -187,7 +185,6 @@ __all__ = [
     "UsageLog",
     "ModelPricing",
     "CreditTransaction",
-    "ProviderOperation",
     "Project",
     "ProjectEvent",
     "ProjectFile",
@@ -271,7 +268,6 @@ __all__ = [
     "WorkspaceInvitation",
     "WorkspaceMembership",
     "UserSession",
-    "AuthActionToken",
     "APIToken",
     "UserTwoFactor",
     "AIOperation",
