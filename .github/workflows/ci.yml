@@ -65,3 +65,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t research-ai-api:ci -f apps/api/Dockerfile apps/api
+  e2e:
+    name: Frontend E2E
+    runs-on: ubuntu-latest
+    needs: web
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      BACKEND_API_URL: http://localhost:8000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 20}
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm run start &
+      - run: |
+          npx wait-on http://127.0.0.1:3000
+      - run: npm run test:e2e
