@@ -18,7 +18,7 @@ def generate_secret() -> str:
 def provisioning_uri(secret: str, email: str) -> str:
     return pyotp.TOTP(secret).provisioning_uri(
         name=email,
-        issuer_name=get_settings().project_name,
+        issuer_name=get_settings().auth_mfa_issuer,
     )
 
 
