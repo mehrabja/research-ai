@@ -332,7 +332,19 @@ async def stripe_webhook(
             )
             .with_for_update()
         ).scalar_one_or_none()
+        if (
+            sub is None
+            and isinstance(stripe_customer_id, str)
+        ):
+            sub = db.execute(
+                select(Subscription).where(
+                    Subscription.provider == "stripe",
+                    Subscription.provider_customer_id == stripe_customer_id,
+                )
+                .with_for_update()
+            ).scalar_one_or_none()
         if sub is not None:
+            sub.provider_subscription_id = stripe_subscription_id
             status_value = obj.get("status")
             cancel_at_period_end = bool(obj.get("cancel_at_period_end"))
             if isinstance(status_value, str):
