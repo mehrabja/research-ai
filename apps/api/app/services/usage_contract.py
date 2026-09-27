@@ -7,8 +7,6 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.services.usage import record_event
-
 
 @dataclass(frozen=True)
 class ProviderUsage:
@@ -57,6 +55,10 @@ def record_provider_usage(
         metadata["request_id"] = usage.request_id
     if usage.provider_request_id:
         metadata["provider_request_id"] = usage.provider_request_id
+
+    # Imported lazily to avoid a module-cycle: usage.py re-exports
+    # this contract for legacy producers.
+    from app.services.usage import record_event
 
     return record_event(
         db,
