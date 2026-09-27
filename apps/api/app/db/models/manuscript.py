@@ -115,6 +115,7 @@ class ManuscriptVersion(Base, UUIDPKMixin, CreatedAtMixin):
     word_target: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("0")
     )
+    content_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     sections_snapshot: Mapped[list | None] = mapped_column(
         JSONB, nullable=True
