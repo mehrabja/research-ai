@@ -17,6 +17,8 @@ class ProviderCapability(StrEnum):
     DETECTION = "detection"
     SOURCE_DISCOVERY = "source_discovery"
     BILLING = "billing"
+    EMAIL = "email"
+    STORAGE = "storage"
 
 
 @dataclass(frozen=True)
@@ -261,6 +263,28 @@ def build_default_registry() -> ProviderRegistry:
         from app.integrations.sources.crossref import CrossrefProvider
         return CrossrefProvider()
 
+    def noop_email_factory(ctx: ProviderContext) -> Any:
+        from app.email.noop import NoopEmailProvider
+        return NoopEmailProvider()
+
+    def resend_email_factory(ctx: ProviderContext) -> Any:
+        from app.email.resend import ResendEmailProvider
+        return ResendEmailProvider()
+
+    def local_storage_factory(ctx: ProviderContext) -> Any:
+        from pathlib import Path
+        from app.core.config import REPO_ROOT
+        from app.services.file_storage import LocalStorageProvider
+        settings = get_settings()
+        root = Path(settings.file_storage_local_root)
+        if not root.is_absolute():
+            root = REPO_ROOT / "apps" / "api" / root
+        return LocalStorageProvider(root)
+
+    def s3_storage_factory(ctx: ProviderContext) -> Any:
+        from app.services.s3_storage import build_s3_storage_provider
+        return build_s3_storage_provider()
+
     def billing_factory(ctx: ProviderContext) -> Any:
         from app.billing.fake import FakeBillingProvider
         return FakeBillingProvider()
@@ -328,6 +352,31 @@ def build_default_registry() -> ProviderRegistry:
         capability=ProviderCapability.BILLING,
         name="fake",
         factory=billing_factory,
+    )
+    registry.register(
+        capability=ProviderCapability.BILLING,
+        name="stripe",
+        factory=stripe_billing_factory,
+    )
+    registry.register(
+        capability=ProviderCapability.EMAIL,
+        name="none",
+        factory=noop_email_factory,
+    )
+    registry.register(
+        capability=ProviderCapability.EMAIL,
+        name="resend",
+        factory=resend_email_factory,
+    )
+    registry.register(
+        capability=ProviderCapability.STORAGE,
+        name="local",
+        factory=local_storage_factory,
+    )
+    registry.register(
+        capability=ProviderCapability.STORAGE,
+        name="s3",
+        factory=s3_storage_factory,
     )
     registry.register(
         capability=ProviderCapability.BILLING,
