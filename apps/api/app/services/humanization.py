@@ -18,6 +18,7 @@ from app.db.models.humanization import (
     HumanizationRun,
 )
 from app.db.models.pipeline import DetectionRun, DetectionSegment
+from app.db.models.project import Project
 from app.db.models.report import Report, ReportVersion
 from app.domain.humanization import (
     DETECTION_STATUS_COMPLETED,
@@ -42,6 +43,7 @@ from app.domain.humanization_preservation import (
     extract_protected_tokens,
     validate_preservation,
 )
+from app.services.ai_metering import execute_metered_provider_call
 from app.services.humanization_profile import build_policy_from_settings
 
 logger = logging.getLogger(__name__)
@@ -139,12 +141,32 @@ def _build_prompt_for_layer(
     return _PromptBundle(system_prompt=system_prompt, user_prompt="\n".join(parts))
 
 
-def _call_provider(*, provider, prompt: _PromptBundle, policy: HumanizationPolicy):
-    return provider.generate(
-        system_prompt=prompt.system_prompt,
-        user_prompt=prompt.user_prompt,
-        temperature=policy.temperature,
-        max_output_tokens=policy.max_output_tokens,
+def _call_provider(
+    *,
+    provider,
+    prompt: _PromptBundle,
+    policy: HumanizationPolicy,
+    workspace_id: uuid.UUID,
+    user_id: uuid.UUID,
+    report_id: uuid.UUID,
+):
+    return execute_metered_provider_call(
+        lambda: provider.generate(
+            system_prompt=prompt.system_prompt,
+            user_prompt=prompt.user_prompt,
+            temperature=policy.temperature,
+            max_output_tokens=policy.max_output_tokens,
+        ),
+        workspace_id=workspace_id,
+        user_id=user_id,
+        operation="report.humanization.provider_call",
+        capability="generation",
+        provider=provider,
+        model=getattr(policy, "model", None),
+        report_id=report_id,
+        job_id=getattr(policy, "job_id", None),
+        input_units=lambda result: getattr(result, "input_tokens", None),
+        output_units=lambda result: getattr(result, "output_tokens", None),
     )
 
 
@@ -192,6 +214,9 @@ def _execute_with_preservation(
     prompt: _PromptBundle,
     policy: HumanizationPolicy,
     before_snapshot,
+    workspace_id: uuid.UUID,
+    user_id: uuid.UUID,
+    report_id: uuid.UUID,
 ) -> tuple[str, PreservationResult | None, list[_ProviderCall]]:
     calls: list[_ProviderCall] = []
     last_text = ""
@@ -207,7 +232,14 @@ def _execute_with_preservation(
                 user_prompt=prompt.user_prompt,
             )
 
-        result = _call_provider(provider=provider, prompt=current_prompt, policy=policy)
+        result = _call_provider(
+            provider=provider,
+            prompt=current_prompt,
+            policy=policy,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            report_id=report_id,
+        )
         call = _make_call(result)
         calls.append(call)
         last_text = call.text
@@ -485,6 +517,16 @@ def run_humanization(
         raise HumanizationError("report not found")
     if getattr(report, "user_id", None) != user_id:
         raise HumanizationError("report ownership mismatch")
+
+    project = db.get(Project, report.project_id) if report.project_id else None
+    if project is not None:
+        workspace_id = project.workspace_id
+    else:
+        from app.services.workspaces import get_default_workspace_for_user
+        workspace = get_default_workspace_for_user(db, user_id=user_id)
+        if workspace is None:
+            raise HumanizationError("humanization report has no workspace context")
+        workspace_id = workspace.id
 
     current_status = getattr(report, "status", None)
     if current_status != "humanizing":
