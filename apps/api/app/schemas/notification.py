@@ -22,3 +22,13 @@ class NotificationListResponse(BaseModel):
     items: list[NotificationRead]
     total: int
     unread: int
+
+
+class NotificationPreferenceRead(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    preferences: dict[str, bool]
+
+
+class NotificationPreferenceUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    preferences: dict[str, bool] = Field(default_factory=dict)
