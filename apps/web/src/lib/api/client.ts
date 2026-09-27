@@ -106,9 +106,21 @@ export const api={
   translate:(r:string,b:object)=>request<unknown>("reports/"+r+"/translation/enqueue",{method:"POST",body:JSON.stringify(b)}),
 
   jobs:(w?:string)=>request<unknown[]>("jobs"+(w?"?workspace_id="+encodeURIComponent(w):"")),
+  enqueueJob:(jobType:string,payload:object,reportId?:string)=>request<unknown>("jobs",{method:"POST",body:JSON.stringify({job_type:jobType,payload,report_id:reportId})}),
+
   retryJob:(id:string)=>request<unknown>("jobs/"+id+"/retry",{method:"POST"}),
   cancelJob:(id:string)=>request<void>("jobs/"+id+"/cancel",{method:"POST"}),
 
+  sessions:()=>request<unknown[]>("auth/sessions"),
+  revokeSession:(id:string)=>request<void>("auth/sessions/"+id,{method:"DELETE"}),
+  revokeOtherSessions:()=>request<void>("auth/sessions/revoke-others",{method:"POST"}),
+  apiTokens:()=>request<unknown[]>("auth/api-tokens"),
+  createApiToken:(body:object)=>request<unknown>("auth/api-tokens",{method:"POST",body:JSON.stringify(body)}),
+  revokeApiToken:(id:string)=>request<void>("auth/api-tokens/"+id,{method:"DELETE"}),
+  twoFactor:()=>request<unknown>("auth/2fa"),
+  beginTwoFactor:()=>request<unknown>("auth/2fa/enroll",{method:"POST"}),
+  confirmTwoFactor:(code:string)=>request<unknown>("auth/2fa/confirm",{method:"POST",body:JSON.stringify({code})}),
+  disableTwoFactor:(code:string)=>request<unknown>("auth/2fa/disable",{method:"POST",body:JSON.stringify({code})}),
   members:(w:string)=>request<{items:Member[];total:number}>("workspaces/"+w+"/members"),
   changeMemberRole:(w:string,u:string,role:string)=>request<Member>("workspaces/"+w+"/members/"+u,{method:"PATCH",body:JSON.stringify({role})}),
   removeMember:(w:string,u:string)=>request<null>("workspaces/"+w+"/members/"+u,{method:"DELETE"}),
