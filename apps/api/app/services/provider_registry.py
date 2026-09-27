@@ -19,8 +19,12 @@ ProviderCapability = Literal["generation", "embedding", "translation"]
 if TYPE_CHECKING:
     from app.services.translation_profile import TranslationProfile
 
+
+
 class ProviderResolutionError(RuntimeError):
     """Base error for provider-policy resolution."""
+
+
 
 class ProviderNotConfiguredError(ProviderResolutionError):
     """No configured provider is registered for the requested capability."""
@@ -31,6 +35,7 @@ class ProviderDefinition:
     capability: ProviderCapability
     factory: Callable[[Any], Any]
     enabled: bool = True
+
 
 class ProviderRegistry:
     def __init__(self) -> None:
@@ -100,6 +105,7 @@ class ProviderRegistry:
         definitions = self.candidates(capability, requested=requested)
         return definitions[0].factory(config)
 
+
 def _build_generation(config: GenerationProfile | None) -> Any:
     from app.integrations.generation.openai import OpenAIGenerationProvider
     profile = config or __import__(
@@ -122,6 +128,7 @@ def _build_generation(config: GenerationProfile | None) -> Any:
         retry_jitter_fraction=s.generation_retry_jitter_fraction,
     )
 
+
 def _build_embedding(config: EmbeddingProfile | None) -> Any:
     from app.integrations.embeddings.openai import OpenAIEmbeddingProvider
     profile = config or __import__(
@@ -133,6 +140,7 @@ def _build_embedding(config: EmbeddingProfile | None) -> Any:
             f"embedding provider {profile.provider!r} is not registered"
         )
     return OpenAIEmbeddingProvider(profile=profile)
+
 
 def _build_translation(config: TranslationProfile | None) -> Any:
     from app.integrations.generation.openai import OpenAIGenerationProvider
@@ -161,6 +169,7 @@ def _build_translation(config: TranslationProfile | None) -> Any:
         model_name=profile.model,
     )
 
+
 def build_provider_registry() -> ProviderRegistry:
     registry = ProviderRegistry()
     registry.register(
@@ -186,18 +195,22 @@ def build_provider_registry() -> ProviderRegistry:
     )
     return registry
 
+
 def get_provider_registry() -> ProviderRegistry:
     return build_provider_registry()
+
 
 def build_generation_provider(profile: GenerationProfile | None = None) -> Any:
     registry = get_provider_registry()
     requested = profile.provider if profile is not None else None
     return cast(Any, registry.resolve("generation", requested=requested, config=profile))
 
+
 def build_embedding_provider(profile: EmbeddingProfile | None = None) -> Any:
     registry = get_provider_registry()
     requested = profile.provider if profile is not None else None
     return cast(Any, registry.resolve("embedding", requested=requested, config=profile))
+
 
 def build_translation_provider(profile: TranslationProfile) -> Any:
     registry = get_provider_registry()
