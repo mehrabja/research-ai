@@ -378,11 +378,6 @@ def build_default_registry() -> ProviderRegistry:
         name="s3",
         factory=s3_storage_factory,
     )
-    registry.register(
-        capability=ProviderCapability.BILLING,
-        name="stripe",
-        factory=stripe_billing_factory,
-    )
     return registry
 
 
