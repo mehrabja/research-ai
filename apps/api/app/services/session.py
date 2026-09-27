@@ -134,3 +134,24 @@ def list_active_sessions(db: Session, *, user_id: uuid.UUID) -> list[UserSession
             .order_by(UserSession.last_used_at.desc().nullslast())
         ).scalars().all()
     )
+
+
+def revoke_by_refresh_token(
+    db: Session,
+    *,
+    raw_refresh_token: str,
+) -> bool:
+    if not raw_refresh_token:
+        return False
+    session = db.execute(
+        select(UserSession)
+        .where(
+            UserSession.refresh_token_hash == _hash_token(raw_refresh_token),
+            UserSession.revoked_at.is_(None),
+        )
+        .with_for_update()
+    ).scalar_one_or_none()
+    if session is None:
+        return False
+    session.revoked_at = datetime.now(UTC)
+    return True
