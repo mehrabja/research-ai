@@ -1,4 +1,4 @@
-import type {Citation,Invitation,Manuscript,Member,Plan,Project,ProjectList,QA,RAGResponse,Report,Source,SourceCandidate,Usage,User,Workspace} from "./generated";
+import type {Citation,Invitation,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,QA,RAGResponse,Report,Source,SourceCandidate,Usage,User,Workspace} from "./generated";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
 
@@ -89,7 +89,11 @@ export const api={
 
   folders:(p:string)=>request<unknown[]>("projects/"+p+"/file-folders"),
   createFolder:(p:string,b:object)=>request<unknown>("projects/"+p+"/file-folders",{method:"POST",body:JSON.stringify(b)}),
-  files:(p:string)=>request<unknown[]>("projects/"+p+"/files"),
+  files:(p:string)=>request<ProjectFileList>("projects/"+p+"/files"),
+  uploadFile:(p:string,file:File,folderId?:string)=>{
+    const form=new FormData();form.append("file",file);
+    return request<unknown>("projects/"+p+"/files"+(folderId?"?folder_id="+encodeURIComponent(folderId):""),{method:"POST",body:form});
+  },
 
   plan:(p:string)=>request<unknown>("projects/"+p+"/research-plan"),
   planVersions:(p:string)=>request<unknown>("projects/"+p+"/research-plan/versions"),
