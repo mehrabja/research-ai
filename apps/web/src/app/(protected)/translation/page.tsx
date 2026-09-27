@@ -1,0 +1,2 @@
+import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
+export default function TranslationPage(){return <WorkspaceFeaturePage active="translation" title="Translation" description="Translation runs use the shared provider registry and preserve report, citation, DOI, URL, and evidence markers."/>}
