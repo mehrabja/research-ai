@@ -1,0 +1,2 @@
+import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
+export default function NotificationsSettingsPage(){return <WorkspaceFeaturePage active="settings" title="Notifications" description="In-app notification records are loaded from the authenticated workspace scope."/>}
