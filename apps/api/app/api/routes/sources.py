@@ -45,7 +45,6 @@ router = APIRouter(
 # Provider dependency (overridable in tests)
 # ---------------------------------------------------------------------------
 def _default_provider() -> SourceSearchProvider:
-    settings = get_settings()
     return resolve_provider(
         capability=ProviderCapability.SOURCE_DISCOVERY,
         preferred="semantic_scholar",
