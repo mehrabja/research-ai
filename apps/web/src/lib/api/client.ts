@@ -14,6 +14,7 @@ createAPIToken:(b:{name:string;expires_at?:string|null})=>request<{id:string;nam
 apiTokens:()=>request<Array<{id:string;name:string;token_prefix:string;last_used_at:string|null;expires_at:string|null;revoked_at:string|null;created_at:string}>>("auth/api-tokens"),
 revokeAPIToken:(id:string)=>request<null>("auth/api-tokens/"+id,{method:"DELETE"}),
 search:(w:string,q:string)=>request<{query:string;items:Array<{id:string;resource_type:string;title:string;snippet:string|null;updated_at:string}>;total:number}>("search?workspace_id="+encodeURIComponent(w)+"&q="+encodeURIComponent(q)),
+providerMatrix:()=>request<{capabilities:Array<{capability:string;configured_preferred:string;available_providers:string[]}>}>("providers/matrix"),
 folders:(p:string)=>request<{items:Array<{id:string;project_id:string;parent_id:string|null;name:string;created_at:string;updated_at:string}>;total:number}>("projects/"+p+"/folders"),
 jobs:()=>request<Array<{id:string;job_type:string;status:string;attempt_count:number;max_attempts:number;created_at:string;last_error_message:string|null}>>("jobs"),
 };
