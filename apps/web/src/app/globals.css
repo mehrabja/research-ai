@@ -16,3 +16,5 @@
 .checkbox{display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--muted)}.checkbox input{margin-top:3px}
 .quote{margin-top:70px;padding:18px;border:1px solid var(--border);background:#fff;border-radius:10px;max-width:580px}
 .pillbar{display:flex;gap:7px;flex-wrap:wrap}
+
+.dropzone{border:1px dashed #C7CAD2;background:#FBFCFD;border-radius:9px;padding:18px;transition:background .15s,border-color .15s}.dropzone:hover{background:#F6F7FB;border-color:#A5B4FC}
