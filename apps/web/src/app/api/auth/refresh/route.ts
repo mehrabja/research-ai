@@ -1,25 +1,21 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { copySetCookies, csrfCookieName, refreshCookieName, setAccessCookie } from "@/lib/server/auth";
+import {NextResponse} from "next/server";
+import {cookies} from "next/headers";
+import {setAccessCookie,copySetCookies,CSRF_COOKIE,REFRESH_COOKIE} from "@/lib/server/auth";
 
-export async function POST(req: Request) {
-  const jar = await cookies();
-  const refreshToken = jar.get(refreshCookieName())?.value;
-  const csrf = jar.get(csrfCookieName())?.value;
-  const headerCsrf = req.headers.get("x-csrf-token") ?? csrf;
-  if (!refreshToken || !csrf || !headerCsrf || csrf !== headerCsrf) {
-    return NextResponse.json({ detail: "CSRF validation failed." }, { status: 403 });
-  }
-  const base = process.env.BACKEND_API_URL ?? "http://localhost:8000";
-  const backend = await fetch(base + "/api/v1/auth/refresh", {
-    method: "POST",
-    headers: { "cookie": refreshCookieName() + "=" + refreshToken, "x-csrf-token": headerCsrf },
-    cache: "no-store",
-  });
-  const body = await backend.json().catch(() => ({}));
-  if (!backend.ok) return NextResponse.json(body, { status: backend.status });
-  const out = NextResponse.json({ ok: true });
-  if (body.access_token) setAccessCookie(out, body.access_token);
-  copySetCookies(backend.headers, out);
+export async function POST(){
+  const base=process.env.BACKEND_API_URL??"http://localhost:8000";
+  const jar=await cookies();
+  const refreshToken=jar.get(REFRESH_COOKIE)?.value;
+  const csrf=jar.get(CSRF_COOKIE)?.value;
+  const cookieHeader=[refreshToken ? REFRESH_COOKIE+"="+refreshToken : "", csrf ? CSRF_COOKIE+"="+csrf : ""].filter(Boolean).join("; ");
+  const headers=new Headers();
+  if(cookieHeader)headers.set("cookie",cookieHeader);
+  if(csrf)headers.set("X-CSRF-Token",csrf);
+  const upstream=await fetch(base+"/api/v1/auth/refresh",{method:"POST",headers,cache:"no-store"});
+  const body=await upstream.json().catch(()=>({}));
+  if(!upstream.ok)return NextResponse.json(body,{status:upstream.status});
+  const out=NextResponse.json({ok:true});
+  if(typeof body.access_token==="string")setAccessCookie(out,body.access_token);
+  copySetCookies(out,upstream);
   return out;
 }
