@@ -293,6 +293,28 @@ async def stripe_webhook(
     stripe_subscription_id = obj.get("id")
     stripe_customer_id = obj.get("customer")
 
+    if event_type == "checkout.session.completed":
+        checkout_subscription_id = obj.get("subscription")
+        if (
+            isinstance(stripe_customer_id, str)
+            and isinstance(checkout_subscription_id, str)
+        ):
+            sub = db.execute(
+                select(Subscription).where(
+                    Subscription.provider == "stripe",
+                    Subscription.provider_customer_id == stripe_customer_id,
+                ).with_for_update()
+            ).scalar_one_or_none()
+            if sub is not None:
+                sub.provider_subscription_id = checkout_subscription_id
+                plan_code = (obj.get("metadata") or {}).get("plan_code")
+                if isinstance(plan_code, str):
+                    plan = db.execute(
+                        select(Plan).where(Plan.code == plan_code)
+                    ).scalar_one_or_none()
+                    if plan is not None:
+                        sub.plan_id = plan.id
+
     if (
         event_type.startswith("customer.subscription.")
         and isinstance(stripe_subscription_id, str)
