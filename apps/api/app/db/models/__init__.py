@@ -3,6 +3,7 @@
 from app.db.models.auth_session import AuthSession  # noqa: F401
 from app.db.models.auth_token import AuthOneTimeToken  # noqa: F401
 from app.db.models.notification import Notification  # noqa: F401
+from app.db.models.notification_preference import NotificationPreference  # noqa: F401
 
 from app.db.models.api_token import APIToken  # noqa: F401
 from app.db.models.academic_qa import (
@@ -80,7 +81,6 @@ from app.db.models.manuscript_prose import (
     ManuscriptProseSentence,
 )
 from app.db.models.membership import WorkspaceMembership  # noqa: F401
-from app.db.models.api_token import APIToken  # noqa: F401
 from app.db.models.metric import Metric
 from app.db.models.oauth_account import OAuthAccount  # noqa: F401
 from app.db.models.ops import (
@@ -262,6 +262,7 @@ __all__ = [
     "AuthSession",
     "AuthOneTimeToken",
     "Notification",
+    "NotificationPreference",
     "EmailDelivery",
     "APIToken",
     "OAuthAccount",
