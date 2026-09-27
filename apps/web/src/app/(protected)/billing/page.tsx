@@ -7,6 +7,10 @@ import { api } from "@/lib/api/client";
 export default function BillingPage() {
   const { workspaceId } = useWorkspace();
   const qc = useQueryClient();
+  const plans = useQuery({
+    queryKey: ["billing-plans"],
+    queryFn: api.plans,
+  });
   const plan = useQuery({
     queryKey: ["plan", workspaceId],
     queryFn: () => api.plan(workspaceId!),
@@ -87,7 +91,9 @@ export default function BillingPage() {
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2">
-              {["free", "pro", "team"].map((code) => (
+              {(plans.data ?? ["free", "pro", "team"].map((code) => ({ code }))).map((item) => {
+                const code = item.code;
+                return (
                 <button
                   key={code}
                   className={code === plan.data?.code ? "btn btn-secondary" : "btn btn-primary"}
@@ -100,7 +106,8 @@ export default function BillingPage() {
                       ? "Current: " + code
                       : "Choose " + code}
                 </button>
-              ))}
+                );
+              })}
             </div>
 
             {checkout.error && <div className="text-sm mt-3" style={{ color: "var(--danger)" }}>{checkout.error.message}</div>}
