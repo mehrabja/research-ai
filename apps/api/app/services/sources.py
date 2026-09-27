@@ -145,6 +145,7 @@ def search_source_candidates(
                     operation="source_search",
                     provider=getattr(provider, "provider_name", "unknown"),
                     model=None,
+                    metric="search_requests",
                     units=1,
                     metadata={"query_length": len(q), "result_count": len(candidates)},
                 ),
