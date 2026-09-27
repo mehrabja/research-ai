@@ -88,6 +88,10 @@ class Settings(BaseSettings):
         ge=1024,
         le=100 * 1024 * 1024,
     )
+    # Multipart uploads are enforced by the file service while streaming;
+    # they must not be buffered by the generic request-size middleware.
+    body_limit_stream_uploads: bool = True
+    body_limit_stream_upload_suffix: str = "/files"
 
     rate_limit_enabled: bool = True
     rate_limit_global_per_minute: int = Field(
@@ -203,7 +207,7 @@ class Settings(BaseSettings):
         default=20.0, ge=1.0, le=120.0
     )
     document_max_bytes: int = Field(
-        default=20 * 1024 * 1024, ge=1024, le=200 * 1024 * 1024
+        default=500 * 1024 * 1024, ge=1024, le=500 * 1024 * 1024
     )
     document_max_redirects: int = Field(default=5, ge=0, le=10)
 
