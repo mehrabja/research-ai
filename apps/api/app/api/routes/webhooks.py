@@ -117,6 +117,32 @@ async def stripe_webhook(
     provider_subscription_id = obj.get("id") if isinstance(obj, dict) else None
     provider_customer_id = obj.get("customer") if isinstance(obj, dict) else None
 
+    if event_type == "checkout.session.completed":
+        subscription_id = obj.get("subscription")
+        customer_id = obj.get("customer")
+        if isinstance(customer_id, str):
+            subscription = db.query(Subscription).filter(
+                Subscription.provider == "stripe",
+                Subscription.provider_customer_id == customer_id,
+            ).first()
+            if subscription is not None and isinstance(subscription_id, str):
+                subscription.provider_subscription_id = subscription_id
+                db.flush()
+
+    if event_type == "invoice.payment_failed":
+        customer_id = obj.get("customer")
+        if isinstance(customer_id, str):
+            subscription = db.query(Subscription).filter(
+                Subscription.provider == "stripe",
+                Subscription.provider_customer_id == customer_id,
+            ).first()
+            if subscription is not None and subscription.status in (
+                "trialing",
+                "active",
+            ):
+                subscription.status = "past_due"
+                db.flush()
+
     if event_type.startswith("customer.subscription.") and (
         provider_subscription_id or provider_customer_id
     ):
