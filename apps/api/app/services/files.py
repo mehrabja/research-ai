@@ -392,6 +392,31 @@ def list_files(
     return list(rows), total
 
 
+def move_file(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    file_id: uuid.UUID,
+    folder_id: uuid.UUID | None,
+) -> ProjectFile:
+    """Move a file between project folders without copying its object."""
+    pf = get_file(db, user_id=user_id, file_id=file_id)
+    if pf.deleted_at is not None:
+        raise FileNotFound()
+    if folder_id is not None:
+        folder = db.execute(
+            select(ProjectFolder).where(
+                ProjectFolder.id == folder_id,
+                ProjectFolder.project_id == pf.project_id,
+            )
+        ).scalar_one_or_none()
+        if folder is None:
+            raise FileNotFound("folder not found")
+    pf.folder_id = folder_id
+    db.flush()
+    return pf
+
+
 # ---------------------------------------------------------------------------
 # Content
 # ---------------------------------------------------------------------------
