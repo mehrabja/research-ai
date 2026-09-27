@@ -1079,3 +1079,9 @@ class PasswordResetInvalid(AppError):
     code = "PASSWORD_RESET_INVALID"
     status_code = 400
     message = "Password reset token is invalid or expired."
+
+
+class EmailNotVerified(AppError):
+    code = "EMAIL_NOT_VERIFIED"
+    status_code = 403
+    message = "Email address must be verified before sign-in."
