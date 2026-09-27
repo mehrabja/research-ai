@@ -22,7 +22,7 @@ def provider_matrix(
         ProviderCapability.EMBEDDING.value: settings.embedding_provider,
         ProviderCapability.TRANSLATION.value: settings.translation_provider,
         ProviderCapability.DETECTION.value: settings.detection_provider,
-        ProviderCapability.SOURCE_DISCOVERY.value: "semantic_scholar",
+        ProviderCapability.SOURCE_DISCOVERY.value: settings.source_discovery_provider,
         ProviderCapability.BILLING.value: settings.billing_provider,
     }
     rows = [
