@@ -33,6 +33,7 @@ from app.integrations.detection.base import (
     DetectionProvider,
 )
 from app.services import report_status as report_status_service
+from app.services.usage_contract import ProviderUsage, record_provider_usage
 from app.services.detection_profile import (
     get_current_detection_profile,
 )
@@ -462,6 +463,26 @@ def _persist_success_atomic(
         )
         if result.rowcount == 0:
             raise DetectionAlreadyCompletedError()
+
+        report = db.get(Report, report_id)
+        project = db.get(Project, report.project_id) if report is not None else None
+        if project is not None:
+            record_provider_usage(
+                db,
+                workspace_id=project.workspace_id,
+                user_id=user_id,
+                source_id=None,
+                usage=ProviderUsage(
+                    capability="detection",
+                    operation="detect",
+                    provider=provider_result.provider,
+                    model=provider_result.model,
+                    metric="ai_generation_units",
+                    units=1,
+                    metadata={"report_id": str(report_id), "input_chars": input_chars},
+                ),
+                idempotency_key=f"detection:{attempt_id}:provider_call",
+            )
 
         report_status_service.update_report_status(
             db,
