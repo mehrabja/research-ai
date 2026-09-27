@@ -143,7 +143,7 @@ class Settings(BaseSettings):
     )
     database_url: str = Field(..., repr=False)
     # --- M37: SaaS / Billing -------------------------------------------
-    billing_provider: Literal["none", "fake"] = "none"
+    billing_provider: Literal["none", "fake", "stripe"] = "none"
 
     # --- F20: External provider credentials -------------------------------
     openrouter_api_key: str = Field(default="", repr=False)
@@ -157,6 +157,10 @@ class Settings(BaseSettings):
     stripe_secret_key: str = Field(default="", repr=False)
     stripe_webhook_secret: str = Field(default="", repr=False)
     stripe_publishable_key: str = ""
+    stripe_price_ids: str = ""
+    stripe_success_url: str = ""
+    stripe_cancel_url: str = ""
+    stripe_api_base_url: str = "https://api.stripe.com/v1"
     google_oauth_client_id: str = ""
     google_oauth_client_secret: str = Field(default="", repr=False)
     google_oauth_redirect_uri: str = ""
