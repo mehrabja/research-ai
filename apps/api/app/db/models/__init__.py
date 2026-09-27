@@ -50,6 +50,7 @@ from app.db.models.knowledge import (
     TerminologyGlossary,
     VoiceProfile,
 )
+from app.db.models.email_delivery import EmailDelivery  # noqa: F401
 from app.db.models.knowledge_graph import (
     KnowledgeGraphBuildRun,
     KnowledgeGraphEdge,
