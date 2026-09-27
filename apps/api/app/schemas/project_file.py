@@ -28,6 +28,7 @@ class ProjectFileRead(BaseModel):
     original_filename: str
     normalized_filename: str
     extension: str | None
+    folder_id: uuid.UUID | None
     size_bytes: int
     sha256: str
     client_mime_type: str | None
