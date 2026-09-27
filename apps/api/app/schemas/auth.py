@@ -22,6 +22,7 @@ class UserResponse(BaseModel):
 
     id: uuid.UUID
     email: str
+    email_verified: bool = False
 
 
 class TokenResponse(BaseModel):
