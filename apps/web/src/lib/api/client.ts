@@ -77,7 +77,7 @@ export const api={
   report:(r:string)=>request<Report>("reports/"+r),
 
   sources:(r:string)=>request<{items:Source[]}>("reports/"+r+"/sources"),
-  searchSources:(r:string,q:string)=>request<{query:string;limit:number;candidates:SourceCandidate[]}>("reports/"+r+"/sources/search?q="+encodeURIComponent(q)+"&limit=8"),
+  searchSources:(r:string,q:string,year?:number,openAccess=false)=>request<{query:string;limit:number;candidates:SourceCandidate[]}>("reports/"+r+"/sources/search?q="+encodeURIComponent(q)+"&limit=8"+(year?"&year="+year:"")+(openAccess?"&open_access=true":"")),
   createSource:(r:string,c:SourceCandidate)=>request<Source>("reports/"+r+"/sources",{method:"POST",body:JSON.stringify(c)}),
 
   literature:(p:string)=>request<unknown>("projects/"+p+"/literature"),
