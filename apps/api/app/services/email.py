@@ -14,13 +14,14 @@ class EmailDeliveryService:
 
     def __init__(self) -> None:
         from app.core.config import get_settings
+        from app.providers.registry import ProviderCapability, resolve_provider
 
         settings = get_settings()
         self._provider_name = settings.email_provider
-        if self._provider_name == "resend":
-            self._provider = ResendEmailProvider()
-        else:
-            self._provider = None
+        self._provider = resolve_provider(
+            capability=ProviderCapability.EMAIL,
+            preferred=self._provider_name,
+        )
 
     def send(
         self,
