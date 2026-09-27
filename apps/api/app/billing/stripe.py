@@ -128,6 +128,7 @@ class StripeBillingProvider(BillingProvider):
         }
         for key, value in metadata.items():
             data[f"metadata[{key}]"] = value
+            data[f"subscription_data[metadata][{key}]"] = value
         return self._request(
             "POST",
             "/v1/checkout/sessions",
