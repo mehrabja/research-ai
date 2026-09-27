@@ -27,6 +27,8 @@ class FakeBillingProvider:
         *,
         workspace_id: uuid.UUID,
         owner_user_id: uuid.UUID,
+        email: str | None = None,
+        name: str | None = None,
         idempotency_key: str | None = None,
     ) -> str:
         if idempotency_key is not None:
@@ -41,6 +43,36 @@ class FakeBillingProvider:
         if idempotency_key is not None:
             self._idem[idempotency_key] = cid
         return cid
+
+    def create_checkout_session(
+        self,
+        *,
+        customer_id: str,
+        price_id: str,
+        success_url: str,
+        cancel_url: str,
+        client_reference_id: str,
+        metadata: dict[str, str],
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        if idempotency_key is not None and idempotency_key in self._idem:
+            sid = self._idem[idempotency_key]
+            return {"id": sid, "url": f"{success_url}?checkout={sid}", "status": "open"}
+        if customer_id not in self._customers:
+            raise ValueError(f"unknown customer: {customer_id}")
+        checkout_id = self._new_id("cs_test")
+        if idempotency_key is not None:
+            self._idem[idempotency_key] = checkout_id
+        return {
+            "id": checkout_id,
+            "url": f"{success_url}?checkout={checkout_id}",
+            "status": "open",
+            "customer": customer_id,
+            "price_id": price_id,
+            "cancel_url": cancel_url,
+            "client_reference_id": client_reference_id,
+            "metadata": dict(metadata),
+        }
 
     def create_subscription(
         self,
@@ -100,3 +132,14 @@ class FakeBillingProvider:
 
 
 __all__ = ["FakeBillingProvider"]
+
+
+    def list_invoices(
+        self,
+        *,
+        customer_id: str,
+        limit: int = 25,
+    ) -> list[dict[str, Any]]:
+        if customer_id not in self._customers:
+            raise ValueError(f"unknown customer: {customer_id}")
+        return []
