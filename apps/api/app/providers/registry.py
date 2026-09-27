@@ -155,6 +155,18 @@ def build_default_registry() -> ProviderRegistry:
             raise TypeError("generation provider requires GenerationProfile")
         return OpenAIGenerationProvider(model=profile.model)
 
+    def openrouter_generation_factory(ctx: ProviderContext) -> Any:
+        from app.domain.generation import GenerationProfile
+        from app.integrations.generation.openrouter import OpenRouterGenerationProvider
+
+        profile = ctx.profile
+        if profile is None:
+            from app.services.generation_profile import get_current_generation_profile
+            profile = get_current_generation_profile()
+        if not isinstance(profile, GenerationProfile):
+            raise TypeError("generation provider requires GenerationProfile")
+        return OpenRouterGenerationProvider(model=profile.model)
+
     def embedding_factory(ctx: ProviderContext) -> Any:
         from app.domain.embeddings import EmbeddingProfile
         from app.integrations.embeddings.openai import OpenAIEmbeddingProvider
@@ -166,6 +178,18 @@ def build_default_registry() -> ProviderRegistry:
         if not isinstance(profile, EmbeddingProfile):
             raise TypeError("embedding provider requires EmbeddingProfile")
         return OpenAIEmbeddingProvider(profile)
+
+    def openrouter_embedding_factory(ctx: ProviderContext) -> Any:
+        from app.domain.embeddings import EmbeddingProfile
+        from app.integrations.embeddings.openrouter import OpenRouterEmbeddingProvider
+
+        profile = ctx.profile
+        if profile is None:
+            from app.services.embedding_profile import get_current_embedding_profile
+            profile = get_current_embedding_profile()
+        if not isinstance(profile, EmbeddingProfile):
+            raise TypeError("embedding provider requires EmbeddingProfile")
+        return OpenRouterEmbeddingProvider(profile)
 
     def translation_factory(ctx: ProviderContext) -> Any:
         from app.services.translation_profile import TranslationProfile
@@ -191,6 +215,22 @@ def build_default_registry() -> ProviderRegistry:
         )
         return OpenAITranslationProvider(
             generation_provider=generation,
+            model_name=profile.model,
+        )
+
+    def openrouter_translation_factory(ctx: ProviderContext) -> Any:
+        from app.services.translation_profile import TranslationProfile
+        from app.integrations.generation.openrouter import OpenRouterGenerationProvider
+        from app.integrations.translation.openrouter import OpenRouterTranslationProvider
+
+        profile = ctx.profile
+        if profile is None:
+            from app.services.translation_profile import get_current_translation_profile
+            profile = get_current_translation_profile()
+        if not isinstance(profile, TranslationProfile):
+            raise TypeError("translation provider requires TranslationProfile")
+        return OpenRouterTranslationProvider(
+            generation_provider=OpenRouterGenerationProvider(model=profile.model),
             model_name=profile.model,
         )
 
@@ -221,9 +261,24 @@ def build_default_registry() -> ProviderRegistry:
         factory=embedding_factory,
     )
     registry.register(
+        capability=ProviderCapability.GENERATION,
+        name="openrouter",
+        factory=openrouter_generation_factory,
+    )
+    registry.register(
+        capability=ProviderCapability.EMBEDDING,
+        name="openrouter",
+        factory=openrouter_embedding_factory,
+    )
+    registry.register(
         capability=ProviderCapability.TRANSLATION,
         name="openai",
         factory=translation_factory,
+    )
+    registry.register(
+        capability=ProviderCapability.TRANSLATION,
+        name="openrouter",
+        factory=openrouter_translation_factory,
     )
     registry.register(
         capability=ProviderCapability.DETECTION,
