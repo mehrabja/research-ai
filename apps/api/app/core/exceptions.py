@@ -1067,3 +1067,15 @@ class UsageWorkspaceMissing(AppError):
     code = "USAGE_WORKSPACE_MISSING"
     status_code = 500
     message = "Usage event must be tied to a workspace."
+
+
+class EmailVerificationInvalid(AppError):
+    code = "EMAIL_VERIFICATION_INVALID"
+    status_code = 400
+    message = "Email verification token is invalid or expired."
+
+
+class PasswordResetInvalid(AppError):
+    code = "PASSWORD_RESET_INVALID"
+    status_code = 400
+    message = "Password reset token is invalid or expired."
