@@ -15,6 +15,7 @@ from app.db.models.citation import (
     CitationRun,
     Claim,
     ClaimCitation,
+    ClaimEvidence,
 )
 from app.db.models.user import User
 from app.db.session import get_db
@@ -23,6 +24,8 @@ from app.schemas.citation import (
     BibliographyEntryRead,
     BibliographyRead,
     CitationCurrentRead,
+    EvidenceMatrixRead,
+    EvidenceMatrixRow,
     CitationGenerateRequest,
     CitationGenerateResponse,
     CitationRunListResponse,
@@ -136,6 +139,80 @@ def get_current_citations(
     return CitationCurrentRead(
         run=CitationRunRead.model_validate(run),
         claims=[ClaimRead.model_validate(c) for c in claims],
+    )
+
+
+@router.get(
+    "/{report_id}/evidence/matrix",
+    response_model=EvidenceMatrixRead,
+)
+def get_evidence_matrix(
+    report_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> EvidenceMatrixRead:
+    get_report(db, user_id=current_user.id, report_id=report_id)
+    run = _load_current_run(db, report_id=report_id)
+    claims = list(
+        db.execute(
+            select(Claim)
+            .where(Claim.citation_run_id == run.id)
+            .order_by(Claim.created_at.asc(), Claim.id.asc())
+        ).scalars().all()
+    )
+    claim_ids = [claim.id for claim in claims]
+    evidence_rows = (
+        list(
+            db.execute(
+                select(ClaimEvidence)
+                .where(ClaimEvidence.claim_id.in_(claim_ids))
+                .order_by(
+                    ClaimEvidence.claim_id.asc(),
+                    ClaimEvidence.relevance_score.desc(),
+                    ClaimEvidence.id.asc(),
+                )
+            ).scalars().all()
+        )
+        if claim_ids else []
+    )
+    citation_rows = (
+        list(
+            db.execute(
+                select(ClaimCitation)
+                .where(ClaimCitation.claim_id.in_(claim_ids))
+                .order_by(
+                    ClaimCitation.claim_id.asc(),
+                    ClaimCitation.citation_order.asc().nullslast(),
+                    ClaimCitation.id.asc(),
+                )
+            ).scalars().all()
+        )
+        if claim_ids else []
+    )
+    evidence_by_claim: dict[uuid.UUID, list[ClaimEvidence]] = {}
+    citation_by_claim: dict[uuid.UUID, list[ClaimCitation]] = {}
+    for row in evidence_rows:
+        evidence_by_claim.setdefault(row.claim_id, []).append(row)
+    for row in citation_rows:
+        citation_by_claim.setdefault(row.claim_id, []).append(row)
+
+    return EvidenceMatrixRead(
+        report_id=report_id,
+        citation_run_id=run.id,
+        rows=[
+            EvidenceMatrixRow(
+                claim=claim,
+                evidence=[
+                    __import__("app.schemas.citation", fromlist=["ClaimEvidenceRead"]).ClaimEvidenceRead.model_validate(e)
+                    for e in evidence_by_claim.get(claim.id, [])
+                ],
+                citations=[
+                    __import__("app.schemas.citation", fromlist=["ClaimCitationRead"]).ClaimCitationRead.model_validate(cc)
+                    for cc in citation_by_claim.get(claim.id, [])
+                ],
+            )
+            for claim in claims
+        ],
     )
 
 
