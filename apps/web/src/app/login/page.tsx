@@ -1,3 +1,31 @@
-"use client";import{useState}from"react";import{useRouter}from"next/navigation";import{z}from"zod";
-const schema=z.object({email:z.string().email(),password:z.string().min(1)});
-export default function LoginPage(){const r=useRouter();const[e,setE]=useState("");const[p,setP]=useState("");const[err,setErr]=useState("");const[busy,setBusy]=useState(false);async function submit(ev:React.FormEvent){ev.preventDefault();setErr("");const parsed=schema.safeParse({email:e,password:p});if(!parsed.success){setErr("Enter a valid email and password.");return}setBusy(true);const res=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(parsed.data)});const body=await res.json().catch(()=>({}));setBusy(false);if(!res.ok){setErr(body?.detail??"Login failed.");return}r.replace("/dashboard");r.refresh()}return <main className="min-h-screen grid place-items-center px-6"><form onSubmit={submit} className="card w-full max-w-md p-7 space-y-5"><div><div className="kicker">Research AI</div><h1 className="text-2xl font-semibold mt-2">Sign in</h1><p className="muted text-sm mt-1">Evidence-grounded research workspace.</p></div><label className="block text-sm space-y-2">Email<input className="input" type="email" value={e} onChange={x=>setE(x.target.value)} autoComplete="email"/></label><label className="block text-sm space-y-2">Password<input className="input" type="password" value={p} onChange={x=>setP(x.target.value)} autoComplete="current-password"/></label>{err&&<div className="text-sm" style={{color:"var(--danger)"}}>{err}</div>}<button className="btn btn-primary w-full" disabled={busy}>{busy?"Signing in…":"Sign in"}</button><p className="muted text-sm">No account? <a className="underline text-white" href="/register">Create one</a></p></form></main>}
+"use client";
+
+import Link from "next/link";
+import { FormEvent, useState } from "react";
+
+export default function LoginPage() {
+  const [email,setEmail]=useState("");
+  const [password,setPassword]=useState("");
+  const [code,setCode]=useState("");
+  const [error,setError]=useState("");
+  const [loading,setLoading]=useState(false);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault(); setLoading(true); setError("");
+    try {
+      const response = await fetch("/api/auth/login", {
+        method:"POST",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify({email,password,two_factor_code:code||undefined}),
+      });
+      if(!response.ok) {
+        const data=await response.json().catch(()=>({}));
+        throw new Error(data?.detail ?? data?.message ?? "Login failed.");
+      }
+      window.location.href="/dashboard";
+    } catch(e) { setError(e instanceof Error ? e.message : "Login failed."); }
+    finally { setLoading(false); }
+  }
+
+  return <div className="auth-page"><div className="auth-side"><Link className="brand" href="/"><span className="brand-mark">R</span><span>Research AI</span></Link><h1>Research work that keeps its evidence.</h1><p>Sign in to your workspace and continue from your latest versioned research state.</p></div><div className="auth-main"><div className="auth-card"><h2>Sign in</h2><p className="muted small">Use your Research AI account.</p>{error?<div className="notice error" style={{marginTop:14}}>{error}</div>:null}<form className="auth-form" onSubmit={submit}><div className="field"><label>Email</label><input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} required /></div><div className="field"><label>Password</label><input className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)} required /></div><div className="field"><label>2FA code (when enabled)</label><input className="input" inputMode="numeric" maxLength={6} value={code} onChange={e=>setCode(e.target.value)} /></div><button className="btn primary" disabled={loading}>{loading?"Signing in…":"Sign in"}</button></form><div className="row" style={{marginTop:14}}><Link className="small muted" href="/forgot-password">Forgot password?</Link><Link className="small muted" href="/signup">Create account</Link></div><div className="divider" style={{margin:"18px 0"}}>or</div><div className="socials"><a className="btn" href="/api/backend/auth/oauth/google/start">Google</a><a className="btn" href="/api/backend/auth/oauth/github/start">GitHub</a></div></div></div></div>;
+}
