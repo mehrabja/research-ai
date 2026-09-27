@@ -28,6 +28,7 @@ from app.db.models.collaboration import (
 )
 from app.db.models.data_profile import DataColumnProfile, DataProfile
 from app.db.models.experiment_result import ExperimentResult
+from app.db.models.file_folder import ProjectFileFolder
 from app.db.models.humanization import (
     ConvergenceBestSnapshot,
     ConvergenceIteration,
@@ -179,6 +180,7 @@ __all__ = [
     "Project",
     "ProjectEvent",
     "ProjectFile",
+    "ProjectFileFolder",
     "ProjectFileEvent",
     "CodeAnalysis",
     "CodeSymbol",
