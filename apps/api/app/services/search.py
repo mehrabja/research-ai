@@ -5,7 +5,6 @@ import uuid
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ProjectNotFound
 from app.db.models.project import Project
 from app.db.models.project_file import ProjectFile
 from app.db.models.report import Report
