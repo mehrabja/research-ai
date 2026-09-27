@@ -11,7 +11,7 @@ It does not fabricate a provider or hide configuration failures.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Generic, TypeVar
 
 from app.services.provider_registry import (
     ProviderCapability,
@@ -47,7 +47,7 @@ class ProviderAttempt:
 
 
 @dataclass(frozen=True)
-class ProviderExecution[T]:
+class ProviderExecution(Generic[T]):
     value: T
     provider: str
     attempts: tuple[ProviderAttempt, ...]
