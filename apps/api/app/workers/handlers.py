@@ -539,6 +539,7 @@ def _translate_report(ctx: JobContext) -> None:
                 db=db,
                 user_id=user_id,
                 report_id=report_id,
+                job_id=ctx.job_id,
                 source_version_id=source_version_id,
                 target_language=target_language,
                 provider=provider,
