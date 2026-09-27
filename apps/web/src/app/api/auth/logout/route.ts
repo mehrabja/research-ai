@@ -1,1 +1,2 @@
-import{NextResponse}from"next/server";import{clearAccessCookie}from"@/lib/server/auth";export async function POST(){const out=NextResponse.json({ok:true});clearAccessCookie(out);return out}
+import{NextResponse}from"next/server";import{cookies}from"next/headers";import{clearAuthCookies,REFRESH_COOKIE}from"@/lib/server/auth";
+export async function POST(){const token=(await cookies()).get(REFRESH_COOKIE)?.value;const base=process.env.BACKEND_API_URL??"http://localhost:8000";if(token)await fetch(base+"/api/v1/auth/logout",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({refresh_token:token}),cache:"no-store"}).catch(()=>null);const out=NextResponse.json({ok:true});clearAuthCookies(out);return out}
