@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import AppError, ProjectNotFound
 from app.db.models.project import Project
-from app.db.models.project_file import ProjectFile
 from app.db.models.project_folder import ProjectFolder
 
 
