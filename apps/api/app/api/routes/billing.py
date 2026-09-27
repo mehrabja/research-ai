@@ -11,13 +11,16 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.core.config import get_settings
+from app.db.models.plan import Plan
 from app.db.models.subscription import Subscription
 from app.db.models.user import User
 from app.db.session import get_db
 from app.domain.billing import can_transition
 from app.schemas.billing import (
     BillingPortalActionResponse,
+    ChangePlanRequest,
     CheckoutSessionRequest,
+    SubscriptionSummaryResponse,
     CheckoutSessionResponse,
 )
 from app.services import billing as billing_service
@@ -86,6 +89,80 @@ def create_checkout(
     return CheckoutSessionResponse(
         session_id=session_id,
         checkout_url=checkout_url if isinstance(checkout_url, str) else None,
+    )
+
+
+@router.get(
+    "/workspaces/{workspace_id}/subscription",
+    response_model=SubscriptionSummaryResponse,
+)
+def get_subscription(
+    workspace_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SubscriptionSummaryResponse:
+    from app.services.workspaces import get_workspace_for_user
+    get_workspace_for_user(
+        db,
+        workspace_id=workspace_id,
+        user_id=current_user.id,
+    )
+    sub = billing_service.get_live_subscription(
+        db,
+        workspace_id=workspace_id,
+    )
+    if sub is None:
+        return SubscriptionSummaryResponse(subscription={})
+    plan = db.get(Plan, sub.plan_id)
+    return SubscriptionSummaryResponse(
+        subscription={
+            "id": str(sub.id),
+            "workspace_id": str(sub.workspace_id),
+            "plan_id": str(sub.plan_id),
+            "plan_code": plan.code if plan else None,
+            "status": sub.status,
+            "current_period_start": sub.current_period_start.isoformat() if sub.current_period_start else None,
+            "current_period_end": sub.current_period_end.isoformat() if sub.current_period_end else None,
+            "provider": sub.provider,
+            "cancel_at_period_end": sub.cancel_at_period_end,
+        }
+    )
+
+
+@router.post(
+    "/workspaces/{workspace_id}/plan",
+    response_model=BillingPortalActionResponse,
+)
+def change_workspace_plan(
+    workspace_id: uuid.UUID,
+    body: ChangePlanRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> BillingPortalActionResponse:
+    from app.services.workspaces import get_workspace_for_user
+    get_workspace_for_user(
+        db,
+        workspace_id=workspace_id,
+        user_id=current_user.id,
+    )
+    plan = db.execute(
+        select(Plan).where(Plan.code == body.plan_code)
+    ).scalar_one_or_none()
+    if plan is None:
+        raise billing_service.PlanNotFound()
+    provider = get_billing_provider()
+    sub = billing_service.change_plan(
+        db,
+        workspace_id=workspace_id,
+        actor_user_id=current_user.id,
+        new_plan_id=plan.id,
+        provider=provider,
+    )
+    db.commit()
+    return BillingPortalActionResponse(
+        status=sub.status,
+        subscription_id=sub.id,
+        cancel_at_period_end=sub.cancel_at_period_end,
     )
 
 
