@@ -63,3 +63,22 @@ class PasswordResetConfirmRequest(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+class TwoFactorEnrollmentResponse(BaseModel):
+    enabled: bool
+    secret: str
+    provisioning_uri: str
+    recovery_codes: list[str]
+
+
+class TwoFactorStatusResponse(BaseModel):
+    enabled: bool
+
+
+class TwoFactorConfirmRequest(BaseModel):
+    code: str = Field(..., min_length=6, max_length=6)
+
+
+class TwoFactorDisableRequest(BaseModel):
+    code: str = Field(..., min_length=6, max_length=6)
