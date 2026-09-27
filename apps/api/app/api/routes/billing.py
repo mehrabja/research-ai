@@ -14,6 +14,7 @@ from app.core.config import get_settings
 from app.db.models.subscription import Subscription
 from app.db.models.user import User
 from app.db.session import get_db
+from app.domain.billing import can_transition
 from app.schemas.billing import (
     BillingPortalActionResponse,
     CheckoutSessionRequest,
@@ -40,7 +41,7 @@ def create_checkout(
         raise billing_service.BillingOperationUnavailable()
 
     from app.services.workspaces import get_workspace_for_user
-    workspace, role = get_workspace_for_user(
+    _workspace, role = get_workspace_for_user(
         db, workspace_id=workspace_id, user_id=current_user.id
     )
     if role != "owner":
@@ -240,7 +241,7 @@ async def stripe_webhook(
                 new_status = allowed.get(status_value)
                 if new_status is not None:
                     current = sub.status
-                    if billing_service.can_transition_compat(current, new_status):
+                    if can_transition(current, new_status):
                         sub.status = new_status
                     elif current == new_status:
                         pass
