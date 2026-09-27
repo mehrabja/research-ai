@@ -35,7 +35,19 @@ function Card({children}:{children:React.ReactNode}){return <section className="
 function State({title,description,error=false}:{title:string;description:string;error?:boolean}){return <div className={"state"+(error?" error":"")}><h3>{title}</h3><p>{description}</p></div>}
 function Table({data}:{data:Obj[]}){return <div className="table-wrap"><table className="table"><thead><tr><th>Record</th><th>Status</th><th>Identifier</th></tr></thead><tbody>{data.slice(0,30).map((x,i)=><tr key={i}><td>{value(x.title??x.name??x.claim??x.type,"Record")}</td><td>{value(x.status??x.state)}</td><td className="mono">{value(x.id)}</td></tr>)}</tbody></table></div>}
 
-export function PrototypeScreen({segments}:{segments:string[]}){const route=segments[0]??"dashboard";const user=useQuery({queryKey:["me"],queryFn:api.me});if(user.isPending)return <State title="Loading session" description="Restoring the authenticated workspace…"/>;if(user.isError)return <State title="Session unavailable" description="The backend authentication session could not be restored." error/>;return <AppShell userEmail={user.data.email}><Screen route={route}/></AppShell>}
+export function PrototypeScreen({segments}:{segments:string[]}){
+  const route=segments[0]??"dashboard";
+  if(route==="landing")return <Landing/>;
+  if(route==="loading")return <LoadingView/>;
+  return <AuthenticatedScreen route={route}/>;
+}
+function AuthenticatedScreen({route}:{route:string}){
+  const user=useQuery({queryKey:["me"],queryFn:api.me});
+  if(user.isPending)return <State title="Loading session" description="Restoring the authenticated workspace…"/>;
+  if(user.isError)return <State title="Session unavailable" description="The backend authentication session could not be restored." error/>;
+  return <AppShell userEmail={user.data.email}><Screen route={route}/></AppShell>;
+}
+function LoadingView(){return <div className="auth-page"><section className="auth-side"><div className="brand"><span className="brand-mark">R</span><span>Research AI</span></div><div className="eyebrow" style={{marginTop:70}}>Research workspace</div><h1>Restoring your evidence context.</h1><p>The workspace is reconnecting to the authenticated API session.</p></section><section className="auth-main"><div className="auth-card"><div className="eyebrow">Loading</div><h2>Opening workspace…</h2><div className="notice" style={{marginTop:14}}>The interface is waiting for backend state; no demo data is inserted.</div></div></section></div>}
 
 function Screen({route}:{route:string}){
  switch(route){
