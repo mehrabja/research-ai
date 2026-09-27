@@ -5,6 +5,7 @@ from fastapi import APIRouter
 
 from app.api.routes.academic_qa import router as academic_qa_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.api_tokens import router as api_tokens_router
 from app.api.routes.billing import router as billing_router
 from app.api.routes.citations import router as citations_router
 from app.api.routes.classification import (
