@@ -5,36 +5,45 @@ from collections.abc import Sequence
 from typing import Protocol
 
 from app.domain.embeddings import EmbeddingBatchResult
+from app.integrations.base import (
+    ProviderAuthenticationError,
+    ProviderError,
+    ProviderInputTooLargeError,
+    ProviderInvalidRequestError,
+    ProviderInvalidResponseError,
+    ProviderRetryableError,
+)
 
 
-class EmbeddingProviderError(Exception):
+class EmbeddingProviderError(ProviderError):
     """Base for provider failures. Mapped to AppError by services."""
 
 
-class EmbeddingRateLimitError(EmbeddingProviderError):
+class EmbeddingRateLimitError(ProviderRetryableError, EmbeddingProviderError):
     """Provider rate-limited the request (retryable)."""
 
 
-class EmbeddingProviderUnavailableError(EmbeddingProviderError):
+class EmbeddingProviderUnavailableError(ProviderRetryableError, EmbeddingProviderError):
     """Provider returned 5xx / network error (retryable)."""
 
 
-class EmbeddingAuthenticationError(EmbeddingProviderError):
+class EmbeddingAuthenticationError(ProviderAuthenticationError, EmbeddingProviderError):
     """Invalid API key / forbidden (non-retryable)."""
 
 
-class EmbeddingInvalidRequestError(EmbeddingProviderError):
+class EmbeddingInvalidRequestError(ProviderInvalidRequestError, EmbeddingProviderError):
     """Provider rejected the request as invalid (non-retryable)."""
 
 
-class EmbeddingInvalidResponseError(EmbeddingProviderError):
+class EmbeddingInvalidResponseError(ProviderInvalidResponseError, EmbeddingProviderError):
     """Provider returned malformed or inconsistent response."""
 
 
-class EmbeddingInputTooLargeError(EmbeddingProviderError):
+class EmbeddingInputTooLargeError(ProviderInputTooLargeError, EmbeddingProviderError):
     """Per-item or per-request input exceeds provider limit."""
 
 
+class EmbeddingProvider(Protocol):
 class EmbeddingProvider(Protocol):
     provider_name: str
     model_name: str
