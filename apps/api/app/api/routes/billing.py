@@ -99,6 +99,32 @@ def create_checkout(
 
 
 @router.get(
+    "/plans",
+    response_model=list[dict],
+)
+def list_plans(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    rows = list(
+        db.execute(
+            select(Plan)
+            .where(Plan.status == "active")
+            .order_by(Plan.code.asc())
+        ).scalars().all()
+    )
+    return [
+        {
+            "id": str(plan.id),
+            "code": plan.code,
+            "name": plan.name,
+            "description": plan.description,
+        }
+        for plan in rows
+    ]
+
+
+@router.get(
     "/workspaces/{workspace_id}/subscription",
     response_model=SubscriptionSummaryResponse,
 )
