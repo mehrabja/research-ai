@@ -8,7 +8,11 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_client_ip, get_current_user
 from app.core.config import get_settings
-from app.core.exceptions import AuthenticationRateLimited, EmailNotVerified, InvalidCredentials
+from app.core.exceptions import (
+    AuthenticationRateLimited,
+    EmailNotVerified,
+    InvalidCredentials,
+)
 from app.core.security import create_access_token
 from app.db.models.user import User
 from app.db.session import get_db
@@ -181,7 +185,9 @@ def resend_verification(
         issue_email_verification_token(db, user_id=user.id)
         db.commit()
     return MessageResponse(
-        message="If the account exists and needs verification, an email will be sent."
+        message=(
+            "If the account exists and needs verification, an email will be sent."
+        )
     )
 
 
@@ -195,7 +201,9 @@ def request_password_reset(
         issue_password_reset_token(db, user_id=user.id)
         db.commit()
     return MessageResponse(
-        message="If the account exists, a password reset email will be sent."
+        message=(
+            "If the account exists, a password reset email will be sent."
+        )
     )
 
 
@@ -210,6 +218,8 @@ def confirm_password_reset(
         new_password=payload.new_password,
     )
     return MessageResponse(message="Password reset completed.")
+
+
 @router.post("/refresh", response_model=TokenResponse)
 def refresh(
     response: Response,
