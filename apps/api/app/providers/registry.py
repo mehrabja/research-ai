@@ -249,6 +249,9 @@ def build_default_registry() -> ProviderRegistry:
     def billing_factory(ctx: ProviderContext) -> Any:
         from app.billing.fake import FakeBillingProvider
         return FakeBillingProvider()
+    def stripe_billing_factory(ctx: ProviderContext) -> Any:
+        from app.billing.stripe import StripeBillingProvider
+        return StripeBillingProvider()
 
     registry.register(
         capability=ProviderCapability.GENERATION,
@@ -294,6 +297,11 @@ def build_default_registry() -> ProviderRegistry:
         capability=ProviderCapability.BILLING,
         name="fake",
         factory=billing_factory,
+    )
+    registry.register(
+        capability=ProviderCapability.BILLING,
+        name="stripe",
+        factory=stripe_billing_factory,
     )
     return registry
 
