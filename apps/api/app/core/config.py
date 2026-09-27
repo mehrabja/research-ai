@@ -956,6 +956,32 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "AUTH_COOKIE_SECURE must be True when APP_ENV=production."
                 )
+            if not self.auth_require_email_verification:
+                raise ValueError(
+                    "AUTH_REQUIRE_EMAIL_VERIFICATION must be True when APP_ENV=production."
+                )
+            if self.email_provider == "none":
+                raise ValueError(
+                    "EMAIL_PROVIDER must be configured in production."
+                )
+            if self.email_provider == "smtp" and (
+                not self.smtp_host.strip() or not self.smtp_sender.strip()
+            ):
+                raise ValueError(
+                    "SMTP_HOST and SMTP_SENDER must be configured in production."
+                )
+            if not self.frontend_base_url.strip():
+                raise ValueError(
+                    "FRONTEND_BASE_URL must be configured in production."
+                )
+            if len(self.jwt_secret_key.encode("utf-8")) < _MIN_JWT_SECRET_BYTES:
+                raise ValueError(
+                    "JWT_SECRET_KEY must be at least 32 bytes in production."
+                )
+            if self.jwt_secret_key == DEV_JWT_SECRET:
+                raise ValueError(
+                    "The development JWT secret is not allowed in production."
+                )
             if self.auth_cookie_samesite == "none" and not self.auth_cookie_secure:
                 raise ValueError(
                     "SameSite=None requires secure auth cookies."
