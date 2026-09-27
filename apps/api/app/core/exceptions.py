@@ -1091,3 +1091,15 @@ class EmailNotVerified(AppError):
     code = "EMAIL_NOT_VERIFIED"
     status_code = 403
     message = "Email address must be verified before sign-in."
+
+
+class TwoFactorInvalid(AppError):
+    code = "TWO_FACTOR_INVALID"
+    status_code = 400
+    message = "Two-factor authentication code is invalid."
+
+
+class TwoFactorNotEnabled(AppError):
+    code = "TWO_FACTOR_NOT_ENABLED"
+    status_code = 409
+    message = "Two-factor authentication is not enabled."
