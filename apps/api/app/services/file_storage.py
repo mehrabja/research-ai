@@ -107,11 +107,9 @@ class LocalStorageProvider(StorageProvider):
 
 def get_storage_provider() -> StorageProvider:
     settings = get_settings()
-    if settings.file_storage_backend == "s3":
-        from app.services.s3_storage import build_s3_storage_provider
-        return build_s3_storage_provider()
+    from app.providers.registry import ProviderCapability, resolve_provider
 
-    root = Path(settings.file_storage_local_root)
-    if not root.is_absolute():
-        root = REPO_ROOT / "apps" / "api" / root
-    return LocalStorageProvider(root)
+    return resolve_provider(
+        capability=ProviderCapability.STORAGE,
+        preferred=settings.file_storage_backend,
+    )
