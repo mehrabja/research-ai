@@ -13,7 +13,9 @@ from app.domain.embeddings import (
     build_embedding_profile_id,
 )
 from app.integrations.embeddings.base import EmbeddingProvider
-from app.services.provider_registry import build_embedding_provider as _build_registry_embedding_provider
+from app.services.provider_registry import (
+    build_embedding_provider as _build_registry_embedding_provider,
+)
 
 
 def get_current_embedding_profile() -> EmbeddingProfile:
