@@ -10,6 +10,7 @@ from app.db.models.project_file import ProjectFile
 from app.db.models.report import Report
 from app.db.models.source import Source
 from app.services.workspaces import get_workspace_for_user
+from app.services.usage_contract import ProviderUsage, record_provider_usage
 
 
 def search_workspace(
