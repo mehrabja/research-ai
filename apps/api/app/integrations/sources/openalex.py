@@ -88,6 +88,13 @@ class OpenAlexProvider:
             doi = item.get("doi")
             primary_location = item.get("primary_location") or {}
             url = primary_location.get("landing_page_url") or item.get("id")
+            host_venue = item.get("host_venue") or {}
+            source_meta = {
+                "venue": host_venue.get("display_name"),
+                "is_open_access": bool(
+                    (item.get("open_access") or {}).get("is_oa")
+                ),
+            }
             try:
                 candidates.append(
                     SourceCandidate(
@@ -104,6 +111,7 @@ class OpenAlexProvider:
                             if isinstance(item.get("cited_by_count"), int)
                             else None
                         ),
+                        source_meta=source_meta,
                     )
                 )
             except ValueError:
