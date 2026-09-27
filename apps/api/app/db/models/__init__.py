@@ -82,6 +82,7 @@ from app.db.models.manuscript_prose import (
 from app.db.models.membership import WorkspaceMembership  # noqa: F401
 from app.db.models.api_token import APIToken  # noqa: F401
 from app.db.models.metric import Metric
+from app.db.models.oauth_account import OAuthAccount  # noqa: F401
 from app.db.models.ops import (
     CreditTransaction,
     ModelPricing,
@@ -232,11 +233,6 @@ __all__ = [
     "CitationIdentity",
     "ClaimCitation",
     "CitationRun",
-    "Claim",
-    "ClaimEvidence",
-    "CitationIdentity",
-    "ClaimCitation",
-    "CitationRun",
     "AcademicQARun",
     "AcademicQAFinding",
     "PublicationTarget",
@@ -268,4 +264,5 @@ __all__ = [
     "Notification",
     "EmailDelivery",
     "APIToken",
+    "OAuthAccount",
 ]
