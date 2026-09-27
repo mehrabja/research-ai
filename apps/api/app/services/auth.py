@@ -331,6 +331,28 @@ def revoke_session(
     return True
 
 
+def revoke_session_by_id(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    session_id: uuid.UUID,
+) -> bool:
+    session = db.execute(
+        select(AuthSession)
+        .where(
+            AuthSession.id == session_id,
+            AuthSession.user_id == user_id,
+            AuthSession.revoked_at.is_(None),
+        )
+        .with_for_update()
+    ).scalar_one_or_none()
+    if session is None:
+        return False
+    session.revoked_at = _utcnow()
+    db.flush()
+    return True
+
+
 def revoke_all_sessions(
     db: Session,
     *,
