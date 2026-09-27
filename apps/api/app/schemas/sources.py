@@ -17,6 +17,7 @@ class SourceCandidateRead(BaseModel):
     url: str | None = None
     abstract: str | None = None
     citation_count: int | None = None
+    source_meta: dict[str, object] | None = None
 
 
 class SourceSearchResponse(BaseModel):
