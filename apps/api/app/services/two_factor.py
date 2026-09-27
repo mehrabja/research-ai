@@ -99,7 +99,7 @@ def begin_enrollment(
     *,
     user_id: uuid.UUID,
     email: str,
-) -> tuple[UserTwoFactor, str, list[str]]:
+) -> tuple[UserTwoFactor, str, str, list[str]]:
     row = db.execute(
         select(UserTwoFactor)
         .where(UserTwoFactor.user_id == user_id)
@@ -154,7 +154,7 @@ def confirm_enrollment(
     if step is None:
         raise TwoFactorInvalid()
     row.enabled_at = datetime.now(UTC)
-    row.last_used_step = step
+    row.last_used_step = None
     db.commit()
     return row
 
