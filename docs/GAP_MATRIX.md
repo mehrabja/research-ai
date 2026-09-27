@@ -31,8 +31,8 @@ Baseline commit: 106ca1fd2b5b1b86e4e9521ffa9c33f3d8ddfa91
 | G-24 | Real billing provider missing | P0 | Stripe REST adapter, checkout, cancel/resume and plan-change surface | F11/F20 | Implemented |
 | G-25 | Billing webhook verification missing | P0 | Stripe signature verification, idempotent billing inbox, subscription reconciliation | F11/F20 | Implemented |
 | G-26 | Email provider/workflows missing | P0 | Resend adapter plus idempotent delivery records wired to auth flows | F11/F20 | Implemented |
-| G-27 | Unified billable metering incomplete | P0 | authoritative workspace UsageEvent is now populated by generation, embedding, translation, source search, global search, and legacy humanization usage adapters; UsageLog remains compatibility history | F11/F15 | Partial (legacy table retained) |
-| G-28 | Frontend 21-page production port incomplete | P0 | production workspace route surface expanded across research, evidence, literature, planning, graph, manuscript, jobs, billing, search and settings | F13 | Partial |
+| G-27 | Unified billable metering incomplete | P0 | authoritative workspace UsageEvent is populated by generation, embedding, translation, source search, global search, and legacy humanization adapters; UsageLog remains compatibility history | F11/F15 | Implemented (legacy compatibility retained) |
+| G-28 | Frontend 21-page production port incomplete | P0 | protected route surface now covers dashboard, projects, research, sources, literature, evidence, planning, knowledge graph, manuscript, jobs, files, search, billing, collaboration, review, translation, usage, and settings/security/integrations/notifications | F13 | Implemented in code |
 | G-29 | Frontend production CI gates incomplete | P1 | web typecheck/build already gated; Playwright E2E gate added | F16 | Implemented |
 | G-30 | Migration graph has static multi-head condition | P0 | explicit merge revision 0042 joins legacy report branch into the production chain | F16 | Implemented |
 | G-31 | Root product/developer docs absent | P1 | root README and Makefile now document setup and verification commands | F16/F19 | Implemented |
