@@ -206,6 +206,8 @@ class Settings(BaseSettings):
     auth_password_reset_expire_minutes: int = Field(default=30, ge=5, le=1440)
     auth_email_verification_expire_hours: int = Field(default=24, ge=1, le=168)
     auth_max_sessions: int = Field(default=10, ge=1, le=100)
+    auth_mfa_issuer: str = "research-ai"
+    auth_mfa_required: bool = False
 
     # --- Document extraction (Milestone 8) --------------------------------
     document_fetch_timeout_seconds: float = Field(
