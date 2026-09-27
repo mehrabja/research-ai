@@ -3,12 +3,20 @@ from __future__ import annotations
 
 import uuid
 
+import json
+
 from fastapi import APIRouter, Depends, Query, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.core.config import get_settings
 from app.core.exceptions import KnowledgeGraphConfigurationInvalid
+from app.db.models.knowledge_graph import (
+    KnowledgeGraphEdge,
+    KnowledgeGraphNode,
+    KnowledgeGraphVersion,
+)
 from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.knowledge_graph import (
@@ -159,6 +167,72 @@ def get_neighbors(
         limit=limit,
     )
     return [KnowledgeGraphNeighborRead.model_validate(r) for r in rows]
+
+
+@router.get(
+    "/{project_id}/knowledge-graph/export",
+    summary="Export the bounded current knowledge graph",
+)
+def export_graph(
+    project_id: uuid.UUID,
+    format: str = Query(default="json", pattern="^json$"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    get_project(db, user_id=current_user.id, project_id=project_id)
+    graph = queries_svc.get_graph(db, project_id=project_id)
+    nodes = list(
+        db.execute(
+            __import__("sqlalchemy").select(KnowledgeGraphNode)
+            .where(KnowledgeGraphNode.graph_version_id == graph.id)
+            .order_by(KnowledgeGraphNode.id.asc())
+            .limit(graph.node_count + 1)
+        ).scalars().all()
+    )
+    if len(nodes) > graph.node_count:
+        nodes = nodes[: graph.node_count]
+
+    edges = list(
+        db.execute(
+            __import__("sqlalchemy").select(KnowledgeGraphEdge)
+            .where(KnowledgeGraphEdge.graph_version_id == graph.id)
+            .order_by(KnowledgeGraphEdge.id.asc())
+            .limit(graph.edge_count + 1)
+        ).scalars().all()
+    )
+    if len(edges) > graph.edge_count:
+        edges = edges[: graph.edge_count]
+
+    payload = {
+        "graph": KnowledgeGraphRead.model_validate(graph).model_dump(mode="json"),
+        "nodes": [
+            KnowledgeGraphNodeRead.model_validate(node).model_dump(mode="json")
+            for node in nodes
+        ],
+        "edges": [
+            {
+                "id": edge.id,
+                "source_node_id": edge.source_node_id,
+                "target_node_id": edge.target_node_id,
+                "relation_type": edge.relation_type,
+                "provenance_type": edge.provenance_type,
+                "provenance_ref": edge.provenance_ref,
+                "confidence": float(edge.confidence) if edge.confidence is not None else None,
+                "weight": float(edge.weight),
+                "edge_key": edge.edge_key,
+            }
+            for edge in edges
+        ],
+    }
+    return JSONResponse(
+        content=payload,
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="knowledge-graph-{project_id}.json"'
+            ),
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.post(
