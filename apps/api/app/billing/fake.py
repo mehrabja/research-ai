@@ -130,10 +130,6 @@ class FakeBillingProvider:
         sub = self._subscriptions.get(subscription_id)
         return dict(sub) if sub is not None else None
 
-
-__all__ = ["FakeBillingProvider"]
-
-
     def list_invoices(
         self,
         *,
@@ -143,3 +139,6 @@ __all__ = ["FakeBillingProvider"]
         if customer_id not in self._customers:
             raise ValueError(f"unknown customer: {customer_id}")
         return []
+
+
+__all__ = ["FakeBillingProvider"]
