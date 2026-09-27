@@ -7,6 +7,7 @@ from enum import StrEnum
 from typing import Any
 
 from app.core.config import get_settings
+from app.core.exceptions import AppError
 
 
 class ProviderCapability(StrEnum):
@@ -35,7 +36,7 @@ class ProviderSpec:
     factory: ProviderFactory
 
 
-class ProviderResolutionError(RuntimeError):
+class ProviderResolutionError(AppError):
     """Raised when no configured provider can satisfy a capability."""
 
     def __init__(
@@ -48,9 +49,11 @@ class ProviderResolutionError(RuntimeError):
         self.attempted = attempted
         names = ", ".join(attempted) or "<none>"
         super().__init__(
-            f"no provider registered for capability "
-            f"{capability.value!r}; attempted: {names}"
+            f"No provider is registered for capability "
+            f"{capability.value!r}; attempted: {names}",
+            code="PROVIDER_UNAVAILABLE",
         )
+        self.status_code = 503
 
 
 class ProviderRegistry:
