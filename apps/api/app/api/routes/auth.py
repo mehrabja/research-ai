@@ -17,6 +17,9 @@ from app.core.security import create_access_token
 from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.auth import (
+    APITokenCreateRequest,
+    APITokenCreateResponse,
+    APITokenRead,
     EmailTokenRequest,
     LoginRequest,
     MessageResponse,
@@ -25,6 +28,10 @@ from app.schemas.auth import (
     RegisterRequest,
     SessionListResponse,
     TokenResponse,
+    TwoFactorConfirmRequest,
+    TwoFactorDisableRequest,
+    TwoFactorEnrollmentResponse,
+    TwoFactorStatusResponse,
     UserResponse,
 )
 from app.services.auth import authenticate_user, get_user_by_email, register_user
@@ -183,24 +190,24 @@ def login(
 
 
 
-@router.get("/2fa", response_model=__import__("app.schemas.auth", fromlist=["TwoFactorStatusResponse"]).TwoFactorStatusResponse)
+@router.get("/2fa", response_model=TwoFactorStatusResponse)
 def get_two_factor_status(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> TwoFactorStatusResponse:
     row = db.get(UserTwoFactor, current_user.id)
     return {"enabled": bool(row and row.enabled_at is not None)}
 
 
 @router.post(
     "/2fa/enroll",
-    response_model=__import__("app.schemas.auth", fromlist=["TwoFactorEnrollmentResponse"]).TwoFactorEnrollmentResponse,
+    response_model=TwoFactorEnrollmentResponse,
 )
 def enroll_two_factor(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
-    row, uri, recovery_codes = begin_enrollment(
+) -> TwoFactorEnrollmentResponse:
+    row, secret, uri, recovery_codes = begin_enrollment(
         db,
         user_id=current_user.id,
         email=current_user.email,
@@ -208,7 +215,7 @@ def enroll_two_factor(
     db.commit()
     return {
         "enabled": bool(row.enabled_at),
-        "secret": __import__("app.services.two_factor", fromlist=["_decrypt"])._decrypt(row.secret_encrypted),
+        "secret": secret,
         "provisioning_uri": uri,
         "recovery_codes": recovery_codes,
     }
@@ -216,30 +223,30 @@ def enroll_two_factor(
 
 @router.post("/2fa/confirm", response_model=__import__("app.schemas.auth", fromlist=["TwoFactorStatusResponse"]).TwoFactorStatusResponse)
 def confirm_two_factor(
-    payload: __import__("app.schemas.auth", fromlist=["TwoFactorConfirmRequest"]).TwoFactorConfirmRequest,
+    payload: TwoFactorConfirmRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> TwoFactorStatusResponse:
     confirm_enrollment(db, user_id=current_user.id, code=payload.code)
     return {"enabled": True}
 
 
 @router.post("/2fa/disable", response_model=__import__("app.schemas.auth", fromlist=["TwoFactorStatusResponse"]).TwoFactorStatusResponse)
-def disable_two_factor(
-    payload: __import__("app.schemas.auth", fromlist=["TwoFactorDisableRequest"]).TwoFactorDisableRequest,
+def disable_two_factor_route(
+    payload: TwoFactorDisableRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> TwoFactorStatusResponse:
     disable_two_factor(db, user_id=current_user.id, code=payload.code)
     return {"enabled": False}
 
 
-@router.post("/api-tokens", response_model=__import__("app.schemas.auth", fromlist=["APITokenCreateResponse"]).APITokenCreateResponse)
+@router.post("/api-tokens", response_model=APITokenCreateResponse)
 def create_api_token(
-    payload: __import__("app.schemas.auth", fromlist=["APITokenCreateRequest"]).APITokenCreateRequest,
+    payload: APITokenCreateRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> APITokenCreateResponse:
     row, raw = create_token(
         db,
         user_id=current_user.id,
@@ -250,11 +257,11 @@ def create_api_token(
     return {"token": raw, "item": row}
 
 
-@router.get("/api-tokens", response_model=list[__import__("app.schemas.auth", fromlist=["APITokenRead"]).APITokenRead])
+@router.get("/api-tokens", response_model=list[APITokenRead])
 def list_api_tokens(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> list[APITokenRead]:
     return list_tokens(db, user_id=current_user.id)
 
 
