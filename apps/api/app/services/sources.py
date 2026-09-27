@@ -100,6 +100,10 @@ def search_source_candidates(
     venue: str | None = None,
     year_from: int | None = None,
     year_to: int | None = None,
+    publication_type: str | None = None,
+    language: str | None = None,
+    sort_by: str = "relevance",
+    sort_order: str = "desc",
 ) -> list[SourceCandidate]:
     """Discovery only. Never persists anything.
 
