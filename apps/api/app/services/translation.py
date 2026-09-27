@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models.knowledge import TerminologyGlossary
 from app.db.models.pipeline import TranslationRun, TranslationVersion
+from app.db.models.project import Project
 from app.db.models.report import Report, ReportVersion, ReviewEvent
 from app.domain.translation_preservation import (
     validate_translation_preservation,
@@ -29,6 +30,7 @@ from app.integrations.translation.base import (
 )
 from app.services.report_status import update_report_status
 from app.services.translation_profile import TranslationProfile
+from app.services.usage_contract import ProviderUsage, record_provider_usage
 
 logger = logging.getLogger(__name__)
 
@@ -254,6 +256,37 @@ def _record_translation_usage(
     attribute names.
     """
     from app.db.models.ops import UsageLog  # VERIFY: exact module
+
+    project_id = db.execute(
+        select(Report.project_id).where(Report.id == report_id)
+    ).scalar_one_or_none()
+    if project_id is None:
+        raise TranslationValidationError("report project not found")
+    project = db.get(Project, project_id)
+    if project is None:
+        raise TranslationValidationError("report project not found")
+
+    total_tokens = (input_tokens or 0) + (output_tokens or 0)
+    record_provider_usage(
+        db,
+        workspace_id=project.workspace_id,
+        user_id=user_id,
+        source_id=None,
+        usage=ProviderUsage(
+            capability="translation",
+            operation="report_translation",
+            provider=provider,
+            model=model,
+            input_tokens=input_tokens or 0,
+            output_tokens=output_tokens or 0,
+            units=max(1, total_tokens),
+            metadata={"report_id": str(report_id)},
+        ),
+        idempotency_key=idempotency_key.replace(
+            ":provider_call",
+            ":workspace_provider_call",
+        ),
+    )
 
     db.add(
         UsageLog(
