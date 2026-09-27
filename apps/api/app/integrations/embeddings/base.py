@@ -44,7 +44,6 @@ class EmbeddingInputTooLargeError(ProviderInputTooLargeError, EmbeddingProviderE
 
 
 class EmbeddingProvider(Protocol):
-class EmbeddingProvider(Protocol):
     provider_name: str
     model_name: str
     dimensions: int
