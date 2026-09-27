@@ -32,6 +32,8 @@ from app.core.exceptions import (
     SourceNotReadyForEmbedding,
 )
 from app.db.models.ops import UsageLog
+from app.db.models.project import Project
+from app.db.models.report import Report
 from app.db.models.source import Chunk
 from app.domain.embeddings import (
     EmbeddingProfile,
@@ -49,6 +51,7 @@ from app.integrations.embeddings.base import (
 )
 from app.services.reports import get_report
 from app.services.sources import get_source_for_report
+from app.services.usage_contract import ProviderUsage, record_provider_usage
 
 logger = logging.getLogger(__name__)
 
@@ -485,6 +488,33 @@ def _persist_batch_atomic(
             chunk.embedding_status = _STATUS_COMPLETED
             chunk.embedding_error = None
             chunk.embedding_completed_at = now
+
+        project_id = db.execute(
+            select(Report.project_id)
+            .where(Report.id == report_id)
+        ).scalar_one_or_none()
+        project = db.get(Project, project_id) if project_id is not None else None
+        if project is None:
+            raise EmbeddingConfigurationError("report project not found")
+
+        record_provider_usage(
+            db,
+            workspace_id=project.workspace_id,
+            user_id=user_id,
+            source_id=source_id,
+            usage=ProviderUsage(
+                capability="embedding",
+                operation="source_embedding_batch",
+                provider=profile.provider,
+                model=profile.model,
+                input_tokens=input_tokens,
+                output_tokens=0,
+                units=max(1, input_tokens),
+                provider_request_id=provider_request_id,
+                metadata={"batch_size": len(batch), "profile_id": profile_id},
+            ),
+            idempotency_key=f"embedding-provider:{idempotency_key}",
+        )
 
         if existing is None and input_tokens > 0:
             metadata: dict[str, object] = {
