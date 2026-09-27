@@ -13,6 +13,7 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.billing.protocol import BillingProvider
@@ -243,10 +244,16 @@ def record_billing_event(
         select(BillingEvent).where(
             BillingEvent.provider == provider,
             BillingEvent.provider_event_id == provider_event_id,
-        )
+        ).with_for_update()
     ).scalar_one_or_none()
     if existing is not None:
+        if existing.payload_hash != payload_hash:
+            raise AppError(
+                "Billing event replay contains a different payload hash.",
+                code="BILLING_EVENT_PAYLOAD_MISMATCH",
+            )
         return existing, False
+
     ev = BillingEvent(
         provider=provider,
         provider_event_id=provider_event_id,
@@ -254,7 +261,24 @@ def record_billing_event(
         payload_hash=payload_hash,
     )
     db.add(ev)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        existing = db.execute(
+            select(BillingEvent).where(
+                BillingEvent.provider == provider,
+                BillingEvent.provider_event_id == provider_event_id,
+            ).with_for_update()
+        ).scalar_one_or_none()
+        if existing is None:
+            raise
+        if existing.payload_hash != payload_hash:
+            raise AppError(
+                "Billing event replay contains a different payload hash.",
+                code="BILLING_EVENT_PAYLOAD_MISMATCH",
+            )
+        return existing, False
     return ev, True
 
 
