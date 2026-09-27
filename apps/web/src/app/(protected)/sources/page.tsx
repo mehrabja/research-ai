@@ -1,0 +1,2 @@
+import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
+export default function SourcesPage(){return <WorkspaceFeaturePage active="sources" title="Sources" description="Source discovery, source registration, metadata, extraction, and provenance are exposed through the backend source APIs."/>}
