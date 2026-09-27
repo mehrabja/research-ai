@@ -126,6 +126,44 @@ def patch_workspace(
     return WorkspaceRead.model_validate(ws)
 
 
+@router.post(
+    "/{workspace_id}/suspend",
+    response_model=WorkspaceRead,
+)
+def suspend_workspace(
+    workspace_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> WorkspaceRead:
+    ws = workspaces_service.suspend_workspace(
+        db,
+        workspace_id=workspace_id,
+        actor_user_id=current_user.id,
+    )
+    db.commit()
+    db.refresh(ws)
+    return WorkspaceRead.model_validate(ws)
+
+
+@router.post(
+    "/{workspace_id}/reactivate",
+    response_model=WorkspaceRead,
+)
+def reactivate_workspace(
+    workspace_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> WorkspaceRead:
+    ws = workspaces_service.reactivate_workspace(
+        db,
+        workspace_id=workspace_id,
+        actor_user_id=current_user.id,
+    )
+    db.commit()
+    db.refresh(ws)
+    return WorkspaceRead.model_validate(ws)
+
+
 # ---------------------------------------------------------------------------
 # Members
 # ---------------------------------------------------------------------------
