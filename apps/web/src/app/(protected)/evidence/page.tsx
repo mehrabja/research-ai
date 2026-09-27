@@ -1,0 +1,2 @@
+import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
+export default function EvidencePage(){return <WorkspaceFeaturePage active="evidence" title="Evidence" description="Claim-level evidence, citation support, and provenance remain linked to the report and manuscript context."/>}
