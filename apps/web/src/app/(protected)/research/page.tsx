@@ -1,0 +1,2 @@
+import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
+export default function ResearchPage(){return <WorkspaceFeaturePage active="research" title="Research" description="Research objectives, questions, hypotheses, and project intelligence are organized around the active workspace."/>}
