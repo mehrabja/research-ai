@@ -502,6 +502,12 @@ class ResearchMemoryNotFound(AppError):
     status_code = 404
     message = "Research memory not found."
 # --- Manuscript Architect (Milestone 27) ----------------------------------
+class ManuscriptDraftConflictError(AppError):
+    code = "MANUSCRIPT_DRAFT_CONFLICT"
+    status_code = 409
+    message = "The manuscript draft changed before this save could be applied."
+
+
 class ManuscriptNotFound(AppError):
     code = "MANUSCRIPT_NOT_FOUND"
     status_code = 404
