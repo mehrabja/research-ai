@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import secrets
+import time
 import urllib.parse
 from typing import Any
 
@@ -29,17 +30,34 @@ def _state_signature(provider: str, nonce: str) -> str:
 
 def make_state(provider: str) -> str:
     nonce = secrets.token_urlsafe(24)
-    return f"{provider}.{nonce}.{_state_signature(provider, nonce)}"
+    issued_at = str(int(time.time()))
+    payload = f"{provider}:{issued_at}:{nonce}".encode("utf-8")
+    signature = hmac.new(
+        get_settings().jwt_secret_key.encode("utf-8"),
+        payload,
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{provider}.{issued_at}.{nonce}.{signature}"
 
 
 def verify_state(provider: str, state: str) -> bool:
     try:
-        state_provider, nonce, signature = state.split(".", 2)
-    except ValueError:
+        state_provider, issued_at_raw, nonce, signature = state.split(".", 3)
+        issued_at = int(issued_at_raw)
+    except (ValueError, TypeError):
         return False
     if state_provider != provider:
         return False
-    expected = _state_signature(provider, nonce)
+    if abs(int(time.time()) - issued_at) > 600:
+        return False
+    if state_provider != provider:
+        return False
+    payload = f"{provider}:{issued_at}:{nonce}".encode("utf-8")
+    expected = hmac.new(
+        get_settings().jwt_secret_key.encode("utf-8"),
+        payload,
+        hashlib.sha256,
+    ).hexdigest()
     return hmac.compare_digest(expected, signature)
 
 
