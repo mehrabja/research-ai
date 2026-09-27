@@ -140,6 +140,10 @@ class Settings(BaseSettings):
     database_url: str = Field(..., repr=False)
     # --- M37: SaaS / Billing -------------------------------------------
     billing_provider: Literal["none", "fake"] = "none"
+    # M39 provider routing: comma-separated ordered provider chains.
+    provider_generation_chain: str = "openai"
+    provider_embedding_chain: str = "openai"
+    provider_translation_chain: str = "openai"
     # --- Advanced Humanization (Milestone 32) -------------------------
     manuscript_humanization_enabled: bool = True
     manuscript_humanization_async_jobs: bool = False
