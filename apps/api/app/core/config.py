@@ -172,7 +172,7 @@ class Settings(BaseSettings):
     email_verification_expire_minutes: int = Field(default=1440, ge=5, le=10080)
     password_reset_expire_minutes: int = Field(default=60, ge=5, le=1440)
     auth_require_email_verification: bool = False
-    auth_cookie_secure: bool = True
+    auth_cookie_secure: bool = False
     auth_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     auth_refresh_cookie_name: str = "research_ai_refresh"
     auth_csrf_cookie_name: str = "research_ai_csrf"
