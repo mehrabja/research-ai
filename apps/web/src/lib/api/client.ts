@@ -1,5 +1,33 @@
 import type{Citation,Invitation,Manuscript,Member,Plan,Project,ProjectList,QA,RAGResponse,Report,Source,SourceCandidate,Usage,User,Workspace}from"./generated";
-async function request<T>(path:string,init?:RequestInit):Promise<T>{const res=await fetch("/api/backend/"+path.replace(/^\//,""),{...init,headers:{...(init?.body?{"content-type":"application/json"}:{}),...(init?.headers??{})},cache:"no-store"});const body=await res.json().catch(()=>null);if(!res.ok){const m=body?.detail??body?.message??("Request failed ("+res.status+")");throw new Error(typeof m==="string"?m:JSON.stringify(m))}return body as T}
+export class ApiError extends Error{
+  status:number;
+  code:string;
+  requestId:string|null;
+  details:unknown;
+  constructor(message:string,status:number,code="API_ERROR",requestId:string|null=null,details?:unknown){
+    super(message);this.name="ApiError";this.status=status;this.code=code;this.requestId=requestId;this.details=details;
+  }
+}
+async function request<T>(path:string,init?:RequestInit):Promise<T>{
+  const res=await fetch("/api/backend/"+path.replace(/^\//,""),{
+    ...init,
+    headers:{...(init?.body?{"content-type":"application/json"}:{}),...(init?.headers??{})},
+    cache:"no-store"
+  });
+  const body=await res.json().catch(()=>null);
+  if(!res.ok){
+    const error=body?.error??body;
+    const message=error?.message??body?.detail??body?.message??("Request failed ("+res.status+")");
+    throw new ApiError(
+      typeof message==="string"?message:JSON.stringify(message),
+      res.status,
+      typeof error?.code==="string"?error.code:"API_ERROR",
+      typeof error?.request_id==="string"?error.request_id:(res.headers.get("x-request-id")??null),
+      error?.details??error?.extra
+    );
+  }
+  return body as T;
+}
 export const api={
 me:()=>request<User>("auth/me"),
 sessions:()=>request<Array<{id:string;created_at:string;expires_at:string;last_used_at:string|null}>>("auth/sessions"),
