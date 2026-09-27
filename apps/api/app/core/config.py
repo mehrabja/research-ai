@@ -275,7 +275,13 @@ class Settings(BaseSettings):
     #
     # Note: extraction jobs use the global ``job_processing_timeout_seconds``
     # (M10) for lease expiry. There is no per-job-type timeout today.
-    file_storage_backend: Literal["local"] = "local"
+    file_storage_backend: Literal["local", "s3"] = "local"
+    storage_endpoint: str = ""
+    storage_access_key_id: str = Field(default="", repr=False)
+    storage_secret_access_key: str = Field(default="", repr=False)
+    storage_bucket: str = ""
+    storage_region: str = "auto"
+    storage_path_style: bool = True
     file_storage_local_root: str = "storage/files"
     file_chunk_stream_size: int = Field(
         default=1 * 1024 * 1024, ge=4096, le=16 * 1024 * 1024
