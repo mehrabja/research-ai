@@ -18,6 +18,10 @@ class User(Base, UUIDPKMixin, TimestampMixin):
         server_default=text("true"),
     )
 
+    @property
+    def email_verified(self) -> bool:
+        return self.email_verified_at is not None
+
     __table_args__ = (
         # Case-insensitive uniqueness without citext.
         Index("ux_users_email_lower", text("lower(email)"), unique=True),
