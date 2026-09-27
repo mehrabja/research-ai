@@ -113,6 +113,15 @@ def login(
     else:
         limiter.record_success(email_key)
 
+    if user.mfa_enabled:
+        if not payload.mfa_code:
+            raise MFARequired()
+        if not user.mfa_secret or not mfa_service.verify_code(
+            user.mfa_secret,
+            payload.mfa_code,
+        ):
+            raise MFAInvalid()
+
     token = create_access_token(subject=str(user.id))
     _session, refresh_token = auth_service.create_refresh_session(
         db,
