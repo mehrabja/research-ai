@@ -1,0 +1,2 @@
+import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
+export default function KnowledgeGraphPage(){return <WorkspaceFeaturePage active="knowledge-graph" title="Knowledge Graph" description="Versioned graph builds, bounded traversal, node neighbors, summaries, provenance, and export are connected to project data."/>}
