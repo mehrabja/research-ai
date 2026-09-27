@@ -140,6 +140,14 @@ def search_source_candidates(
         for candidate in candidates:
             if year is not None and candidate.year != year:
                 continue
+            if year_from is not None and (
+                candidate.year is None or candidate.year < year_from
+            ):
+                continue
+            if year_to is not None and (
+                candidate.year is None or candidate.year > year_to
+            ):
+                continue
             if min_citations is not None and (
                 candidate.citation_count is None
                 or candidate.citation_count < min_citations
@@ -162,6 +170,11 @@ def search_source_candidates(
                 ).lower()
                 if venue_q not in venue_value:
                     continue
+            if open_access_only:
+                meta = candidate.source_meta or {}
+                oa = meta.get("is_open_access")
+                if oa is False:
+                    continue
             filtered.append(candidate)
         candidates = filtered
         report = get_report(
@@ -183,7 +196,7 @@ def search_source_candidates(
                     model=None,
                     metric="search_requests",
                     units=1,
-                    metadata={"query_length": len(q), "result_count": len(candidates), "min_citations": min_citations, "max_citations": max_citations, "author": author, "venue": venue},
+                    metadata={"query_length": len(q), "result_count": len(candidates), "min_citations": min_citations, "max_citations": max_citations, "author": author, "venue": venue, "year_from": year_from, "year_to": year_to, "open_access_only": open_access_only},
                 ),
                 idempotency_key=f"source-search:{uuid.uuid4()}",
             )
