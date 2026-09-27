@@ -30,6 +30,9 @@ from app.core.exceptions import (
     UsageInvalidSourceType,
     UsageWorkspaceMissing,
 )
+from app.db.models.project import Project
+from app.db.models.report import Report
+from app.services.usage_contract import ProviderUsage, record_provider_usage
 from app.db.models.usage import (
     USAGE_METRICS,
     USAGE_SOURCE_TYPES,
@@ -76,6 +79,34 @@ def record_humanization_usage(
         )
     )
     db.flush()
+
+    # M37 authoritative metering mirrors legacy humanization usage so
+    # existing producers remain compatible while quotas use workspace data.
+    report = db.get(Report, report_id)
+    project = db.get(Project, report.project_id) if report is not None else None
+    if project is not None:
+        total_tokens = (input_tokens or 0) + (output_tokens or 0)
+        record_provider_usage(
+            db,
+            workspace_id=project.workspace_id,
+            user_id=user_id,
+            source_id=None,
+            usage=ProviderUsage(
+                capability=phase,
+                operation="legacy_usage_producer",
+                provider=provider,
+                model=model,
+                input_tokens=input_tokens or 0,
+                output_tokens=output_tokens or 0,
+                units=max(1, total_tokens),
+                metadata={"report_id": str(report_id), "phase": phase},
+            ),
+            idempotency_key=(
+                f"legacy-provider:{idempotency_key}"
+                if idempotency_key
+                else f"legacy-provider:{uuid.uuid4()}"
+            ),
+        )
 
 
 # ==========================================================================
