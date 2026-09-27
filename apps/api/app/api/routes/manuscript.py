@@ -247,8 +247,6 @@ def autosave_manuscript(
             content=body.content,
             base_version_id=body.base_version_id,
         )
-    except ManuscriptDraftConflict:
-        raise
     return ManuscriptDraftSaveResponse(
         draft=ManuscriptDraftRead.model_validate(draft),
         saved=True,
