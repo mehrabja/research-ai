@@ -52,6 +52,8 @@ def get_current_translation_profile_id() -> str:
 
 
 def build_translation_provider(profile: TranslationProfile):
-    from app.services.provider_registry import build_translation_provider as _build_registry_translation_provider
+    from app.services.provider_registry import (
+        build_translation_provider as _build_registry_translation_provider,
+    )
 
     return _build_registry_translation_provider(profile)
