@@ -17,6 +17,7 @@ from app.core.exceptions import (
     AuthenticationRequired,
 )
 from app.db.models.billing_invoice import BillingInvoice
+from app.db.session import get_db
 from app.db.models.plan import Plan
 from app.db.models.subscription import Subscription
 from app.db.models.user import User
@@ -41,7 +42,7 @@ def create_checkout_route(
     workspace_id: uuid.UUID,
     body: CheckoutRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(__import__("app.db.session", fromlist=["get_db"]).get_db),
+    db: Session = Depends(get_db),
 ) -> CheckoutResponse:
     settings = get_settings()
     provider = build_billing_provider()
@@ -95,7 +96,7 @@ def list_invoices_route(
 
 
 @router.post("/billing/webhooks/stripe", status_code=200)
-def stripe_webhook(
+async def stripe_webhook(
     request: Request,
     stripe_signature: str | None = Header(default=None, alias="Stripe-Signature"),
     db: Session = Depends(__import__("app.db.session", fromlist=["get_db"]).get_db),
@@ -107,7 +108,7 @@ def stripe_webhook(
     if not isinstance(provider, StripeBillingProvider):
         raise AppError("Stripe billing provider is not active")
 
-    raw_body = request.body
+    raw_body = await request.body()
     if not raw_body:
         raise AppError("empty webhook body")
 
@@ -131,8 +132,10 @@ def stripe_webhook(
         payload_hash=payload_hash,
     )
     if not created:
-        db.commit()
-        return {"status": "duplicate"}
+        if billing_event.status == billing_service.BILLING_EVENT_PROCESSED:
+            db.commit()
+            return {"status": "duplicate"}
+        billing_event.status = "received"
 
     metadata = obj.get("metadata")
     metadata = metadata if isinstance(metadata, dict) else {}
