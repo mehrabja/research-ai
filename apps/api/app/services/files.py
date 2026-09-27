@@ -48,6 +48,7 @@ from app.domain.file import (
     storage_key_for,
 )
 from app.domain.project import EDITABLE_PROJECT_STATUSES
+from app.services import entitlements as entitlements_service
 from app.services import jobs as jobs_service
 from app.services.file_storage import get_storage_provider
 
@@ -204,6 +205,12 @@ def upload_file(
     # event emission) must remove the storage object.
     try:
         sha256 = hasher.hexdigest()
+
+        entitlements_service.check_and_reserve_storage_bytes(
+            db,
+            workspace_id=project.workspace_id,
+            additional_bytes=total,
+        )
 
         head = _read_head(provider, storage_key, _HEAD_PROBE_BYTES)
         detected_mime = detect_mime_from_bytes(head)
