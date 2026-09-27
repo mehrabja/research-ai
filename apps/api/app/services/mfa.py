@@ -1,33 +1,14 @@
 from __future__ import annotations
 
-import base64
-import hashlib
 import secrets
 from datetime import UTC, datetime
 
 import pyotp
-from cryptography.fernet import Fernet, InvalidToken
 
 from app.core.config import get_settings
 
+
 _RECOVERY_COUNT = 8
-
-
-def _fernet() -> Fernet:
-    secret = get_settings().jwt_secret_key.encode("utf-8")
-    key = base64.urlsafe_b64encode(hashlib.sha256(secret).digest())
-    return Fernet(key)
-
-
-def encrypt_secret(secret: str) -> str:
-    return _fernet().encrypt(secret.encode("utf-8")).decode("ascii")
-
-
-def decrypt_secret(value: str) -> str | None:
-    try:
-        return _fernet().decrypt(value.encode("ascii")).decode("utf-8")
-    except (InvalidToken, ValueError, UnicodeError):
-        return None
 
 
 def generate_secret() -> str:
@@ -54,6 +35,7 @@ def generate_recovery_codes() -> list[str]:
 
 
 def hash_recovery_code(code: str) -> str:
+    import hashlib
     return hashlib.sha256(code.strip().lower().encode("utf-8")).hexdigest()
 
 
@@ -72,6 +54,9 @@ def consume_recovery_code(
     remaining.remove(digest)
     return True, remaining
 
+
+def utcnow() -> datetime:
+    return datetime.now(UTC)
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
