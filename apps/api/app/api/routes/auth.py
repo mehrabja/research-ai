@@ -4,6 +4,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Cookie, Depends, Header, Request, Response, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_client_ip, get_current_user
@@ -42,6 +43,7 @@ from app.services.auth_tokens import (
     verify_email,
 )
 from app.services.rate_limit import get_login_rate_limiter
+from app.services.oauth import begin_oauth, complete_oauth
 from app.services.two_factor import (
     begin_enrollment,
     confirm_enrollment,
