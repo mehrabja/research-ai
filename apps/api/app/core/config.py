@@ -359,6 +359,9 @@ class Settings(BaseSettings):
         default=100 * 1024 * 1024, ge=1024, le=1024 * 1024 * 1024
     )
 
+    source_discovery_provider: str = "semantic_scholar"
+    source_discovery_fallbacks: str = ""
+
     # --- Research Classification (Milestone 21) --------------------------
     detection_api_base_url: str = ""
     detection_api_model: str = "ai-detector-v1"
