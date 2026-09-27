@@ -48,6 +48,7 @@ from app.api.routes.research_plan import (
     router as research_plan_router,
 )
 from app.api.routes.reviews import router as reviews_router
+from app.api.routes.search import router as search_router
 from app.api.routes.section_research import (
     router as section_research_router,
 )
@@ -94,3 +95,4 @@ api_router.include_router(workspaces_router)
 api_router.include_router(invitations_router)
 
 api_router.include_router(notifications_router)
+\napi_router.include_router(search_router)\n
