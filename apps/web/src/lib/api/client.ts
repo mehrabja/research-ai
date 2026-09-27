@@ -54,6 +54,7 @@ search:(w:string,q:string)=>request<{query:string;items:Array<{id:string;resourc
 providerMatrix:()=>request<{capabilities:Array<{capability:string;configured_preferred:string;available_providers:string[]}>}>("providers/matrix"),
 folders:(p:string)=>request<{items:Array<{id:string;project_id:string;parent_id:string|null;name:string;created_at:string;updated_at:string}>;total:number}>("projects/"+p+"/folders"),
 jobs:()=>request<Array<{id:string;job_type:string;status:string;attempt_count:number;max_attempts:number;created_at:string;last_error_message:string|null}>>("jobs"),
+retryJob:(id:string)=>request<object>("jobs/"+id+"/retry",{method:"POST"}),
 };
 export type FeaturePagePayload={
   title:string;
