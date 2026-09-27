@@ -42,3 +42,12 @@ Unknown providers are skipped during resolution. No fallback is silently invente
 - Register additional real providers where production redundancy is required.
 - Wire the unified UsageEvent contract into every billable provider-call producer; legacy `usage_logs` remain for backward compatibility until the later migration.
 - Add provider health/configuration inspection before production deployment.
+
+
+## F20 additions
+
+The registry now also covers:
+- email: none and resend
+- storage: local and s3
+
+The application email and file-storage services resolve through the same registry boundary rather than importing a concrete provider in the business flow.
