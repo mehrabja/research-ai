@@ -125,6 +125,7 @@ def record_event(
     user_id: uuid.UUID | None = None,
     idempotency_key: str | None = None,
     source_type: str | None = None,
+    usage_class: str = "internal",
     source_id: uuid.UUID | None = None,
     occurred_at: datetime | None = None,
     metadata: dict[str, Any] | None = None,
@@ -145,6 +146,8 @@ def record_event(
         raise UsageInvalidMetric()
     if source_type is not None and source_type not in USAGE_SOURCE_TYPES:
         raise UsageInvalidSourceType()
+    if usage_class not in {"provider", "internal", "billable"}:
+        raise UsageInvalidSourceType()
     if not isinstance(quantity, int) or quantity <= 0:
         raise UsageInvalidQuantity()
 
@@ -160,6 +163,7 @@ def record_event(
         user_id=user_id,
         metric=metric,
         quantity=quantity,
+        usage_class=usage_class,
         idempotency_key=idempotency_key,
         source_type=source_type,
         source_id=source_id,
@@ -209,18 +213,24 @@ def get_period_usage(
     metric: str,
     period_start: datetime,
     period_end: datetime,
+    usage_class: str | None = None,
 ) -> int:
     """Sum ``quantity`` for ``(workspace, metric)`` in
     ``[period_start, period_end)``.  Half-open interval."""
     if metric not in USAGE_METRICS:
         raise UsageInvalidMetric()
+    conditions = [
+        UsageEvent.workspace_id == workspace_id,
+        UsageEvent.metric == metric,
+        UsageEvent.occurred_at >= period_start,
+        UsageEvent.occurred_at < period_end,
+    ]
+    if usage_class is not None:
+        if usage_class not in {"provider", "internal", "billable"}:
+            raise UsageInvalidSourceType()
+        conditions.append(UsageEvent.usage_class == usage_class)
     total = db.execute(
-        select(func.coalesce(func.sum(UsageEvent.quantity), 0)).where(
-            UsageEvent.workspace_id == workspace_id,
-            UsageEvent.metric == metric,
-            UsageEvent.occurred_at >= period_start,
-            UsageEvent.occurred_at < period_end,
-        )
+        select(func.coalesce(func.sum(UsageEvent.quantity), 0)).where(*conditions)
     ).scalar_one()
     return int(total)
 
