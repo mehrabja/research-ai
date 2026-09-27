@@ -31,6 +31,7 @@ from app.domain.research_plan import (
     ValidationStatus,
 )
 from app.services.projects import get_project
+from app.services.usage_contract import ProviderUsage, record_provider_usage
 from app.services.research_planning import (
     budget as budget_svc,
 )
@@ -335,6 +336,26 @@ def generate_research_plan(
                 )
                 raw = refine_svc.call_refinement_provider(
                     provider, prompt
+                )
+                record_provider_usage(
+                    db,
+                    workspace_id=project.workspace_id,
+                    user_id=user_id,
+                    source_id=None,
+                    usage=ProviderUsage(
+                        capability="generation",
+                        operation="research_plan_refinement",
+                        provider=str(getattr(provider, "provider_name", settings.generation_provider)),
+                        model=str(getattr(provider, "model_name", settings.generation_model)),
+                        metric="ai_generation_units",
+                        units=1,
+                        metadata={
+                            "project_id": str(project_id),
+                            "context_hash": context_hash,
+                            "planner_version": RESEARCH_PLAN_VERSION,
+                        },
+                    ),
+                    idempotency_key=f"research-plan-refinement:{context_hash}:{RESEARCH_PLAN_VERSION}",
                 )
                 allowed_sections = set(section_keys)
                 allowed_reqs = {d.requirement_key for d in req_drafts}
