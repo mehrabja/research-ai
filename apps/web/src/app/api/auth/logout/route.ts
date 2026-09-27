@@ -1,30 +1,21 @@
-import { NextResponse } from "next/server";
-import { clearAccessCookie, copySetCookies, csrfCookieName, refreshCookieName } from "@/lib/server/auth";
-import { cookies } from "next/headers";
+import {NextResponse} from "next/server";
+import {cookies} from "next/headers";
+import {clearAccessCookie,copySetCookies,CSRF_COOKIE,REFRESH_COOKIE} from "@/lib/server/auth";
 
-export async function POST(req: Request) {
-  const jar = await cookies();
-  const refreshToken = jar.get(refreshCookieName())?.value;
-  const csrf = jar.get(csrfCookieName())?.value;
-  const headerCsrf = req.headers.get("x-csrf-token") ?? csrf;
-  const base = process.env.BACKEND_API_URL ?? "http://localhost:8000";
-
-  if (refreshToken && csrf && headerCsrf === csrf) {
-    const backend = await fetch(base + "/api/v1/auth/logout", {
-      method: "POST",
-      headers: {
-        cookie: refreshCookieName() + "=" + refreshToken + "; " + csrfCookieName() + "=" + csrf,
-        "x-csrf-token": headerCsrf,
-      },
-      cache: "no-store",
-    });
-    const out = NextResponse.json({ ok: true }, { status: backend.ok ? 200 : 502 });
-    copySetCookies(backend.headers, out);
-    clearAccessCookie(out);
-    return out;
-  }
-
-  const out = NextResponse.json({ ok: true });
+export async function POST(){
+  const base=process.env.BACKEND_API_URL??"http://localhost:8000";
+  const jar=await cookies();
+  const refresh=jar.get(REFRESH_COOKIE)?.value;
+  const csrf=jar.get(CSRF_COOKIE)?.value;
+  const cookieHeader=[refresh ? REFRESH_COOKIE+"="+refresh : "", csrf ? CSRF_COOKIE+"="+csrf : ""].filter(Boolean).join("; ");
+  const headers=new Headers();
+  if(cookieHeader)headers.set("cookie",cookieHeader);
+  if(csrf)headers.set("X-CSRF-Token",csrf);
+  const upstream=await fetch(base+"/api/v1/auth/logout",{method:"POST",headers,cache:"no-store"});
+  const out=upstream.status===204
+    ? new NextResponse(null,{status:204})
+    : NextResponse.json(await upstream.json().catch(()=>({})),{status:upstream.status});
   clearAccessCookie(out);
+  copySetCookies(out,upstream);
   return out;
 }
