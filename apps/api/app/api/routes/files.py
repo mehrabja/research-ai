@@ -63,6 +63,7 @@ def upload_file(
         original_filename=file.filename or "",
         client_mime=file.content_type,
         upload_stream=_stream(),
+        folder_id=folder_id,
     )
     return ProjectFileRead.model_validate(pf)
 
