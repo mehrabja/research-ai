@@ -7,7 +7,7 @@ Baseline commit: 106ca1fd2b5b1b86e4e9521ffa9c33f3d8ddfa91
 |---|---|---|---|---|---|
 | G-01 | Global provider registry/resolver missing | P0 | centralized `app/providers/registry.py`; generation/embedding/translation/detection/source factories now resolve through it | F01 | Implemented |
 | G-02 | Universal fallback policy missing | P0 | `PROVIDER_FALLBACKS` routing plus `FallbackProvider` transient-failure chain | F01 | Implemented (additional real providers still required) |
-| G-03 | Unified provider error contract missing | P1 | routing is centralized; capability-specific typed errors remain by design | F01 | Partial |
+| G-03 | Unified provider error contract missing | P1 | generation, embedding, translation, detection, and source adapters inherit the shared ProviderError/ProviderRetryableError hierarchy | F01/F20 | Implemented |
 | G-04 | Real provider configuration model missing | P0 | typed provider configuration and registry-backed adapters now exist for generation, embedding, translation, detection, discovery, billing, email, storage | F01/F20 | Implemented |
 | G-05 | Persistent refresh/session mechanism missing | P0 | persistent hashed refresh sessions plus BFF rotation/retry | F02 | Implemented |
 | G-06 | Password reset missing | P0 | single-use hashed reset tokens and confirm endpoint | F02 | Implemented |
