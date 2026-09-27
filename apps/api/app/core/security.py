@@ -39,7 +39,7 @@ def password_needs_rehash(password_hash: str) -> bool:
         return True
 
 
-def create_access_token(subject: str) -> str:
+def create_access_token(subject: str, *, session_id: str | None = None) -> str:
     settings = get_settings()
 
     now = datetime.now(UTC)
@@ -55,6 +55,8 @@ def create_access_token(subject: str) -> str:
         "exp": int(expire.timestamp()),
         "jti": str(uuid.uuid4()),
     }
+    if session_id:
+        payload["sid"] = session_id
 
     headers: dict[str, Any] = {
         "typ": settings.jwt_type,
