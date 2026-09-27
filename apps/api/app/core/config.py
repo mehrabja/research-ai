@@ -178,6 +178,15 @@ class Settings(BaseSettings):
     github_oauth_client_id: str = ""
     github_oauth_client_secret: str = Field(default="", repr=False)
     github_oauth_redirect_uri: str = ""
+    email_provider: Literal["none", "smtp"] = "none"
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str = ""
+    smtp_password: str = Field(default="", repr=False)
+    smtp_sender: str = ""
+    smtp_use_tls: bool = True
+    smtp_timeout_seconds: float = Field(default=15.0, ge=1.0, le=120.0)
+    frontend_base_url: str = ""
 
     # Login throttling
     login_rate_limit: int = Field(default=5, ge=1)
