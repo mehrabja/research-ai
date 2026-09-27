@@ -127,6 +127,8 @@ def search_sources(
         max_citations=max_citations,
         author=author,
         venue=venue,
+        year_from=year_from,
+        year_to=year_to,
     )
     settings = get_settings()
     effective_limit = (
