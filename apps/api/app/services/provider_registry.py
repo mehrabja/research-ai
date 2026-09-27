@@ -227,11 +227,15 @@ class ProviderRegistry:
         *,
         requested: str | None = None,
     ) -> tuple[ProviderDefinition, ...]:
-        ordered_names = (
-            (requested.strip().lower(),)
-            if requested and requested.strip()
-            else self.configured_chain(capability)
-        )
+        configured = self.configured_chain(capability)
+        if requested and requested.strip():
+            preferred = requested.strip().lower()
+            ordered_names = (
+                preferred,
+                *tuple(name for name in configured if name != preferred),
+            )
+        else:
+            ordered_names = configured
         result: list[ProviderDefinition] = []
         for name in ordered_names:
             definition = self._definitions.get((capability, name))
