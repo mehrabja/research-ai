@@ -24,6 +24,8 @@ def provider_matrix(
         ProviderCapability.DETECTION.value: settings.detection_provider,
         ProviderCapability.SOURCE_DISCOVERY.value: settings.source_discovery_provider,
         ProviderCapability.BILLING.value: settings.billing_provider,
+        ProviderCapability.EMAIL.value: settings.email_provider,
+        ProviderCapability.STORAGE.value: settings.file_storage_backend,
     }
     rows = [
         ProviderCapabilityRead(
