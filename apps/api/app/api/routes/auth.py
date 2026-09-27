@@ -127,6 +127,8 @@ def register(
         db,
         email=payload.email,
         password=payload.password,
+        full_name=payload.full_name,
+        workspace_name=payload.workspace_name,
     )
     enqueue_verification_email(db, user_id=user.id)
     db.commit()
