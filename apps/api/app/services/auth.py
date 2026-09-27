@@ -377,5 +377,5 @@ def _trim_active_sessions(
     settings = get_settings()
     sessions = list_active_sessions(db, user_id=user_id)
     max_sessions = settings.auth_max_sessions
-    for stale in sessions[max_sessions - 1 :]:
+    for stale in sessions[max_sessions :]:
         stale.revoked_at = _utcnow()
