@@ -13,7 +13,7 @@ from app.domain.embeddings import (
     build_embedding_profile_id,
 )
 from app.integrations.embeddings.base import EmbeddingProvider
-from app.integrations.embeddings.openai import OpenAIEmbeddingProvider
+from app.services.provider_registry import build_embedding_provider as build_registry_embedding_provider
 
 
 def get_current_embedding_profile() -> EmbeddingProfile:
@@ -34,8 +34,8 @@ def get_current_embedding_profile_id() -> str:
 def build_embedding_provider(
     profile: EmbeddingProfile | None = None,
 ) -> EmbeddingProvider:
-    return OpenAIEmbeddingProvider(
-        profile=profile or get_current_embedding_profile()
+    return build_registry_embedding_provider(
+        profile or get_current_embedding_profile()
     )
 
 
