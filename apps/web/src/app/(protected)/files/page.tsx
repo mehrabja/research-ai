@@ -1,0 +1,2 @@
+import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
+export default function FilesPage(){return <WorkspaceFeaturePage active="files" title="Files" description="File upload, extraction, folders, deduplication, object storage, download, and lifecycle state are workspace-backed."/>}
