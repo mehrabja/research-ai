@@ -1,7 +1,10 @@
-from app.db.models.ai_operation import AIOperation
 """Register every model so ``Base.metadata`` is complete for Alembic."""
 
-from app.db.models.auth_tokens import (\n    EmailVerificationToken,\n    PasswordResetToken,\n)\nfrom app.db.models.academic_qa import (
+from app.db.models.ai_operation import AIOperation
+from app.db.models.auth_tokens import (
+    EmailVerificationToken,
+    PasswordResetToken,
+)\nfrom app.db.models.academic_qa import (
     AcademicQAFinding,
     AcademicQARun,
 )
