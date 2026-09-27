@@ -22,7 +22,7 @@ Baseline commit: 106ca1fd2b5b1b86e4e9521ffa9c33f3d8ddfa91
 | G-15 | File folders missing | P1 | folder tree model, CRUD, file placement and move routes | F04 | Implemented |
 | G-16 | Storage quota accounting incomplete | P0 | authoritative active-byte aggregation and upload-time quota reservation | F04 | Implemented |
 | G-17 | Global search missing | P1 | workspace-scoped project/report/source/file search and frontend surface | F05/F13 | Implemented |
-| G-18 | Advanced discovery filters incomplete | P1 | current literature/source contracts are narrower than design | F05 | Partial |
+| G-18 | Advanced discovery filters incomplete | P1 | source discovery now supports year ranges, citation ranges, author, venue, publication type, language, OA, and deterministic sorting | F05 | Implemented |
 | G-19 | Claim-centric evidence API incomplete | P0 | claim evidence/citation matrix endpoint with provenance-linked rows | F06 | Implemented |
 | G-20 | Knowledge graph export missing | P1 | bounded JSON export endpoint | F06 | Implemented |
 | G-21 | Research plan mutation/restore missing | P1 | immutable revision save/restore with copied dependency graph | F07 | Implemented |
@@ -31,7 +31,7 @@ Baseline commit: 106ca1fd2b5b1b86e4e9521ffa9c33f3d8ddfa91
 | G-24 | Real billing provider missing | P0 | Stripe REST adapter, checkout, cancel/resume and plan-change surface | F11/F20 | Implemented |
 | G-25 | Billing webhook verification missing | P0 | Stripe signature verification, idempotent billing inbox, subscription reconciliation | F11/F20 | Implemented |
 | G-26 | Email provider/workflows missing | P0 | Resend adapter plus idempotent delivery records wired to auth flows | F11/F20 | Implemented |
-| G-27 | Unified billable metering incomplete | P0 | UsageEvent exists but provider operations still write legacy UsageLog | F11/F15 | Partial |
+| G-27 | Unified billable metering incomplete | P0 | authoritative workspace UsageEvent is now populated by generation, embedding, translation, source search, global search, and legacy humanization usage adapters; UsageLog remains compatibility history | F11/F15 | Partial (legacy table retained) |
 | G-28 | Frontend 21-page production port incomplete | P0 | production workspace route surface expanded across research, evidence, literature, planning, graph, manuscript, jobs, billing, search and settings | F13 | Partial |
 | G-29 | Frontend production CI gates incomplete | P1 | web typecheck/build already gated; Playwright E2E gate added | F16 | Implemented |
 | G-30 | Migration graph has static multi-head condition | P0 | explicit merge revision 0042 joins legacy report branch into the production chain | F16 | Implemented |
