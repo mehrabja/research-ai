@@ -12,6 +12,7 @@ from app.core.exceptions import (
 
 from app.core.security import create_access_token
 from app.db.models.user import User
+from app.services import auth as auth_service
 from app.schemas.auth import (
     LoginRequest,
     LogoutRequest,
