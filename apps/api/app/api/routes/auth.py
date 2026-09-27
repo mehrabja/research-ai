@@ -16,8 +16,8 @@ from app.core.exceptions import (
     InvalidCredentials,
 )
 from app.core.security import create_access_token
-from app.db.models.user import User
 from app.db.models.session import UserSession
+from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.auth import (
     APITokenCreateRequest,
