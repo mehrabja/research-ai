@@ -952,6 +952,27 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "debug must be False when APP_ENV=production."
                 )
+            if not self.auth_cookie_secure:
+                raise ValueError(
+                    "AUTH_COOKIE_SECURE must be True when APP_ENV=production."
+                )
+            if self.auth_cookie_samesite == "none" and not self.auth_cookie_secure:
+                raise ValueError(
+                    "SameSite=None requires secure auth cookies."
+                )
+            if self.file_storage_backend == "local":
+                raise ValueError(
+                    "FILE_STORAGE_BACKEND=local is not allowed in production."
+                )
+            if self.file_storage_backend == "s3" and not (
+                self.file_storage_s3_bucket.strip()
+                and self.file_storage_s3_region.strip()
+                and self.file_storage_s3_access_key_id.strip()
+                and self.file_storage_s3_secret_access_key.strip()
+            ):
+                raise ValueError(
+                    "S3 storage requires bucket, region and credentials in production."
+                )
             if any(
                 origin == "*"
                 for origin in self.cors_origins_list
