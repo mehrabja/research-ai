@@ -151,6 +151,7 @@ class Settings(BaseSettings):
     openalex_api_key: str = Field(default="", repr=False)
     crossref_mailto: str = ""
     resend_api_key: str = Field(default="", repr=False)
+    email_provider: Literal["none", "resend"] = "none"
     email_from: str = ""
     email_reply_to: str = ""
     stripe_secret_key: str = Field(default="", repr=False)
