@@ -122,12 +122,36 @@ def search_source_candidates(
         effective_limit = settings.source_search_limit_max
 
     try:
-        return provider.search(
+        candidates = provider.search(
             query=q,
             limit=effective_limit,
             year=year,
             open_access_only=open_access_only,
         )
+        report = get_report(
+            db,
+            user_id=user_id,
+            report_id=report_id,
+        )
+        project = db.get(Project, report.project_id)
+        if project is not None:
+            record_provider_usage(
+                db,
+                workspace_id=project.workspace_id,
+                user_id=user_id,
+                source_id=None,
+                usage=ProviderUsage(
+                    capability="source_discovery",
+                    operation="source_search",
+                    provider=getattr(provider, "provider_name", "unknown"),
+                    model=None,
+                    units=1,
+                    metadata={"query_length": len(q), "result_count": len(candidates)},
+                ),
+                idempotency_key=f"search:{report_id}:{q}:{year}:{open_access_only}",
+            )
+            db.commit()
+        return candidates
     except SourceProviderTimeoutError as exc:
         raise app_exceptions.SourceProviderUnavailable() from exc
     except SourceProviderUnavailableError as exc:
