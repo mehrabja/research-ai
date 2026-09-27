@@ -4,40 +4,49 @@ from __future__ import annotations
 from typing import Protocol
 
 from app.domain.detection import DetectionProviderResult
+from app.integrations.base import (
+    ProviderAuthenticationError,
+    ProviderError,
+    ProviderInputTooLargeError,
+    ProviderInvalidRequestError,
+    ProviderInvalidResponseError,
+    ProviderRetryableError,
+)
 
 
-class DetectionProviderError(Exception):
+class DetectionProviderError(ProviderError):
     """Base for provider failures."""
 
 
-class DetectionRateLimitError(DetectionProviderError):
+class DetectionRateLimitError(ProviderRetryableError, DetectionProviderError):
     """Retryable."""
 
 
-class DetectionTimeoutError(DetectionProviderError):
+class DetectionTimeoutError(ProviderRetryableError, DetectionProviderError):
     """Retryable."""
 
 
-class DetectionProviderUnavailableError(DetectionProviderError):
+class DetectionProviderUnavailableError(ProviderRetryableError, DetectionProviderError):
     """Retryable (5xx, transport)."""
 
 
-class DetectionAuthenticationError(DetectionProviderError):
+class DetectionAuthenticationError(ProviderAuthenticationError, DetectionProviderError):
     """Non-retryable."""
 
 
-class DetectionInvalidRequestError(DetectionProviderError):
+class DetectionInvalidRequestError(ProviderInvalidRequestError, DetectionProviderError):
     """Non-retryable."""
 
 
-class DetectionInvalidResponseError(DetectionProviderError):
+class DetectionInvalidResponseError(ProviderInvalidResponseError, DetectionProviderError):
     """Non-retryable."""
 
 
-class DetectionInputTooLargeError(DetectionProviderError):
+class DetectionInputTooLargeError(ProviderInputTooLargeError, DetectionProviderError):
     """Non-retryable."""
 
 
+class DetectionProvider(Protocol):
 class DetectionProvider(Protocol):
     provider_name: str
     model_name: str
