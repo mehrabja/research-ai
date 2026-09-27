@@ -10,7 +10,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.db.models.billing_event import BillingEvent
 from app.db.models.subscription import Subscription
 from app.db.models.user import User
 from app.db.session import get_db
