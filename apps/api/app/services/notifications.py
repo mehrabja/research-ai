@@ -7,6 +7,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.db.models.notification import Notification
+from app.db.models.notification_preference import NotificationPreference
 
 
 def create_notification(
@@ -117,3 +118,36 @@ def mark_all_read(
     )
     db.flush()
     return int(result.rowcount or 0)
+
+
+def get_preferences(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+) -> dict[str, bool]:
+    row = db.get(NotificationPreference, user_id)
+    if row is None:
+        return {}
+    return {str(key): bool(value) for key, value in (row.preferences or {}).items()}
+
+
+def update_preferences(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    preferences: dict[str, bool],
+) -> dict[str, bool]:
+    row = db.get(NotificationPreference, user_id)
+    if row is None:
+        row = NotificationPreference(
+            user_id=user_id,
+            preferences=dict(preferences),
+        )
+        db.add(row)
+    else:
+        row.preferences = {
+            **(row.preferences or {}),
+            **preferences,
+        }
+    db.flush()
+    return get_preferences(db, user_id=user_id)
