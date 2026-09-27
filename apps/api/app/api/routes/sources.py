@@ -22,8 +22,8 @@ from app.core.config import get_settings
 from app.db.models.user import User
 from app.db.session import get_db
 from app.domain.source import SourceCandidate
-from app.integrations.sources import SemanticScholarProvider
 from app.integrations.sources.base import SourceSearchProvider
+from app.providers.registry import ProviderCapability, resolve_provider
 from app.schemas.source_extraction import SourceExtractionResponse
 from app.schemas.sources import (
     SourceCandidateRead,
@@ -46,11 +46,9 @@ router = APIRouter(
 # ---------------------------------------------------------------------------
 def _default_provider() -> SourceSearchProvider:
     settings = get_settings()
-    return SemanticScholarProvider(
-        api_key=settings.semantic_scholar_api_key,
-        base_url=settings.semantic_scholar_base_url,
-        timeout_seconds=settings.semantic_scholar_timeout_seconds,
-        max_retries=settings.semantic_scholar_max_retries,
+    return resolve_provider(
+        capability=ProviderCapability.SOURCE_DISCOVERY,
+        preferred="semantic_scholar",
     )
 
 
