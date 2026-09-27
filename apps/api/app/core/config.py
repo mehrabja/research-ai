@@ -360,6 +360,11 @@ class Settings(BaseSettings):
     )
 
     # --- Research Classification (Milestone 21) --------------------------
+    detection_api_base_url: str = ""
+    detection_api_model: str = "ai-detector-v1"
+    detection_timeout_seconds: float = 20.0
+    detection_max_input_chars: int = 100_000
+
     classification_enabled: bool = True
     classification_use_llm: bool = False
     classification_classifier_version: str = "m21.1"
