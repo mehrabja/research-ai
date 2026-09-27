@@ -59,6 +59,7 @@ from app.api.routes.technical_intelligence import (
 )
 from app.api.routes.translation import router as translation_router
 from app.api.routes.workspaces import router as workspaces_router
+from app.api.routes.webhooks import router as webhooks_router
 
 api_router = APIRouter()
 api_router.include_router(projects_router)
@@ -96,4 +97,5 @@ api_router.include_router(publication_router)
 api_router.include_router(collaboration_router)
 api_router.include_router(orchestration_router)
 api_router.include_router(workspaces_router)
+api_router.include_router(webhooks_router)
 api_router.include_router(invitations_router)
