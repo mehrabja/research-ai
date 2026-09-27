@@ -4,11 +4,11 @@ from app.db.models.ai_operation import AIOperation
 from app.db.models.auth_tokens import (
     EmailVerificationToken,
     PasswordResetToken,
-)\nfrom app.db.models.auth_action_token import AuthActionToken
-from app.db.models.academic_qa import (
+)\nfrom app.db.models.academic_qa import (
     AcademicQAFinding,
     AcademicQARun,
 )
+from app.db.models.auth_action_token import AuthActionToken
 
 # M37 — SaaS foundation
 from app.db.models.billing_event import BillingEvent
