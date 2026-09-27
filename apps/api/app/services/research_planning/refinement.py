@@ -76,10 +76,16 @@ def call_refinement_provider(provider, prompt: str) -> str | dict:
     if hasattr(provider, "complete_json"):
         return provider.complete_json(prompt)
     if hasattr(provider, "generate"):
-        out = provider.generate(prompt)
-        if hasattr(out, "text"):
-            return out.text
-        return out
+        result = provider.generate(
+            system_prompt="Return only valid JSON matching the requested schema.",
+            user_prompt=prompt,
+            temperature=0.0,
+            max_output_tokens=4000,
+        )
+        text_value = getattr(result, "text", None)
+        if isinstance(text_value, str):
+            return text_value
+        return result
     raise RuntimeError("no compatible method on provider")
 
 
