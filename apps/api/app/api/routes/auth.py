@@ -71,7 +71,8 @@ def register(
             subject="Verify your Research-AI email",
             html=(
                 "<p>Verify your email address.</p>"
-                f"<p>Verification token: <code>{verification_token}</code></p>"
+                f'<p><a href="{settings.web_app_base_url.rstrip("/")}/email-verify?token={verification_token}">'
+                "Verify email</a></p>"
             ),
             idempotency_key=f"email-verification:{user.id}:{verification_token}",
         )
@@ -307,7 +308,8 @@ def request_password_reset(
                 subject="Reset your Research-AI password",
                 html=(
                     "<p>Password reset requested.</p>"
-                    f"<p>Reset token: <code>{reset_token}</code></p>"
+                    f'<p><a href="{settings.web_app_base_url.rstrip("/")}/password-reset/confirm?token={reset_token}">'
+                    "Reset password</a></p>"
                 ),
                 idempotency_key=f"password-reset:{user.id}:{reset_token}",
             )
@@ -364,7 +366,8 @@ def resend_verification(
                 subject="Verify your Research-AI email",
                 html=(
                     "<p>Verify your email address.</p>"
-                    f"<p>Verification token: <code>{verification_token}</code></p>"
+                    f'<p><a href="{settings.web_app_base_url.rstrip("/")}/email-verify?token={verification_token}">'
+                    "Verify email</a></p>"
                 ),
                 idempotency_key=f"email-verification:{user.id}:{verification_token}",
             )
