@@ -31,6 +31,7 @@ from app.api.routes.knowledge_graph import (
 )
 from app.api.routes.literature import router as literature_router
 from app.api.routes.manuscript import router as manuscript_router
+from app.api.routes.manuscript_drafts import router as manuscript_drafts_router
 from app.api.routes.manuscript_humanization import (
     router as manuscript_humanization_router,
 )
@@ -93,6 +94,7 @@ api_router.include_router(research_plan_router)
 api_router.include_router(knowledge_graph_router)
 api_router.include_router(rag_router)
 api_router.include_router(manuscript_router)
+api_router.include_router(manuscript_drafts_router)
 api_router.include_router(section_research_router)
 api_router.include_router(technical_intelligence_router)
 api_router.include_router(citations_router)
