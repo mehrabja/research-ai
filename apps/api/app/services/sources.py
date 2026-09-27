@@ -94,6 +94,10 @@ def search_source_candidates(
     provider: SourceSearchProvider,
     year: int | None = None,
     open_access_only: bool = False,
+    min_citations: int | None = None,
+    max_citations: int | None = None,
+    author: str | None = None,
+    venue: str | None = None,
 ) -> list[SourceCandidate]:
     """Discovery only. Never persists anything.
 
@@ -128,6 +132,36 @@ def search_source_candidates(
             year=year,
             open_access_only=open_access_only,
         )
+        author_q = author.strip().lower() if author else None
+        venue_q = venue.strip().lower() if venue else None
+        filtered: list[SourceCandidate] = []
+        for candidate in candidates:
+            if year is not None and candidate.year != year:
+                continue
+            if min_citations is not None and (
+                candidate.citation_count is None
+                or candidate.citation_count < min_citations
+            ):
+                continue
+            if max_citations is not None and (
+                candidate.citation_count is None
+                or candidate.citation_count > max_citations
+            ):
+                continue
+            if author_q and not any(
+                author_q in person.lower()
+                for person in (candidate.authors or ())
+            ):
+                continue
+            if venue_q:
+                meta = candidate.source_meta or {}
+                venue_value = str(
+                    meta.get("venue") or meta.get("journal") or ""
+                ).lower()
+                if venue_q not in venue_value:
+                    continue
+            filtered.append(candidate)
+        candidates = filtered
         report = get_report(
             db,
             user_id=user_id,
@@ -147,7 +181,7 @@ def search_source_candidates(
                     model=None,
                     metric="search_requests",
                     units=1,
-                    metadata={"query_length": len(q), "result_count": len(candidates)},
+                    metadata={"query_length": len(q), "result_count": len(candidates), "min_citations": min_citations, "max_citations": max_citations, "author": author, "venue": venue},
                 ),
                 idempotency_key=f"source-search:{uuid.uuid4()}",
             )
