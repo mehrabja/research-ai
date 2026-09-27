@@ -157,7 +157,7 @@ def search_workspace(
             units=1,
             metadata={"query_length": len(q), "result_count": len(items)},
         ),
-        idempotency_key=f"workspace-search:{workspace_id}:{q}",
+        idempotency_key=f"workspace-search:{uuid.uuid4()}",
     )
     db.commit()
     return items[:limit], len(items)
