@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, CreatedAtMixin, UUIDPKMixin
@@ -54,10 +54,7 @@ class AuthSession(Base, UUIDPKMixin, CreatedAtMixin):
             "ix_auth_sessions_user_active",
             "user_id",
             "expires_at",
-            postgresql_where=func.coalesce(
-                revoked_at,
-                func.to_timestamp(0),
-            ) == func.to_timestamp(0),
+            postgresql_where=text("revoked_at IS NULL"),
         ),
         Index("ix_auth_sessions_user_expires", "user_id", "expires_at"),
     )
