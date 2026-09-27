@@ -70,6 +70,7 @@ from app.db.models.manuscript import (
     ManuscriptSectionDependency,
     ManuscriptVersion,
 )
+from app.db.models.manuscript_draft import ManuscriptDraft  # noqa: F401
 from app.db.models.manuscript_prose import (
     ManuscriptProseParagraph,
     ManuscriptProseRun,
@@ -246,6 +247,7 @@ __all__ = [
     "ProjectCollaborationEvent",
     "ResearchOrchestrationRun",
     "ResearchOrchestrationNode",
+    "ManuscriptDraft",
     "ManuscriptProseRun",
     "ManuscriptProseSection",
     "ManuscriptProseParagraph",
