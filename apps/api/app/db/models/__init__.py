@@ -1,3 +1,4 @@
+from app.db.models.ai_operation import AIOperation
 """Register every model so ``Base.metadata`` is complete for Alembic."""
 
 from app.db.models.auth_tokens import (\n    EmailVerificationToken,\n    PasswordResetToken,\n)\nfrom app.db.models.academic_qa import (
@@ -260,6 +261,7 @@ __all__ = [
     "WorkspaceInvitation",
     "WorkspaceMembership",
     "UserSession",
+    "AIOperation",
     "Notification",
     "NotificationPreference",
     "EmailVerificationToken",
