@@ -32,6 +32,6 @@ export async function POST(req: Request) {
   // complete the configured verification policy before signing in.
   const out = NextResponse.json({ ok: true, user: body });
   if (body.access_token) setAccessCookie(out, body.access_token);
-  copySetCookies(backend.headers, out);
+  copySetCookies(out, backend);
   return out;
 }
