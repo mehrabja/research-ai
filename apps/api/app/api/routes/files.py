@@ -89,6 +89,7 @@ def list_files(
         project_id=project_id,
         status=status_filter,
         file_kind=kind,
+        folder_id=folder_id,
         limit=limit,
         offset=offset,
     )
