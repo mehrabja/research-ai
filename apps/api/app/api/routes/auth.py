@@ -35,6 +35,14 @@ from app.services.auth_tokens import (
     verify_email,
 )
 from app.services.rate_limit import get_login_rate_limiter
+from app.services.two_factor import (
+    begin_enrollment,
+    confirm_enrollment,
+    disable as disable_two_factor,
+    verify_second_factor,
+)
+from app.services.api_tokens import create_token, list_tokens, revoke_token
+from app.db.models.security import UserTwoFactor
 from app.services.session import (
     CSRF_COOKIE_NAME,
     REFRESH_COOKIE_NAME,
@@ -145,6 +153,13 @@ def login(
     if settings.auth_require_email_verification and user.email_verified_at is None:
         raise EmailNotVerified()
 
+    verify_second_factor(
+        db,
+        user_id=user.id,
+        code=payload.two_factor_code,
+        recovery_code=payload.recovery_code,
+    )
+
     session, refresh_token = create_session(
         db,
         user_id=user.id,
@@ -165,6 +180,91 @@ def login(
         token_type="bearer",
         session_id=session.id,
     )
+
+
+
+@router.get("/2fa", response_model=__import__("app.schemas.auth", fromlist=["TwoFactorStatusResponse"]).TwoFactorStatusResponse)
+def get_two_factor_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    row = db.get(UserTwoFactor, current_user.id)
+    return {"enabled": bool(row and row.enabled_at is not None)}
+
+
+@router.post(
+    "/2fa/enroll",
+    response_model=__import__("app.schemas.auth", fromlist=["TwoFactorEnrollmentResponse"]).TwoFactorEnrollmentResponse,
+)
+def enroll_two_factor(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    row, uri, recovery_codes = begin_enrollment(
+        db,
+        user_id=current_user.id,
+        email=current_user.email,
+    )
+    db.commit()
+    return {
+        "enabled": bool(row.enabled_at),
+        "secret": __import__("app.services.two_factor", fromlist=["_decrypt"])._decrypt(row.secret_encrypted),
+        "provisioning_uri": uri,
+        "recovery_codes": recovery_codes,
+    }
+
+
+@router.post("/2fa/confirm", response_model=__import__("app.schemas.auth", fromlist=["TwoFactorStatusResponse"]).TwoFactorStatusResponse)
+def confirm_two_factor(
+    payload: __import__("app.schemas.auth", fromlist=["TwoFactorConfirmRequest"]).TwoFactorConfirmRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    confirm_enrollment(db, user_id=current_user.id, code=payload.code)
+    return {"enabled": True}
+
+
+@router.post("/2fa/disable", response_model=__import__("app.schemas.auth", fromlist=["TwoFactorStatusResponse"]).TwoFactorStatusResponse)
+def disable_two_factor(
+    payload: __import__("app.schemas.auth", fromlist=["TwoFactorDisableRequest"]).TwoFactorDisableRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    disable_two_factor(db, user_id=current_user.id, code=payload.code)
+    return {"enabled": False}
+
+
+@router.post("/api-tokens", response_model=__import__("app.schemas.auth", fromlist=["APITokenCreateResponse"]).APITokenCreateResponse)
+def create_api_token(
+    payload: __import__("app.schemas.auth", fromlist=["APITokenCreateRequest"]).APITokenCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    row, raw = create_token(
+        db,
+        user_id=current_user.id,
+        name=payload.name,
+        scopes=payload.scopes,
+        expires_days=payload.expires_days,
+    )
+    return {"token": raw, "item": row}
+
+
+@router.get("/api-tokens", response_model=list[__import__("app.schemas.auth", fromlist=["APITokenRead"]).APITokenRead])
+def list_api_tokens(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return list_tokens(db, user_id=current_user.id)
+
+
+@router.delete("/api-tokens/{token_id}", status_code=status.HTTP_204_NO_CONTENT)
+def revoke_api_token(
+    token_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    revoke_token(db, user_id=current_user.id, token_id=token_id)
 
 
 @router.post("/verify-email", response_model=UserResponse)
