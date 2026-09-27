@@ -53,9 +53,9 @@ class EmailDeliveryService:
         db.add(row)
         db.flush()
 
-        if self._provider is None:
+        if self._provider_name == "none":
             row.status = "skipped"
-            row.last_error = "email provider is not configured"
+            row.last_error = "email provider is disabled"
             db.flush()
             return row
 
