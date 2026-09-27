@@ -37,6 +37,9 @@ dependencies = [
     # JWT Authentication Foundation
     "pyjwt>=2.8,<3.0",
     "argon2-cffi>=23.1,<25.0",
+
+    # Production object storage (F04)
+    "boto3>=1.35,<2.0",
 ]
 
 [project.optional-dependencies]
