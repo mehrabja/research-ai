@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models.knowledge import TerminologyGlossary
 from app.db.models.pipeline import TranslationRun, TranslationVersion
+from app.db.models.project import Project
 from app.db.models.report import Report, ReportVersion, ReviewEvent
 from app.domain.translation_preservation import (
     validate_translation_preservation,
@@ -27,6 +28,7 @@ from app.integrations.translation.base import (
     TranslationRateLimitError,
     TranslationTimeoutError,
 )
+from app.services.ai_metering import execute_metered_provider_call
 from app.services.report_status import update_report_status
 from app.services.translation_profile import TranslationProfile
 
@@ -120,6 +122,7 @@ def _find_existing_success(
     db: Session,
     *,
     report_id: uuid.UUID,
+    job_id: uuid.UUID | None = None,
     source_version_id: uuid.UUID,
     source_lang: str,
     target_lang: str,
@@ -296,6 +299,16 @@ def translate_report(
             f"report status {report.status!r} not eligible for translation"
         )
 
+    project = db.get(Project, report.project_id) if report.project_id else None
+    if project is not None:
+        workspace_id = project.workspace_id
+    else:
+        from app.services.workspaces import get_default_workspace_for_user
+        workspace = get_default_workspace_for_user(db, user_id=user_id)
+        if workspace is None:
+            raise TranslationError("translation report has no workspace context")
+        workspace_id = workspace.id
+
     # ---- 2. Validate source = M15-approved version ----
     source_version = db.execute(
         select(ReportVersion).where(
@@ -393,16 +406,29 @@ def translate_report(
 
     for attempt in range(profile.preservation_retry_count + 1):
         try:
-            result = provider.translate(
-                source_text=content,
-                source_language=source_lang,
-                target_language=target_language,
-                instructions=(
-                    "Preserve all evidence markers, URLs, DOIs, "
-                    "numbers, and locked terminology exactly."
+            result = execute_metered_provider_call(
+                lambda: provider.translate(
+                    source_text=content,
+                    source_language=source_lang,
+                    target_language=target_language,
+                    instructions=(
+                        "Preserve all evidence markers, URLs, DOIs, "
+                        "numbers, and locked terminology exactly."
+                    ),
+                    temperature=profile.temperature,
+                    max_output_tokens=profile.max_output_tokens,
                 ),
-                temperature=profile.temperature,
-                max_output_tokens=profile.max_output_tokens,
+                workspace_id=workspace_id,
+                user_id=user_id,
+                operation="report.translate.provider_call",
+                capability="translation",
+                provider=provider,
+                model=profile.model,
+                project_id=report.project_id,
+                report_id=report_id,
+                job_id=job_id,
+                input_units=lambda value: value.input_tokens,
+                output_units=lambda value: value.output_tokens,
             )
         except (
             TranslationRateLimitError,
