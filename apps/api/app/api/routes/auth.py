@@ -31,7 +31,6 @@ from app.core.mfa_exceptions import MFAInvalid, MFARequired
 from app.services import mfa as mfa_service
 from app.services.email import EmailDeliveryService
 from app.services.rate_limit import get_login_rate_limiter
-from app.services.rate_limit import get_login_rate_limiter
 
 router = APIRouter(
     prefix="/auth",
