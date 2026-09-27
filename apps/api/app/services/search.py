@@ -96,6 +96,8 @@ def search_workspace(
                     Source.title.ilike(pattern),
                     Source.doi.ilike(pattern),
                     Source.url.ilike(pattern),
+                    Source.abstract.ilike(pattern),
+                    Source.full_text.ilike(pattern),
                 ),
             )
             .order_by(Source.updated_at.desc())
@@ -123,6 +125,7 @@ def search_workspace(
                 or_(
                     ProjectFile.original_filename.ilike(pattern),
                     ProjectFile.normalized_filename.ilike(pattern),
+                    ProjectFile.extracted_text.ilike(pattern),
                 ),
             )
             .order_by(ProjectFile.updated_at.desc())
