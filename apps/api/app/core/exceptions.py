@@ -1067,3 +1067,7 @@ class UsageWorkspaceMissing(AppError):
     code = "USAGE_WORKSPACE_MISSING"
     status_code = 500
     message = "Usage event must be tied to a workspace."
+class NotificationNotFound(AppError):
+    code = "NOTIFICATION_NOT_FOUND"
+    status_code = 404
+    message = "Notification not found."

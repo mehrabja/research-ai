@@ -1,3 +1,33 @@
-"use client";
-import{useState}from"react";import{useSearchParams}from"next/navigation";
-export default function EmailVerifyPage(){const params=useSearchParams(),[token,setToken]=useState(params.get("token")??""),[msg,setMsg]=useState(""),[busy,setBusy]=useState(false);async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);const r=await fetch("/api/backend/auth/verify-email",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token})});const b=await r.json().catch(()=>({}));setBusy(false);setMsg(r.ok?"Email verified. You can sign in.":b?.error?.message??b?.detail??"Verification failed.")}return <main className="min-h-screen grid place-items-center px-6"><form onSubmit={submit} className="card w-full max-w-md p-7 space-y-5"><h1 className="text-2xl font-semibold">Verify email</h1><input className="input" value={token} onChange={e=>setToken(e.target.value)} placeholder="Verification token"/><button className="btn btn-primary w-full" disabled={busy||!token}>{busy?"Verifying…":"Verify"}</button>{msg&&<div className="muted text-sm">{msg}</div>}<a className="muted text-xs underline" href="/login">Back to sign in</a></form></main>}
+import { Suspense } from "react";
+import EmailVerifyForm from "./EmailVerifyForm";
+
+function EmailVerifyFallback() {
+  return (
+    <main className="min-h-screen grid place-items-center px-6">
+      <div className="card w-full max-w-md p-7 space-y-5">
+        <h1 className="text-2xl font-semibold">Verify email</h1>
+
+        <input
+          className="input"
+          disabled
+          placeholder="Verification token"
+        />
+
+        <button
+          className="btn btn-primary w-full"
+          disabled
+        >
+          Loading…
+        </button>
+      </div>
+    </main>
+  );
+}
+
+export default function EmailVerifyPage() {
+  return (
+    <Suspense fallback={<EmailVerifyFallback />}>
+      <EmailVerifyForm />
+    </Suspense>
+  );
+}

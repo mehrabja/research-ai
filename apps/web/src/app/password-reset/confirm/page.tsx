@@ -1,3 +1,40 @@
-"use client";
-import{useState}from"react";import{useSearchParams}from"next/navigation";
-export default function PasswordResetConfirmPage(){const params=useSearchParams(),[token,setToken]=useState(params.get("token")??""),[password,setPassword]=useState(""),[msg,setMsg]=useState(""),[busy,setBusy]=useState(false);async function submit(e:React.FormEvent){e.preventDefault();if(password.length<15){setMsg("Password must be at least 15 characters.");return}setBusy(true);const r=await fetch("/api/backend/auth/password-reset/confirm",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token,new_password:password})});const b=await r.json().catch(()=>({}));setBusy(false);setMsg(r.ok?"Password updated. You can sign in.":b?.error?.message??b?.detail??"Reset failed.")}return <main className="min-h-screen grid place-items-center px-6"><form onSubmit={submit} className="card w-full max-w-md p-7 space-y-5"><h1 className="text-2xl font-semibold">Set new password</h1><input className="input" value={token} onChange={e=>setToken(e.target.value)} placeholder="Reset token"/><input className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="New password" autoComplete="new-password"/><button className="btn btn-primary w-full" disabled={busy||!token||!password}>{busy?"Updating…":"Update password"}</button>{msg&&<div className="muted text-sm">{msg}</div>}<a className="muted text-xs underline" href="/login">Back to sign in</a></form></main>}
+import { Suspense } from "react";
+import PasswordResetConfirmForm from "./PasswordResetConfirmForm";
+
+function PasswordResetConfirmFallback() {
+  return (
+    <main className="min-h-screen grid place-items-center px-6">
+      <div className="card w-full max-w-md p-7 space-y-5">
+        <h1 className="text-2xl font-semibold">Set new password</h1>
+
+        <input
+          className="input"
+          disabled
+          placeholder="Reset token"
+        />
+
+        <input
+          className="input"
+          type="password"
+          disabled
+          placeholder="New password"
+        />
+
+        <button
+          className="btn btn-primary w-full"
+          disabled
+        >
+          Loading…
+        </button>
+      </div>
+    </main>
+  );
+}
+
+export default function PasswordResetConfirmPage() {
+  return (
+    <Suspense fallback={<PasswordResetConfirmFallback />}>
+      <PasswordResetConfirmForm />
+    </Suspense>
+  );
+}
