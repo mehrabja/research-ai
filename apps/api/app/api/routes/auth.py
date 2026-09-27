@@ -9,10 +9,9 @@ from app.core.exceptions import (
     AuthenticationRateLimited,
     InvalidCredentials,
 )
-
 from app.core.security import create_access_token
 from app.db.models.user import User
-from app.services import auth as auth_service
+from app.db.session import get_db
 from app.schemas.auth import (
     LoginRequest,
     LogoutRequest,
@@ -26,14 +25,8 @@ from app.schemas.auth import (
     UserResponse,
     VerifyEmailRequest,
 )
-from app.db.session import get_db
-from app.schemas.auth import (
-    LoginRequest,
-    RegisterRequest,
-    TokenResponse,
-    UserResponse,
-)
-from app.services.auth import authenticate_user, register_user
+from app.services import auth as auth_service
+from app.services.rate_limit import get_login_rate_limiter
 from app.services.rate_limit import get_login_rate_limiter
 
 router = APIRouter(
