@@ -285,6 +285,18 @@ def refresh(
         db,
         raw_refresh_token=refresh_token or "",
     )
+    user = db.get(User, session.user_id)
+    settings = get_settings()
+    if (
+        user is None
+        or not user.is_active
+        or (
+            settings.auth_require_email_verification
+            and user.email_verified_at is None
+        )
+    ):
+        db.rollback()
+        raise AuthenticationRequired()
     csrf_token = new_csrf_token()
     db.commit()
 
