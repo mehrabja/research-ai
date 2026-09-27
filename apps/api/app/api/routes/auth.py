@@ -11,6 +11,7 @@ from app.core.exceptions import (
     AuthenticationRateLimited,
     InvalidCredentials,
 )
+from app.core.mfa_exceptions import MFAInvalid, MFARequired
 from app.core.security import create_access_token
 from app.db.models.user import User
 from app.db.session import get_db
@@ -28,7 +29,6 @@ from app.schemas.auth import (
     VerifyEmailRequest,
 )
 from app.services import auth as auth_service
-from app.core.mfa_exceptions import MFAInvalid, MFARequired
 from app.services import mfa as mfa_service
 from app.services.email import EmailDeliveryService
 from app.services.rate_limit import get_login_rate_limiter
