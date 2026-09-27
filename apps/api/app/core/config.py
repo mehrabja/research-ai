@@ -141,6 +141,28 @@ class Settings(BaseSettings):
     # --- M37: SaaS / Billing -------------------------------------------
     billing_provider: Literal["none", "fake"] = "none"
 
+    # --- F20: External provider credentials -------------------------------
+    openrouter_api_key: str = Field(default="", repr=False)
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openalex_api_key: str = Field(default="", repr=False)
+    crossref_mailto: str = ""
+    resend_api_key: str = Field(default="", repr=False)
+    email_from: str = ""
+    email_reply_to: str = ""
+    stripe_secret_key: str = Field(default="", repr=False)
+    stripe_webhook_secret: str = Field(default="", repr=False)
+    stripe_publishable_key: str = ""
+    google_oauth_client_id: str = ""
+    google_oauth_client_secret: str = Field(default="", repr=False)
+    google_oauth_redirect_uri: str = ""
+    github_oauth_client_id: str = ""
+    github_oauth_client_secret: str = Field(default="", repr=False)
+    github_oauth_redirect_uri: str = ""
+    ai_detection_api_key: str = Field(default="", repr=False)
+    sentry_dsn: str = ""
+    turnstile_secret_key: str = Field(default="", repr=False)
+    turnstile_site_key: str = ""
+
     # --- M39: Provider routing --------------------------------------------
     # Format: capability=provider1,provider2;capability2=provider1
     # The first provider is selected from the capability-specific setting;
