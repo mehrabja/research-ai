@@ -27,7 +27,7 @@ Baseline commit: 106ca1fd2b5b1b86e4e9521ffa9c33f3d8ddfa91
 | Files | Yes | Local storage abstraction | ProjectFile | Files | Implemented |
 | Production object storage | Yes | Local/S3 registry | Storage metadata | Files | Implemented (code) |
 | File folders | Yes | N/A | ProjectFolder + File.folder_id | Files | Implemented (code) |
-| File max size contract | Yes | Configurable backend, currently 20 MiB default | ProjectFile | Design says 500 MB | Mismatch |
+| File max size contract | Yes | Streaming upload enforcement up to 500 MB | ProjectFile | Design says 500 MB | Implemented |
 | File intelligence | Yes | Extractors/intelligence | File events/meta | Files | Partial |
 | Research plan | Yes | Generation/planning services | Versioned plan | Plan | Partial |
 | Plan edit/save/restore | Yes | Internal planner | Versioned plan graph | Plan UI/API | Implemented (code) |
