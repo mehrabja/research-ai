@@ -32,10 +32,9 @@ Implemented:
 - Billing provider protocol.
 
 Not verified/configured:
-- No project-wide provider registry or resolver was found.
-- Generation/embedding factories directly construct OpenAI providers.
-- Translation factory only accepts OpenAI.
-- Detection factory only accepts the heuristic provider.
+- Central project-wide provider registry/resolver is now present in `apps/api/app/providers`.
+- Generation/embedding/translation/detection/source factories now route through the registry.
+- Ordered transient-failure fallback is supported through `PROVIDER_FALLBACKS`.
 - Billing domain only declares `none` and `fake`.
 
 ### Resilience
@@ -208,7 +207,7 @@ Conclusion: the Alembic graph is **multi-head by static inspection** unless an e
 
 ## Production-critical gaps found
 
-1. M39 provider registry/resolver/fallback policy — Missing.
+1. M39 additional real provider registrations — Open (architecture implemented).
 2. Real billing provider adapter — Missing.
 3. Billing webhook verification/route — Missing.
 4. Real email provider/workflows — Missing.
