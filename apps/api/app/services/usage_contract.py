@@ -17,6 +17,7 @@ class ProviderUsage:
     capability: str
     operation: str
     provider: str
+    metric: str = "ai_generation_units"
     model: str | None = None
     input_tokens: int = 0
     output_tokens: int = 0
@@ -61,7 +62,7 @@ def record_provider_usage(
         db,
         workspace_id=workspace_id,
         user_id=user_id,
-        metric="ai_generation_units",
+        metric=usage.metric,
         quantity=usage.units,
         idempotency_key=idempotency_key,
         source_type="provider_call",
