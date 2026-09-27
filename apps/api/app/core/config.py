@@ -140,6 +140,12 @@ class Settings(BaseSettings):
     database_url: str = Field(..., repr=False)
     # --- M37: SaaS / Billing -------------------------------------------
     billing_provider: Literal["none", "fake"] = "none"
+
+    # --- M39: Provider routing --------------------------------------------
+    # Format: capability=provider1,provider2;capability2=provider1
+    # The first provider is selected from the capability-specific setting;
+    # these entries are appended as ordered transient-failure fallbacks.
+    provider_fallbacks: str = ""
     # --- Advanced Humanization (Milestone 32) -------------------------
     manuscript_humanization_enabled: bool = True
     manuscript_humanization_async_jobs: bool = False
