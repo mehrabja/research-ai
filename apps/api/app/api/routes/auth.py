@@ -8,18 +8,28 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_client_ip, get_current_user
 from app.core.config import get_settings
-from app.core.exceptions import AuthenticationRateLimited, InvalidCredentials
+from app.core.exceptions import AuthenticationRateLimited, EmailNotVerified, InvalidCredentials
 from app.core.security import create_access_token
 from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.auth import (
+    EmailTokenRequest,
     LoginRequest,
+    MessageResponse,
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
     RegisterRequest,
     SessionListResponse,
     TokenResponse,
     UserResponse,
 )
-from app.services.auth import authenticate_user, register_user
+from app.services.auth import authenticate_user, get_user_by_email, register_user
+from app.services.auth_tokens import (
+    issue_email_verification_token,
+    issue_password_reset_token,
+    reset_password,
+    verify_email,
+)
 from app.services.rate_limit import get_login_rate_limiter
 from app.services.session import (
     CSRF_COOKIE_NAME,
@@ -92,7 +102,10 @@ def register(
     payload: RegisterRequest,
     db: Session = Depends(get_db),
 ) -> User:
-    return register_user(db, email=payload.email, password=payload.password)
+    user = register_user(db, email=payload.email, password=payload.password)
+    issue_email_verification_token(db, user_id=user.id)
+    db.commit()
+    return user
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -124,6 +137,10 @@ def login(
     else:
         limiter.record_success(email_key)
 
+    settings = get_settings()
+    if settings.auth_require_email_verification and user.email_verified_at is None:
+        raise EmailNotVerified()
+
     session, refresh_token = create_session(
         db,
         user_id=user.id,
@@ -146,6 +163,53 @@ def login(
     )
 
 
+@router.post("/verify-email", response_model=UserResponse)
+def verify_email_route(
+    payload: EmailTokenRequest,
+    db: Session = Depends(get_db),
+) -> User:
+    return verify_email(db, raw_token=payload.token)
+
+
+@router.post("/resend-verification", response_model=MessageResponse)
+def resend_verification(
+    payload: PasswordResetRequest,
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    user = get_user_by_email(db, payload.email)
+    if user is not None and user.is_active and user.email_verified_at is None:
+        issue_email_verification_token(db, user_id=user.id)
+        db.commit()
+    return MessageResponse(
+        message="If the account exists and needs verification, an email will be sent."
+    )
+
+
+@router.post("/password-reset/request", response_model=MessageResponse)
+def request_password_reset(
+    payload: PasswordResetRequest,
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    user = get_user_by_email(db, payload.email)
+    if user is not None and user.is_active:
+        issue_password_reset_token(db, user_id=user.id)
+        db.commit()
+    return MessageResponse(
+        message="If the account exists, a password reset email will be sent."
+    )
+
+
+@router.post("/password-reset/confirm", response_model=MessageResponse)
+def confirm_password_reset(
+    payload: PasswordResetConfirmRequest,
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    reset_password(
+        db,
+        raw_token=payload.token,
+        new_password=payload.new_password,
+    )
+    return MessageResponse(message="Password reset completed.")
 @router.post("/refresh", response_model=TokenResponse)
 def refresh(
     response: Response,
