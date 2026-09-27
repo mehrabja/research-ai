@@ -301,11 +301,66 @@ def update_workspace(
     return ws
 
 
+
+
+def suspend_workspace(
+    db: Session,
+    *,
+    workspace_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+) -> Workspace:
+    """Suspend an active workspace. Owner-only lifecycle operation."""
+    from app.core.exceptions import (
+        WorkspaceLifecycleForbidden,
+        WorkspaceLifecycleInvalid,
+    )
+
+    ws, role = get_workspace_for_user(
+        db,
+        workspace_id=workspace_id,
+        user_id=actor_user_id,
+    )
+    if role != ROLE_OWNER:
+        raise WorkspaceLifecycleForbidden()
+    if ws.status != WORKSPACE_STATUS_ACTIVE:
+        raise WorkspaceLifecycleInvalid()
+    ws.status = WORKSPACE_STATUS_SUSPENDED
+    db.flush()
+    return ws
+
+
+def reactivate_workspace(
+    db: Session,
+    *,
+    workspace_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+) -> Workspace:
+    """Reactivate a suspended workspace. Owner-only lifecycle operation."""
+    from app.core.exceptions import (
+        WorkspaceLifecycleForbidden,
+        WorkspaceLifecycleInvalid,
+    )
+
+    ws, role = get_workspace_for_user(
+        db,
+        workspace_id=workspace_id,
+        user_id=actor_user_id,
+    )
+    if role != ROLE_OWNER:
+        raise WorkspaceLifecycleForbidden()
+    if ws.status != WORKSPACE_STATUS_SUSPENDED:
+        raise WorkspaceLifecycleInvalid()
+    ws.status = WORKSPACE_STATUS_ACTIVE
+    db.flush()
+    return ws
+
 __all__ = [
     "create_workspace",
     "ensure_default_workspace",
     "get_default_workspace_for_user",
     "get_workspace_for_user",
     "list_workspaces_for_user",
+    "reactivate_workspace",
+    "suspend_workspace",
     "update_workspace",
 ]
