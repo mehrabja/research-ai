@@ -107,6 +107,18 @@ class LocalStorageProvider(StorageProvider):
 
 def get_storage_provider() -> StorageProvider:
     settings = get_settings()
+    if settings.file_storage_backend == "s3":
+        from app.integrations.storage.s3 import S3StorageProvider
+
+        return S3StorageProvider(
+            bucket=settings.file_storage_s3_bucket,
+            region=settings.file_storage_s3_region,
+            access_key_id=settings.file_storage_s3_access_key_id,
+            secret_access_key=settings.file_storage_s3_secret_access_key,
+            endpoint_url=settings.file_storage_s3_endpoint_url or None,
+            prefix=settings.file_storage_s3_prefix,
+            signed_url_expire_seconds=settings.file_storage_s3_signed_url_expire_seconds,
+        )
     root = Path(settings.file_storage_local_root)
     if not root.is_absolute():
         root = REPO_ROOT / "apps" / "api" / root
