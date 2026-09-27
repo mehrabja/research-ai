@@ -29,7 +29,6 @@ class TranslationInputTooLargeError(ProviderInputTooLargeError, TranslationProvi
 
 @dataclass(frozen=True)
 class TranslationProviderResult:
-class TranslationProviderResult:
     translated_text: str
     provider: str
     model: str
