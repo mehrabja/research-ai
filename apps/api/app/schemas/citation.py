@@ -140,3 +140,17 @@ class CitationValidationRead(BaseModel):
     validation_status: str
     validation_errors: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+
+
+class EvidenceMatrixRow(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    claim: ClaimRead
+    evidence: list[ClaimEvidenceRead] = Field(default_factory=list)
+    citations: list[ClaimCitationRead] = Field(default_factory=list)
+
+
+class EvidenceMatrixRead(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    report_id: uuid.UUID
+    citation_run_id: uuid.UUID
+    rows: list[EvidenceMatrixRow] = Field(default_factory=list)
