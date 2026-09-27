@@ -3,10 +3,16 @@ from __future__ import annotations
 
 from typing import Protocol
 
+
 from app.domain.generation import GenerationProviderResult
+from app.integrations.base import ProviderError
+from app.integrations.base import ProviderRetryableError, ProviderAuthenticationError, ProviderInvalidRequestError, ProviderInvalidResponseError, ProviderInputTooLargeError
 
 
-class GenerationProviderError(Exception):
+from app.integrations.base import ProviderError, ProviderRetryableError, ProviderAuthenticationError, ProviderInvalidRequestError, ProviderInvalidResponseError, ProviderInputTooLargeError
+
+
+class GenerationProviderError(ProviderError):
     """Base for provider failures."""
 
 
