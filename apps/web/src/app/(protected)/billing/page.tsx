@@ -1,3 +1,4 @@
+"use client";
 import { useWorkspace } from "@/components/app-shell";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
