@@ -3,20 +3,15 @@ from __future__ import annotations
 
 from typing import Protocol
 
-
-
-
-
-
-
-
-
 from app.domain.generation import GenerationProviderResult
-from app.integrations.base import ProviderError
-from app.integrations.base import ProviderRetryableError, ProviderAuthenticationError, ProviderInvalidRequestError, ProviderInvalidResponseError, ProviderInputTooLargeError
-
-
-from app.integrations.base import ProviderError, ProviderRetryableError, ProviderAuthenticationError, ProviderInvalidRequestError, ProviderInvalidResponseError, ProviderInputTooLargeError
+from app.integrations.base import (
+    ProviderAuthenticationError,
+    ProviderError,
+    ProviderInputTooLargeError,
+    ProviderInvalidRequestError,
+    ProviderInvalidResponseError,
+    ProviderRetryableError,
+)
 
 
 class GenerationProviderError(ProviderError):
@@ -35,22 +30,31 @@ class GenerationTimeoutError(GenerationProviderUnavailableError):
     """Retryable (specific timeout)."""
 
 
-class GenerationAuthenticationError(ProviderAuthenticationError, GenerationProviderError):
+class GenerationAuthenticationError(
+    ProviderAuthenticationError, GenerationProviderError
+):
     """Non-retryable."""
 
 
-class GenerationInvalidRequestError(ProviderInvalidRequestError, GenerationProviderError):
+class GenerationInvalidRequestError(
+    ProviderInvalidRequestError, GenerationProviderError
+):
     """Non-retryable."""
 
 
-class GenerationInvalidResponseError(ProviderInvalidResponseError, GenerationProviderError):
+class GenerationInvalidResponseError(
+    ProviderInvalidResponseError, GenerationProviderError
+):
     """Non-retryable."""
 
 
-class GenerationInputTooLargeError(ProviderInputTooLargeError, GenerationProviderError):
+class GenerationInputTooLargeError(
+    ProviderInputTooLargeError, GenerationProviderError
+):
     """Non-retryable."""
 
 
+class GenerationProvider(Protocol):
 class GenerationProvider(Protocol):
     provider_name: str
     model_name: str
