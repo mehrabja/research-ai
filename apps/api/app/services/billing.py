@@ -157,6 +157,7 @@ def transition_status(
         )
     if sub.status == new_status:
         return sub
+    previous_status = sub.status
     sub.status = new_status
     db.flush()
     emit_audit(
