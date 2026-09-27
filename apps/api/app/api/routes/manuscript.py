@@ -21,6 +21,12 @@ from app.db.models.manuscript import (
 )
 from app.db.models.user import User
 from app.db.session import get_db
+from app.schemas.manuscript_draft import (
+    ManuscriptDraftRead,
+    ManuscriptDraftSaveRequest,
+    ManuscriptDraftSaveResponse,
+    ManuscriptSaveVersionRequest,
+)
 from app.schemas.manuscript import (
     ManuscriptCurrentRead,
     ManuscriptGenerateRequest,
@@ -37,6 +43,12 @@ from app.services.manuscript import builder as builder_svc
 from app.services.manuscript import jobs as jobs_svc
 from app.services.manuscript import validation as val_svc
 from app.services.manuscript.ordering import research_order_for_sections
+from app.services.manuscript_drafts import (
+    ManuscriptDraftConflict,
+    autosave as autosave_draft,
+    read_draft,
+    save_version as save_draft_version,
+)
 
 router = APIRouter(prefix="/reports", tags=["manuscript"])
 
@@ -199,6 +211,67 @@ def list_versions(
         items=[ManuscriptVersionRead.model_validate(r) for r in rows],
         total=total, limit=limit, offset=offset,
     )
+
+
+
+@router.get(
+    "/{report_id}/manuscript/draft",
+    response_model=ManuscriptDraftRead,
+)
+def get_manuscript_draft(
+    report_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ManuscriptDraftRead:
+    return ManuscriptDraftRead.model_validate(
+        read_draft(db, report_id=report_id, user_id=current_user.id)
+    )
+
+
+@router.put(
+    "/{report_id}/manuscript/draft/autosave",
+    response_model=ManuscriptDraftSaveResponse,
+)
+def autosave_manuscript(
+    report_id: uuid.UUID,
+    body: ManuscriptDraftSaveRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ManuscriptDraftSaveResponse:
+    try:
+        draft = autosave_draft(
+            db,
+            report_id=report_id,
+            user_id=current_user.id,
+            revision=body.revision,
+            content=body.content,
+            base_version_id=body.base_version_id,
+        )
+    except ManuscriptDraftConflict:
+        raise
+    return ManuscriptDraftSaveResponse(
+        draft=ManuscriptDraftRead.model_validate(draft),
+        saved=True,
+    )
+
+
+@router.post(
+    "/{report_id}/manuscript/save-version",
+    response_model=ManuscriptVersionRead,
+)
+def save_manuscript_version(
+    report_id: uuid.UUID,
+    body: ManuscriptSaveVersionRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ManuscriptVersionRead:
+    version = save_draft_version(
+        db,
+        report_id=report_id,
+        user_id=current_user.id,
+        expected_revision=body.expected_revision,
+    )
+    return ManuscriptVersionRead.model_validate(version)
 
 
 @router.post(
