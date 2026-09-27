@@ -32,6 +32,19 @@ from app.services import memberships as memberships_service
 from app.services.audit import emit_audit
 
 
+def get_billing_provider() -> BillingProvider | None:
+    from app.core.config import get_settings
+    from app.providers.registry import ProviderCapability, resolve_provider
+
+    settings = get_settings()
+    if settings.billing_provider == "none":
+        return None
+    return resolve_provider(
+        capability=ProviderCapability.BILLING,
+        preferred=settings.billing_provider,
+    )
+
+
 class BillingOperationUnavailable(AppError):
     code = "BILLING_OPERATION_UNAVAILABLE"
     status_code = 503
@@ -277,6 +290,7 @@ __all__ = [
     "SubscriptionStateInvalid",
     "cancel_subscription",
     "change_plan",
+    "get_billing_provider",
     "get_live_subscription",
     "mark_billing_event_processed",
     "record_billing_event",
