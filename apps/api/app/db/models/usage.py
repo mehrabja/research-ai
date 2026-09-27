@@ -25,6 +25,9 @@ USAGE_METRICS: tuple[str, ...] = (
     "files_uploaded",
     "storage_bytes",
     "ai_generation_units",
+    "ai_input_tokens",
+    "ai_output_tokens",
+    "embedding_input_tokens",
     "search_requests",
 )
 
