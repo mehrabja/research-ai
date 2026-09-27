@@ -5,9 +5,9 @@ Baseline commit: 106ca1fd2b5b1b86e4e9521ffa9c33f3d8ddfa91
 
 | ID | Gap | Severity | Evidence | Target phase | Status |
 |---|---|---|---|---|---|
-| G-01 | Global provider registry/resolver missing | P0 | generation/embedding profile factories directly instantiate OpenAI | F01 | Missing |
-| G-02 | Universal fallback policy missing | P0 | no resolver/fallback layer found | F01 | Missing |
-| G-03 | Unified provider error contract missing | P1 | separate per-capability error hierarchies | F01 | Partial |
+| G-01 | Global provider registry/resolver missing | P0 | centralized `app/providers/registry.py`; generation/embedding/translation/detection/source factories now resolve through it | F01 | Implemented |
+| G-02 | Universal fallback policy missing | P0 | `PROVIDER_FALLBACKS` routing plus `FallbackProvider` transient-failure chain | F01 | Implemented (additional real providers still required) |
+| G-03 | Unified provider error contract missing | P1 | routing is centralized; capability-specific typed errors remain by design | F01 | Partial |
 | G-04 | Real provider configuration model missing | P0 | config has per-provider fields, no registry policy | F01 | Partial |
 | G-05 | Persistent refresh/session mechanism missing | P0 | only access JWT + BFF cookie | F02 | Missing |
 | G-06 | Password reset missing | P0 | no route/model | F02 | Missing |
