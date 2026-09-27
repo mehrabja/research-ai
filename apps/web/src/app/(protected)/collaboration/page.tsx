@@ -1,0 +1,2 @@
+import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
+export default function CollaborationPage(){return <WorkspaceFeaturePage active="collaboration" title="Collaboration" description="Team membership, invitations, ownership transfer, manuscript branches, comments, and review tasks share the workspace authorization boundary."/>}
