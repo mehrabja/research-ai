@@ -132,7 +132,7 @@ export const api={
   usage:(w:string)=>request<Usage>("workspaces/"+w+"/usage"),
   planSubscription:(w:string)=>request<Plan>("workspaces/"+w+"/plan"),
   billingInvoices:(w:string)=>request<unknown[]>("workspaces/"+w+"/billing/invoices"),
-  billingCheckout:(w:string,plan:string)=>request<{checkout_url:string}>("workspaces/"+w+"/billing/checkout",{method:"POST",body:JSON.stringify({plan})}),
+  billingCheckout:(w:string,planCode:string)=>request<{provider:string;checkout_session_id:string;checkout_url:string}>("workspaces/"+w+"/billing/checkout",{method:"POST",body:JSON.stringify({plan_code:planCode})}),
 
   citations:(r:string)=>request<Citation>("reports/"+r+"/citations/current"),
   qa:(r:string)=>request<QA>("reports/"+r+"/academic-qa/current"),
