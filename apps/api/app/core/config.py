@@ -164,6 +164,9 @@ class Settings(BaseSettings):
     jwt_clock_skew_seconds: int = Field(default=30, ge=0)
     # M39 session/auth cookies
     refresh_token_expire_days: int = Field(default=30, ge=1, le=365)
+    email_verification_expire_minutes: int = Field(default=1440, ge=5, le=10080)
+    password_reset_expire_minutes: int = Field(default=60, ge=5, le=1440)
+    auth_require_email_verification: bool = False
     auth_cookie_secure: bool = True
     auth_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     auth_refresh_cookie_name: str = "research_ai_refresh"
