@@ -15,6 +15,7 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=1, max_length=256)
+    mfa_code: str | None = Field(default=None, min_length=6, max_length=32)
 
 
 class RefreshRequest(BaseModel):
