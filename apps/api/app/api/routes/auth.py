@@ -11,6 +11,7 @@ from app.api.dependencies import get_client_ip, get_current_user
 from app.core.config import get_settings
 from app.core.exceptions import (
     AuthenticationRateLimited,
+    AuthenticationRequired,
     EmailNotVerified,
     InvalidCredentials,
 )
@@ -426,7 +427,6 @@ def _require_csrf(
     csrf_header: str | None,
 ) -> None:
     if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
-        from app.core.exceptions import AuthenticationRequired
         raise AuthenticationRequired("CSRF validation failed.")
 
 
