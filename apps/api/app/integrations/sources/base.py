@@ -1,37 +1,40 @@
-"""Provider-agnostic source discovery contract.
-
-Mirrors the shape of ``app/integrations/detection/base.py`` and
-``app/integrations/generation/base.py``: a small protocol plus a
-typed exception hierarchy. Providers never touch SQLAlchemy.
-"""
+"""Provider-agnostic source discovery contract."""
 from __future__ import annotations
 
 from typing import Protocol
 
 from app.domain.source import SourceCandidate
+from app.integrations.base import (
+    ProviderAuthenticationError,
+    ProviderError,
+    ProviderInvalidResponseError,
+    ProviderRetryableError,
+)
 
 
-class SourceProviderError(Exception):
+class SourceProviderError(ProviderError):
     """Base class for all provider-level source discovery errors."""
 
 
-class SourceProviderTimeoutError(SourceProviderError):
+class SourceProviderTimeoutError(ProviderRetryableError, SourceProviderError):
     """Network timeout or unrecoverable transport failure."""
 
 
-class SourceProviderRateLimitError(SourceProviderError):
+class SourceProviderRateLimitError(ProviderRetryableError, SourceProviderError):
     """Provider signalled rate limiting (HTTP 429)."""
 
 
-class SourceProviderAuthError(SourceProviderError):
+class SourceProviderUnavailableError(ProviderRetryableError, SourceProviderError):
+    """Provider is transiently unavailable."""
+
+
+class SourceProviderAuthError(ProviderAuthenticationError, SourceProviderError):
     """Missing or invalid credentials (HTTP 401/403)."""
 
 
-class SourceProviderUnavailableError(SourceProviderError):
-    """Provider is transiently unavailable (5xx / repeated network error)."""
-
-
-class SourceProviderInvalidResponseError(SourceProviderError):
+class SourceProviderInvalidResponseError(
+    ProviderInvalidResponseError, SourceProviderError
+):
     """Response did not match the expected schema."""
 
 
@@ -50,6 +53,15 @@ class SourceSearchProvider(Protocol):
     ) -> list[SourceCandidate]: ...
 
 
+__all__ = [
+    "SourceProviderAuthError",
+    "SourceProviderError",
+    "SourceProviderInvalidResponseError",
+    "SourceProviderRateLimitError",
+    "SourceProviderTimeoutError",
+    "SourceProviderUnavailableError",
+    "SourceSearchProvider",
+]
 __all__ = [
     "SourceProviderAuthError",
     "SourceProviderError",
