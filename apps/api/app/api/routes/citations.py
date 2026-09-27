@@ -24,6 +24,8 @@ from app.schemas.citation import (
     BibliographyEntryRead,
     BibliographyRead,
     CitationCurrentRead,
+    ClaimCitationRead,
+    ClaimEvidenceRead,
     EvidenceMatrixRead,
     EvidenceMatrixRow,
     CitationGenerateRequest,
@@ -203,11 +205,11 @@ def get_evidence_matrix(
             EvidenceMatrixRow(
                 claim=claim,
                 evidence=[
-                    __import__("app.schemas.citation", fromlist=["ClaimEvidenceRead"]).ClaimEvidenceRead.model_validate(e)
+                    ClaimEvidenceRead.model_validate(e)
                     for e in evidence_by_claim.get(claim.id, [])
                 ],
                 citations=[
-                    __import__("app.schemas.citation", fromlist=["ClaimCitationRead"]).ClaimCitationRead.model_validate(cc)
+                    ClaimCitationRead.model_validate(cc)
                     for cc in citation_by_claim.get(claim.id, [])
                 ],
             )
