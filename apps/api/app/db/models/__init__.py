@@ -113,6 +113,7 @@ from app.db.models.research_memory import (
     ResearchMemory,
     ResearchMemoryLink,
 )
+from app.db.models.session import UserSession
 from app.db.models.research_plan import (
     ResearchEvidenceRequirement,
     ResearchPlan,
@@ -252,4 +253,5 @@ __all__ = [
     "Workspace",
     "WorkspaceInvitation",
     "WorkspaceMembership",
+    "UserSession",
 ]
