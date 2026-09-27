@@ -194,7 +194,7 @@ def login(
     )
 
     return TokenResponse(
-        access_token=create_access_token(subject=str(user.id)),
+        access_token=create_access_token(subject=str(user.id), session_id=str(session.id)),
         token_type="bearer",
         session_id=session.id,
     )
@@ -308,7 +308,7 @@ def refresh(
         csrf_token=csrf_token,
     )
     return TokenResponse(
-        access_token=create_access_token(subject=str(session.user_id)),
+        access_token=create_access_token(subject=str(session.user_id), session_id=str(session.id)),
         token_type="bearer",
         session_id=session.id,
     )
@@ -377,12 +377,23 @@ def delete_session(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def revoke_others(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> None:
+    session_id = None
+    if credentials is not None:
+        try:
+            payload = decode_access_token(credentials.credentials)
+            sid = payload.get("sid")
+            if isinstance(sid, str) and sid:
+                session_id = uuid.UUID(sid)
+        except (jwt.PyJWTError, ValueError, TypeError):
+            session_id = None
     revoke_all_other_sessions(
         db,
         user_id=current_user.id,
+        except_session_id=session_id,
     )
     db.commit()
 
@@ -424,7 +435,7 @@ def oauth_callback(
         csrf_token=new_csrf_token(),
     )
     return TokenResponse(
-        access_token=create_access_token(subject=str(user.id)),
+        access_token=create_access_token(subject=str(user.id), session_id=str(session_id)),
         token_type="bearer",
         session_id=session_id,
     )
