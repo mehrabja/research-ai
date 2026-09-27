@@ -50,6 +50,12 @@ def create_checkout(
     if role != "owner":
         raise HTTPException(status_code=403, detail="billing owner required")
 
+    plan = db.execute(
+        select(Plan).where(Plan.code == body.plan_code)
+    ).scalar_one_or_none()
+    if plan is None:
+        raise billing_service.PlanNotFound()
+
     sub = billing_service.require_live_subscription(
         db, workspace_id=workspace_id
     )
