@@ -1,0 +1,2 @@
+import { WorkspaceFeaturePage } from "@/components/workspace-feature-page";
+export default function HumanReviewPage(){return <WorkspaceFeaturePage active="human-review" title="Human Review" description="Review checkpoints, approval state, comments, and downstream release gates are kept in the collaboration and review APIs."/>}
