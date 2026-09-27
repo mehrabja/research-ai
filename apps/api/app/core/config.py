@@ -154,6 +154,7 @@ class Settings(BaseSettings):
     email_provider: Literal["none", "resend"] = "none"
     email_from: str = ""
     email_reply_to: str = ""
+    web_app_base_url: str = "http://localhost:3000"
     stripe_secret_key: str = Field(default="", repr=False)
     stripe_webhook_secret: str = Field(default="", repr=False)
     stripe_publishable_key: str = ""
