@@ -15,6 +15,7 @@ from app.core.exceptions import (
     NoEvidenceAvailableError,
 )
 from app.db.models.pipeline import GenerationRun
+from app.db.models.project import Project
 from app.db.models.report import Report
 from app.domain.generation import (
     AttemptState,
@@ -41,6 +42,8 @@ from app.integrations.generation.base import (
 )
 from app.services import report_status as report_status_service
 from app.services import report_versions as report_versions_service
+from app.services.ai_metering import execute_metered_provider_call
+from app.services.usage import record_event
 from app.services import retrieval as retrieval_service
 from app.services.embedding_profile import (
     build_embedding_provider,
@@ -207,6 +210,7 @@ def generate_report(
             user_id=user_id,
             report_id=report_id,
             profile_id=profile_id,
+            workspace_id=workspace_id,
         )
         db.commit()
         attempt_run = cast(Any, lease.run)
@@ -220,6 +224,16 @@ def generate_report(
         raise GenerationAlreadySucceeded()
 
     report = _load_report(db, user_id, report_id)
+    project = db.get(Project, report.project_id) if report.project_id else None
+    if project is not None:
+        workspace_id = project.workspace_id
+    else:
+        from app.services.workspaces import get_default_workspace_for_user
+        workspace = get_default_workspace_for_user(db, user_id=user_id)
+        if workspace is None:
+            raise RuntimeError("generation report has no workspace context")
+        workspace_id = workspace.id
+
     embedding_profile = get_current_embedding_profile()
     embedding_provider = build_embedding_provider(embedding_profile)
     retrieved, _coverage = retrieval_service.retrieve(
@@ -276,11 +290,24 @@ def generate_report(
     )
 
     try:
-        provider_result: GenerationProviderResult = provider.generate(
-            system_prompt=context.system_prompt,
-            user_prompt=context.user_prompt,
-            temperature=profile.temperature,
-            max_output_tokens=profile.max_output_tokens,
+        provider_result: GenerationProviderResult = execute_metered_provider_call(
+            lambda: provider.generate(
+                system_prompt=context.system_prompt,
+                user_prompt=context.user_prompt,
+                temperature=profile.temperature,
+                max_output_tokens=profile.max_output_tokens,
+            ),
+            workspace_id=workspace_id,
+            user_id=user_id,
+            operation="report.generate.provider_call",
+            capability="generation",
+            provider=provider,
+            model=profile.model,
+            project_id=report.project_id,
+            report_id=report_id,
+            job_id=job_id,
+            input_units=lambda result: result.input_tokens,
+            output_units=lambda result: result.output_tokens,
         )
         cited = validate_generation_output(
             text=provider_result.text, evidence=evidence
@@ -335,6 +362,7 @@ def _persist_success_atomic(
     provider_result: GenerationProviderResult,
     cited: tuple[str, ...],
     profile_id: str,
+    workspace_id: uuid.UUID,
 ) -> None:
     marker_map = context.evidence.marker_map()
     claims_evidence = [
@@ -366,6 +394,19 @@ def _persist_success_atomic(
         "cited_markers": list(cited),
         "claims_evidence": claims_evidence,
     }
+
+    record_event(
+        db,
+        workspace_id=workspace_id,
+        metric="ai_generation_units",
+        quantity=1,
+        user_id=user_id,
+        source_type="provider_call",
+        source_id=report_id,
+        usage_class="internal",
+        idempotency_key=f"report.generate:internal:{job_id}",
+        metadata={"operation": "report.generate.provider_call"},
+    )
 
     try:
         updated_id = db.execute(
