@@ -61,68 +61,37 @@ function useCtx(){const ws=useWorkspace();const projects=useQuery({queryKey:["pr
 function Dashboard(){const {ws,projects}=useCtx();const s=useQuery({queryKey:["dashboard",ws.workspaceId],queryFn:()=>api.dashboard(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});return <><Head route="dashboard" actions={<><Link className="btn" href="/team">Invite teammate</Link><Link className="btn primary" href="/workspace">Open workspace</Link></>}/><div className="grid grid-4"><Metric label="Active projects" value={s.data?.active_projects}/><Metric label="Saved sources" value={s.data?.saved_sources}/><Metric label="Evidence items" value={s.data?.evidence_items}/><Metric label="AI generation units" value={s.data?.ai_generation_units}/></div><Card style={{marginTop:16}}><h3>Projects</h3><Table data={(projects.data?.items??[]) as unknown as Obj[]}/></Card></>}
 function Metric({label,value:v}:{label:string;value:unknown}){return <div className="card metric"><div className="label">{label}</div><div className="value">{v??"—"}</div><div className="delta">Backend source of truth</div></div>}
 
-function Research(){const {ws}=useCtx();const p=useSearchParams();const [q,setQ]=useState(p.get("q")??"");const r=useQuery({queryKey:["search",ws.workspaceId,q],queryFn:()=>api.globalSearch(q,ws.workspaceId!),enabled:Boolean(q.trim()&&ws.workspaceId)});return <><Head route="research"/><Card><div className="field"><label>Global search</label><input className="input" value={q} onChange={e=>setQ(e.target.value)} placeholder="papers, projects, evidence…"/></div></Card><Card style={{marginTop:16}}><h3>Results</h3>{q?<Table data={rows(r.data?.items)}/>:<State title="Start a search" description="Results are fetched from the current workspace only."/>}</Card></>}
-
-function Generic({route}:{route:string}){const {projectId,reportId,ws}=useCtx();const q=useQuery({queryKey:["page",route,projectId,reportId],queryFn:async()=>{switch(route){case "sources":return reportId?api.sources(reportId):[];case "literature":return projectId?api.literature(projectId):{};case "evidence":return reportId?api.evidenceMatrix(reportId):[];case "knowledge":return projectId?api.knowledgeGraph(projectId):{};case "files":return projectId?api.files(projectId):[];case "plan":return projectId?api.plan(projectId):{};case "manuscript":return reportId?api.manuscript(reportId):{};case "collaboration":return ws.workspaceId?api.members(ws.workspaceId):{};case "team":return ws.workspaceId?api.members(ws.workspaceId):{};default:return {route};}},enabled:Boolean(projectId||reportId||ws.workspaceId)});return <><Head route={route}/><Card>{q.isError?<State title="API request failed" description="The backend returned an error for this capability." error/>:<>{rows(q.data).length>0?<Table data={rows(q.data)}/>:<pre className="code" style={{whiteSpace:"pre-wrap",fontSize:11}}>{JSON.stringify(q.data??{status:"waiting",route},null,2)}</pre>}</>}</Card></>}
-
-function Knowledge(){const {projectId}=useCtx();const q=useQuery({queryKey:["kg",projectId],queryFn:()=>api.knowledgeGraph(projectId!),enabled:Boolean(projectId)});const ex=useMutation({mutationFn:(f:"json"|"csv")=>api.knowledgeGraphExport(projectId!,f)});return <><Head route="knowledge" actions={<><button className="btn" disabled={!projectId||ex.isPending} onClick={()=>ex.mutate("json")}>Export JSON</button><button className="btn" disabled={!projectId||ex.isPending} onClick={()=>ex.mutate("csv")}>Export CSV</button></>}/><Card><div className="graph">{rows((q.data as Obj|null)?.nodes).slice(0,18).map((n,i)=><div key={i} className={"node"+(i===0?" main":"")} style={{left:(8+(i*17)%82)+"%",top:(12+(i*23)%76)+"%"}}>{value(n.label??n.name)}</div>)}</div><pre className="code" style={{whiteSpace:"pre-wrap",fontSize:11,marginTop:14}}>{JSON.stringify(q.data??{},null,2)}</pre></Card></>}
-function Files(){
-  const {projectId}=useCtx();
-  const files=useQuery({queryKey:["files",projectId],queryFn:()=>api.files(projectId!),enabled:Boolean(projectId),refetchInterval:5000});
-  const folders=useQuery({queryKey:["folders",projectId],queryFn:()=>api.folders(projectId!),enabled:Boolean(projectId)});
-  const qc=useQueryClient();
-  const [folderId,setFolderId]=useState("");
-  const [uploading,setUploading]=useState(false);
-  const [error,setError]=useState("");
-  async function upload(file:File){
-    if(!projectId)return;
-    setError("");setUploading(true);
-    try{
-      await api.uploadFile(projectId,file,folderId||undefined);
-      await qc.invalidateQueries({queryKey:["files",projectId]});
-    }catch(e){setError(e instanceof Error?e.message:"Upload failed.");}
-    finally{setUploading(false);}
-  }
-  return <><Head route="files"/>
+function Research(){
+  const {ws,reportId}=useCtx();
+  const p=useSearchParams();
+  const [q,setQ]=useState(p.get("q")??"");
+  const [year,setYear]=useState("");
+  const [openAccess,setOpenAccess]=useState(false);
+  const search=useQuery({
+    queryKey:["source-discovery",reportId,q,year,openAccess],
+    queryFn:()=>api.searchSources(reportId!,q,year?Number(year):undefined,openAccess),
+    enabled:Boolean(reportId&&q.trim()),
+  });
+  const save=useMutation({mutationFn:(item:unknown)=>api.createSource(reportId!,item as SourceCandidate)});
+  const global=useQuery({
+    queryKey:["global-search",ws.workspaceId,q],
+    queryFn:()=>api.globalSearch(q,ws.workspaceId!),
+    enabled:Boolean(ws.workspaceId&&q.trim()&&!reportId),
+  });
+  return <><Head route="research"/>
     <div className="grid grid-3">
-      <Card><h3>Folders</h3>{rows(folders.data).map(f=><div className="list-item" key={value(f.id)}><div className="row"><span className="title">{value(f.name)}</span><span className="tag">{value(f.id).slice(0,8)}</span></div></div>)}</Card>
-      <Card><h3>Upload</h3><div className="field"><label>Destination folder</label><select className="input" value={folderId} onChange={e=>setFolderId(e.target.value)}><option value="">Project root</option>{rows(folders.data).map(f=><option key={value(f.id)} value={value(f.id)}>{value(f.name)}</option>)}</select></div><label className="dropzone" style={{display:"grid",placeItems:"center",minHeight:150,marginTop:12,cursor:projectId?"pointer":"not-allowed"}}><input type="file" hidden disabled={!projectId||uploading} onChange={e=>{const f=e.target.files?.[0];if(f)void upload(f)}}/><div style={{textAlign:"center"}}><div className="strong">{uploading?"Uploading…":"Drop or choose a file"}</div><div className="muted tiny" style={{marginTop:6}}>Backend validates size, MIME and project authorization.</div></div></label>{error&&<div className="notice error" style={{marginTop:10}}>{error}</div>}</Card>
-      <Card><h3>Intelligence</h3><p className="muted small" style={{lineHeight:1.6}}>Extraction, indexing, classification, code analysis and data profiling run through the durable job pipeline.</p></Card>
+      <Card><div className="field"><label>Research query</label><input className="input" value={q} onChange={e=>setQ(e.target.value)} placeholder="topic, DOI, title, author…"/></div></Card>
+      <Card><div className="field"><label>Year</label><input className="input" inputMode="numeric" value={year} onChange={e=>setYear(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="2024"/></div></Card>
+      <Card><label className="checkbox"><input type="checkbox" checked={openAccess} onChange={e=>setOpenAccess(e.target.checked)}/><span><b>Open access only</b><br/><span className="muted tiny">Applied only where the research provider supports it.</span></span></label></Card>
     </div>
-    <Card style={{marginTop:16}}><h3>Project files</h3><div style={{marginTop:10}}><Table data={files.data?.items??[]}/></div>{files.data?.items.length===0&&!files.isPending&&<State title="No files" description="Upload a PDF, DOCX, TXT, CSV, ZIP or supported project file to begin intelligence processing."/>}</Card>
+    <Card style={{marginTop:16}}><div className="row"><div><h3>Discovery results</h3><div className="muted small">{reportId?"Semantic Scholar-backed source discovery for the active report.":"Workspace global search."}</div></div><span className="tag">{search.data?.candidates?.length??global.data?.total??0} results</span></div>
+      {reportId&&<div className="list" style={{marginTop:10}}>{search.data?.candidates?.map((item,index)=><div className="list-item" key={item.external_source_id??index}><div className="row"><div><div className="title">{item.title}</div><div className="meta">{item.year??"Year unknown"} · {item.doi??item.url??"No DOI/URL"}</div></div><button className="btn" disabled={save.isPending} onClick={()=>save.mutate(item)}>Save source</button></div></div>)}{q&&!search.isPending&&(search.data?.candidates?.length??0)===0&&<State title="No provider results" description="The source provider returned no candidate for this query/filter set."/>}</div>}
+      {!reportId&&q&&<Table data={rows(global.data?.items)}/>}
+      {!q&&<State title="Start with a research query" description="Search the current report's literature or the workspace index."/>}
+    </Card>
   </>;
 }
 
-function Plan(){const {projectId}=useCtx();const q=useQuery({queryKey:["plan",projectId],queryFn:()=>api.plan(projectId!),enabled:Boolean(projectId)});const v=useQuery({queryKey:["plan-v",projectId],queryFn:()=>api.planVersions(projectId!),enabled:Boolean(projectId)});const val=useMutation({mutationFn:()=>api.validatePlan(projectId!)});return <><Head route="plan" actions={<button className="btn primary" disabled={!projectId||val.isPending} onClick={()=>val.mutate()}>{val.isPending?"Validating…":"Validate plan"}</button>}/><div className="grid grid-2"><Card><h3>Current plan</h3><pre className="code" style={{whiteSpace:"pre-wrap",fontSize:11}}>{JSON.stringify(q.data??{},null,2)}</pre></Card><Card><h3>Versions</h3><pre className="code" style={{whiteSpace:"pre-wrap",fontSize:11}}>{JSON.stringify(v.data??{},null,2)}</pre>{val.data&&<div className="notice" style={{marginTop:12}}>{JSON.stringify(val.data)}</div>}</Card></div></>}
-function Manuscript(){const {reportId}=useCtx();const q=useQuery({queryKey:["manuscript",reportId],queryFn:()=>api.manuscript(reportId!),enabled:Boolean(reportId)});return <><Head route="manuscript" actions={<Link className="btn" href="/collaboration">Review</Link>}/><div className="editor"><div className="title">{value((q.data as unknown as Obj|null)?.title,"Untitled manuscript")}</div><p>{value((q.data as unknown as Obj|null)?.abstract,"No current manuscript content is available.")}</p><div className="notice" style={{marginTop:18}}>Autosave API is available and revision-aware. Content is never replaced without a version contract.</div></div></>}
-function Generate(){const {reportId}=useCtx();const [brief,setBrief]=useState("");const m=useMutation({mutationFn:()=>api.enqueueJob("generate_report",{report_id:reportId},reportId)});return <><Head route="generate"/><div className="grid grid-2"><Card><div className="field"><label>Generation brief</label><textarea className="input textarea" value={brief} onChange={e=>setBrief(e.target.value)} placeholder="Describe what should be generated…"/></div><div className="actions" style={{marginTop:12}}><span className="tag primary">Evidence grounded</span><span className="tag">Durable job</span></div><button className="btn primary" style={{marginTop:14}} disabled={!reportId||m.isPending} onClick={()=>m.mutate()}>{m.isPending?"Queueing…":"Queue generation"}</button></Card><Card><h3>Context</h3><div className="notice">{reportId?"Report "+reportId:"Select a report before generating."}</div></Card></div></>}
-function Humanize(){
-  const {reportId}=useCtx();
-  const [versionId,setVersionId]=useState("");
-  const [detectionRunId,setDetectionRunId]=useState("");
-  const [policyVersion,setPolicyVersion]=useState("");
-  const m=useMutation({mutationFn:()=>api.humanize(reportId!,{
-    version_id:versionId,
-    detection_run_id:detectionRunId,
-    ...(policyVersion.trim()?{policy_version:policyVersion.trim()}:{})
-  })});
-  return <><Head route="humanize"/><div className="grid grid-2">
-    <Card><h3>Source version</h3><p className="muted small">Use an approved report version plus its completed detection run. The backend preserves citations, URLs, DOIs, numbers and evidence markers.</p>
-      <div className="field" style={{marginTop:14}}><label>Version UUID</label><input className="input" value={versionId} onChange={e=>setVersionId(e.target.value)} placeholder="Report version UUID"/></div>
-      <div className="field" style={{marginTop:12}}><label>Detection run UUID</label><input className="input" value={detectionRunId} onChange={e=>setDetectionRunId(e.target.value)} placeholder="Detection run UUID"/></div>
-      <div className="field" style={{marginTop:12}}><label>Policy version <span className="muted tiny">optional</span></label><input className="input" value={policyVersion} onChange={e=>setPolicyVersion(e.target.value)} placeholder="Current policy"/></div>
-      <button className="btn primary" style={{marginTop:14}} disabled={!reportId||!versionId||!detectionRunId||m.isPending} onClick={()=>m.mutate()}>{m.isPending?"Queueing…":"Queue humanization"}</button>
-      {m.isError&&<div className="notice error" style={{marginTop:12}}>Humanization request failed. Check the version and detection run belong to this report.</div>}
-      {m.data&&<div className="notice success" style={{marginTop:12}}>Job queued: {text((m.data as Obj).job_id)}</div>}
-    </Card>
-    <Card><h3>Preservation contract</h3><div className="stack" style={{marginTop:12}}>
-      {["Evidence markers","URLs and DOIs","Numbers","Terminology","Factual meaning"].map(x=><div className="row" key={x}><span>{x}</span><span className="tag success">Protected</span></div>)}
-    </div></Card>
-  </div></>;
-}
-
-function Translate(){const {reportId}=useCtx();const [version,setVersion]=useState("");const [lang,setLang]=useState("fa");const m=useMutation({mutationFn:()=>api.translate(reportId!,{source_version_id:version,target_language:lang})});return <><Head route="translate"/><Card><div className="grid grid-3"><div className="field"><label>Approved source version</label><input className="input" value={version} onChange={e=>setVersion(e.target.value)} placeholder="UUID"/></div><div className="field"><label>Target</label><select className="input" value={lang} onChange={e=>setLang(e.target.value)}><option value="fa">Persian</option><option value="en">English</option><option value="de">German</option></select></div><div className="actions" style={{alignItems:"end"}}><button className="btn primary" disabled={!reportId||!version||m.isPending} onClick={()=>m.mutate()}>{m.isPending?"Queueing…":"Translate"}</button></div></div></Card></>}
-function Collaboration(){const {ws}=useCtx();const q=useQuery({queryKey:["members",ws.workspaceId],queryFn:()=>api.members(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});return <><Head route="collaboration" actions={<Link className="btn" href="/team">Team</Link>}/><Card><h3>Members</h3><Table data={rows(q.data?.items)}/></Card></>}
 function Notifications(){
   const {ws}=useCtx();
   const qc=useQueryClient();
