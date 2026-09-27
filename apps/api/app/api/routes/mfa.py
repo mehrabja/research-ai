@@ -38,7 +38,7 @@ def setup_mfa(
         raise MFAAlreadyEnabled()
     secret = mfa_service.generate_secret()
     codes = mfa_service.generate_recovery_codes()
-    current_user.mfa_secret = secret
+    current_user.mfa_secret = mfa_service.encrypt_secret(secret)
     current_user.mfa_recovery_code_hashes = mfa_service.hash_recovery_codes(codes)
     db.commit()
     return MFASetupResponse(
