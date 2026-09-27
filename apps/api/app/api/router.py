@@ -5,6 +5,7 @@ from fastapi import APIRouter
 
 from app.api.routes.academic_qa import router as academic_qa_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.billing import router as billing_router
 from app.api.routes.citations import router as citations_router
 from app.api.routes.classification import (
     router as classification_router,
@@ -12,9 +13,9 @@ from app.api.routes.classification import (
 from app.api.routes.collaboration import (
     router as collaboration_router,
 )
+from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.detection import router as detection_router
 from app.api.routes.embeddings import router as embeddings_router
-from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.evidence import router as evidence_router
 from app.api.routes.file_folders import router as file_folders_router
 from app.api.routes.files import files_router
@@ -32,8 +33,8 @@ from app.api.routes.manuscript import router as manuscript_router
 from app.api.routes.manuscript_humanization import (
     router as manuscript_humanization_router,
 )
-from app.api.routes.notifications import router as notifications_router
 from app.api.routes.manuscript_prose import (
+
     router as manuscript_prose_router,
 )
 from app.api.routes.orchestration import (
@@ -50,7 +51,6 @@ from app.api.routes.research_plan import (
     router as research_plan_router,
 )
 from app.api.routes.reviews import router as reviews_router
-from app.api.routes.billing import router as billing_router
 from app.api.routes.search import router as search_router
 from app.api.routes.section_research import (
     router as section_research_router,
@@ -104,4 +104,5 @@ api_router.include_router(search_router)
 api_router.include_router(billing_router)
 
 api_router.include_router(evidence_router)
-\napi_router.include_router(dashboard_router)\n
+
+api_router.include_router(dashboard_router)
