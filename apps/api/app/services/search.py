@@ -154,6 +154,7 @@ def search_workspace(
             operation="workspace_search",
             provider="database",
             model=None,
+            metric="search_requests",
             units=1,
             metadata={"query_length": len(q), "result_count": len(items)},
         ),
