@@ -246,6 +246,14 @@ def build_default_registry() -> ProviderRegistry:
             timeout_seconds=settings.semantic_scholar_timeout_seconds,
         )
 
+    def openalex_factory(ctx: ProviderContext) -> Any:
+        from app.integrations.sources.openalex import OpenAlexProvider
+        return OpenAlexProvider()
+
+    def crossref_factory(ctx: ProviderContext) -> Any:
+        from app.integrations.sources.crossref import CrossrefProvider
+        return CrossrefProvider()
+
     def billing_factory(ctx: ProviderContext) -> Any:
         from app.billing.fake import FakeBillingProvider
         return FakeBillingProvider()
@@ -292,6 +300,16 @@ def build_default_registry() -> ProviderRegistry:
         capability=ProviderCapability.SOURCE_DISCOVERY,
         name="semantic_scholar",
         factory=source_factory,
+    )
+    registry.register(
+        capability=ProviderCapability.SOURCE_DISCOVERY,
+        name="openalex",
+        factory=openalex_factory,
+    )
+    registry.register(
+        capability=ProviderCapability.SOURCE_DISCOVERY,
+        name="crossref",
+        factory=crossref_factory,
     )
     registry.register(
         capability=ProviderCapability.BILLING,
