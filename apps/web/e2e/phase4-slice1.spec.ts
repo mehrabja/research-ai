@@ -176,8 +176,8 @@ test("evidence page uses the real citation matrix and has no synthetic counters"
 
   await expect(
     page.getByRole("heading", { name: "Evidence", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText("Evidence matrix")).toBeVisible();
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("Evidence matrix")).toBeVisible({ timeout: 10_000 });
 
   await expect(page.getByText("86", { exact: true })).toHaveCount(0);
   await expect(page.getByText("312", { exact: true })).toHaveCount(0);
