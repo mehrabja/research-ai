@@ -95,3 +95,40 @@ function getApiErrorMessage(error: unknown): string {
   }
   return "Translation review API request failed";
 }
+
+
+export interface CurrentTranslation {
+  run_id: string;
+  translation_version_id: string;
+  source_version_id: string | null;
+  source_lang: string;
+  target_lang: string;
+  provider: string;
+  status: string;
+  completed_at: string | null;
+  content: string;
+  preservation_check_status: string;
+  preservation_details: Record<string, unknown> | null;
+}
+
+export async function getCurrentTranslation(
+  reportId: string,
+): Promise<CurrentTranslation | null> {
+  const response = await fetch(
+    `/api/v1/reports/${reportId}/translation/current`,
+    { credentials: "include", cache: "no-store" },
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(await getFetchErrorMessage(response));
+  return (await response.json()) as CurrentTranslation;
+}
+
+async function getFetchErrorMessage(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { detail?: unknown };
+    if (typeof body.detail === "string") return body.detail;
+  } catch {
+    // Fall through to the generic status message.
+  }
+  return `Translation request failed (${response.status})`;
+}
