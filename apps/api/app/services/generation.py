@@ -405,27 +405,26 @@ def _persist_success_atomic(
             select(Report.project_id).where(Report.id == report_id)
         ).scalar_one_or_none()
         project = db.get(Project, project_id) if project_id is not None else None
-        if project is None:
-            raise InvalidJobStateError("report project not found")
         total_tokens = (provider_result.total_tokens or 0)
-        record_provider_usage(
-            db,
-            workspace_id=project.workspace_id,
-            user_id=user_id,
-            source_id=None,
-            usage=ProviderUsage(
-                capability="generation",
-                operation="report_generation",
-                provider=provider_result.provider,
-                model=provider_result.model,
-                input_tokens=provider_result.input_tokens or 0,
-                output_tokens=provider_result.output_tokens or 0,
-                units=max(1, total_tokens),
-                request_id=getattr(provider_result, "request_id", None),
-                metadata={"report_id": str(report_id)},
-            ),
-            idempotency_key=f"generation:{attempt_id}:provider_call",
-        )
+        if project is not None:
+            record_provider_usage(
+                db,
+                workspace_id=project.workspace_id,
+                user_id=user_id,
+                source_id=None,
+                usage=ProviderUsage(
+                    capability="generation",
+                    operation="report_generation",
+                    provider=provider_result.provider,
+                    model=provider_result.model,
+                    input_tokens=provider_result.input_tokens or 0,
+                    output_tokens=provider_result.output_tokens or 0,
+                    units=max(1, total_tokens),
+                    request_id=getattr(provider_result, "request_id", None),
+                    metadata={"report_id": str(report_id)},
+                ),
+                idempotency_key=f"generation:{attempt_id}:provider_call",
+            )
 
         from app.db.models.ops import UsageLog
         db.add(

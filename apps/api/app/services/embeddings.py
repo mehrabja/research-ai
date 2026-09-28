@@ -494,27 +494,25 @@ def _persist_batch_atomic(
             .where(Report.id == report_id)
         ).scalar_one_or_none()
         project = db.get(Project, project_id) if project_id is not None else None
-        if project is None:
-            raise EmbeddingConfigurationError("report project not found")
-
-        record_provider_usage(
-            db,
-            workspace_id=project.workspace_id,
-            user_id=user_id,
-            source_id=source_id,
-            usage=ProviderUsage(
-                capability="embedding",
-                operation="source_embedding_batch",
-                provider=profile.provider,
-                model=profile.model,
-                input_tokens=input_tokens,
-                output_tokens=0,
-                units=max(1, input_tokens),
-                provider_request_id=provider_request_id,
-                metadata={"batch_size": len(batch), "profile_id": profile_id},
-            ),
-            idempotency_key=f"embedding-provider:{idempotency_key}",
-        )
+        if project is not None:
+            record_provider_usage(
+                db,
+                workspace_id=project.workspace_id,
+                user_id=user_id,
+                source_id=source_id,
+                usage=ProviderUsage(
+                    capability="embedding",
+                    operation="source_embedding_batch",
+                    provider=profile.provider,
+                    model=profile.model,
+                    input_tokens=input_tokens,
+                    output_tokens=0,
+                    units=max(1, input_tokens),
+                    provider_request_id=provider_request_id,
+                    metadata={"batch_size": len(batch), "profile_id": profile_id},
+                ),
+                idempotency_key=f"embedding-provider:{idempotency_key}",
+            )
 
         if existing is None and input_tokens > 0:
             metadata: dict[str, object] = {

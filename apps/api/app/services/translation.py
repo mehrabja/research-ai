@@ -260,33 +260,30 @@ def _record_translation_usage(
     project_id = db.execute(
         select(Report.project_id).where(Report.id == report_id)
     ).scalar_one_or_none()
-    if project_id is None:
-        raise TranslationValidationError("report project not found")
-    project = db.get(Project, project_id)
-    if project is None:
-        raise TranslationValidationError("report project not found")
+    project = db.get(Project, project_id) if project_id is not None else None
 
     total_tokens = (input_tokens or 0) + (output_tokens or 0)
-    record_provider_usage(
-        db,
-        workspace_id=project.workspace_id,
-        user_id=user_id,
-        source_id=None,
-        usage=ProviderUsage(
-            capability="translation",
-            operation="report_translation",
-            provider=provider,
-            model=model,
-            input_tokens=input_tokens or 0,
-            output_tokens=output_tokens or 0,
-            units=max(1, total_tokens),
-            metadata={"report_id": str(report_id)},
-        ),
-        idempotency_key=idempotency_key.replace(
-            ":provider_call",
-            ":workspace_provider_call",
-        ),
-    )
+    if project is not None:
+        record_provider_usage(
+            db,
+            workspace_id=project.workspace_id,
+            user_id=user_id,
+            source_id=None,
+            usage=ProviderUsage(
+                capability="translation",
+                operation="report_translation",
+                provider=provider,
+                model=model,
+                input_tokens=input_tokens or 0,
+                output_tokens=output_tokens or 0,
+                units=max(1, total_tokens),
+                metadata={"report_id": str(report_id)},
+            ),
+            idempotency_key=idempotency_key.replace(
+                ":provider_call",
+                ":workspace_provider_call",
+            ),
+        )
 
     db.add(
         UsageLog(
