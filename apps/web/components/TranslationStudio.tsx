@@ -94,7 +94,7 @@ export default function TranslationStudio() {
       if (!draftContentForReview.trim()) throw new Error("Review content cannot be empty.");
       return editPreTranslationReview(
         activeReportId!,
-        review.data.version_id,
+        reviewData.version_id,
         draftContentForReview,
         editNotes,
       );
@@ -110,7 +110,7 @@ export default function TranslationStudio() {
   const approve = useMutation({
     mutationFn: () => {
       if (!review.data) throw new Error("No pre-translation review is available.");
-      return approvePreTranslationReview(activeReportId!, review.data.version_id);
+      return approvePreTranslationReview(activeReportId!, reviewData.version_id);
     },
     onSuccess: async (data) => {
       setDecisionNotes("");
@@ -125,7 +125,7 @@ export default function TranslationStudio() {
       if (!decisionNotes.trim()) throw new Error("Notes are required when requesting changes.");
       return requestChangesPreTranslationReview(
         activeReportId!,
-        review.data.version_id,
+        reviewData.version_id,
         decisionNotes,
       );
     },
@@ -142,7 +142,7 @@ export default function TranslationStudio() {
       if (!decisionNotes.trim()) throw new Error("Notes are required when rejecting the review.");
       return rejectPreTranslationReview(
         activeReportId!,
-        review.data.version_id,
+        reviewData.version_id,
         decisionNotes,
       );
     },
@@ -178,10 +178,11 @@ export default function TranslationStudio() {
 
   const status = report.data?.status;
   const draftContentForReview =
-    review.data && draftVersionId === review.data.version_id
+    review.data && draftVersionId === reviewData.version_id
       ? draftContent
       : review.data?.content ?? "";
-  const reviewReady = status === "pre_translation_review" && Boolean(review.data);
+  const reviewData = review.data;
+  const reviewReady = status === "pre_translation_review" && Boolean(reviewData);
   const actionPending =
     edit.isPending ||
     approve.isPending ||
@@ -299,7 +300,7 @@ export default function TranslationStudio() {
             <div className="card metric">
               <div className="label">Source version</div>
               <div className="value">
-                {review.data?.version_number ?? "—"}
+                {reviewData?.version_number ?? "—"}
               </div>
               <div className="delta">Backend review version</div>
             </div>
@@ -312,11 +313,11 @@ export default function TranslationStudio() {
                   <div>
                     <h3>Pre-translation review</h3>
                     <div className="muted small">
-                      v{review.data.version_number} · {review.data.language} ·{" "}
-                      {review.data.change_type ?? "review target"}
+                      v{reviewData.version_number} · {reviewData.language} ·{" "}
+                      {reviewData.change_type ?? "review target"}
                     </div>
                   </div>
-                  <span className="tag">{review.data.review_stage}</span>
+                  <span className="tag">{reviewData.review_stage}</span>
                 </div>
 
                 <div className="field" style={{ marginTop: 14 }}>
@@ -329,7 +330,7 @@ export default function TranslationStudio() {
                     rows={18}
                     value={draftContentForReview}
                     onChange={(event) => {
-                      setDraftVersionId(review.data.version_id);
+                      setDraftVersionId(reviewData.version_id);
                       setDraftContent(event.target.value);
                     }}
                     disabled={actionPending}
@@ -368,7 +369,7 @@ export default function TranslationStudio() {
                     disabled={!review.data || actionPending}
                     onClick={() => {
                       setDraftVersionId(review.data?.version_id);
-                      setDraftContent(review.data?.content ?? "");
+                      setDraftContent(reviewData.content);
                     }}
                   >
                     Reset draft
@@ -450,16 +451,16 @@ export default function TranslationStudio() {
                       Backend audit events for this pre-translation review.
                     </div>
                   </div>
-                  <span className="tag">{review.data.review_events.length}</span>
+                  <span className="tag">{reviewData.review_events.length}</span>
                 </div>
 
-                {review.data.review_events.length === 0 ? (
+                {reviewData.review_events.length === 0 ? (
                   <div className="empty" style={{ marginTop: 12 }}>
                     <div>No review actions have been recorded yet.</div>
                   </div>
                 ) : (
                   <div className="list" style={{ marginTop: 12 }}>
-                    {[...review.data.review_events].reverse().map((event) => (
+                    {[...reviewData.review_events].reverse().map((event) => (
                       <div className="list-item" key={event.id}>
                         <div className="row">
                           <div className="strong">
@@ -471,8 +472,8 @@ export default function TranslationStudio() {
                         </div>
                         <div className="meta" style={{ marginTop: 5 }}>
                           User {event.user_id.slice(0, 8)}… · version{" "}
-                          {event.version_id === review.data?.version_id
-                            ? review.data?.version_number
+                          {event.version_id === reviewData.version_id
+                            ? reviewData.version_number
                             : "previous"}
                         </div>
                         {event.notes && (
