@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import secrets
-from datetime import UTC, datetime
-
 import base64
 import hashlib
+import secrets
+from datetime import UTC, datetime
 import pyotp
 from cryptography.fernet import Fernet, InvalidToken
 
