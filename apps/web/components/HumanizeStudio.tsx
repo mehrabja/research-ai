@@ -14,6 +14,7 @@ export default function HumanizeStudio() {
   const [projectId, setProjectId] = useState<string>();
   const [reportId, setReportId] = useState<string>();
   const [mode, setMode] = useState("academic");
+  const queryClient = useQueryClient();
 
 
   const workspaces = useQuery({ queryKey: ["workspaces"], queryFn: listWorkspaces, staleTime: 30_000 });
@@ -53,7 +54,8 @@ export default function HumanizeStudio() {
   const validate = useMutation({ mutationFn: () => validateManuscriptHumanization(activeReportId!) });
 
   const errors = [workspaces.error, projects.error, reports.error, manuscript.error, humanization.error, generate.error, validate.error].filter(Boolean);
-  const firstError = errors.find((error): error is Error => error instanceof Error);\n  if (firstError) return <section className="card pad" role="alert"><h2>Humanization unavailable</h2><p className="muted" style={{ marginTop: 6 }}>{firstError.message}</p></section>;
+  const firstError = errors.find((error): error is Error => error instanceof Error);
+  if (firstError) return <section className="card pad" role="alert"><h2>Humanization unavailable</h2><p className="muted" style={{ marginTop: 6 }}>{firstError.message}</p></section>;
 
   const run = humanization.data?.run;
   const preservation = run?.preservation_summary ?? {};
