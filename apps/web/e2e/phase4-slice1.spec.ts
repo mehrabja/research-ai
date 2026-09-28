@@ -148,7 +148,7 @@ test("files page creates a real folder and uploads a real file", async ({
     page.getByLabel("Folder").locator("option", { hasText: "e2e-data" }),
   ).toHaveCount(1, { timeout: 10_000 });
 
-  await page.getByLabel("Folder").selectOption({
+  await page.getByLabel("Folder", { exact: true }).selectOption({
     label: "e2e-data",
   });
 
