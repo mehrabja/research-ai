@@ -31,7 +31,6 @@ from app.domain.research_plan import (
     ValidationStatus,
 )
 from app.services.projects import get_project
-from app.services.usage_contract import ProviderUsage, record_provider_usage
 from app.services.research_planning import (
     budget as budget_svc,
 )
@@ -56,6 +55,7 @@ from app.services.research_planning import (
 from app.services.research_planning import (
     validation as validation_svc,
 )
+from app.services.usage_contract import ProviderUsage, record_provider_usage
 
 logger = logging.getLogger(__name__)
 
