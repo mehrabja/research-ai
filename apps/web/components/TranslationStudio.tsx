@@ -310,7 +310,7 @@ export default function TranslationStudio() {
             </div>
           </section>
 
-          {reviewReady && review.data && (
+          {reviewReady && reviewData && (
             <>
               <section className="card pad">
                 <div className="row">
