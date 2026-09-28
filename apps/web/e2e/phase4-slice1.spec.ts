@@ -81,3 +81,40 @@ test("workspace creates a real project and opens project-scoped research", async
   ).toBeVisible();
   await expect(page.getByText("Project scoped")).toBeVisible();
 });
+
+test("literature page reads the selected project corpus from the backend", async ({
+  page,
+}) => {
+  await createAuthenticatedSession(page);
+
+  await page.goto("/workspace");
+  await expect(page.getByLabel("Workspace")).toBeEnabled({
+    timeout: 10_000,
+  });
+
+  const projectName = "E2E Literature " + Date.now();
+  await page.getByLabel("Project name").fill(projectName);
+  await page.getByRole("button", { name: "Create project" }).click();
+
+  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await page.goto("/literature");
+
+  await expect(
+    page.getByRole("heading", { name: "Literature map" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Literature corpus" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Current project corpus"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No literature items exist for this project yet."),
+  ).toBeVisible();
+
+  await expect(page.getByText("248", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("1,931", { exact: true })).toHaveCount(0);
+});
