@@ -4,6 +4,7 @@ import base64
 import hashlib
 import secrets
 from datetime import UTC, datetime
+
 import pyotp
 from cryptography.fernet import Fernet, InvalidToken
 
@@ -11,8 +12,6 @@ from app.core.config import get_settings
 
 
 _RECOVERY_COUNT = 8
-
-
 
 
 def _cipher() -> Fernet:
