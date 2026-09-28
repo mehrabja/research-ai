@@ -398,3 +398,233 @@ def reject_pre_translation_review(
     db.commit()
     db.refresh(locked)
     return locked
+
+
+# =========================================================================
+# Final review (post-translation / review_2)
+# =========================================================================
+
+REVIEW_STAGE_POST_TRANSLATION = "post_translation"
+FINAL_REVIEW_STATUS = "review_2"
+
+
+def _resolve_latest_final_review_version(
+    db: Session, *, report_id: uuid.UUID
+) -> ReportVersion | None:
+    return db.execute(
+        select(ReportVersion)
+        .where(
+            ReportVersion.report_id == report_id,
+            ReportVersion.change_type.in_(
+                ("humanized_post_translation", "human_review_edit")
+            ),
+        )
+        .order_by(ReportVersion.version_number.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+
+
+def _build_final_review_context(
+    db: Session, *, user_id: uuid.UUID, report_id: uuid.UUID
+) -> dict[str, Any]:
+    report = get_report(db, user_id=user_id, report_id=report_id)
+    version = _resolve_latest_final_review_version(db, report_id=report_id)
+    if version is None:
+        raise ReviewNotFoundError(
+            "no post-translation humanized version found for this report"
+        )
+    events = list(
+        db.execute(
+            select(ReviewEvent)
+            .where(
+                ReviewEvent.report_id == report_id,
+                ReviewEvent.stage == REVIEW_STAGE_POST_TRANSLATION,
+            )
+            .order_by(ReviewEvent.created_at.asc())
+        ).scalars().all()
+    )
+    return {
+        "report_id": report.id,
+        "status": report.status,
+        "version_id": version.id,
+        "version_number": version.version_number,
+        "language": version.language,
+        "content": version.content,
+        "change_type": version.change_type,
+        "source_version_id": version.source_version_id,
+        "review_stage": REVIEW_STAGE_POST_TRANSLATION,
+        "review_events": events,
+    }
+
+
+def get_final_review(
+    db: Session, *, user_id: uuid.UUID, report_id: uuid.UUID
+) -> dict[str, Any]:
+    report = get_report(db, user_id=user_id, report_id=report_id)
+    if report.status != FINAL_REVIEW_STATUS:
+        raise InvalidReviewStateError(
+            f"report status is {report.status!r}, expected {FINAL_REVIEW_STATUS!r}"
+        )
+    return _build_final_review_context(db, user_id=user_id, report_id=report_id)
+
+
+def edit_final_review(
+    db: Session, *, user_id: uuid.UUID, report_id: uuid.UUID,
+    version_id: uuid.UUID, content: str, notes: str | None = None,
+) -> ReportVersion:
+    get_report(db, user_id=user_id, report_id=report_id)
+    if not isinstance(content, str) or not content.strip():
+        raise ReviewValidationError("content must be a non-empty string")
+    if len(content) > MAX_CONTENT_LENGTH:
+        raise ReviewValidationError(
+            f"content exceeds maximum length {MAX_CONTENT_LENGTH}"
+        )
+    if notes is not None and len(notes) > MAX_NOTES_LENGTH:
+        raise ReviewValidationError(
+            f"notes exceed maximum length {MAX_NOTES_LENGTH}"
+        )
+
+    locked = _lock_and_load_report(db, report_id)
+    if locked.status != FINAL_REVIEW_STATUS:
+        db.rollback()
+        raise InvalidReviewStateError(f"report status is {locked.status!r}")
+    current = _resolve_latest_final_review_version(db, report_id=report_id)
+    if current is None or current.id != version_id:
+        db.rollback()
+        raise StaleReviewVersionError("version_id is no longer the active final review version")
+
+    diff = {
+        "type": "human_review_edit",
+        "stage": REVIEW_STAGE_POST_TRANSLATION,
+        "changed": content != current.content,
+        "editor_user_id": str(user_id),
+        "edited_at": datetime.now(UTC).isoformat(),
+    }
+    new_version = create_report_version(
+        db,
+        user_id=user_id,
+        report_id=report_id,
+        language=current.language,
+        content=content,
+        created_by_user=True,
+        change_type="human_review_edit",
+        source_version_id=current.id,
+        diff_from_previous=diff,
+        commit=False,
+    )
+    db.add(
+        ReviewEvent(
+            report_id=report_id,
+            stage=REVIEW_STAGE_POST_TRANSLATION,
+            user_id=user_id,
+            action=REVIEW_ACTION_EDITED,
+            version_id=new_version.id,
+            notes=notes,
+        )
+    )
+    db.commit()
+    db.refresh(new_version)
+    return new_version
+
+
+def request_changes_final_review(
+    db: Session, *, user_id: uuid.UUID, report_id: uuid.UUID,
+    version_id: uuid.UUID, notes: str,
+) -> Report:
+    get_report(db, user_id=user_id, report_id=report_id)
+    if not notes or not notes.strip():
+        raise ReviewValidationError("notes must be non-empty")
+    if len(notes) > MAX_NOTES_LENGTH:
+        raise ReviewValidationError(f"notes exceed maximum length {MAX_NOTES_LENGTH}")
+    locked = _lock_and_load_report(db, report_id)
+    if locked.status != FINAL_REVIEW_STATUS:
+        db.rollback()
+        raise InvalidReviewStateError(f"report status is {locked.status!r}")
+    current = _resolve_latest_final_review_version(db, report_id=report_id)
+    if current is None or current.id != version_id:
+        db.rollback()
+        raise StaleReviewVersionError("stale version")
+    db.add(
+        ReviewEvent(
+            report_id=report_id,
+            stage=REVIEW_STAGE_POST_TRANSLATION,
+            user_id=user_id,
+            action=REVIEW_ACTION_REQUESTED_CHANGES,
+            version_id=current.id,
+            notes=notes,
+        )
+    )
+    db.commit()
+    db.refresh(locked)
+    return locked
+
+
+def reject_final_review(
+    db: Session, *, user_id: uuid.UUID, report_id: uuid.UUID,
+    version_id: uuid.UUID, notes: str,
+) -> Report:
+    get_report(db, user_id=user_id, report_id=report_id)
+    if not notes or not notes.strip():
+        raise ReviewValidationError("notes must be non-empty")
+    if len(notes) > MAX_NOTES_LENGTH:
+        raise ReviewValidationError(f"notes exceed maximum length {MAX_NOTES_LENGTH}")
+    locked = _lock_and_load_report(db, report_id)
+    if locked.status != FINAL_REVIEW_STATUS:
+        db.rollback()
+        raise InvalidReviewStateError(f"report status is {locked.status!r}")
+    current = _resolve_latest_final_review_version(db, report_id=report_id)
+    if current is None or current.id != version_id:
+        db.rollback()
+        raise StaleReviewVersionError("stale version")
+    db.add(
+        ReviewEvent(
+            report_id=report_id,
+            stage=REVIEW_STAGE_POST_TRANSLATION,
+            user_id=user_id,
+            action=REVIEW_ACTION_REJECTED,
+            version_id=current.id,
+            notes=notes,
+        )
+    )
+    db.commit()
+    db.refresh(locked)
+    return locked
+
+
+def approve_final_review(
+    db: Session, *, user_id: uuid.UUID, report_id: uuid.UUID,
+    version_id: uuid.UUID,
+) -> Report:
+    get_report(db, user_id=user_id, report_id=report_id)
+    locked = _lock_and_load_report(db, report_id)
+    if locked.status == "validating":
+        db.commit()
+        return locked
+    if locked.status != FINAL_REVIEW_STATUS:
+        db.rollback()
+        raise InvalidReviewStateError(f"report status is {locked.status!r}")
+    current = _resolve_latest_final_review_version(db, report_id=report_id)
+    if current is None or current.id != version_id:
+        db.rollback()
+        raise StaleReviewVersionError("stale version")
+    db.add(
+        ReviewEvent(
+            report_id=report_id,
+            stage=REVIEW_STAGE_POST_TRANSLATION,
+            user_id=user_id,
+            action=REVIEW_ACTION_APPROVED,
+            version_id=current.id,
+            notes=None,
+        )
+    )
+    update_report_status(
+        db,
+        user_id=user_id,
+        report_id=report_id,
+        new_status="validating",
+        reason="final_review_approved",
+        commit=False,
+    )
+    db.commit()
+    db.refresh(locked)
+    return locked
