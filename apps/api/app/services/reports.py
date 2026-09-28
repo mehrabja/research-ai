@@ -11,6 +11,7 @@ M37:
 """
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -19,9 +20,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
-import logging
-
 logger = logging.getLogger(__name__)
+
 
 from app.core.exceptions import (
     ProjectNotFound,
