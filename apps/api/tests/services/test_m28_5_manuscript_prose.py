@@ -212,7 +212,13 @@ def test_provider_assisted_generation_parses_structured_output(monkeypatch) -> N
     monkeypatch.setattr(
         prose_generator,
         "_build_provider",
-        lambda: (_FakeProvider(payload), GenerationProfile(\n            provider="fake",\n            model="fake-model",\n            temperature=0.0,\n            max_output_tokens=1000,\n            profile_version="test",\n        )),
+        lambda: (_FakeProvider(payload), GenerationProfile(
+            provider="fake",
+            model="fake-model",
+            temperature=0.0,
+            max_output_tokens=1000,
+            profile_version="test",
+        )),
     )
 
     result = prose_generator.generate_section(
@@ -229,7 +235,13 @@ def test_hybrid_provider_failure_falls_back_to_deterministic(monkeypatch) -> Non
     monkeypatch.setattr(
         prose_generator,
         "_build_provider",
-        lambda: (_FakeProvider("{not-json}"), GenerationProfile(\n            provider="fake",\n            model="fake-model",\n            temperature=0.0,\n            max_output_tokens=1000,\n            profile_version="test",\n        )),
+        lambda: (_FakeProvider("{not-json}"), GenerationProfile(
+            provider="fake",
+            model="fake-model",
+            temperature=0.0,
+            max_output_tokens=1000,
+            profile_version="test",
+        )),
     )
 
     result = prose_generator.generate_section(
@@ -245,7 +257,13 @@ def test_provider_assisted_invalid_output_raises(monkeypatch) -> None:
     monkeypatch.setattr(
         prose_generator,
         "_build_provider",
-        lambda: (_FakeProvider("{not-json}"), object()),
+        lambda: (_FakeProvider("{not-json}"), GenerationProfile(
+            provider="fake",
+            model="fake-model",
+            temperature=0.0,
+            max_output_tokens=1000,
+            profile_version="test",
+        )),
     )
 
     with pytest.raises(ValueError, match="invalid JSON"):
