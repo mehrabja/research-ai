@@ -50,12 +50,12 @@ from app.services.embedding_profile import (
 from app.services.generation_profile import (
     get_current_generation_profile,
 )
-from app.services.usage_contract import ProviderUsage, record_provider_usage
 from app.services.generation_prompt import (
     build_evidence_set,
     build_system_prompt,
     build_user_prompt,
 )
+from app.services.usage_contract import ProviderUsage, record_provider_usage
 
 logger = logging.getLogger(__name__)
 
