@@ -11,7 +11,7 @@ export type KnowledgeGraphBuildResponse =
 export async function getKnowledgeGraphSummary(
   projectId: string,
 ): Promise<KnowledgeGraphSummary | null> {
-  const { data, error } = await api.GET(
+  const { data, error, response } = await api.GET(
     "/api/v1/projects/{project_id}/knowledge-graph/summary",
     {
       params: { path: { project_id: projectId } },
@@ -19,11 +19,7 @@ export async function getKnowledgeGraphSummary(
   );
 
   if (error) {
-    const status =
-      typeof error === "object" && error !== null
-        ? (error as { status?: number }).status
-        : undefined;
-    if (status === 404) return null;
+    if (response.status === 404) return null;
     throw new Error(getApiErrorMessage(error));
   }
 
@@ -33,7 +29,7 @@ export async function getKnowledgeGraphSummary(
 export async function getKnowledgeGraph(
   projectId: string,
 ): Promise<KnowledgeGraph | null> {
-  const { data, error } = await api.GET(
+  const { data, error, response } = await api.GET(
     "/api/v1/projects/{project_id}/knowledge-graph",
     {
       params: { path: { project_id: projectId } },
@@ -41,11 +37,7 @@ export async function getKnowledgeGraph(
   );
 
   if (error) {
-    const status =
-      typeof error === "object" && error !== null
-        ? (error as { status?: number }).status
-        : undefined;
-    if (status === 404) return null;
+    if (response.status === 404) return null;
     throw new Error(getApiErrorMessage(error));
   }
 
