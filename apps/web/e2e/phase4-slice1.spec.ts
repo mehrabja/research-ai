@@ -204,7 +204,7 @@ test("plan page reads real project plan state without synthetic metrics", async 
   await page.goto("/plan");
 
   await expect(
-    page.getByRole("heading", { name: "Research plan", exact: true }),
+    page.getByRole("heading", { name: "Research plan", exact: true }).first(),
   ).toBeVisible();
   await expect(
     page.getByText("No research plan exists for this project yet."),
@@ -235,7 +235,7 @@ test("knowledge graph page reads real project graph state without synthetic metr
   await page.goto("/knowledge");
 
   await expect(
-    page.getByRole("heading", { name: "Knowledge graph", exact: true }).first(),
+    page.getByRole("heading", { name: "Knowledge graph", exact: true }).first().first(),
   ).toBeVisible();
   await expect(
     page.getByText("No knowledge graph exists for this project yet."),
