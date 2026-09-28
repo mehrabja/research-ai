@@ -197,9 +197,9 @@ def build_default_registry() -> ProviderRegistry:
         return OpenRouterEmbeddingProvider(profile)
 
     def translation_factory(ctx: ProviderContext) -> Any:
-        from app.services.translation_profile import TranslationProfile
         from app.integrations.generation.openai import OpenAIGenerationProvider
         from app.integrations.translation.openai import OpenAITranslationProvider
+        from app.services.translation_profile import TranslationProfile
 
         profile = ctx.profile
         if profile is None:
@@ -224,9 +224,9 @@ def build_default_registry() -> ProviderRegistry:
         )
 
     def openrouter_translation_factory(ctx: ProviderContext) -> Any:
-        from app.services.translation_profile import TranslationProfile
         from app.integrations.generation.openrouter import OpenRouterGenerationProvider
         from app.integrations.translation.openrouter import OpenRouterTranslationProvider
+        from app.services.translation_profile import TranslationProfile
 
         profile = ctx.profile
         if profile is None:
@@ -279,6 +279,7 @@ def build_default_registry() -> ProviderRegistry:
 
     def local_storage_factory(ctx: ProviderContext) -> Any:
         from pathlib import Path
+
         from app.core.config import REPO_ROOT
         from app.services.file_storage import LocalStorageProvider
         settings = get_settings()
