@@ -285,7 +285,7 @@ export default function SourcesLibrary() {
             <div>No research report exists for this project yet.</div>
             <Link
               className="btn"
-              href={"/research?projectId=" + activeProjectId}
+              href={{ pathname: "/research", query: { projectId: activeProjectId } }}
               style={{ marginTop: 12 }}
             >
               Start discovery
