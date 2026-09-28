@@ -4,17 +4,17 @@ from __future__ import annotations
 from typing import Any
 
 from app.integrations.detection.base import (
-    DetectionRateLimitError,
     DetectionProviderUnavailableError,
+    DetectionRateLimitError,
     DetectionTimeoutError,
 )
 from app.integrations.embeddings.base import (
-    EmbeddingRateLimitError,
     EmbeddingProviderUnavailableError,
+    EmbeddingRateLimitError,
 )
 from app.integrations.generation.base import (
-    GenerationRateLimitError,
     GenerationProviderUnavailableError,
+    GenerationRateLimitError,
     GenerationTimeoutError,
 )
 from app.integrations.sources.base import (
@@ -23,8 +23,8 @@ from app.integrations.sources.base import (
     SourceProviderUnavailableError,
 )
 from app.integrations.translation.base import (
-    TranslationRateLimitError,
     TranslationProviderUnavailableError,
+    TranslationRateLimitError,
     TranslationTimeoutError,
 )
 
