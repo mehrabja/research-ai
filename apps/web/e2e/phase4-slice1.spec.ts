@@ -289,7 +289,7 @@ test("generation studio exposes real manuscript pipeline state", async ({ page }
 
   await page.goto("/generate");
   await expect(
-    page.getByRole("heading", { name: "Generate with evidence", exact: true }),
+    page.getByRole("heading", { name: "Generate with evidence", exact: true }).first(),
   ).toBeVisible();
   await expect(
     page.getByText("No research report exists in the selected project."),
