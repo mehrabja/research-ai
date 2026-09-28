@@ -248,3 +248,74 @@ test("knowledge graph page reads real project graph state without synthetic metr
   await expect(page.getByText("482", { exact: true })).toHaveCount(0);
   await expect(page.getByText("11", { exact: true })).toHaveCount(0);
 });
+
+test("manuscript page uses real report-scoped state", async ({ page }) => {
+  await createAuthenticatedSession(page);
+
+  await page.goto("/workspace");
+  await expect(page.getByLabel("Project name")).toBeEnabled({ timeout: 10_000 });
+
+  const projectName = "E2E Manuscript " + Date.now();
+  await page.getByLabel("Project name").fill(projectName);
+  await page.getByRole("button", { name: "Create project" }).click();
+  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await page.goto("/manuscript");
+  await expect(
+    page.getByRole("heading", { name: "Manuscript", exact: true }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No research report exists in this project yet."),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Neural decoding in sparse fMRI", { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByText("91 cited claims", { exact: false })).toHaveCount(0);
+});
+
+test("generation studio exposes real manuscript pipeline state", async ({ page }) => {
+  await createAuthenticatedSession(page);
+
+  await page.goto("/generate");
+  await expect(
+    page.getByRole("heading", { name: "Generate with evidence", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No research report exists in the selected project."),
+  ).toHaveCount(0);
+
+  await expect(page.getByText("18 items", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("86 claims", { exact: false })).toHaveCount(0);
+});
+
+test("humanization studio is driven by manuscript state", async ({ page }) => {
+  await createAuthenticatedSession(page);
+
+  await page.goto("/humanize");
+  await expect(
+    page.getByRole("heading", { name: "Humanize manuscript", exact: true }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No research report exists in the selected project."),
+  ).toHaveCount(0);
+  await expect(page.getByText("412 words", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Claim integrity 100%", { exact: true })).toHaveCount(0);
+});
+
+test("translation studio follows the real pre-translation state machine", async ({
+  page,
+}) => {
+  await createAuthenticatedSession(page);
+
+  await page.goto("/translate");
+  await expect(
+    page.getByRole("heading", { name: "Translate research content", exact: true }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No research report exists in the selected project."),
+  ).toHaveCount(0);
+  await expect(page.getByText("18 / 18 citations preserved", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("26 / 26 key terms mapped", { exact: true })).toHaveCount(0);
+});
