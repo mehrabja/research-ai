@@ -20,6 +20,7 @@ export async function listReports(): Promise<Report[]> {
 
 export async function createResearchReport(
   topic: string,
+  projectId?: string,
 ): Promise<Report> {
   const { data, error } = await api.POST("/api/v1/reports", {
     params: {
@@ -29,6 +30,7 @@ export async function createResearchReport(
       topic,
       output_language: "en",
       domain: "academic research",
+      project_id: projectId,
       tone: "academic",
       length: "medium",
       audience_level: "researcher",
