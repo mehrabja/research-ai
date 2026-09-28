@@ -223,6 +223,7 @@ def create_source(
         url=payload.url,
         abstract=payload.abstract,
         citation_count=payload.citation_count,
+        source_meta=payload.source_meta,
     )
     source, _was_created = sources_service.create_source_from_candidate(
         db,
