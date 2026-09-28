@@ -3,11 +3,9 @@ from __future__ import annotations
 
 import uuid
 
-from app.domain.generation import GenerationProviderResult
-from app.services.manuscript_prose import generator as prose_generator
-from app.services.manuscript_prose.contracts import SectionContract
-from app.services.manuscript_prose.evidence import EvidenceItem, EvidencePacket
+import pytest
 
+from app.domain.generation import GenerationProviderResult
 from app.domain.manuscript_prose import (
     M28_5_VERSION,
     PROSE_GENERATION_MODES,
@@ -26,6 +24,9 @@ from app.services.manuscript_prose.serialization import (
     split_sentences,
     word_count,
 )
+from app.services.manuscript_prose import generator as prose_generator
+from app.services.manuscript_prose.contracts import SectionContract
+from app.services.manuscript_prose.evidence import EvidenceItem, EvidencePacket
 from app.services.manuscript_prose.validation import validate_section
 
 
@@ -173,7 +174,7 @@ def _provider_packet() -> tuple[SectionContract, EvidencePacket]:
         m28_items=[
             EvidenceItem(
                 evidence_id=uuid.uuid4(),
-                source_id=__import__("uuid").uuid4(),
+                source_id=uuid.uuid4(),
                 excerpt="The intervention improved the primary outcome.",
                 rank=1,
                 evidence_role="direct",
@@ -190,7 +191,7 @@ class _FakeProvider:
     def __init__(self, text: str) -> None:
         self.text = text
 
-    def generate(self, **kwargs):
+    def generate(self, **kwargs) -> GenerationProviderResult:
         return GenerationProviderResult(
             text=self.text,
             provider=self.provider_name,
@@ -247,7 +248,6 @@ def test_provider_assisted_invalid_output_raises(monkeypatch) -> None:
         lambda: (_FakeProvider("{not-json}"), object()),
     )
 
-    import pytest
     with pytest.raises(ValueError, match="invalid JSON"):
         prose_generator.generate_section(
             None,
