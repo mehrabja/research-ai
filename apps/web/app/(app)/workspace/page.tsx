@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { Metadata } from "next";
+import WorkspaceProjects from "@/components/WorkspaceProjects";
 
 export const metadata: Metadata = {
   title: "Workspace · Research AI",
@@ -8,7 +8,17 @@ export const metadata: Metadata = {
 export default function WorkspacePage() {
   return (
     <>
-<div className="page-head"><div><div className="eyebrow">Project · PRI-042</div><h1>Neural decoding in fMRI</h1><p>Evidence-backed methods study · updated 12 minutes ago</p></div><div className="actions"><button className="btn" data-toast="Project settings">•••</button><Link className="btn primary" href="/generate">Generate next section</Link></div></div><div className="card pad"><div className="timeline"><div className="step done"><div className="dot"></div><b>Scope</b><div className="meta">Question locked</div></div><div className="step done"><div className="dot"></div><b>Discovery</b><div className="meta">248 sources</div></div><div className="step done"><div className="dot"></div><b>Evidence</b><div className="meta">1,284 items</div></div><div className="step active"><div className="dot"></div><b>Planning</b><div className="meta">4/6 sections ready</div></div><div className="step"><div className="dot"></div><b>Manuscript</b><div className="meta">68% complete</div></div></div></div><div className="grid grid-3" style={{marginTop: '16px'}}><section className="card pad"><h3>Research brief</h3><p className="muted" style={{lineHeight: '1.65'}}>How accurately can transformer-based models decode cognitive state from sparse fMRI measurements under low-data conditions?</p><div className="pillbar"><span className="tag">fMRI</span><span className="tag">transformers</span><span className="tag">low-data</span></div></section><section className="card pad"><h3>Current milestones</h3><div className="stack" style={{marginTop: '12px'}}><div className="row"><span>Research plan</span><span className="tag success">Ready</span></div><div className="row"><span>Methods evidence</span><span className="tag warn">Review</span></div><div className="row"><span>Discussion scaffold</span><span className="tag">Draft</span></div></div></section><section className="card pad"><h3>Workspace context</h3><div className="stack" style={{marginTop: '12px'}}><div className="row"><span className="muted">Members</span><b>7</b></div><div className="row"><span className="muted">Private files</span><b>36</b></div><div className="row"><span className="muted">Open jobs</span><b>2</b></div></div></section></div><div className="grid grid-2" style={{marginTop: '16px'}}><section className="card pad"><div className="row"><h3>Priority queue</h3><Link className="btn ghost" href="/jobs">All jobs</Link></div><div className="list"><div className="list-item"><div className="row"><div><div className="title">Verify low-data baseline claim</div><div className="meta">4 supporting sources · owner Alex</div></div><span className="tag warn">Today</span></div></div><div className="list-item"><div className="row"><div><div className="title">Resolve reference formatting</div><div className="meta">IEEE → APA mismatch</div></div><span className="tag">Queued</span></div></div><div className="list-item"><div className="row"><div><div className="title">Generate limitations draft</div><div className="meta">Discussion · 700–900 words</div></div><span className="tag">Ready</span></div></div></div></section><section className="card pad"><div className="row"><h3>Latest evidence</h3><Link className="btn ghost" href="/evidence">Open evidence</Link></div><div className="quote-card" style={{marginTop: '13px'}}><div className="small strong">Claim · Sparse acquisition reduces training stability.</div><div className="muted small" style={{marginTop: '5px'}}>Supported by 6 sources · 3 primary studies · 2 reviews · 1 methods paper</div></div><div className="quote-card" style={{marginTop: '10px'}}><div className="small strong">Claim · Contrastive pretraining improved transfer on low-data tasks.</div><div className="muted small" style={{marginTop: '5px'}}>Supported by 4 sources · confidence 0.86</div></div></section></div>
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">Workspace</div>
+          <h1>Projects and research context</h1>
+          <p>
+            Work with the real workspace and project records behind your
+            research.
+          </p>
+        </div>
+      </div>
+      <WorkspaceProjects />
     </>
   );
 }
