@@ -177,6 +177,7 @@ def test_search_returns_candidates(
                 source_api="semantic_scholar",
                 external_source_id="P1",
                 title="T1",
+                source_meta={"federated": {"hit_count": 2}},
             )
         ]
     )
@@ -189,6 +190,7 @@ def test_search_returns_candidates(
     assert body["query"] == "hello"
     assert len(body["candidates"]) == 1
     assert body["candidates"][0]["external_source_id"] == "P1"
+    assert body["candidates"][0]["source_meta"]["federated"]["hit_count"] == 2
 
 
 def test_search_foreign_report_404(
@@ -237,7 +239,6 @@ def test_create_source_201(
     assert body["external_source_id"] == "P1"
     assert body["source_meta"]["federated"]["hit_count"] == 2
     assert "full_text" not in body
-    assert "source_meta" not in body
 
 
 def test_create_duplicate_is_idempotent(
