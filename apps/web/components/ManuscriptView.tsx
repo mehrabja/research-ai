@@ -73,7 +73,8 @@ export default function ManuscriptView() {
   const validate = useMutation({ mutationFn: () => validateManuscript(activeReportId!) });
 
   const errors = [workspaces.error, projects.error, reports.error, manuscript.error, prose.error, versions.error, generate.error, validate.error].filter(Boolean);
-  const firstError = errors.find((error): error is Error => error instanceof Error);\n  if (firstError) return <section className="card pad" role="alert"><h2>Manuscript unavailable</h2><p className="muted" style={{ marginTop: 6 }}>{firstError.message}</p></section>;
+  const firstError = errors.find((error): error is Error => error instanceof Error);
+  if (firstError) return <section className="card pad" role="alert"><h2>Manuscript unavailable</h2><p className="muted" style={{ marginTop: 6 }}>{firstError.message}</p></section>;
 
   const current = manuscript.data;
   return (
