@@ -145,7 +145,7 @@ class StripeBillingProvider:
             raise RuntimeError(
                 f"No Stripe price configured for plan {plan_code!r}"
             )
-        current = self.get_subscription(subscription_id)
+        current = self.get_subscription(subscription_id=subscription_id)
         if not current:
             raise RuntimeError("Stripe subscription not found")
         items = current.get("items", {}).get("data") or []
