@@ -19,8 +19,8 @@ from sqlalchemy.orm import Session
 from app.core import exceptions as app_exceptions
 from app.core.config import get_settings
 from app.core.exceptions import SourceNotFound
-from app.db.models.source import Source
 from app.db.models.project import Project
+from app.db.models.source import Source
 from app.domain.source import SourceCandidate
 from app.integrations.sources.base import (
     SourceProviderAuthError,
