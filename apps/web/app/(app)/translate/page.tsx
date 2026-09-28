@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import TranslationStudio from "@/components/TranslationStudio";
-import PostTranslationHumanizationPanel from "@/components/PostTranslationHumanizationPanel";
 
 export const metadata: Metadata = {
   title: "Translate · Research AI",
@@ -17,7 +16,6 @@ export default function TranslatePage() {
         </div>
       </div>
       <TranslationStudio />
-      <PostTranslationHumanizationPanel />
     </>
   );
 }
