@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { Metadata } from "next";
+import GenerateStudio from "@/components/GenerateStudio";
 
 export const metadata: Metadata = {
   title: "AI Studio · Research AI",
@@ -8,7 +8,14 @@ export const metadata: Metadata = {
 export default function GeneratePage() {
   return (
     <>
-<div className="page-head"><div><div className="eyebrow">AI Studio</div><h1>Generate with evidence</h1><p>Choose a task, ground it in project context, and review the draft before inserting it.</p></div><div className="actions"><Link className="btn" href="/evidence">Evidence</Link><button className="btn primary" data-toast="Draft generation started">Generate →</button></div></div><div className="grid grid-3"><section className="card pad"><h3>Task</h3><div className="stack" style={{marginTop: '12px'}}><button className="btn primary" data-toast="Methods selected">Draft Methods</button><button className="btn" data-toast="Discussion selected">Draft Discussion</button><button className="btn" data-toast="Abstract selected">Generate Abstract</button><button className="btn" data-toast="Review selected">Reviewer Response</button></div></section><section className="card pad" style={{gridColumn: 'span 2'}}><h3>Generation brief</h3><div className="grid grid-2" style={{marginTop: '12px'}}><div className="field"><label>Target section</label><select className="input"><option>Methods</option><option>Discussion</option><option>Abstract</option></select></div><div className="field"><label>Length</label><select className="input"><option>900–1200 words</option><option>500–700 words</option><option>1500–1800 words</option></select></div></div><div className="field" style={{marginTop: '12px'}}><label>Instructions</label><textarea className="input textarea" defaultValue="Explain the preprocessing, subject split strategy, contrastive pretraining, and primary evaluation metric. Keep the tone formal and avoid claims not supported by the evidence matrix." /></div><div className="pillbar" style={{marginTop: '10px'}}><span className="tag success">Use evidence</span><span className="tag success">Cite sources</span><span className="tag">Preserve terminology</span><span className="tag">Flag uncertainty</span></div></section></div><div className="grid grid-2" style={{marginTop: '16px'}}><section className="card pad"><div className="row"><h3>Context included</h3><span className="tag">18 items</span></div><div className="list"><div className="list-item"><div className="title">Evidence matrix</div><div className="meta">86 claims · 312 passages</div></div><div className="list-item"><div className="title">Research plan</div><div className="meta">6-section outline</div></div><div className="list-item"><div className="title">Uploaded protocol</div><div className="meta">protocol_v7.docx</div></div></div></section><section className="card pad"><div className="row"><h3>Preview</h3><span className="tag warn">Not generated</span></div><div className="empty"><div className="big">✧</div><div>Generated text will appear here for review.</div></div></section></div>
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">AI Studio</div>
+          <h1>Generate with evidence</h1>
+          <p>Run the real manuscript architecture and evidence-grounded prose pipelines.</p>
+        </div>
+      </div>
+      <GenerateStudio />
     </>
   );
 }
