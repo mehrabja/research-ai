@@ -5,6 +5,8 @@ storage abstraction provider-neutral so file routes do not change.
 """
 from __future__ import annotations
 
+import contextlib
+
 from collections.abc import Iterator
 from pathlib import PurePosixPath
 
@@ -137,14 +139,12 @@ class S3StorageProvider(StorageProvider):
             return total
         except Exception as exc:
             if multipart_id is not None:
-                try:
+                with contextlib.suppress(Exception):
                     self._client.abort_multipart_upload(
                         Bucket=self._bucket,
                         Key=key,
                         UploadId=multipart_id,
                     )
-                except Exception:
-                    pass
             raise StorageUnavailable(
                 f"S3 upload failed: {type(exc).__name__}"
             ) from exc
