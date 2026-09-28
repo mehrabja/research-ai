@@ -141,6 +141,7 @@ def _payload(ext: str = "P1") -> dict:
         "url": "https://example.org/p",
         "abstract": "abs",
         "citation_count": 5,
+        "source_meta": {"federated": {"hit_count": 2}},
     }
 
 
@@ -234,6 +235,7 @@ def test_create_source_201(
     body = r.json()
     assert body["status"] == "metadata_only"
     assert body["external_source_id"] == "P1"
+    assert body["source_meta"]["federated"]["hit_count"] == 2
     assert "full_text" not in body
     assert "source_meta" not in body
 
