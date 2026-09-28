@@ -5,16 +5,21 @@ import uuid
 from collections.abc import Iterator
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 
-from app.db.models.report import Report, ReportEvent, ReportVersion, ReviewEvent
+from app.db.models.report import (
+    Report,
+    ReportEvent,
+    ReportVersion,
+    ReviewEvent,
+)
 from app.db.models.user import User
 from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
+from app.main import app
 from app.services import reviews as reviews_service
 from app.services.rate_limit import set_login_rate_limiter
-from app.main import app  # noqa: F401
-from fastapi.testclient import TestClient
 
 client = TestClient(app)
 
