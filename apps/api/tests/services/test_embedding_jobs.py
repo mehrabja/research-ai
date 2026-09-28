@@ -79,6 +79,24 @@ def test_build_key_differs_by_profile() -> None:
     assert k1 != k2
 
 
+def test_build_key_differs_by_content_hash() -> None:
+    rid = uuid.uuid4()
+    sid = uuid.uuid4()
+    k1 = build_embedding_job_idempotency_key(
+        report_id=rid,
+        source_id=sid,
+        profile_id="p1",
+        content_hash="a" * 64,
+    )
+    k2 = build_embedding_job_idempotency_key(
+        report_id=rid,
+        source_id=sid,
+        profile_id="p1",
+        content_hash="b" * 64,
+    )
+    assert k1 != k2
+
+
 def test_build_key_differs_by_source() -> None:
     rid = uuid.uuid4()
     k1 = build_embedding_job_idempotency_key(
