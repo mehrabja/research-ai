@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import ResearchPlanView from "@/components/ResearchPlanView";
 
 export const metadata: Metadata = {
   title: "Research plan · Research AI",
@@ -7,7 +8,17 @@ export const metadata: Metadata = {
 export default function PlanPage() {
   return (
     <>
-<div className="page-head"><div><div className="eyebrow">Planning</div><h1>Research plan</h1><p>Turn the research question into a reviewable study protocol and manuscript outline.</p></div><div className="actions"><button className="btn" data-toast="Plan validation started">Validate</button><button className="btn primary" data-toast="Plan saved">Save plan</button></div></div><div className="grid grid-2"><section className="card pad"><h3>Research objective</h3><textarea className="input textarea" style={{marginTop: '10px'}} defaultValue="Evaluate whether transformer encoders with contrastive pretraining improve neural decoding performance when labeled fMRI samples are limited." /><div className="grid grid-2" style={{marginTop: '12px'}}><div className="field"><label>Population</label><input className="input" defaultValue="Healthy adults, 18–65" /></div><div className="field"><label>Primary endpoint</label><input className="input" defaultValue="Cross-subject decoding AUROC" /></div></div></section><section className="card pad"><h3>Protocol checks</h3><div className="stack" style={{marginTop: '14px'}}><div className="row"><span>Research question specificity</span><span className="tag success">Pass</span></div><div className="row"><span>Primary outcome defined</span><span className="tag success">Pass</span></div><div className="row"><span>Sampling assumptions</span><span className="tag warn">Review</span></div><div className="row"><span>Data leakage guardrails</span><span className="tag success">Pass</span></div><div className="row"><span>Evidence coverage</span><span className="tag success">91%</span></div></div></section></div><div className="grid grid-2" style={{marginTop: '16px'}}><section className="card pad"><div className="row"><h3>Manuscript outline</h3><span className="tag">6 sections</span></div><div className="list"><div className="list-item"><div className="row"><div><div className="title">1. Introduction</div><div className="meta">Context · gap · objective</div></div><span className="tag success">Ready</span></div></div><div className="list-item"><div className="row"><div><div className="title">2. Related work</div><div className="meta">4 themes · 22 sources</div></div><span className="tag success">Ready</span></div></div><div className="list-item"><div className="row"><div><div className="title">3. Methods</div><div className="meta">Protocol + implementation details</div></div><span className="tag warn">Review</span></div></div><div className="list-item"><div className="row"><div><div className="title">4. Results</div><div className="meta">Tables + figures</div></div><span className="tag">Draft</span></div></div><div className="list-item"><div className="row"><div><div className="title">5. Discussion</div><div className="meta">Interpretation + limitations</div></div><span className="tag">Draft</span></div></div><div className="list-item"><div className="row"><div><div className="title">6. Conclusion</div><div className="meta">Takeaways + future work</div></div><span className="tag">Draft</span></div></div></div></section><section className="card pad"><h3>Generation policy</h3><div className="stack" style={{marginTop: '14px'}}><div className="row"><span>Use only verified evidence</span><span className="tag success">On</span></div><div className="row"><span>Keep author voice</span><span className="tag success">On</span></div><div className="row"><span>Flag unsupported claims</span><span className="tag success">On</span></div><div className="row"><span>Allow inferred transitions</span><span className="tag warn">Review</span></div><div className="row"><span>Target citation style</span><span className="tag">APA 7</span></div></div></section></div>
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">Planning</div>
+          <h1>Research plan</h1>
+          <p>
+            Generate, validate, revise and inspect the persisted research plan
+            for a project.
+          </p>
+        </div>
+      </div>
+      <ResearchPlanView />
     </>
   );
 }
