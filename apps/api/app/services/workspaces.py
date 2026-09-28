@@ -40,6 +40,7 @@ from app.domain.plan import DEFAULT_PLAN_CODE
 from app.domain.workspace import (
     WORKSPACE_READABLE_STATUSES,
     WORKSPACE_STATUS_ACTIVE,
+    WORKSPACE_STATUS_SUSPENDED,
     slugify,
 )
 
