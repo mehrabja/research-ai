@@ -66,6 +66,19 @@ def sync_project_file_evidence(
             ).limit(1)
         ).scalar_one_or_none()
 
+        if source is not None:
+            chunk_count = db.execute(
+                select(Chunk.id).where(Chunk.source_id == source.id).limit(1)
+            ).scalar_one_or_none()
+            if (
+                source.content_hash == pf.sha256
+                and source.extraction_pipeline_version
+                == pf.extraction_pipeline_version
+                and chunk_count is not None
+            ):
+                synced += 1
+                continue
+
         if source is None:
             source = Source(
                 report_id=report.id,
@@ -168,7 +181,36 @@ def sync_ready_project_files_for_report(
     return synced
 
 
+def disable_project_file_evidence(
+    db: Session,
+    *,
+    project_file_id: uuid.UUID,
+    reason: str,
+) -> int:
+    sources = list(db.execute(
+        select(Source).where(
+            Source.source_api == _SOURCE_API,
+            Source.external_source_id == str(project_file_id),
+        )
+    ).scalars().all())
+    affected = 0
+    for source in sources:
+        db.execute(delete(Chunk).where(Chunk.source_id == source.id))
+        source.status = "extraction_failed"
+        source.extraction_error = reason
+        source.source_meta = {
+            **(source.source_meta or {}),
+            "active": False,
+            "disabled_reason": reason,
+        }
+        affected += 1
+    if sources:
+        db.commit()
+    return affected
+
+
 __all__ = [
+    "disable_project_file_evidence",
     "sync_project_file_evidence",
     "sync_ready_project_files_for_report",
 ]
