@@ -5,7 +5,7 @@ import secrets
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import AppError
@@ -81,15 +81,16 @@ def revoke_token(
     user_id: uuid.UUID,
     token_id: uuid.UUID,
 ) -> None:
-    result = db.execute(
-        update(APIToken)
+    row = db.execute(
+        select(APIToken)
         .where(
             APIToken.id == token_id,
             APIToken.user_id == user_id,
             APIToken.revoked_at.is_(None),
         )
-        .values(revoked_at=datetime.now(UTC))
-    )
-    if result.rowcount == 0:
+        .with_for_update()
+    ).scalar_one_or_none()
+    if row is None:
         raise APITokenInvalid()
+    row.revoked_at = datetime.now(UTC)
     db.flush()
