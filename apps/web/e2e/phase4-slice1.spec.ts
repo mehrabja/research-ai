@@ -207,9 +207,12 @@ test("plan page reads real project plan state without synthetic metrics", async 
   await expect(
     page.getByRole("heading", { name: "Research plan", exact: true }).first(),
   ).toBeVisible();
+  await expect(page.getByLabel("Project")).toBeEnabled({ timeout: 10_000 });
+  await page.getByLabel("Project").selectOption({ label: projectName });
+
   await expect(
     page.getByText("No research plan exists for this project yet."),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 10_000 });
 
   await expect(page.getByText("91%", { exact: true })).toHaveCount(0);
   await expect(page.getByText("6 sections", { exact: true })).toHaveCount(0);
