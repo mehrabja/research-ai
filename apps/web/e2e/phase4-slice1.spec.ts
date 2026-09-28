@@ -385,3 +385,33 @@ test("citations page reads real citation state without synthetic references", as
   await expect(page.getByText("Research Paper Example", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Export BibTeX", { exact: true })).toHaveCount(0);
 });
+
+
+test("final review page reads real review_2 state without synthetic output", async ({
+  page,
+}) => {
+  await createAuthenticatedSession(page);
+
+  await page.goto("/workspace");
+  await expect(page.getByLabel("Project name")).toBeEnabled({
+    timeout: 10_000,
+  });
+
+  const projectName = "E2E Final Review " + Date.now();
+  await page.getByLabel("Project name").fill(projectName);
+  await page.getByRole("button", { name: "Create project" }).click();
+
+  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await page.goto("/final-review");
+
+  await expect(
+    page.getByRole("heading", { name: "Final review", exact: true }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No research report exists in the selected project."),
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("Synthetic final result", { exact: true })).toHaveCount(0);
+});
