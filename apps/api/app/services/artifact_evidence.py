@@ -22,6 +22,7 @@ def sync_project_file_evidence(
     *,
     project_file_id: uuid.UUID,
     user_id: uuid.UUID | None,
+    report_id: uuid.UUID | None = None,
 ) -> int:
     """Materialize extracted project-file text as report-local evidence.
 
@@ -45,11 +46,14 @@ def sync_project_file_evidence(
     if not chunks:
         return 0
 
+    report_stmt = select(Report).where(
+        Report.project_id == pf.project_id,
+        Report.deleted_at.is_(None),
+    )
+    if report_id is not None:
+        report_stmt = report_stmt.where(Report.id == report_id)
     reports = list(db.execute(
-        select(Report).where(
-            Report.project_id == pf.project_id,
-            Report.deleted_at.is_(None),
-        ).order_by(Report.created_at.asc(), Report.id.asc())
+        report_stmt.order_by(Report.created_at.asc(), Report.id.asc())
     ).scalars().all())
 
     synced = 0
@@ -139,4 +143,32 @@ def _source_metadata(pf: ProjectFile) -> dict[str, Any]:
     }
 
 
-__all__ = ["sync_project_file_evidence"]
+def sync_ready_project_files_for_report(
+    db: Session,
+    *,
+    project_id: uuid.UUID,
+    report_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> int:
+    files = list(db.execute(
+        select(ProjectFile).where(
+            ProjectFile.project_id == project_id,
+            ProjectFile.deleted_at.is_(None),
+            ProjectFile.extraction_status == "completed",
+        ).order_by(ProjectFile.created_at.asc(), ProjectFile.id.asc())
+    ).scalars().all())
+    synced = 0
+    for pf in files:
+        synced += sync_project_file_evidence(
+            db,
+            project_file_id=pf.id,
+            user_id=user_id,
+            report_id=report_id,
+        )
+    return synced
+
+
+__all__ = [
+    "sync_project_file_evidence",
+    "sync_ready_project_files_for_report",
+]
