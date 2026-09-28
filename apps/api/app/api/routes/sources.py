@@ -23,13 +23,13 @@ from app.db.models.user import User
 from app.db.session import get_db
 from app.domain.source import SourceCandidate
 from app.integrations.sources.base import SourceSearchProvider
+from app.integrations.sources.federated import FederatedSourceSearchProvider
 from app.providers.registry import (
     ProviderCapability,
     ProviderContext,
     get_provider_registry,
     resolve_provider,
 )
-from app.integrations.sources.federated import FederatedSourceSearchProvider
 from app.schemas.source_extraction import SourceExtractionResponse
 from app.schemas.sources import (
     SourceCandidateRead,
