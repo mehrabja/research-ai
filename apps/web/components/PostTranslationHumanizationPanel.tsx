@@ -94,6 +94,7 @@ export default function PostTranslationHumanizationPanel({
     status === "post_translation_review" &&
     Boolean(translation.data) &&
     !run &&
+    !started &&
     !enqueue.isPending;
 
   return (
@@ -121,9 +122,11 @@ export default function PostTranslationHumanizationPanel({
           >
             {enqueue.isPending
               ? "Starting…"
-              : started || status === "post_translation_review"
-                ? "Run humanization"
-                : "Waiting"}
+              : started
+                ? "Humanization queued"
+                : status === "post_translation_review"
+                  ? "Run humanization"
+                  : "Waiting"}
           </button>
         )}
       </div>
