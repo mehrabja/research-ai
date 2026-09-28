@@ -8,9 +8,9 @@ from app.core.mfa_exceptions import MFAAlreadyEnabled, MFAInvalid
 from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.mfa import (
+    MFADisableRequest,
     MFASetupResponse,
     MFAStatusResponse,
-    MFADisableRequest,
     MFAVerifyRequest,
 )
 from app.services import mfa as mfa_service
