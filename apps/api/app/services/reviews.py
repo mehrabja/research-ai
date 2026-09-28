@@ -468,6 +468,14 @@ def get_final_review(
     return _build_final_review_context(db, user_id=user_id, report_id=report_id)
 
 
+def get_final_review_context(
+    db: Session, *, user_id: uuid.UUID, report_id: uuid.UUID
+) -> dict[str, Any]:
+    return _build_final_review_context(
+        db, user_id=user_id, report_id=report_id
+    )
+
+
 def edit_final_review(
     db: Session, *, user_id: uuid.UUID, report_id: uuid.UUID,
     version_id: uuid.UUID, content: str, notes: str | None = None,
