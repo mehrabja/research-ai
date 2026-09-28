@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.db.models.humanization import HumanizationRun
+from app.db.models.report import Report
 from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.post_translation_humanization import PostTranslationHumanizationCurrentResponse
@@ -69,7 +70,7 @@ def get_current_post_translation_humanization(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> PostTranslationHumanizationCurrentResponse:
-    report = db.get(__import__('app.db.models.report', fromlist=['Report']).Report, report_id)
+    report = db.get(Report, report_id)
     if report is None or getattr(report, 'deleted_at', None) is not None or report.user_id != current_user.id:
         raise HTTPException(status_code=404, detail='not found')
     run = db.execute(
