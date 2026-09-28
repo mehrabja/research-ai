@@ -14,7 +14,6 @@ from app.core.exceptions import KnowledgeGraphConfigurationInvalid
 from app.db.models.knowledge_graph import (
     KnowledgeGraphEdge,
     KnowledgeGraphNode,
-    KnowledgeGraphVersion,
 )
 from app.db.models.user import User
 from app.db.session import get_db
