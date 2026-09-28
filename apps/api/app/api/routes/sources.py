@@ -172,6 +172,7 @@ def search_sources(
                 url=c.url,
                 abstract=c.abstract,
                 citation_count=c.citation_count,
+                source_meta=c.source_meta,
             )
             for c in candidates
         ],
