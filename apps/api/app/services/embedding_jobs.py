@@ -23,6 +23,7 @@ def build_embedding_job_idempotency_key(
     report_id: uuid.UUID,
     source_id: uuid.UUID,
     profile_id: str,
+    content_hash: str | None = None,
 ) -> str:
     """Deterministic key so a duplicate enqueue of the same logical
     work returns the existing job.
@@ -30,8 +31,9 @@ def build_embedding_job_idempotency_key(
     Profile is part of the key so a profile bump produces a fresh
     job (as required for re-embedding after model changes).
     """
+    suffix = content_hash or "current"
     return (
-        f"embedding_source:{report_id}:{source_id}:{profile_id}"
+        f"embedding_source:{report_id}:{source_id}:{profile_id}:{suffix}"
     )
 
 
@@ -46,7 +48,7 @@ def enqueue_source_embedding_job(
     max_attempts: int | None = None,
 ) -> jobs_service.EnqueueResult:
     """Validate ownership and enqueue an ``embedding_source`` job."""
-    get_source_for_report(
+    source = get_source_for_report(
         db,
         user_id=user_id,
         report_id=report_id,
@@ -61,6 +63,7 @@ def enqueue_source_embedding_job(
             report_id=report_id,
             source_id=source_id,
             profile_id=profile_id,
+            content_hash=source.content_hash,
         )
     )
 
