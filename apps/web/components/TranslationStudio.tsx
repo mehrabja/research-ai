@@ -90,11 +90,12 @@ export default function TranslationStudio() {
 
   const edit = useMutation({
     mutationFn: () => {
-      if (!review.data) throw new Error("No pre-translation review is available.");
+      const currentReview = review.data;
+      if (!currentReview) throw new Error("No pre-translation review is available.");
       if (!draftContentForReview.trim()) throw new Error("Review content cannot be empty.");
       return editPreTranslationReview(
         activeReportId!,
-        reviewData.version_id,
+        currentReview.version_id,
         draftContentForReview,
         editNotes,
       );
@@ -109,8 +110,9 @@ export default function TranslationStudio() {
 
   const approve = useMutation({
     mutationFn: () => {
-      if (!review.data) throw new Error("No pre-translation review is available.");
-      return approvePreTranslationReview(activeReportId!, reviewData.version_id);
+      const currentReview = review.data;
+      if (!currentReview) throw new Error("No pre-translation review is available.");
+      return approvePreTranslationReview(activeReportId!, currentReview.version_id);
     },
     onSuccess: async (data) => {
       setDecisionNotes("");
@@ -121,11 +123,12 @@ export default function TranslationStudio() {
 
   const requestChanges = useMutation({
     mutationFn: () => {
-      if (!review.data) throw new Error("No pre-translation review is available.");
+      const currentReview = review.data;
+      if (!currentReview) throw new Error("No pre-translation review is available.");
       if (!decisionNotes.trim()) throw new Error("Notes are required when requesting changes.");
       return requestChangesPreTranslationReview(
         activeReportId!,
-        reviewData.version_id,
+        currentReview.version_id,
         decisionNotes,
       );
     },
@@ -138,11 +141,12 @@ export default function TranslationStudio() {
 
   const reject = useMutation({
     mutationFn: () => {
-      if (!review.data) throw new Error("No pre-translation review is available.");
+      const currentReview = review.data;
+      if (!currentReview) throw new Error("No pre-translation review is available.");
       if (!decisionNotes.trim()) throw new Error("Notes are required when rejecting the review.");
       return rejectPreTranslationReview(
         activeReportId!,
-        reviewData.version_id,
+        currentReview.version_id,
         decisionNotes,
       );
     },
@@ -177,11 +181,11 @@ export default function TranslationStudio() {
   }
 
   const status = report.data?.status;
-  const draftContentForReview =
-    review.data && draftVersionId === reviewData.version_id
-      ? draftContent
-      : review.data?.content ?? "";
   const reviewData = review.data;
+  const draftContentForReview =
+    reviewData && draftVersionId === reviewData.version_id
+      ? draftContent
+      : reviewData?.content ?? "";
   const reviewReady = status === "pre_translation_review" && Boolean(reviewData);
   const actionPending =
     edit.isPending ||
