@@ -35,7 +35,7 @@ def test_record_provider_usage_maps_provider_metadata(
         captured.update(kwargs)
         return "event"
 
-    monkeypatch.setattr(usage_contract, "record_event", fake_record_event)
+    monkeypatch.setattr("app.services.usage.record_event", fake_record_event)
 
     source_id = uuid.uuid4()
     workspace_id = uuid.uuid4()

@@ -9,6 +9,7 @@ from app.core.config import Settings
 
 def _base(**overrides: object) -> dict[str, object]:
     base: dict[str, object] = {
+        "_env_file": None,
         "database_url": (
             "postgresql+psycopg://t:t@localhost/t"
         ),
