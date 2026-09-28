@@ -348,6 +348,10 @@ test("translation studio follows the real pre-translation state machine", async 
   ).toBeVisible();
   await expect(page.getByText("18 / 18 citations preserved", { exact: true })).toHaveCount(0);
   await expect(page.getByText("26 / 26 key terms mapped", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Approve and start translation" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Request changes" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reject review" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Pre-translation review" })).toHaveCount(0);
 });
 
 test("citations page reads real citation state without synthetic references", async ({
