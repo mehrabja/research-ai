@@ -14,9 +14,9 @@ import {
 } from "@/lib/api/manuscript";
 
 export default function ManuscriptView() {
-  const [workspaceId, setWorkspaceId] = useState();
-  const [projectId, setProjectId] = useState();
-  const [reportId, setReportId] = useState();
+  const [workspaceId, setWorkspaceId] = useState<string>();
+  const [projectId, setProjectId] = useState<string>();
+  const [reportId, setReportId] = useState<string>();
   const queryClient = useQueryClient();
 
 
@@ -46,31 +46,31 @@ export default function ManuscriptView() {
 
   const manuscript = useQuery({
     queryKey: ["manuscript-current", activeReportId],
-    queryFn: () => getCurrentManuscript(activeReportId),
+    queryFn: () => getCurrentManuscript(activeReportId!),
     enabled: Boolean(activeReportId),
     staleTime: 10_000,
   });
   const prose = useQuery({
     queryKey: ["manuscript-prose-current", activeReportId],
-    queryFn: () => getCurrentManuscriptProse(activeReportId),
+    queryFn: () => getCurrentManuscriptProse(activeReportId!),
     enabled: Boolean(activeReportId && manuscript.data),
     staleTime: 10_000,
   });
   const versions = useQuery({
     queryKey: ["manuscript-versions", activeReportId],
-    queryFn: () => listManuscriptVersions(activeReportId),
+    queryFn: () => listManuscriptVersions(activeReportId!),
     enabled: Boolean(activeReportId && manuscript.data),
     staleTime: 10_000,
   });
   const generate = useMutation({
-    mutationFn: () => generateManuscript(activeReportId, false),
+    mutationFn: () => generateManuscript(activeReportId!, false),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["manuscript-current", activeReportId] });
       await queryClient.invalidateQueries({ queryKey: ["manuscript-prose-current", activeReportId] });
       await queryClient.invalidateQueries({ queryKey: ["manuscript-versions", activeReportId] });
     },
   });
-  const validate = useMutation({ mutationFn: () => validateManuscript(activeReportId) });
+  const validate = useMutation({ mutationFn: () => validateManuscript(activeReportId!) });
 
   const errors = [workspaces.error, projects.error, reports.error, manuscript.error, prose.error, versions.error, generate.error, validate.error].filter(Boolean);
   if (errors.length) return <section className="card pad" role="alert"><h2>Manuscript unavailable</h2><p className="muted" style={{ marginTop: 6 }}>{errors[0].message}</p></section>;
