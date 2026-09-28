@@ -36,6 +36,7 @@ class SourceCreateRequest(BaseModel):
     url: str | None = None
     abstract: str | None = None
     citation_count: int | None = None
+    source_meta: dict[str, object] | None = None
 
 
 class SourceRead(BaseModel):
@@ -52,6 +53,7 @@ class SourceRead(BaseModel):
     external_source_id: str | None
     citation_count: int | None
     abstract: str | None
+    source_meta: dict[str, object] | None
     status: str
     created_at: datetime
     updated_at: datetime
