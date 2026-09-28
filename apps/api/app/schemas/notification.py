@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+
 class NotificationRead(BaseModel):
     id: uuid.UUID
     workspace_id: uuid.UUID | None
