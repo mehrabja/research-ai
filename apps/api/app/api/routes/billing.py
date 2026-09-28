@@ -20,8 +20,8 @@ from app.schemas.billing import (
     BillingPortalActionResponse,
     ChangePlanRequest,
     CheckoutSessionRequest,
-    SubscriptionSummaryResponse,
     CheckoutSessionResponse,
+    SubscriptionSummaryResponse,
 )
 from app.services import billing as billing_service
 from app.services.billing_provider import get_billing_provider
@@ -268,7 +268,7 @@ def _verify_stripe_signature(
         return False
     if abs(int(time.time()) - timestamp) > tolerance_seconds:
         return False
-    signed = f"{timestamp}.".encode("utf-8") + payload
+    signed = f"{timestamp}.".encode() + payload
     expected = hmac.new(
         secret.encode("utf-8"),
         signed,
