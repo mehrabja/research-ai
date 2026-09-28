@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { Metadata } from "next";
+import LiteratureMap from "@/components/LiteratureMap";
 
 export const metadata: Metadata = {
   title: "Literature · Research AI",
@@ -8,7 +8,16 @@ export const metadata: Metadata = {
 export default function LiteraturePage() {
   return (
     <>
-<div className="page-head"><div><h1>Literature map</h1><p>Compare themes, methods, citations and gaps across your corpus.</p></div><div className="actions"><button className="btn" data-toast="Export CSV">Export</button><Link className="btn primary" href="/evidence">Build evidence set</Link></div></div><div className="grid grid-4"><div className="card metric"><div className="label">Papers</div><div className="value">248</div><div className="delta">18 clusters</div></div><div className="card metric"><div className="label">Themes</div><div className="value">12</div><div className="delta">3 emerging</div></div><div className="card metric"><div className="label">Citation links</div><div className="value">1,931</div><div className="delta good">+84 this week</div></div><div className="card metric"><div className="label">Evidence gaps</div><div className="value">7</div><div className="delta warn">Needs review</div></div></div><div className="grid grid-2" style={{marginTop: '16px'}}><section className="card pad"><div className="row"><h3>Theme distribution</h3><span className="tag">248 papers</span></div><div className="stack" style={{marginTop: '16px'}}><div><div className="row small"><span>Transformer decoding</span><b>28%</b></div><div className="progress"><span style={{width: '28%'}}></span></div></div><div><div className="row small"><span>Contrastive learning</span><b>21%</b></div><div className="progress"><span style={{width: '21%'}}></span></div></div><div><div className="row small"><span>Low-data adaptation</span><b>18%</b></div><div className="progress"><span style={{width: '18%'}}></span></div></div><div><div className="row small"><span>Benchmarking</span><b>15%</b></div><div className="progress"><span style={{width: '15%'}}></span></div></div><div><div className="row small"><span>Interpretability</span><b>10%</b></div><div className="progress"><span style={{width: '10%'}}></span></div></div></div></section><section className="card pad"><div className="row"><h3>Recent papers</h3><span className="tag">Sorted by relevance</span></div><div className="list"><div className="list-item"><div className="title">Adaptive pretraining for sparse neuroimaging</div><div className="meta">2026 · 31 citations · relevance 0.89</div></div><div className="list-item"><div className="title">Cross-subject transfer with frozen encoders</div><div className="meta">2025 · 67 citations · relevance 0.87</div></div><div className="list-item"><div className="title">Benchmarking low-sample brain decoding</div><div className="meta">2024 · 54 citations · relevance 0.84</div></div></div></section></div>
+      <div className="page-head">
+        <div>
+          <h1>Literature map</h1>
+          <p>
+            Review the selected project&apos;s literature corpus, screening
+            state, clusters and evidence gaps.
+          </p>
+        </div>
+      </div>
+      <LiteratureMap />
     </>
   );
 }
