@@ -6,7 +6,6 @@ storage abstraction provider-neutral so file routes do not change.
 from __future__ import annotations
 
 import contextlib
-
 from collections.abc import Iterator
 from pathlib import PurePosixPath
 
