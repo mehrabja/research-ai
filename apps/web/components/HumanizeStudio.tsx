@@ -53,7 +53,7 @@ export default function HumanizeStudio() {
   const validate = useMutation({ mutationFn: () => validateManuscriptHumanization(activeReportId!) });
 
   const errors = [workspaces.error, projects.error, reports.error, manuscript.error, humanization.error, generate.error, validate.error].filter(Boolean);
-  if (errors.length) return <section className="card pad" role="alert"><h2>Humanization unavailable</h2><p className="muted" style={{ marginTop: 6 }}>{errors[0].message}</p></section>;
+  const firstError = errors.find((error): error is Error => error instanceof Error);\n  if (firstError) return <section className="card pad" role="alert"><h2>Humanization unavailable</h2><p className="muted" style={{ marginTop: 6 }}>{firstError.message}</p></section>;
 
   const run = humanization.data?.run;
   const preservation = run?.preservation_summary ?? {};
