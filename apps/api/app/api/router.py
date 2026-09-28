@@ -4,9 +4,8 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.routes.academic_qa import router as academic_qa_router
-from app.api.routes.auth import router as auth_router
-from app.api.routes.mfa import router as mfa_router
 from app.api.routes.api_tokens import router as api_tokens_router
+from app.api.routes.auth import router as auth_router
 from app.api.routes.billing import router as billing_router
 from app.api.routes.citations import router as citations_router
 from app.api.routes.classification import (
@@ -18,14 +17,13 @@ from app.api.routes.collaboration import (
 from app.api.routes.detection import router as detection_router
 from app.api.routes.embeddings import router as embeddings_router
 from app.api.routes.files import files_router
-from app.api.routes.folders import router as folders_router
 from app.api.routes.files import router as project_files_router
+from app.api.routes.folders import router as folders_router
 from app.api.routes.health import router as health_router
 from app.api.routes.humanization import router as humanization_router
 from app.api.routes.intelligence import router as intelligence_router
 from app.api.routes.invitations import router as invitations_router
 from app.api.routes.jobs import router as jobs_router
-from app.api.routes.notifications import router as notifications_router
 from app.api.routes.knowledge_graph import (
     router as knowledge_graph_router,
 )
@@ -38,6 +36,8 @@ from app.api.routes.manuscript_humanization import (
 from app.api.routes.manuscript_prose import (
     router as manuscript_prose_router,
 )
+from app.api.routes.mfa import router as mfa_router
+from app.api.routes.notifications import router as notifications_router
 from app.api.routes.orchestration import (
     router as orchestration_router,
 )
@@ -62,8 +62,8 @@ from app.api.routes.technical_intelligence import (
     router as technical_intelligence_router,
 )
 from app.api.routes.translation import router as translation_router
-from app.api.routes.workspaces import router as workspaces_router
 from app.api.routes.webhooks import router as webhooks_router
+from app.api.routes.workspaces import router as workspaces_router
 
 api_router = APIRouter()
 api_router.include_router(projects_router)
