@@ -33,10 +33,10 @@ from app.integrations.detection.base import (
     DetectionProvider,
 )
 from app.services import report_status as report_status_service
-from app.services.usage_contract import ProviderUsage, record_provider_usage
 from app.services.detection_profile import (
     get_current_detection_profile,
 )
+from app.services.usage_contract import ProviderUsage, record_provider_usage
 
 logger = logging.getLogger(__name__)
 
