@@ -193,17 +193,17 @@ def get_evidence_matrix(
     )
     evidence_by_claim: dict[uuid.UUID, list[ClaimEvidence]] = {}
     citation_by_claim: dict[uuid.UUID, list[ClaimCitation]] = {}
-    for row in evidence_rows:
-        evidence_by_claim.setdefault(row.claim_id, []).append(row)
-    for row in citation_rows:
-        citation_by_claim.setdefault(row.claim_id, []).append(row)
+    for evidence_row in evidence_rows:
+        evidence_by_claim.setdefault(evidence_row.claim_id, []).append(evidence_row)
+    for citation_row in citation_rows:
+        citation_by_claim.setdefault(citation_row.claim_id, []).append(citation_row)
 
     return EvidenceMatrixRead(
         report_id=report_id,
         citation_run_id=run.id,
         rows=[
             EvidenceMatrixRow(
-                claim=claim,
+                claim=ClaimRead.model_validate(claim),
                 evidence=[
                     ClaimEvidenceRead.model_validate(e)
                     for e in evidence_by_claim.get(claim.id, [])
