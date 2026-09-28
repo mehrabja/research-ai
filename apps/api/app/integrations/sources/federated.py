@@ -168,7 +168,8 @@ def _federated_score(
     citation_count: int | None,
 ) -> float:
     hit_bonus = float(len(hits))
-    best_rank = min(int(h["rank"]) for h in hits)
+    ranks = [rank for h in hits if isinstance((rank := h.get("rank")), int)]
+    best_rank = min(ranks) if ranks else 1
     rank_bonus = 1.0 / max(1, best_rank)
     citation_bonus = min(5.0, float(citation_count or 0) / 1000.0)
     return hit_bonus + rank_bonus + citation_bonus
