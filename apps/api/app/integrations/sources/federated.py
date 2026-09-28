@@ -11,7 +11,7 @@ from app.integrations.sources.base import (
     SourceSearchProvider,
 )
 
-_WS_RE = re.compile(r"\\s+")
+_WS_RE = re.compile(r"\s+")
 
 
 def _norm_text(value: str | None) -> str:
