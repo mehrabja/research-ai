@@ -8,9 +8,9 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.db.models.project_file import ProjectFile
 from app.db.models.report import Report
 from app.db.models.source import Chunk, Source
-from app.db.models.project_file import ProjectFile
 from app.domain.text_chunking import WordTextChunker
 from app.services.embedding_jobs import enqueue_source_embedding_job
 
