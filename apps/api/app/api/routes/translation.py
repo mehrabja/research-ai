@@ -5,11 +5,8 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
-from app.schemas.translation_current import TranslationCurrentResponse
 
 from app.api.dependencies import get_current_user
 from app.db.models.pipeline import TranslationRun, TranslationVersion
