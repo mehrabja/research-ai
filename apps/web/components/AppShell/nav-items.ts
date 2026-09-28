@@ -19,6 +19,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/generate", icon: "✧", label: "AI Studio" },
   { href: "/humanize", icon: "≈", label: "Humanize" },
   { href: "/translate", icon: "⇄", label: "Translate" },
+  { href: "/final-review", icon: "✓", label: "Final review" },
   { href: "/collaboration", icon: "◌", label: "Collaboration" },
   { href: "/jobs", icon: "◷", label: "Jobs" },
   { href: "/team", icon: "♙", label: "Team" },
