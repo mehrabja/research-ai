@@ -597,6 +597,22 @@ def apply_extraction_result(
         reason="extraction_completed",
     )
 
+    # Phase 3 — make extracted file text available to the existing
+    # Source/Chunk retrieval and citation pipeline.
+    try:
+        from app.services.artifact_evidence import sync_project_file_evidence
+
+        sync_project_file_evidence(
+            db,
+            project_file_id=pf.id,
+            user_id=user_id,
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception(
+            "artifact evidence sync failed for file_id=%s",
+            pf.id,
+        )
+
 
 def mark_extraction_failed(
     db: Session,
