@@ -10,9 +10,9 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import AuthenticationRequired
 from app.core.security import decode_access_token
-from app.services.api_tokens import authenticate_api_token, APITokenInvalid
 from app.db.models.user import User
 from app.db.session import get_db
+from app.services.api_tokens import APITokenInvalid, authenticate_api_token
 
 _bearer = HTTPBearer(auto_error=False)
 
