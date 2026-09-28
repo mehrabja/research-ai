@@ -139,7 +139,7 @@ test("files page creates a real folder and uploads a real file", async ({
 
   await page.goto("/files");
   await expect(
-    page.getByRole("heading", { name: "Files & intelligence" }),
+    page.getByRole("heading", { name: "Files & intelligence", exact: true }).first(),
   ).toBeVisible();
 
   await page.getByLabel("Folder name").fill("e2e-data");
@@ -174,7 +174,7 @@ test("evidence page uses the real citation matrix and has no synthetic counters"
   await page.goto("/evidence");
 
   await expect(
-    page.getByRole("heading", { name: "Evidence" }),
+    page.getByRole("heading", { name: "Evidence", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("Evidence matrix")).toBeVisible();
 
