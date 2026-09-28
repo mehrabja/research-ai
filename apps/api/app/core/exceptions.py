@@ -65,6 +65,18 @@ class ProjectReportAttachForbiddenError(AppError):
     code = "PROJECT_REPORT_ATTACH_FORBIDDEN"
     status_code = 409
     message = "Reports cannot be attached to an archived project."
+class WorkspaceLifecycleForbidden(AppError):
+    code = "WORKSPACE_LIFECYCLE_FORBIDDEN"
+    status_code = 403
+    message = "You do not have permission to change workspace lifecycle state."
+
+
+class WorkspaceLifecycleInvalid(AppError):
+    code = "WORKSPACE_LIFECYCLE_INVALID"
+    status_code = 409
+    message = "The requested workspace lifecycle transition is invalid."
+
+
 class FileNotFound(AppError):
     code = "FILE_NOT_FOUND"
     status_code = 404
