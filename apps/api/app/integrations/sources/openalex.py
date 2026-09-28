@@ -18,6 +18,7 @@ class OpenAlexProvider:
 
     def __init__(self) -> None:
         settings = get_settings()
+        self._api_key = settings.openalex_api_key
         self._mailto = settings.crossref_mailto
         self._base_url = "https://api.openalex.org/works"
         self._timeout = 20.0
@@ -34,6 +35,9 @@ class OpenAlexProvider:
             "search": query,
             "per-page": str(max(1, min(limit, 100))),
         }
+
+        if self._api_key:
+            params["api_key"] = self._api_key
         if year is not None:
             params["filter"] = f"from_publication_year:{year},to_publication_year:{year}"
         if open_access_only:

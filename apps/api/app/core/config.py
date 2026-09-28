@@ -150,6 +150,8 @@ class Settings(BaseSettings):
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openalex_api_key: str = Field(default="", repr=False)
     crossref_mailto: str = ""
+    ncbi_api_key: str = Field(default="", repr=False)
+    unpaywall_email: str = ""
     resend_api_key: str = Field(default="", repr=False)
     email_provider: Literal["none", "resend"] = "none"
     email_from: str = ""
@@ -361,7 +363,8 @@ class Settings(BaseSettings):
     )
 
     source_discovery_provider: str = "semantic_scholar"
-    source_discovery_fallbacks: str = ""
+    source_discovery_fallbacks: str = "openalex,crossref"
+    source_discovery_federated: bool = True
 
     # --- Research Classification (Milestone 21) --------------------------
     detection_api_base_url: str = ""

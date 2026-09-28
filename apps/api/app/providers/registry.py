@@ -248,11 +248,17 @@ def build_default_registry() -> ProviderRegistry:
         return HTTPDetectionProvider()
 
     def source_factory(ctx: ProviderContext) -> Any:
-        from app.integrations.sources.semantic_scholar import SemanticScholarProvider
+        from app.integrations.sources.semantic_scholar import (
+            SemanticScholarProvider,
+        )
+
         settings = get_settings()
+
         return SemanticScholarProvider(
             api_key=settings.semantic_scholar_api_key,
+            base_url=settings.semantic_scholar_base_url,
             timeout_seconds=settings.semantic_scholar_timeout_seconds,
+            max_retries=settings.semantic_scholar_max_retries,
         )
 
     def openalex_factory(ctx: ProviderContext) -> Any:
