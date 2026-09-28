@@ -49,3 +49,16 @@ class PreTranslationRequestChangesRequest(BaseModel):
 class PreTranslationRejectRequest(BaseModel):
     version_id: uuid.UUID
     notes: str = Field(..., min_length=1, max_length=2_000)
+
+
+class PostTranslationReviewResponse(BaseModel):
+    report_id: uuid.UUID
+    status: str
+    version_id: uuid.UUID
+    version_number: int
+    language: str
+    content: str
+    change_type: str | None
+    source_version_id: uuid.UUID | None
+    review_stage: str
+    review_events: list[ReviewEventResponse]
