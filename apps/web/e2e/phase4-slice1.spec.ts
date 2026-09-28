@@ -118,3 +118,67 @@ test("literature page reads the selected project corpus from the backend", async
   await expect(page.getByText("248", { exact: true })).toHaveCount(0);
   await expect(page.getByText("1,931", { exact: true })).toHaveCount(0);
 });
+
+test("files page creates a real folder and uploads a real file", async ({
+  page,
+}) => {
+  await createAuthenticatedSession(page);
+
+  await page.goto("/workspace");
+  await expect(page.getByLabel("Project name")).toBeEnabled({
+    timeout: 10_000,
+  });
+
+  const projectName = "E2E Files " + Date.now();
+  await page.getByLabel("Project name").fill(projectName);
+  await page.getByRole("button", { name: "Create project" }).click();
+
+  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await page.goto("/files");
+  await expect(
+    page.getByRole("heading", { name: "Files & intelligence" }),
+  ).toBeVisible();
+
+  await page.getByLabel("Folder name").fill("e2e-data");
+  await page.getByRole("button", { name: "Create folder" }).click();
+  await expect(page.getByText("e2e-data", { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await page.getByLabel("Folder").selectOption({
+    label: "e2e-data",
+  });
+
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "slice3-check.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Slice 3 integration file."),
+  });
+
+  await expect(page.getByText("slice3-check.txt", { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await expect(page.getByText("248", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("36 files", { exact: false })).toHaveCount(0);
+});
+
+test("evidence page uses the real citation matrix and has no synthetic counters", async ({
+  page,
+}) => {
+  await createAuthenticatedSession(page);
+
+  await page.goto("/evidence");
+
+  await expect(
+    page.getByRole("heading", { name: "Evidence" }),
+  ).toBeVisible();
+  await expect(page.getByText("Evidence matrix")).toBeVisible();
+
+  await expect(page.getByText("86", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("312", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("7", { exact: true })).toHaveCount(0);
+});
