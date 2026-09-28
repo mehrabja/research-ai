@@ -40,7 +40,7 @@ def _verify_stripe_signature(
     if abs(int(time.time()) - timestamp) > tolerance_seconds:
         raise HTTPException(status_code=400, detail="stale webhook signature")
 
-    signed = f"{timestamp}.{payload.decode('utf-8')}".encode("utf-8")
+    signed = f"{timestamp}.{payload.decode('utf-8')}".encode()
     expected = hmac.new(
         secret.encode("utf-8"),
         signed,
