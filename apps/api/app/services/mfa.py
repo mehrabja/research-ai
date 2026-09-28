@@ -78,6 +78,3 @@ def consume_recovery_code(
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
-
-def utcnow() -> datetime:
-    return datetime.now(UTC)
