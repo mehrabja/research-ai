@@ -19,6 +19,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from app.core.exceptions import (
     ProjectNotFound,
     ProjectReportAttachForbiddenError,
@@ -137,6 +141,25 @@ def create_report(
     except Exception:
         db.rollback()
         raise
+
+    if report.project_id is not None:
+        try:
+            from app.services.artifact_evidence import (
+                sync_ready_project_files_for_report,
+            )
+
+            sync_ready_project_files_for_report(
+                db,
+                project_id=report.project_id,
+                report_id=report.id,
+                user_id=user_id,
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                "artifact evidence sync on report creation failed "
+                "report_id=%s",
+                report.id,
+            )
 
     return report
 
