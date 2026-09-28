@@ -144,9 +144,9 @@ test("files page creates a real folder and uploads a real file", async ({
 
   await page.getByLabel("Folder name").fill("e2e-data");
   await page.getByRole("button", { name: "Create folder" }).click();
-  await expect(page.getByText("e2e-data", { exact: true })).toBeVisible({
-    timeout: 10_000,
-  });
+  await expect(
+    page.getByLabel("Folder").locator("option", { hasText: "e2e-data" }),
+  ).toHaveCount(1, { timeout: 10_000 });
 
   await page.getByLabel("Folder").selectOption({
     label: "e2e-data",
