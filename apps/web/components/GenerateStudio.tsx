@@ -8,9 +8,9 @@ import { listWorkspaces } from "@/lib/api/workspaces";
 import { generateManuscript, generateManuscriptProse, getCurrentManuscript, getCurrentManuscriptProse } from "@/lib/api/manuscript";
 
 export default function GenerateStudio() {
-  const [workspaceId, setWorkspaceId] = useState();
-  const [projectId, setProjectId] = useState();
-  const [reportId, setReportId] = useState();
+  const [workspaceId, setWorkspaceId] = useState<string>();
+  const [projectId, setProjectId] = useState<string>();
+  const [reportId, setReportId] = useState<string>();
   const queryClient = useQueryClient();
 
 
@@ -38,11 +38,11 @@ export default function GenerateStudio() {
   const activeReportId = reportId ?? reports.data?.[0]?.id;
 
 
-  const manuscript = useQuery({ queryKey: ["manuscript-current", activeReportId], queryFn: () => getCurrentManuscript(activeReportId), enabled: Boolean(activeReportId), staleTime: 10_000 });
-  const prose = useQuery({ queryKey: ["manuscript-prose-current", activeReportId], queryFn: () => getCurrentManuscriptProse(activeReportId), enabled: Boolean(activeReportId), staleTime: 10_000 });
+  const manuscript = useQuery({ queryKey: ["manuscript-current", activeReportId], queryFn: () => getCurrentManuscript(activeReportId!), enabled: Boolean(activeReportId), staleTime: 10_000 });
+  const prose = useQuery({ queryKey: ["manuscript-prose-current", activeReportId], queryFn: () => getCurrentManuscriptProse(activeReportId!), enabled: Boolean(activeReportId), staleTime: 10_000 });
 
   const architect = useMutation({
-    mutationFn: () => generateManuscript(activeReportId, false),
+    mutationFn: () => generateManuscript(activeReportId!, false),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["manuscript-current", activeReportId] });
       await queryClient.invalidateQueries({ queryKey: ["manuscript-prose-current", activeReportId] });
@@ -51,7 +51,7 @@ export default function GenerateStudio() {
   const proseGenerate = useMutation({
     mutationFn: () => {
       if (!manuscript.data) throw new Error("Generate the manuscript architecture first.");
-      return generateManuscriptProse(activeReportId, manuscript.data.version.id);
+      return generateManuscriptProse(activeReportId!, manuscript.data.version.id);
     },
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["manuscript-prose-current", activeReportId] }); },
   });
