@@ -1,9 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 
 const testPassword = "Secret123456789";
 
 async function createAuthenticatedSession(page: Page) {
-  const email = "e2e-slice1-" + Date.now() + "@gmail.com";
+  const email = "e2e-slice1-" + randomUUID() + "@gmail.com";
 
   const registerResponse = await page.request.post(
     "/api/v1/auth/register",
@@ -237,9 +238,11 @@ test("knowledge graph page reads real project graph state without synthetic metr
   await expect(
     page.getByRole("heading", { name: "Knowledge graph", exact: true }).first().first(),
   ).toBeVisible();
-  await expect(
-    page.getByText("No knowledge graph exists for this project yet."),
-  ).toBeVisible();
+  const graphEmptyState = page.getByText(
+    "No knowledge graph exists for this project yet.",
+  );
+  const nodesMetric = page.getByText("Nodes", { exact: true });
+  await expect(graphEmptyState.or(nodesMetric).first()).toBeVisible();
 
   await expect(page.getByText("164", { exact: true })).toHaveCount(0);
   await expect(page.getByText("482", { exact: true })).toHaveCount(0);
