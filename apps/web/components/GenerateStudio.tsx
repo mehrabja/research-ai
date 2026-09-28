@@ -57,7 +57,7 @@ export default function GenerateStudio() {
   });
 
   const errors = [workspaces.error, projects.error, reports.error, manuscript.error, prose.error, architect.error, proseGenerate.error].filter(Boolean);
-  if (errors.length) return <section className="card pad" role="alert"><h2>Generation unavailable</h2><p className="muted" style={{ marginTop: 6 }}>{errors[0].message}</p></section>;
+  const firstError = errors.find((error): error is Error => error instanceof Error);\n  if (firstError) return <section className="card pad" role="alert"><h2>Generation unavailable</h2><p className="muted" style={{ marginTop: 6 }}>{firstError.message}</p></section>;
 
   return <div className="stack" style={{ gap: 16 }}>
     <section className="card pad">
