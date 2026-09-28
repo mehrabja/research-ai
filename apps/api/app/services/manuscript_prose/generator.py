@@ -7,16 +7,25 @@ falls back to deterministic with an explicit warning.
 """
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
 
-from app.domain.manuscript_prose import (
-    ProseGenerationMode,
+from app.core.config import get_settings
+from app.domain.generation import GenerationProfile
+from app.domain.manuscript_prose import ProseGenerationMode
+from app.integrations.generation.base import GenerationProviderError
+from app.providers.registry import (
+    ProviderCapability,
+    ProviderContext,
+    ProviderResolutionError,
+    resolve_provider,
 )
 from app.services.manuscript_prose.contracts import SectionContract
 from app.services.manuscript_prose.evidence import EvidencePacket
+from app.services.manuscript_prose.prompts import SYSTEM_CONTRACT, build_prompt
 from app.services.manuscript_prose.serialization import (
     ParagraphUnit,
     SectionUnit,
@@ -33,6 +42,8 @@ class GeneratedSection:
     mode_used: str
     warnings: list[str] = field(default_factory=list)
     error_message: str | None = None
+    provider_name: str | None = None
+    model_name: str | None = None
 
 
 def _make_paragraph(
@@ -192,6 +203,119 @@ def _deterministic_generate(
     return paragraphs, warnings
 
 
+def _build_provider() -> tuple[object, GenerationProfile]:
+    settings = get_settings()
+    profile = GenerationProfile(
+        provider=settings.manuscript_prose_provider,
+        model=settings.manuscript_prose_model,
+        temperature=settings.manuscript_prose_temperature,
+        max_output_tokens=settings.manuscript_prose_max_output_tokens,
+        profile_version="m28.5-provider-v1",
+    )
+    provider = resolve_provider(
+        capability=ProviderCapability.GENERATION,
+        preferred=profile.provider,
+        context=ProviderContext(profile=profile),
+    )
+    return provider, profile
+
+
+def _parse_provider_output(
+    *,
+    raw_text: str,
+    contract: SectionContract,
+) -> list[ParagraphUnit]:
+    text = raw_text.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines:
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+
+    try:
+        payload = json.loads(text)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise ValueError("provider returned invalid JSON") from exc
+
+    if not isinstance(payload, dict):
+        raise ValueError("provider JSON root must be an object")
+
+    section_id = payload.get("section_id")
+    if section_id not in (None, contract.section_key):
+        raise ValueError("provider returned mismatched section_id")
+
+    raw_paragraphs = payload.get("paragraphs")
+    if not isinstance(raw_paragraphs, list) or not raw_paragraphs:
+        raise ValueError("provider output must contain paragraphs")
+
+    paragraphs: list[ParagraphUnit] = []
+    for ordinal, raw_paragraph in enumerate(raw_paragraphs):
+        if not isinstance(raw_paragraph, dict):
+            raise ValueError("paragraph must be an object")
+        raw_sentences = raw_paragraph.get("sentences")
+        if not isinstance(raw_sentences, list) or not raw_sentences:
+            raise ValueError("paragraph must contain sentences")
+
+        sentences: list[SentenceUnit] = []
+        for raw_sentence in raw_sentences:
+            if not isinstance(raw_sentence, dict):
+                raise ValueError("sentence must be an object")
+            text_value = raw_sentence.get("text")
+            if not isinstance(text_value, str) or not text_value.strip():
+                raise ValueError("sentence text must be non-empty")
+
+            evidence_refs = raw_sentence.get("evidence_refs") or []
+            citation_refs = raw_sentence.get("citation_refs") or []
+            if (
+                not isinstance(evidence_refs, list)
+                or not all(isinstance(x, str) for x in evidence_refs)
+            ):
+                raise ValueError("evidence_refs must be a string list")
+            if (
+                not isinstance(citation_refs, list)
+                or not all(isinstance(x, str) for x in citation_refs)
+            ):
+                raise ValueError("citation_refs must be a string list")
+
+            sentences.append(SentenceUnit(
+                text=text_value.strip(),
+                char_start=0,
+                char_end=0,
+                evidence_refs=evidence_refs,
+                citation_refs=citation_refs,
+            ))
+
+        paragraph = _make_paragraph(ordinal, sentences)
+        if paragraph is not None:
+            paragraphs.append(paragraph)
+
+    if not paragraphs:
+        raise ValueError("provider output produced no paragraphs")
+    return paragraphs
+
+
+def _provider_generate(
+    *,
+    contract: SectionContract,
+    packet: EvidencePacket,
+) -> tuple[list[ParagraphUnit], str, str]:
+    provider, profile = _build_provider()
+    user_prompt = build_prompt(contract=contract, packet=packet)
+    result = provider.generate(
+        system_prompt=SYSTEM_CONTRACT,
+        user_prompt=user_prompt,
+        temperature=profile.temperature,
+        max_output_tokens=profile.max_output_tokens,
+    )
+    paragraphs = _parse_provider_output(
+        raw_text=result.text,
+        contract=contract,
+    )
+    return paragraphs, result.provider, result.model
+
+
 def generate_section(
     db: Session,
     *,
@@ -199,38 +323,48 @@ def generate_section(
     packet: EvidencePacket,
     mode: str,
 ) -> GeneratedSection:
-    """Dispatch generation for a single section.
-
-    Provider-assisted mode is not wired in this milestone. The
-    deterministic path is the only one that yields prose. Provider
-    availability is a deployment concern that must not degrade the
-    manuscript's evidence-grounding.
-    """
+    _ = db
     warnings: list[str] = []
-    mode_used = mode
 
     if mode not in (
         ProseGenerationMode.DETERMINISTIC.value,
         ProseGenerationMode.HYBRID.value,
         ProseGenerationMode.PROVIDER_ASSISTED.value,
     ):
+        warnings.append(f"unknown_mode_fallback:{mode}")
         mode = ProseGenerationMode.DETERMINISTIC.value
-        mode_used = mode
-        warnings.append(f"unknown_mode_fallback:{mode_used}")
 
-    if mode in (
-        ProseGenerationMode.PROVIDER_ASSISTED.value,
-        ProseGenerationMode.HYBRID.value,
-    ):
-        warnings.append(
-            f"provider_not_configured:{mode}; used deterministic"
+    provider_name: str | None = None
+    model_name: str | None = None
+
+    if mode == ProseGenerationMode.DETERMINISTIC.value:
+        paragraphs, dwarn = _deterministic_generate(
+            contract=contract,
+            packet=packet,
         )
-        mode_used = ProseGenerationMode.DETERMINISTIC.value
-
-    paragraphs, dwarn = _deterministic_generate(
-        contract=contract, packet=packet,
-    )
-    warnings.extend(dwarn)
+        warnings.extend(dwarn)
+        mode_used = mode
+    else:
+        try:
+            paragraphs, provider_name, model_name = _provider_generate(
+                contract=contract, packet=packet
+            )
+            mode_used = ProseGenerationMode.PROVIDER_ASSISTED.value
+        except (GenerationProviderError, ProviderResolutionError, ValueError):
+            if mode == ProseGenerationMode.PROVIDER_ASSISTED.value:
+                raise
+            logger.warning(
+                "m28_5_provider_fallback section=%s",
+                contract.section_key,
+                exc_info=True,
+            )
+            paragraphs, dwarn = _deterministic_generate(
+                contract=contract,
+                packet=packet,
+            )
+            warnings.append("provider_fallback")
+            warnings.extend(dwarn)
+            mode_used = ProseGenerationMode.DETERMINISTIC.value
 
     unit = SectionUnit(
         section_key=contract.section_key,
@@ -240,6 +374,8 @@ def generate_section(
         paragraphs=paragraphs,
         provenance={
             "mode_used": mode_used,
+            "provider": provider_name,
+            "model": model_name,
             "m28_evidence_count": len(packet.m28_items),
             "technical_fact_count": len(packet.technical_facts),
             "experiment_result_count": len(packet.experiment_results),
@@ -249,7 +385,11 @@ def generate_section(
         warnings=list(warnings),
     )
     return GeneratedSection(
-        unit=unit, mode_used=mode_used, warnings=warnings,
+        unit=unit,
+        mode_used=mode_used,
+        warnings=warnings,
+        provider_name=provider_name,
+        model_name=model_name,
     )
 
 
