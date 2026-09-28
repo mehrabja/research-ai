@@ -67,7 +67,7 @@ def update_folder(db: Session, *, project_id: uuid.UUID, user_id: uuid.UUID, fol
         ).scalar_one_or_none()
         if parent is None:
             raise AppError("parent folder not found", code="FOLDER_NOT_FOUND")
-        current = parent
+        current: ProjectFolder | None = parent
         seen: set[uuid.UUID] = set()
         while current.parent_id is not None:
             if current.id in seen or current.parent_id == folder_id:
