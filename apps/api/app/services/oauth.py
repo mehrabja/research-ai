@@ -25,7 +25,7 @@ SUPPORTED = {"google", "github"}
 
 def _state_signature(provider: str, nonce: str) -> str:
     secret = get_settings().jwt_secret_key.encode()
-    payload = f"{provider}:{nonce}".encode("utf-8")
+    payload = f"{provider}:{nonce}".encode()
     return hmac.new(secret, payload, hashlib.sha256).hexdigest()
 
 
