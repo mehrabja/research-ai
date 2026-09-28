@@ -16,7 +16,10 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.domain.generation import GenerationProfile
 from app.domain.manuscript_prose import ProseGenerationMode
-from app.integrations.generation.base import GenerationProviderError
+from app.integrations.generation.base import (
+    GenerationProvider,
+    GenerationProviderError,
+)
 from app.providers.registry import (
     ProviderCapability,
     ProviderContext,
@@ -203,7 +206,7 @@ def _deterministic_generate(
     return paragraphs, warnings
 
 
-def _build_provider() -> tuple[object, GenerationProfile]:
+def _build_provider() -> tuple[GenerationProvider, GenerationProfile]:
     settings = get_settings()
     profile = GenerationProfile(
         provider=settings.manuscript_prose_provider,
