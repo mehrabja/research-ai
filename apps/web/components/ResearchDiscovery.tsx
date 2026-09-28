@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
   createResearchReport,
@@ -9,24 +10,27 @@ import {
   searchSources,
   type SourceCandidate,
 } from "@/lib/api/research";
+import { listProjectReports } from "@/lib/api/projects";
 
 const DEFAULT_QUERY =
   "transformer-based neural decoding of sparse fMRI under low-data conditions";
 
 export default function ResearchDiscovery() {
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("projectId") ?? undefined;
   const [query, setQuery] = useState(DEFAULT_QUERY);
   const [reportId, setReportId] = useState<string>();
   const [results, setResults] = useState<SourceCandidate[]>([]);
   const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
 
   const reports = useQuery({
-    queryKey: ["reports"],
-    queryFn: listReports,
+    queryKey: ["reports", projectId],
+    queryFn: () => projectId ? listProjectReports(projectId) : listReports(),
     staleTime: 30_000,
   });
 
   const createReport = useMutation({
-    mutationFn: () => createResearchReport(query.trim()),
+    mutationFn: () => createResearchReport(query.trim(), projectId),
     onSuccess: async (report) => {
       setReportId(report.id);
       await reports.refetch();
@@ -36,12 +40,14 @@ export default function ResearchDiscovery() {
   const discovery = useMutation({
     mutationFn: async () => {
       let activeReportId = reportId ?? reports.data?.[0]?.id;
+
       if (!activeReportId) {
-        const report = await createResearchReport(query.trim());
+        const report = await createResearchReport(query.trim(), projectId);
         activeReportId = report.id;
         setReportId(activeReportId);
         await reports.refetch();
       }
+
       return searchSources(activeReportId, query.trim());
     },
     onSuccess: setResults,
@@ -55,7 +61,7 @@ export default function ResearchDiscovery() {
       }
       return saveSource(activeReportId, candidate);
     },
-    onSuccess: (_source, candidate) => {
+    onSuccess: async (_source, candidate) => {
       setSavedKeys((current) => {
         const next = new Set(current);
         next.add(sourceKey(candidate));
@@ -83,6 +89,7 @@ export default function ResearchDiscovery() {
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
+
         <div className="actions" style={{ marginTop: 12 }}>
           {!activeReportId && (
             <button
@@ -103,29 +110,27 @@ export default function ResearchDiscovery() {
             {discovery.isPending ? "Searching…" : "Run discovery →"}
           </button>
         </div>
+
         <div className="pillbar" style={{ marginTop: 12 }}>
           <span className="tag">OpenAlex</span>
           <span className="tag">Semantic Scholar</span>
           <span className="tag">Crossref</span>
           <span className="tag success">Deduplication on</span>
+          {projectId && <span className="tag">Project scoped</span>}
         </div>
       </div>
 
-      {reports.error && (
-        <div className="card pad" style={{ marginTop: 16 }}>
-          <p className="muted">{reports.error.message}</p>
-        </div>
-      )}
-
-      {createReport.error && (
-        <div className="card pad" style={{ marginTop: 16 }}>
-          <p className="muted">{createReport.error.message}</p>
-        </div>
-      )}
-
-      {discovery.error && (
-        <div className="card pad" style={{ marginTop: 16 }}>
-          <p className="muted">{discovery.error.message}</p>
+      {(reports.error ||
+        createReport.error ||
+        discovery.error ||
+        save.error) && (
+        <div className="card pad" style={{ marginTop: 16 }} role="alert">
+          <p className="muted">
+            {reports.error?.message ??
+              createReport.error?.message ??
+              discovery.error?.message ??
+              save.error?.message}
+          </p>
         </div>
       )}
 
@@ -145,6 +150,7 @@ export default function ResearchDiscovery() {
             {results.map((candidate) => {
               const key = sourceKey(candidate);
               const saved = savedKeys.has(key);
+
               return (
                 <article className="list-item" key={key}>
                   <div className="row">
@@ -165,12 +171,14 @@ export default function ResearchDiscovery() {
                       {saved ? "Saved" : "Save"}
                     </button>
                   </div>
+
                   {candidate.abstract && (
                     <p className="muted small" style={{ marginTop: 7 }}>
                       {candidate.abstract.slice(0, 320)}
                       {candidate.abstract.length > 320 ? "…" : ""}
                     </p>
                   )}
+
                   <div className="pillbar" style={{ marginTop: 8 }}>
                     {candidate.doi && (
                       <span className="tag">DOI {candidate.doi}</span>
@@ -186,16 +194,18 @@ export default function ResearchDiscovery() {
         </div>
       )}
 
-      {!discovery.isPending && discovery.isSuccess && results.length === 0 && (
-        <div className="card pad empty" style={{ marginTop: 16 }}>
-          <div className="big">∅</div>
-          <div>No sources matched this query.</div>
-        </div>
-      )}
+      {!discovery.isPending &&
+        discovery.isSuccess &&
+        results.length === 0 && (
+          <div className="card pad empty" style={{ marginTop: 16 }}>
+            <div className="big">∅</div>
+            <div>No sources matched this query.</div>
+          </div>
+        )}
     </>
   );
 }
 
 function sourceKey(candidate: SourceCandidate): string {
-  return `${candidate.source_api}:${candidate.external_source_id}`;
+  return candidate.source_api + ":" + candidate.external_source_id;
 }
