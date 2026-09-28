@@ -7,8 +7,6 @@ from app.db.models.academic_qa import (
 from app.db.models.api_token import APIToken  # noqa: F401
 from app.db.models.auth_session import AuthSession  # noqa: F401
 from app.db.models.auth_token import AuthOneTimeToken  # noqa: F401
-from app.db.models.notification import Notification  # noqa: F401
-from app.db.models.notification_preference import NotificationPreference  # noqa: F401
 
 
 # M37 — SaaS foundation
@@ -33,6 +31,7 @@ from app.db.models.collaboration import (
     ProjectMember,
 )
 from app.db.models.data_profile import DataColumnProfile, DataProfile
+from app.db.models.email_delivery import EmailDelivery  # noqa: F401
 from app.db.models.experiment_result import ExperimentResult
 from app.db.models.humanization import (
     ConvergenceBestSnapshot,
@@ -52,7 +51,6 @@ from app.db.models.knowledge import (
     TerminologyGlossary,
     VoiceProfile,
 )
-from app.db.models.email_delivery import EmailDelivery  # noqa: F401
 from app.db.models.knowledge_graph import (
     KnowledgeGraphBuildRun,
     KnowledgeGraphEdge,
@@ -82,6 +80,8 @@ from app.db.models.manuscript_prose import (
 )
 from app.db.models.membership import WorkspaceMembership  # noqa: F401
 from app.db.models.metric import Metric
+from app.db.models.notification import Notification  # noqa: F401
+from app.db.models.notification_preference import NotificationPreference  # noqa: F401
 from app.db.models.oauth_account import OAuthAccount  # noqa: F401
 from app.db.models.oauth_state import OAuthState  # noqa: F401
 from app.db.models.ops import (
