@@ -23,7 +23,13 @@ from app.db.models.user import User
 from app.db.session import get_db
 from app.domain.source import SourceCandidate
 from app.integrations.sources.base import SourceSearchProvider
-from app.providers.registry import ProviderCapability, resolve_provider
+from app.providers.registry import (
+    ProviderCapability,
+    ProviderContext,
+    get_provider_registry,
+    resolve_provider,
+)
+from app.integrations.sources.federated import FederatedSourceSearchProvider
 from app.schemas.source_extraction import SourceExtractionResponse
 from app.schemas.sources import (
     SourceCandidateRead,
@@ -51,6 +57,14 @@ def _default_provider() -> SourceSearchProvider:
         for item in settings.source_discovery_fallbacks.split(",")
         if item.strip()
     )
+    if settings.source_discovery_federated:
+        configured = get_provider_registry().resolve_chain(
+            capability=ProviderCapability.SOURCE_DISCOVERY,
+            preferred=settings.source_discovery_provider,
+            fallbacks=fallbacks,
+            context=ProviderContext(),
+        )
+        return FederatedSourceSearchProvider(configured)
     return resolve_provider(
         capability=ProviderCapability.SOURCE_DISCOVERY,
         preferred=settings.source_discovery_provider,
