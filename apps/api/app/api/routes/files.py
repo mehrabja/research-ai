@@ -160,26 +160,6 @@ def move_file(
     return ProjectFileRead.model_validate(pf)
 
 
-@files_router.post(
-    "/{file_id}/move",
-    response_model=ProjectFileRead,
-    summary="Move a file to another folder",
-)
-def move_file(
-    file_id: uuid.UUID,
-    folder_id: uuid.UUID | None = Query(default=None),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> ProjectFileRead:
-    pf = files_service.move_file(
-        db,
-        user_id=current_user.id,
-        file_id=file_id,
-        folder_id=folder_id,
-    )
-    return ProjectFileRead.model_validate(pf)
-
-
 @files_router.delete(
     "/{file_id}",
     status_code=status.HTTP_204_NO_CONTENT,
