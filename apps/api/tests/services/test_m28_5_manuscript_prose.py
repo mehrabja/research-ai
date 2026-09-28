@@ -143,3 +143,113 @@ def test_validate_section_word_budget() -> None:
         max_words=3,
     )
     assert outcome.status == "invalid"
+
+from app.domain.generation import GenerationProviderResult
+from app.services.manuscript_prose.contracts import SectionContract
+from app.services.manuscript_prose.evidence import EvidenceItem, EvidencePacket
+from app.services.manuscript_prose import generator as prose_generator
+
+
+def _provider_packet() -> tuple[SectionContract, EvidencePacket]:
+    contract = SectionContract(
+        section_key="intro",
+        section_type="introduction",
+        display_order=0,
+        title="Introduction",
+        purpose="Explain the topic",
+        research_objective="Assess the evidence",
+        requirement_keys=["r1"],
+        citation_required=True,
+        word_budget=300,
+    )
+    packet = EvidencePacket(
+        section_key="intro",
+        section_type="introduction",
+        display_order=0,
+        title="Introduction",
+        research_objective="Assess the evidence",
+        m28_items=[
+            EvidenceItem(
+                evidence_id=__import__("uuid").uuid4(),
+                source_id=__import__("uuid").uuid4(),
+                excerpt="The intervention improved the primary outcome.",
+                rank=1,
+                evidence_role="direct",
+            )
+        ],
+    )
+    return contract, packet
+
+
+class _FakeProvider:
+    provider_name = "fake"
+    model_name = "fake-model"
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+    def generate(self, **kwargs):
+        return GenerationProviderResult(
+            text=self.text,
+            provider=self.provider_name,
+            model=self.model_name,
+        )
+
+
+def test_provider_assisted_generation_parses_structured_output(monkeypatch) -> None:
+    contract, packet = _provider_packet()
+    evidence_id = str(packet.m28_items[0].evidence_id)
+
+    payload = (
+        '{"section_id":"intro","paragraphs":[{"sentences":['
+        '{"text":"The evidence supports the intervention.",'
+        f'"evidence_refs":["{evidence_id}"]'
+        '}]}]}'
+    )
+    monkeypatch.setattr(
+        prose_generator,
+        "_build_provider",
+        lambda: (_FakeProvider(payload), object()),
+    )
+
+    result = prose_generator.generate_section(
+        None, contract=contract, packet=packet, mode="provider_assisted"
+    )
+    assert result.mode_used == "provider_assisted"
+    assert result.provider_name == "fake"
+    assert result.unit.paragraphs[0].sentences[0].evidence_refs == [evidence_id]
+
+
+def test_hybrid_provider_failure_falls_back_to_deterministic(monkeypatch) -> None:
+    contract, packet = _provider_packet()
+
+    monkeypatch.setattr(
+        prose_generator,
+        "_build_provider",
+        lambda: (_FakeProvider("{not-json}"), object()),
+    )
+
+    result = prose_generator.generate_section(
+        None, contract=contract, packet=packet, mode="hybrid"
+    )
+    assert result.mode_used == "deterministic"
+    assert "provider_fallback" in result.warnings
+    assert result.unit.paragraphs
+
+
+def test_provider_assisted_invalid_output_raises(monkeypatch) -> None:
+    contract, packet = _provider_packet()
+    monkeypatch.setattr(
+        prose_generator,
+        "_build_provider",
+        lambda: (_FakeProvider("{not-json}"), object()),
+    )
+
+    import pytest
+    with pytest.raises(ValueError, match="invalid JSON"):
+        prose_generator.generate_section(
+            None,
+            contract=contract,
+            packet=packet,
+            mode="provider_assisted",
+        )
