@@ -10,9 +10,9 @@ from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.manuscript import ManuscriptVersionRead
 from app.schemas.manuscript_draft import (
+    ManuscriptDraftCommitRequest,
     ManuscriptDraftRead,
     ManuscriptDraftWriteRequest,
-    ManuscriptDraftCommitRequest,
 )
 from app.services.manuscript_drafts import (
     autosave,
