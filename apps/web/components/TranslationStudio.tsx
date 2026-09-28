@@ -12,6 +12,7 @@ import {
   requestChangesPreTranslationReview,
 } from "@/lib/api/translation";
 import { getReport } from "@/lib/api/reports";
+import PostTranslationHumanizationPanel from "@/components/PostTranslationHumanizationPanel";
 
 const REVIEW_ACTION_LABELS: Record<string, string> = {
   edited: "Edited",
@@ -520,6 +521,7 @@ export default function TranslationStudio() {
           )}
         </>
       )}
+      {activeReportId && <PostTranslationHumanizationPanel reportId={activeReportId} />}
     </div>
   );
 }
