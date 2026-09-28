@@ -13,6 +13,9 @@ from app.domain.manuscript_prose import (
     is_special_section,
     weakest_tier,
 )
+from app.services.manuscript_prose import generator as prose_generator
+from app.services.manuscript_prose.contracts import SectionContract
+from app.services.manuscript_prose.evidence import EvidenceItem, EvidencePacket
 from app.services.manuscript_prose.serialization import (
     ParagraphUnit,
     SectionUnit,
@@ -24,9 +27,6 @@ from app.services.manuscript_prose.serialization import (
     split_sentences,
     word_count,
 )
-from app.services.manuscript_prose import generator as prose_generator
-from app.services.manuscript_prose.contracts import SectionContract
-from app.services.manuscript_prose.evidence import EvidenceItem, EvidencePacket
 from app.services.manuscript_prose.validation import validate_section
 
 
