@@ -254,7 +254,10 @@ def run_m28_5_persisted(
             )
 
             if outcome.status != "valid":
-                run_warnings.extend(outcome.errors[:3])
+                raise ManuscriptProseInvalid(
+                    "provider/deterministic prose validation failed: "
+                    + "; ".join(outcome.errors[:5])
+                )
 
             layout_section(generated.unit, cursor)
             body = generated.unit.text
