@@ -349,3 +349,35 @@ test("translation studio follows the real pre-translation state machine", async 
   await expect(page.getByText("18 / 18 citations preserved", { exact: true })).toHaveCount(0);
   await expect(page.getByText("26 / 26 key terms mapped", { exact: true })).toHaveCount(0);
 });
+
+test("citations page reads real citation state without synthetic references", async ({
+  page,
+}) => {
+  await createAuthenticatedSession(page);
+
+  await page.goto("/workspace");
+  await expect(page.getByLabel("Project name")).toBeEnabled({
+    timeout: 10_000,
+  });
+
+  const projectName = "E2E Citations " + Date.now();
+  await page.getByLabel("Project name").fill(projectName);
+  await page.getByRole("button", { name: "Create project" }).click();
+
+  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await page.goto("/citations");
+
+  await expect(
+    page.getByRole("heading", { name: "Citations & bibliography", exact: true }).first(),
+  ).toBeVisible();
+  await expect(page.getByLabel("Citation style")).toBeVisible();
+  await expect(
+    page.getByText("No research report exists for the selected project."),
+  ).toBeVisible({ timeout: 10_000 });
+
+  await expect(page.getByText("Research Paper Example", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Export BibTeX", { exact: true })).toHaveCount(0);
+});
