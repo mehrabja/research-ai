@@ -3,15 +3,19 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-from app.schemas.translation_current import TranslationCurrentResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.schemas.translation_current import TranslationCurrentResponse
+
 from app.api.dependencies import get_current_user
+from app.db.models.pipeline import TranslationRun, TranslationVersion
 from app.db.models.user import User
 from app.db.session import get_db
+from app.services import reports as reports_service
 from app.services import translation_jobs as translation_jobs_service
 from app.services.translation_profile import (
     get_current_translation_profile_id,
