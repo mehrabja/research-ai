@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+/*
+ * The 21-page prototype ships its own small design system (CSS variables +
+ * hand-rolled utility classes like .card, .btn, .tag, .grid-3, ...). That
+ * system is preserved as-is below so every ported page keeps its exact
+ * visual fidelity. Tailwind is layered on top for anything new (the wired
+ * auth forms, future components) rather than used to reinvent the existing
+ * classes wholesale.
+ */
+@theme {
+  --color-bg: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-secondary: #f1f3f6;
+  --color-text: #171a21;
+  --color-muted: #697386;
+  --color-border: #e3e7ed;
+  --color-primary: #4f46e5;
+  --color-primary-2: #4338ca;
+  --color-teal: #0f766e;
+  --color-success: #15803d;
+  --color-warning: #b7791f;
+  --color-danger: #c2413a;
+  --radius-ds: 9px;
+}
+
+@import "../styles/design-system.css";
+
+html,
+body {
+  height: 100%;
+}
+
+.dropzone{border:1px dashed #888;padding:40px;margin-top:20px}.canvas{display:flex;gap:20px;padding:40px}.canvas div{padding:30px;border:1px solid #ccc}.input{padding:12px;width:100%}table{width:100%}

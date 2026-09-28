@@ -1,0 +1,1 @@
+export default function ResearchCanvas(){return <div className="card pad"><h2>Research Canvas</h2><div className="canvas"><div>Idea</div><div>Evidence</div><div>Draft</div></div></div>}

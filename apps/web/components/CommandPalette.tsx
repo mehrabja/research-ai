@@ -1,0 +1,1 @@
+"use client"; export default function CommandPalette(){return <div className="card pad"><h3>Command Palette</h3><input className="input" placeholder="Search papers, projects, actions... Ctrl+K"/></div>}

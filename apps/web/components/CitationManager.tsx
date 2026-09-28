@@ -1,0 +1,1 @@
+export default function CitationManager(){return <div className="card pad"><h2>Citation Manager</h2><table><tbody><tr><th>Source</th><th>Style</th><th>Action</th></tr><tr><td>Research Paper Example</td><td>APA</td><td><button className="btn">Export BibTeX</button></td></tr></tbody></table></div>}
