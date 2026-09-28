@@ -32,12 +32,12 @@ from app.core.exceptions import (
 )
 from app.db.models.project import Project
 from app.db.models.report import Report
-from app.services.usage_contract import ProviderUsage, record_provider_usage
 from app.db.models.usage import (
     USAGE_METRICS,
     USAGE_SOURCE_TYPES,
     UsageEvent,
 )
+from app.services.usage_contract import ProviderUsage, record_provider_usage
 
 # ==========================================================================
 # M17 — legacy per-report usage log
