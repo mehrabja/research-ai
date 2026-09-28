@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { Metadata } from "next";
+import EvidenceMatrixView from "@/components/EvidenceMatrixView";
 
 export const metadata: Metadata = {
   title: "Evidence · Research AI",
@@ -8,7 +8,13 @@ export const metadata: Metadata = {
 export default function EvidencePage() {
   return (
     <>
-<div className="page-head"><div><div className="eyebrow">RAG / evidence layer</div><h1>Evidence matrix</h1><p>Every important claim can point back to a source and passage.</p></div><div className="actions"><button className="btn" data-toast="New claim form">+ Add claim</button><Link className="btn primary" href="/manuscript">Use in manuscript</Link></div></div><div className="grid grid-3"><section className="card metric"><div className="label">Claims</div><div className="value">86</div><div className="delta good">74 strongly supported</div></section><section className="card metric"><div className="label">Passages</div><div className="value">312</div><div className="delta">Avg 3.6 / claim</div></section><section className="card metric"><div className="label">Unresolved</div><div className="value">7</div><div className="delta warn">Need human review</div></section></div><div className="card table-wrap" style={{marginTop: '16px'}}><table className="table"><thead><tr><th>Claim</th><th>Support</th><th>Primary source</th><th>Confidence</th><th>Conflict</th></tr></thead><tbody><tr><td><div className="strong">Sparse acquisition reduces training stability.</div><div className="meta">Methods · line 38</div></td><td>6 passages</td><td>Contrastive representations…</td><td><span className="tag success">0.93</span></td><td>None</td></tr><tr><td><div className="strong">Contrastive pretraining improves transfer under low-data conditions.</div><div className="meta">Results · line 112</div></td><td>4 passages</td><td>Low-data adaptation…</td><td><span className="tag success">0.86</span></td><td>1 minor</td></tr><tr><td><div className="strong">Interpretability improves reviewer confidence.</div><div className="meta">Discussion · line 204</div></td><td>2 passages</td><td>Interpretability review…</td><td><span className="tag warn">0.64</span></td><td>2 conflicting</td></tr></tbody></table></div><div className="grid grid-2" style={{marginTop: '16px'}}><section className="card pad"><h3>Selected passage</h3><div className="quote-card" style={{marginTop: '12px'}}><div className="small strong">Evidence excerpt</div><p className="muted" style={{lineHeight: '1.7', margin: '8px 0'}}>“Across low-sample regimes, pretraining reduced variance in transfer performance while preserving subject-level separation.”</p><div className="meta">Source: Journal of NeuroAI · 2025 · p. 8</div></div></section><section className="card pad"><h3>Support graph</h3><div className="pillbar" style={{marginTop: '12px'}}><span className="tag success">4 supporting</span><span className="tag warn">1 mixed</span><span className="tag">2 not applicable</span></div><div className="muted small" style={{marginTop: '14px', lineHeight: '1.6'}}>The evidence layer is designed to be consumed by the manuscript generator without bypassing source traceability.</div></section></div>
+      <div className="page-head">
+        <div>
+          <h1>Evidence</h1>
+          <p>Inspect claims and source-linked evidence from the current citation run.</p>
+        </div>
+      </div>
+      <EvidenceMatrixView />
     </>
   );
 }
