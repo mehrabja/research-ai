@@ -233,6 +233,8 @@ def run_m28_5_persisted(
                 db, contract=contract, packet=packet,
                 mode=effective_mode,
             )
+            if generated.warnings:
+                run_warnings.extend(generated.warnings)
 
             known_ev = {str(x.evidence_id) for x in packet.m28_items}
             known_ev |= {str(x.fact_id) for x in packet.technical_facts}
