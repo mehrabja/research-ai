@@ -182,3 +182,66 @@ test("evidence page uses the real citation matrix and has no synthetic counters"
   await expect(page.getByText("312", { exact: true })).toHaveCount(0);
   await expect(page.getByText("7", { exact: true })).toHaveCount(0);
 });
+
+test("plan page reads real project plan state without synthetic metrics", async ({
+  page,
+}) => {
+  await createAuthenticatedSession(page);
+
+  await page.goto("/workspace");
+  await expect(page.getByLabel("Project name")).toBeEnabled({
+    timeout: 10_000,
+  });
+
+  const projectName = "E2E Plan " + Date.now();
+  await page.getByLabel("Project name").fill(projectName);
+  await page.getByRole("button", { name: "Create project" }).click();
+
+  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await page.goto("/plan");
+
+  await expect(
+    page.getByRole("heading", { name: "Research plan", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No research plan exists for this project yet."),
+  ).toBeVisible();
+
+  await expect(page.getByText("91%", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("6 sections", { exact: true })).toHaveCount(0);
+});
+
+test("knowledge graph page reads real project graph state without synthetic metrics", async ({
+  page,
+}) => {
+  await createAuthenticatedSession(page);
+
+  await page.goto("/workspace");
+  await expect(page.getByLabel("Project name")).toBeEnabled({
+    timeout: 10_000,
+  });
+
+  const projectName = "E2E Knowledge " + Date.now();
+  await page.getByLabel("Project name").fill(projectName);
+  await page.getByRole("button", { name: "Create project" }).click();
+
+  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await page.goto("/knowledge");
+
+  await expect(
+    page.getByRole("heading", { name: "Knowledge graph", exact: true }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No knowledge graph exists for this project yet."),
+  ).toBeVisible();
+
+  await expect(page.getByText("164", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("482", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("11", { exact: true })).toHaveCount(0);
+});
