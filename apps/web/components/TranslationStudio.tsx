@@ -58,7 +58,8 @@ export default function TranslationStudio() {
   });
 
   const errors = [workspaces.error, projects.error, reports.error, report.error, review.error, approve.error].filter(Boolean);
-  const firstError = errors.find((error): error is Error => error instanceof Error);\n  if (firstError) return <section className="card pad" role="alert"><h2>Translation unavailable</h2><p className="muted" style={{ marginTop: 6 }}>{firstError.message}</p></section>;
+  const firstError = errors.find((error): error is Error => error instanceof Error);
+  if (firstError) return <section className="card pad" role="alert"><h2>Translation unavailable</h2><p className="muted" style={{ marginTop: 6 }}>{firstError.message}</p></section>;
 
   const status = report.data?.status;
   const reviewReady = status === "pre_translation_review" && Boolean(review.data);
