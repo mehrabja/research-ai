@@ -12,6 +12,7 @@ from app.api.dependencies import get_current_user
 from app.db.models.pipeline import TranslationRun, TranslationVersion
 from app.db.models.user import User
 from app.db.session import get_db
+from app.schemas.translation_current import TranslationCurrentResponse
 from app.services import reports as reports_service
 from app.services import translation_jobs as translation_jobs_service
 from app.services.translation_profile import (
