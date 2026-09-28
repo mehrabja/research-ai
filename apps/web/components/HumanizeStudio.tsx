@@ -10,9 +10,9 @@ import { generateManuscriptHumanization, getCurrentManuscriptHumanization, valid
 const MODES = ["conservative", "academic", "natural_academic", "journal_targeted"];
 
 export default function HumanizeStudio() {
-  const [workspaceId, setWorkspaceId] = useState();
-  const [projectId, setProjectId] = useState();
-  const [reportId, setReportId] = useState();
+  const [workspaceId, setWorkspaceId] = useState<string>();
+  const [projectId, setProjectId] = useState<string>();
+  const [reportId, setReportId] = useState<string>();
   const [mode, setMode] = useState("academic");
 
 
@@ -40,17 +40,17 @@ export default function HumanizeStudio() {
   const activeReportId = reportId ?? reports.data?.[0]?.id;
 
 
-  const manuscript = useQuery({ queryKey: ["manuscript-current", activeReportId], queryFn: () => getCurrentManuscript(activeReportId), enabled: Boolean(activeReportId), staleTime: 10_000 });
-  const humanization = useQuery({ queryKey: ["humanization-current", activeReportId], queryFn: () => getCurrentManuscriptHumanization(activeReportId), enabled: Boolean(activeReportId), staleTime: 10_000 });
+  const manuscript = useQuery({ queryKey: ["manuscript-current", activeReportId], queryFn: () => getCurrentManuscript(activeReportId!), enabled: Boolean(activeReportId), staleTime: 10_000 });
+  const humanization = useQuery({ queryKey: ["humanization-current", activeReportId], queryFn: () => getCurrentManuscriptHumanization(activeReportId!), enabled: Boolean(activeReportId), staleTime: 10_000 });
 
   const generate = useMutation({
     mutationFn: () => {
       if (!manuscript.data) throw new Error("A manuscript version is required.");
-      return generateManuscriptHumanization(activeReportId, manuscript.data.version.id, mode);
+      return generateManuscriptHumanization(activeReportId!, manuscript.data.version.id, mode);
     },
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["humanization-current", activeReportId] }); },
   });
-  const validate = useMutation({ mutationFn: () => validateManuscriptHumanization(activeReportId) });
+  const validate = useMutation({ mutationFn: () => validateManuscriptHumanization(activeReportId!) });
 
   const errors = [workspaces.error, projects.error, reports.error, manuscript.error, humanization.error, generate.error, validate.error].filter(Boolean);
   if (errors.length) return <section className="card pad" role="alert"><h2>Humanization unavailable</h2><p className="muted" style={{ marginTop: 6 }}>{errors[0].message}</p></section>;
