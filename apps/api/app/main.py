@@ -16,8 +16,8 @@ from app.core.config import get_settings
 from app.core.error_handlers import install_error_handlers
 from app.core.logging import configure_logging
 from app.core.rate_limit_middleware import GlobalRateLimitMiddleware
-from app.core.security_headers import SecurityHeadersMiddleware
 from app.core.request_context import RequestIdMiddleware
+from app.core.security_headers import SecurityHeadersMiddleware
 
 logger = logging.getLogger(__name__)
 
