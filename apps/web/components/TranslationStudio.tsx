@@ -8,9 +8,9 @@ import { getPreTranslationReview, approvePreTranslationReview } from "@/lib/api/
 import { getReport } from "@/lib/api/reports";
 
 export default function TranslationStudio() {
-  const [workspaceId, setWorkspaceId] = useState();
-  const [projectId, setProjectId] = useState();
-  const [reportId, setReportId] = useState();
+  const [workspaceId, setWorkspaceId] = useState<string>();
+  const [projectId, setProjectId] = useState<string>();
+  const [reportId, setReportId] = useState<string>();
   const queryClient = useQueryClient();
 
 
@@ -38,17 +38,17 @@ export default function TranslationStudio() {
   const activeReportId = reportId ?? reports.data?.[0]?.id;
 
 
-  const report = useQuery({ queryKey: ["report", activeReportId], queryFn: () => getReport(activeReportId), enabled: Boolean(activeReportId), staleTime: 10_000 });
+  const report = useQuery({ queryKey: ["report", activeReportId], queryFn: () => getReport(activeReportId!), enabled: Boolean(activeReportId), staleTime: 10_000 });
   const review = useQuery({
     queryKey: ["pre-translation-review", activeReportId, report.data?.status],
-    queryFn: () => getPreTranslationReview(activeReportId),
+    queryFn: () => getPreTranslationReview(activeReportId!),
     enabled: Boolean(activeReportId && report.data?.status === "pre_translation_review"),
     staleTime: 5_000,
   });
   const approve = useMutation({
     mutationFn: () => {
       if (!review.data) throw new Error("No pre-translation review is available.");
-      return approvePreTranslationReview(activeReportId, review.data.version_id);
+      return approvePreTranslationReview(activeReportId!, review.data.version_id);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["report", activeReportId] });
