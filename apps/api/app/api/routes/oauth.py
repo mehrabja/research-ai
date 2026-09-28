@@ -3,11 +3,11 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import get_client_ip, get_current_user
 from app.db.session import get_db
 from app.schemas.auth import TokenResponse
 from app.schemas.oauth import OAuthCallbackRequest, OAuthStartResponse
 from app.services import oauth as oauth_service
-from app.api.dependencies import get_client_ip, get_current_user
 
 router = APIRouter(prefix="/auth/oauth", tags=["oauth"])
 
@@ -73,6 +73,7 @@ def disconnect_oauth(
     db: Session=Depends(get_db),
 ):
     from sqlalchemy import delete
+
     from app.db.models.oauth_account import OAuthAccount
     db.execute(delete(OAuthAccount).where(
         OAuthAccount.user_id == current_user.id,
