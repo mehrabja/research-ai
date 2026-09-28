@@ -113,11 +113,12 @@ def mark_all_read(
     )
     if workspace_id is not None:
         stmt = stmt.where(Notification.workspace_id == workspace_id)
-    result = db.execute(
-        stmt.values(read_at=datetime.now(UTC))
-    )
+    rows = list(db.execute(stmt.with_only_columns(Notification)).scalars())
+    now = datetime.now(UTC)
+    for row in rows:
+        row.read_at = now
     db.flush()
-    return int(result.rowcount or 0)
+    return len(rows)
 
 
 def get_preferences(
