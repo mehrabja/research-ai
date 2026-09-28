@@ -20,9 +20,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
-logger = logging.getLogger(__name__)
-
-
 from app.core.exceptions import (
     ProjectNotFound,
     ProjectReportAttachForbiddenError,
@@ -36,6 +33,8 @@ from app.services import entitlements as entitlements_service
 from app.services import usage as usage_service
 from app.services import workspaces as workspaces_service
 from app.services.audit import emit_audit
+
+logger = logging.getLogger(__name__)
 
 
 def create_report(
