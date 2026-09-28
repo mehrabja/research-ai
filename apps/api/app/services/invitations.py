@@ -44,8 +44,8 @@ from app.domain.invitation import (
 )
 from app.domain.membership import MEMBERSHIP_ACTIVE, ROLE_ADMIN
 from app.services import memberships as memberships_service
-from app.services.audit import emit_audit
 from app.services import notifications as notifications_service
+from app.services.audit import emit_audit
 
 # --------------------------------------------------------------------------
 # Create
