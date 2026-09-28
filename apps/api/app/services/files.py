@@ -491,6 +491,22 @@ def delete_file(
 
     _best_effort_delete(pf.storage_key)
 
+    # Phase 3 — remove deleted file content from retrieval while
+    # retaining source rows for citation provenance.
+    try:
+        from app.services.artifact_evidence import disable_project_file_evidence
+
+        disable_project_file_evidence(
+            db,
+            project_file_id=pf.id,
+            reason="project_file_deleted",
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception(
+            "artifact evidence disable failed for file_id=%s",
+            pf.id,
+        )
+
     # M21 — file deletion removes a context source.
     _re_enqueue_classification(
         db,
@@ -600,13 +616,23 @@ def apply_extraction_result(
     # Phase 3 — make extracted file text available to the existing
     # Source/Chunk retrieval and citation pipeline.
     try:
-        from app.services.artifact_evidence import sync_project_file_evidence
-
-        sync_project_file_evidence(
-            db,
-            project_file_id=pf.id,
-            user_id=user_id,
+        from app.services.artifact_evidence import (
+            disable_project_file_evidence,
+            sync_project_file_evidence,
         )
+
+        if extraction_status == ExtractionStatus.COMPLETED.value:
+            sync_project_file_evidence(
+                db,
+                project_file_id=pf.id,
+                user_id=user_id,
+            )
+        else:
+            disable_project_file_evidence(
+                db,
+                project_file_id=pf.id,
+                reason=f"extraction_{extraction_status}",
+            )
     except Exception:  # noqa: BLE001
         logger.exception(
             "artifact evidence sync failed for file_id=%s",
