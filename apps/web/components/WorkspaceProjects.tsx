@@ -156,7 +156,7 @@ export default function WorkspaceProjects() {
                   <div className="actions">
                     <Link
                       className="btn"
-                      href={"/research?projectId=" + project.id}
+                      href={{ pathname: "/research", query: { projectId: project.id } }}
                     >
                       Research
                     </Link>
