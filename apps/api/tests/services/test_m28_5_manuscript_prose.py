@@ -1,6 +1,13 @@
 """M28.5 — domain + serialization + validation tests."""
 from __future__ import annotations
 
+import uuid
+
+from app.domain.generation import GenerationProviderResult
+from app.services.manuscript_prose import generator as prose_generator
+from app.services.manuscript_prose.contracts import SectionContract
+from app.services.manuscript_prose.evidence import EvidenceItem, EvidencePacket
+
 from app.domain.manuscript_prose import (
     M28_5_VERSION,
     PROSE_GENERATION_MODES,
@@ -144,11 +151,6 @@ def test_validate_section_word_budget() -> None:
     )
     assert outcome.status == "invalid"
 
-from app.domain.generation import GenerationProviderResult
-from app.services.manuscript_prose.contracts import SectionContract
-from app.services.manuscript_prose.evidence import EvidenceItem, EvidencePacket
-from app.services.manuscript_prose import generator as prose_generator
-
 
 def _provider_packet() -> tuple[SectionContract, EvidencePacket]:
     contract = SectionContract(
@@ -170,7 +172,7 @@ def _provider_packet() -> tuple[SectionContract, EvidencePacket]:
         research_objective="Assess the evidence",
         m28_items=[
             EvidenceItem(
-                evidence_id=__import__("uuid").uuid4(),
+                evidence_id=uuid.uuid4(),
                 source_id=__import__("uuid").uuid4(),
                 excerpt="The intervention improved the primary outcome.",
                 rank=1,
