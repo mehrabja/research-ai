@@ -104,16 +104,14 @@ def mark_all_read(
     user_id: uuid.UUID,
     workspace_id: uuid.UUID | None = None,
 ) -> int:
-    stmt = (
-        update(Notification)
-        .where(
-            Notification.user_id == user_id,
-            Notification.read_at.is_(None),
-        )
+    stmt = select(Notification).where(
+        Notification.user_id == user_id,
+        Notification.read_at.is_(None),
     )
     if workspace_id is not None:
         stmt = stmt.where(Notification.workspace_id == workspace_id)
-    rows = list(db.execute(stmt.with_only_columns(Notification)).scalars())
+
+    rows = list(db.execute(stmt.with_for_update()).scalars())
     now = datetime.now(UTC)
     for row in rows:
         row.read_at = now
