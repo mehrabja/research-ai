@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { listProjectReports, listProjects } from "@/lib/api/projects";
 import { listWorkspaces } from "@/lib/api/workspaces";
 import {
@@ -25,6 +25,7 @@ export default function TranslationStudio() {
   const [projectId, setProjectId] = useState<string>();
   const [reportId, setReportId] = useState<string>();
   const [draftContent, setDraftContent] = useState("");
+  const [draftVersionId, setDraftVersionId] = useState<string>();
   const [editNotes, setEditNotes] = useState("");
   const [decisionNotes, setDecisionNotes] = useState("");
   const [feedback, setFeedback] = useState<string>();
@@ -75,14 +76,6 @@ export default function TranslationStudio() {
     staleTime: 5_000,
   });
 
-  useEffect(() => {
-    if (!review.data) return;
-    setDraftContent(review.data.content);
-    setEditNotes("");
-    setDecisionNotes("");
-    setFeedback(undefined);
-  }, [review.data?.version_id, review.data?.content]);
-
   const invalidateReview = async () => {
     await queryClient.invalidateQueries({
       queryKey: ["pre-translation-review", activeReportId],
@@ -98,11 +91,11 @@ export default function TranslationStudio() {
   const edit = useMutation({
     mutationFn: () => {
       if (!review.data) throw new Error("No pre-translation review is available.");
-      if (!draftContent.trim()) throw new Error("Review content cannot be empty.");
+      if (!draftContentForReview.trim()) throw new Error("Review content cannot be empty.");
       return editPreTranslationReview(
         activeReportId!,
         review.data.version_id,
-        draftContent,
+        draftContentForReview,
         editNotes,
       );
     },
@@ -184,6 +177,10 @@ export default function TranslationStudio() {
   }
 
   const status = report.data?.status;
+  const draftContentForReview =
+    review.data && draftVersionId === review.data.version_id
+      ? draftContent
+      : review.data?.content ?? "";
   const reviewReady = status === "pre_translation_review" && Boolean(review.data);
   const actionPending =
     edit.isPending ||
@@ -192,8 +189,8 @@ export default function TranslationStudio() {
     reject.isPending;
   const canSaveEdit =
     Boolean(review.data) &&
-    Boolean(draftContent.trim()) &&
-    draftContent !== review.data?.content;
+    Boolean(draftContentForReview.trim()) &&
+    draftContentForReview !== review.data?.content;
   const canRequestDecision = Boolean(review.data) && Boolean(decisionNotes.trim());
 
   return (
@@ -330,8 +327,11 @@ export default function TranslationStudio() {
                     id="pre-translation-content"
                     className="input"
                     rows={18}
-                    value={draftContent}
-                    onChange={(event) => setDraftContent(event.target.value)}
+                    value={draftContentForReview}
+                    onChange={(event) => {
+                      setDraftVersionId(review.data.version_id);
+                      setDraftContent(event.target.value);
+                    }}
                     disabled={actionPending}
                     style={{ resize: "vertical", lineHeight: 1.7 }}
                   />
@@ -366,7 +366,10 @@ export default function TranslationStudio() {
                     type="button"
                     className="btn"
                     disabled={!review.data || actionPending}
-                    onClick={() => setDraftContent(review.data?.content ?? "")}
+                    onClick={() => {
+                      setDraftVersionId(review.data?.version_id);
+                      setDraftContent(review.data?.content ?? "");
+                    }}
                   >
                     Reset draft
                   </button>
@@ -468,8 +471,8 @@ export default function TranslationStudio() {
                         </div>
                         <div className="meta" style={{ marginTop: 5 }}>
                           User {event.user_id.slice(0, 8)}… · version{" "}
-                          {event.version_id === review.data.version_id
-                            ? review.data.version_number
+                          {event.version_id === review.data?.version_id
+                            ? review.data?.version_number
                             : "previous"}
                         </div>
                         {event.notes && (
