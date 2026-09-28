@@ -6,17 +6,15 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal, cast
-
 from sqlalchemy import CursorResult, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-
+from app.db.models.project import Project
 from app.core.exceptions import (
     DetectionAlreadyCompletedError,
     InvalidJobStateError,
 )
 from app.db.models.pipeline import DetectionRun
-from app.db.models.project import Project
 from app.db.models.report import Report, ReportVersion
 from app.domain.detection import (
     DetectionLabel,
@@ -34,12 +32,12 @@ from app.integrations.detection.base import (
     DetectionProvider,
 )
 from app.services import report_status as report_status_service
+from app.services.usage_contract import ProviderUsage, record_provider_usage
 from app.services.detection_profile import (
     get_current_detection_profile,
 )
-from app.services.generation_prompt import (
- = logging.getLogger(__name__)
-from app.services.usage_contract import ProviderUsage, record_provider_usage
+
+logger = logging.getLogger(__name__)
 
 _DETECTING = "detecting"
 _HUMANIZING = "humanizing"
