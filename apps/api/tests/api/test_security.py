@@ -319,8 +319,11 @@ def test_production_rejects_short_secret() -> None:
         )
 
 
-def test_production_accepts_strong_secret() -> None:
+def test_production_accepts_strong_secret(monkeypatch) -> None:
+    for k in ("DEBUG", "CORS_ALLOWED_ORIGINS", "APP_ENV"):
+        monkeypatch.delenv(k, raising=False)
     s = Settings(
+        _env_file=None,
         app_env="production",
         jwt_secret_key="x" * 64,
         database_url="postgresql+psycopg://test:test@localhost/test",

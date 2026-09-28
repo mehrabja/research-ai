@@ -182,7 +182,7 @@ def build_default_registry() -> ProviderRegistry:
             profile = get_current_embedding_profile()
         if not isinstance(profile, EmbeddingProfile):
             raise TypeError("embedding provider requires EmbeddingProfile")
-        return OpenAIEmbeddingProvider(profile)
+        return OpenAIEmbeddingProvider(profile=profile)
 
     def openrouter_embedding_factory(ctx: ProviderContext) -> Any:
         from app.domain.embeddings import EmbeddingProfile

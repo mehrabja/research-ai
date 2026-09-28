@@ -12,6 +12,7 @@ from app.core.config import (
 
 def _dev(**overrides) -> Settings:
     base = {
+        "_env_file": None,
         "database_url": (
             "postgresql+psycopg://t:t@localhost/t"
         ),

@@ -6,11 +6,10 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal, cast
-
 from sqlalchemy import CursorResult, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-
+from app.db.models.project import Project
 from app.core.exceptions import (
     DetectionAlreadyCompletedError,
     InvalidJobStateError,
