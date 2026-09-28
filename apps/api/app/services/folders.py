@@ -69,13 +69,11 @@ def update_folder(db: Session, *, project_id: uuid.UUID, user_id: uuid.UUID, fol
             raise AppError("parent folder not found", code="FOLDER_NOT_FOUND")
         current: ProjectFolder | None = parent
         seen: set[uuid.UUID] = set()
-        while current.parent_id is not None:
+        while current is not None and current.parent_id is not None:
             if current.id in seen or current.parent_id == folder_id:
                 raise AppError("folder move would create a cycle", code="FOLDER_CYCLE")
             seen.add(current.id)
             current = db.get(ProjectFolder, current.parent_id)
-            if current is None:
-                break
     if name is not None:
         row.name = name.strip()
     row.parent_id = parent_id
