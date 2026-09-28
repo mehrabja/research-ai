@@ -20,7 +20,7 @@ class OpenAlexProvider:
         settings = get_settings()
         self._api_key = settings.openalex_api_key
         self._mailto = settings.crossref_mailto
-        self._base_url = "https://api.openalex.org/works"
+        self._base_url: str = "https://api.openalex.org/works"
         self._timeout = 20.0
 
     def search(
