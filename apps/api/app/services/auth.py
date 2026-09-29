@@ -41,6 +41,7 @@ def register_user(
     *,
     email: str,
     password: str,
+    full_name: str | None = None,
 ) -> User:
     if get_user_by_email(db, email) is not None:
         raise UserAlreadyExists()
@@ -48,6 +49,7 @@ def register_user(
     user = User(
         email=email,
         password_hash=hash_password(password),
+        full_name=full_name.strip() if full_name else None,
     )
 
     try:
