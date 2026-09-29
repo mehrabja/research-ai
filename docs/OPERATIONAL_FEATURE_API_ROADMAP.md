@@ -53,7 +53,16 @@ A feature is not complete merely because a page or button exists.
 | Security/observability hardening | Implemented (code) | F15 | Request correlation, structured redaction, security headers, frontend sink/secret audit; deployment telemetry remains environment-specific |
 | CI/CD release gates | Implemented (code) | F16 | Backend/frontend quality gates, migration upgrade/downgrade checks, real-backend E2E, security audit, Docker, release gate |
 | Production smoke / external service verification | Implemented (code), runtime-pending | F17 | Reusable smoke runner/workflow with authenticated API and optional external-provider verification; requires deployment credentials |
-| Failure/chaos/recovery | Not verified | F18 | Provider outage, queue stall, storage/email/billing recovery tests |
+| Failure/chaos/recovery | Implemented (code), runtime-pending | F18 | Provider fallback/recovery tests, stale-worker reclamation, storage failure coverage, repeatable recovery runner/workflow; live staging fault injection remains deployment-specific |
+
+## F19 — Final Audit & Production Readiness
+
+F19 is the final repository release-readiness gate after F18 recovery contracts and before production activation.
+
+- Cross-platform final audit checks migration/release artifacts and repository secret hygiene.
+- Frontend security audit is part of the final gate.
+- Required operational scripts/workflows are verified.
+- Runtime closure remains dependent on staging evidence.
 
 ## Cross-cutting F20 — External Service Provisioning & Provider Activation
 
