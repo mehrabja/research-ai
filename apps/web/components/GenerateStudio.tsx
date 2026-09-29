@@ -9,15 +9,10 @@ export default function GenerateStudio() {
   const queryClient = useQueryClient();
 
   const {
-    workspaceId: activeWorkspaceId,
-    projectId: activeProjectId,
     reportId: activeReportId,
     workspacesQuery: workspaces,
     projectsQuery: projects,
     reportsQuery: reports,
-    setWorkspace: setWorkspaceId,
-    setProject: setProjectId,
-    setReport: setReportId,
     contextHref,
   } = useResearchContext();
 
