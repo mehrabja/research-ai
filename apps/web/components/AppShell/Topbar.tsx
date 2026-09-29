@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   useMutation,
@@ -8,6 +9,8 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { apiErrorFromResponse } from "@/lib/api/errors";
+import { logout } from "@/lib/api/auth";
+import { clearSessionUserCache } from "@/lib/session-cache";
 import { useResearchContext } from "@/lib/research-context";
 import { ResearchContextSwitcher } from "./ResearchContextSwitcher";
 import { CommandPalette } from "@/components/CommandPalette";
@@ -116,6 +119,7 @@ export function Topbar({
   const notificationsRef =
     useRef<HTMLDivElement | null>(null);
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { user, project, contextHref } =
     useResearchContext();
 
@@ -198,6 +202,14 @@ export function Topbar({
       void queryClient.invalidateQueries({
         queryKey: ["notifications"],
       }),
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      clearSessionUserCache(queryClient, false);
+      router.replace("/login");
+    },
   });
 
   return (
@@ -413,6 +425,17 @@ export function Topbar({
               <span>Account settings</span>
             </span>
           </Link>
+
+          <button
+            className="btn ghost"
+            type="button"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            {logoutMutation.isPending ? "…" : "↪"}
+          </button>
         </div>
       </header>
 
