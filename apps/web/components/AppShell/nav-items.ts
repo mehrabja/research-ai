@@ -6,6 +6,7 @@ export type NavItem = { href: Route; icon: string; label: string; section: NavSe
 export const NAV_ITEMS: NavItem[] = [
   {section:"Overview", href:"/dashboard", icon:"⌂", label:"Dashboard"},
   {section:"Overview", href:"/workspace", icon:"◈", label:"Workspace"},
+  {section:"Overview", href:"/search", icon:"⌕", label:"Global search"},
   {section:"Research", href:"/research", icon:"⌕", label:"Research discovery"},
   {section:"Research", href:"/sources", icon:"◎", label:"Sources"},
   {section:"Research", href:"/literature", icon:"▤", label:"Literature"},
