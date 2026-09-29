@@ -2,10 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-
-type PreferencesResponse = {
-  preferences: Record<string, boolean>;
-};
+import {
+  getNotificationPreferences,
+  updateNotificationPreferences,
+} from "@/lib/api/notifications";
 
 const PREFERENCES = [
   {
@@ -20,58 +20,17 @@ const PREFERENCES = [
   },
 ];
 
-async function requestJson<T>(
-  url: string,
-  init?: RequestInit,
-): Promise<T> {
-  const response = await fetch(url, {
-    credentials: "include",
-    headers: {
-      Accept: "application/json",
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...(init?.headers ?? {}),
-    },
-    ...init,
-  });
-  const body = await response.text();
-  let payload: unknown = null;
-  if (body) {
-    try {
-      payload = JSON.parse(body) as unknown;
-    } catch {
-      payload = null;
-    }
-  }
-  if (!response.ok) {
-    const detail =
-      payload &&
-      typeof payload === "object" &&
-      payload !== null &&
-      "detail" in payload &&
-      typeof payload.detail === "string"
-        ? payload.detail
-        : "Notification preferences request failed.";
-    throw new Error(detail);
-  }
-  return payload as T;
-}
-
 export function NotificationPreferencesView() {
   const queryClient = useQueryClient();
   const [notice, setNotice] = useState<string | null>(null);
 
   const preferencesQuery = useQuery({
     queryKey: ["notification-preferences"],
-    queryFn: () =>
-      requestJson<PreferencesResponse>("/api/v1/notifications/preferences"),
+    queryFn: getNotificationPreferences,
   });
 
   const update = useMutation({
-    mutationFn: (preferences: Record<string, boolean>) =>
-      requestJson<PreferencesResponse>("/api/v1/notifications/preferences", {
-        method: "PATCH",
-        body: JSON.stringify({ preferences }),
-      }),
+    mutationFn: updateNotificationPreferences,
     onSuccess: (data) => {
       queryClient.setQueryData(["notification-preferences"], data);
       setNotice("Notification preferences saved.");
