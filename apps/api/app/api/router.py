@@ -38,6 +38,7 @@ from app.api.routes.manuscript_prose import (
 )
 from app.api.routes.mfa import router as mfa_router
 from app.api.routes.notifications import router as notifications_router
+from app.api.routes.oauth import router as oauth_router
 from app.api.routes.orchestration import (
     router as orchestration_router,
 )
@@ -70,6 +71,7 @@ api_router.include_router(projects_router)
 api_router.include_router(providers_router)
 api_router.include_router(health_router)
 api_router.include_router(auth_router)
+api_router.include_router(oauth_router)
 api_router.include_router(mfa_router)
 api_router.include_router(api_tokens_router)
 api_router.include_router(billing_router)
