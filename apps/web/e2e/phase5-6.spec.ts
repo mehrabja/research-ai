@@ -65,9 +65,10 @@ test("F05 global search returns a real workspace project", async ({ page }) => {
     .fill(projectName);
   await page.getByRole("button", { name: "Search", exact: true }).click();
 
-  await expect(
-    page.getByRole("link", { name: projectName, exact: true }),
-  ).toBeVisible({ timeout: 10_000 });
+  const projectResult = page
+    .getByRole("link")
+    .filter({ hasText: projectName });
+  await expect(projectResult).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText("Live API", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: projectName }).click();
   await expect(
@@ -116,9 +117,11 @@ test("F06 knowledge graph node browser and export use persisted graph contracts"
 
   await page.goto("/knowledge?workspaceId=" + workspaceId + "&projectId=" + projectId);
   await expect(
-    page.getByRole("heading", { name: "Knowledge graph", exact: true }),
+    page.getByRole("heading", { name: "Knowledge graph", level: 1, exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Nodes", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Nodes", level: 3, exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByLabel("Knowledge graph node filter", { exact: true }),
   ).toBeVisible();
