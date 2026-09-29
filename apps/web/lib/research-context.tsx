@@ -8,6 +8,7 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
+import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   useQuery,
@@ -69,9 +70,9 @@ function resolveContextItem<T extends { id: string }>(
 
 function withContext(
   href: string,
-  currentSearch: string,
+  _currentSearch: string,
   ids: ResearchContextIds,
-): string {
+): Route {
   const url = new URL(href, "https://research-ai.local");
   const params = new URLSearchParams(url.search);
 
@@ -110,14 +111,14 @@ function withContext(
   }
 
   const query = params.toString();
-  return query ? `${url.pathname}?${query}` : url.pathname;
+  return (query ? `${url.pathname}?${query}` : url.pathname) as Route;
 }
 
 export function buildContextHref(
   href: string,
   currentSearch: string,
   ids: ResearchContextIds,
-): string {
+): Route {
   return withContext(href, currentSearch, ids);
 }
 
@@ -147,7 +148,7 @@ function changeContextUrl(
   }
 
   const query = params.toString();
-  return query ? `${pathname}?${query}` : pathname;
+  return (query ? `${pathname}?${query}` : pathname) as Route;
 }
 
 export function useResearchContext(): ResearchContextValue {
@@ -181,6 +182,7 @@ export function ResearchContextProvider({
     staleTime: 5 * 60_000,
     retry: false,
   });
+  const refetchSession = sessionQuery.refetch;
 
   useEffect(() => {
     if (sessionQuery.data) {
@@ -210,7 +212,7 @@ export function ResearchContextProvider({
           clearSessionUserCache(queryClient, false);
           router.replace("/login");
         } else if (payload.type === "authenticated") {
-          void sessionQuery.refetch();
+          void refetchSession();
         }
       } catch {
         // Ignore malformed cross-tab session signals.
@@ -219,7 +221,7 @@ export function ResearchContextProvider({
 
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, [queryClient, router, sessionQuery.refetch]);
+  }, [queryClient, refetchSession, router]);
 
   const workspacesQuery = useQuery({
     queryKey: ["workspaces"],
@@ -343,7 +345,7 @@ export function ResearchContextProvider({
     if (changed) {
       const query = next.toString();
       router.replace(
-        query ? `${pathname}?${query}` : pathname,
+        (query ? `${pathname}?${query}` : pathname) as Route,
         { scroll: false },
       );
     }
@@ -438,7 +440,6 @@ export function ResearchContextProvider({
     [
       currentSearch,
       pathname,
-      reportId,
       reportsQuery.data,
       router,
     ],
