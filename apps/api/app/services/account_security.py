@@ -43,13 +43,19 @@ def export_user_data(db: Session, *, user_id: uuid.UUID) -> dict[str, Any]:
 
     workspace_ids = [w.id for w in workspaces]
     projects = db.execute(
-        select(Project).where(Project.workspace_id.in_(workspace_ids))
+        select(Project).where(
+            Project.workspace_id.in_(workspace_ids),
+            Project.user_id == user_id,
+        )
         if workspace_ids else select(Project).where(Project.id.is_(None))
     ).scalars().all()
     project_ids = [p.id for p in projects]
 
     reports = db.execute(
-        select(Report).where(Report.project_id.in_(project_ids))
+        select(Report).where(
+            Report.project_id.in_(project_ids),
+            Report.user_id == user_id,
+        )
         if project_ids else select(Report).where(Report.id.is_(None))
     ).scalars().all()
     sources = db.execute(
