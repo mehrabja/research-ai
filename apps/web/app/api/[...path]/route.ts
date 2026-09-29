@@ -37,7 +37,9 @@ function isAuthPath(path: string[], endpoint: string): boolean {
 function cookieOptions(maxAge: number) {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production" && process.env.APP_ENV !== "test",
+    secure:
+      process.env.NODE_ENV === "production" &&
+      process.env.E2E_HTTP_COOKIES !== "1",
     sameSite: "lax" as const,
     path: "/",
     maxAge,
