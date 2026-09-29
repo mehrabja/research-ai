@@ -52,6 +52,7 @@ from app.domain.project import EDITABLE_PROJECT_STATUSES
 from app.services import entitlements as entitlements_service
 from app.services import jobs as jobs_service
 from app.services.file_storage import get_storage_provider
+from app.security.file_security import validate_upload_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -234,6 +235,36 @@ def upload_file(
             client_mime=client_mime,
             extension=ext,
         )
+
+        # Security scan runs while the object is still untrusted.  For
+        # archives/OOXML or when AV is enabled, inspect the full object;
+        # otherwise the bounded head is sufficient for content/magic checks.
+        mime = (detected_mime or "").lower()
+        requires_full_scan = (
+            mime in {
+                "application/zip",
+                "application/gzip",
+                "application/x-gzip",
+                "application/x-tar",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            }
+            or settings.file_malware_scan_mode != "off"
+        )
+        if requires_full_scan:
+            full_content = b"".join(provider.open(key=storage_key))
+            validate_upload_bytes(
+                full_content,
+                detected_mime=detected_mime,
+                extension=ext,
+            )
+        else:
+            validate_upload_bytes(
+                head,
+                detected_mime=detected_mime,
+                extension=ext,
+            )
 
         initial_extraction = initial_extraction_status(
             kind,
