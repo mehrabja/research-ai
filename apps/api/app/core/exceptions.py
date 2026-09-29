@@ -1089,3 +1089,9 @@ class OAuthLastAuthMethod(AppError):
     code = "OAUTH_LAST_AUTH_METHOD"
     status_code = 409
     message = "The last connected sign-in method cannot be removed."
+
+
+class AccountDeletionOwnershipRequired(AppError):
+    code = "ACCOUNT_DELETION_OWNERSHIP_REQUIRED"
+    status_code = 409
+    message = "Transfer workspace ownership before deleting this account."
