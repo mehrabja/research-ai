@@ -37,21 +37,23 @@ function withContext(href: string, currentSearch: string, ids: ResearchContextId
   const current = new URLSearchParams(currentSearch);
   const targetWorkspace = params.get("workspaceId");
   const targetProject = params.get("projectId");
+  const workspaceChanged = Boolean(targetWorkspace && targetWorkspace !== ids.workspaceId);
+  const projectChanged = Boolean(targetProject && targetProject !== ids.projectId);
 
   if (!targetWorkspace && ids.workspaceId) {
     params.set("workspaceId", current.get("workspaceId") ?? ids.workspaceId);
   }
-  if (targetWorkspace && targetWorkspace !== ids.workspaceId) {
+  if (workspaceChanged) {
     params.delete("projectId");
     params.delete("reportId");
   }
-  if (!params.has("projectId") && ids.projectId) {
+  if (!workspaceChanged && !params.has("projectId") && ids.projectId) {
     params.set("projectId", ids.projectId);
   }
-  if (targetProject && targetProject !== ids.projectId) {
+  if (projectChanged) {
     params.delete("reportId");
   }
-  if (!params.has("reportId") && ids.reportId) {
+  if (!workspaceChanged && !projectChanged && !params.has("reportId") && ids.reportId) {
     params.set("reportId", ids.reportId);
   }
 
