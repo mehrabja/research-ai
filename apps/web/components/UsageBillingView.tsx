@@ -112,7 +112,7 @@ export function UsageBillingView() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   const loadDetails = useCallback(async (id: string) => {
     setLoadingDetails(true);
@@ -143,7 +143,7 @@ export function UsageBillingView() {
     } finally {
       setLoadingDetails(false);
     }
-  }
+  }, []);
 
   useEffect(() => { void loadWorkspaces(); }, [loadWorkspaces]);
   useEffect(() => { if (workspaceId) void loadDetails(workspaceId); }, [workspaceId, loadDetails]);
