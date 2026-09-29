@@ -32,9 +32,9 @@ def _state_signature(provider: str, nonce: str) -> str:
 def make_state(provider: str) -> str:
     nonce = secrets.token_urlsafe(24)
     issued_at = str(int(time.time()))
-    payload = f"{provider}:{issued_at}:{nonce}".encode("utf-8")
+    payload = f"{provider}:{issued_at}:{nonce}".encode()
     signature = hmac.new(
-        get_settings().jwt_secret_key.encode("utf-8"),
+        get_settings().jwt_secret_key.encode(),
         payload,
         hashlib.sha256,
     ).hexdigest()
@@ -51,8 +51,6 @@ def verify_state(provider: str, state: str) -> bool:
         return False
     if abs(int(time.time()) - issued_at) > 600:
         return False
-    if state_provider != provider:
-        return False
     payload = f"{provider}:{issued_at}:{nonce}".encode("utf-8")
     expected = hmac.new(
         get_settings().jwt_secret_key.encode("utf-8"),
@@ -60,8 +58,6 @@ def verify_state(provider: str, state: str) -> bool:
         hashlib.sha256,
     ).hexdigest()
     return hmac.compare_digest(expected, signature)
-
-
 
 
 def store_state(db: Session, *, provider: str, state: str) -> OAuthState:
