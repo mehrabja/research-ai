@@ -34,8 +34,8 @@ const frontendServer = {
   url: "http://localhost:3000",
   reuseExistingServer: false,
   timeout: 120_000,
-  stdout: "pipe",
-  stderr: "pipe",
+  stdout: "pipe" as const,
+  stderr: "pipe" as const,
   env: {
     ...process.env,
     RATE_LIMIT_ENABLED: "false",
