@@ -228,6 +228,7 @@ def reset_password(
         raise PasswordResetInvalid()
 
     user.password_hash = hash_password(new_password)
+    user.security_version += 1
     revoke_all_sessions(db, user_id=user.id)
     return user
 
