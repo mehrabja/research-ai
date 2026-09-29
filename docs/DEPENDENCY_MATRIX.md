@@ -18,7 +18,7 @@ Date: 2026-09-27
 | F11 Billing/Email | F01/F03/F20 | Stripe/Resend adapters, checkout, webhook inbox and auth email workflows implemented | Implemented |
 | F12 Settings/Security/Audit | F02/F03/F11 | MFA, API tokens, OAuth and session controls implemented | Implemented |
 | F13 Frontend Production Port | F02-F12 | Route surface, BFF refresh, OAuth callbacks, notification/search/integration UI implemented | Implemented |
-| F14 Frontend Integration Hardening | F13 | Typed API error handling, provider matrix, auth retry and backend-scoped data routes implemented | Implemented |
+| F14 Frontend Integration Hardening | F13 | Session-scoped tenant cache isolation, typed ApiError/status-aware retry, provider matrix UI, durable Job Center polling/retry/cancel, and backend-scoped data routes | Implemented |
 | F15 Security/Reliability/Observability | F01-F14/F20 | workspace provider metering and optional Sentry initialized; live external verification remains | Implemented (code) |
 | F16 CI/CD/Deployment/Backup | F15 | frontend E2E gate, migration merge check, backup/restore/smoke scripts and developer verification commands added | Implemented (code) |
 | F17 Production Smoke | F02-F16/F20 credentials | Requires configured external services and runtime API smoke execution | Pending runtime |
