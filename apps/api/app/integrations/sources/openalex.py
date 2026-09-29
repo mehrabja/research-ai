@@ -42,7 +42,8 @@ class OpenAlexProvider:
             params["filter"] = f"from_publication_year:{year},to_publication_year:{year}"
         if open_access_only:
             current_filter = params.get("filter") or ""
-            params["filter"] = f"{current_filter}{"," if current_filter else ""}is_oa:true"
+            separator = "," if current_filter else ""
+            params["filter"] = current_filter + separator + "is_oa:true"
         if self._mailto:
             params["mailto"] = self._mailto
         req = urllib.request.Request(
