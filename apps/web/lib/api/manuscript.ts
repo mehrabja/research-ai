@@ -72,7 +72,7 @@ export async function commitManuscriptDraft(
   reportId: string,
   baseVersionId: string,
   revision: number,
-): Promise<components["schemas"]["ManuscriptVersionRead"]> {
+): Promise<components["schemas"]["app__schemas__manuscript__ManuscriptVersionRead"]> {
   const { data, error, response } = await api.POST(
     "/api/v1/reports/{report_id}/manuscript/draft/commit",
     {
