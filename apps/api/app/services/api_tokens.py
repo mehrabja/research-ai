@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import AppError
 from app.db.models.api_token import APIToken
+from app.db.models.membership import WorkspaceMembership
+from app.db.models.project import Project
 from app.security.api_scopes import DEFAULT_SCOPES, normalize_scopes
 
 
@@ -63,6 +65,50 @@ def create_token(
     if expires_at is not None and expires_at <= datetime.now(UTC):
         raise APITokenPayloadInvalid("expires_at must be in the future")
 
+    workspace_ids = list(_normalize_ids(allowed_workspace_ids))
+    project_ids = list(_normalize_ids(allowed_project_ids))
+
+    if workspace_ids:
+        rows = db.execute(
+            select(WorkspaceMembership.workspace_id).where(
+                WorkspaceMembership.user_id == user_id,
+                WorkspaceMembership.status == "active",
+                WorkspaceMembership.workspace_id.in_(workspace_ids),
+            )
+        ).scalars().all()
+        if {str(x) for x in rows} != set(workspace_ids):
+            raise APITokenPayloadInvalid("token includes a workspace without active membership")
+
+    if project_ids:
+        projects = db.execute(
+            select(Project.id, Project.workspace_id).where(
+                Project.id.in_(project_ids)
+            )
+        ).all()
+        if len(projects) != len(project_ids):
+            raise APITokenPayloadInvalid("token includes an unknown project")
+        accessible_project_ids = {
+            str(pid)
+            for pid, workspace_id in projects
+            if (
+                db.execute(
+                    select(WorkspaceMembership.id).where(
+                        WorkspaceMembership.user_id == user_id,
+                        WorkspaceMembership.workspace_id == workspace_id,
+                        WorkspaceMembership.status == "active",
+                    )
+                ).first()
+                is not None
+            )
+        }
+        if accessible_project_ids != set(project_ids):
+            raise APITokenPayloadInvalid("token includes a project without workspace access")
+        if workspace_ids and any(
+            str(workspace_id) not in set(workspace_ids)
+            for _pid, workspace_id in projects
+        ):
+            raise APITokenPayloadInvalid("project restriction is outside workspace restriction")
+
     raw_secret = secrets.token_urlsafe(40)
     token = f"rai_{raw_secret}"
     row = APIToken(
@@ -72,8 +118,8 @@ def create_token(
         token_hash=_hash(token),
         expires_at=expires_at,
         scopes=list(normalized_scopes),
-        allowed_workspace_ids=list(_normalize_ids(allowed_workspace_ids)),
-        allowed_project_ids=list(_normalize_ids(allowed_project_ids)),
+        allowed_workspace_ids=workspace_ids,
+        allowed_project_ids=project_ids,
     )
     db.add(row)
     db.flush()
