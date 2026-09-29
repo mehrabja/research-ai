@@ -13,6 +13,7 @@ class OAuthState(Base, UUIDPKMixin, CreatedAtMixin):
 
     provider: Mapped[str] = mapped_column(Text, nullable=False)
     state_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    code_challenge: Mapped[str | None] = mapped_column(Text, nullable=True)
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
