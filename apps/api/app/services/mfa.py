@@ -5,8 +5,8 @@ import hashlib
 import secrets
 from datetime import UTC, datetime
 
-from cryptography.fernet import Fernet, InvalidToken
 import pyotp
+from cryptography.fernet import Fernet, InvalidToken
 
 from app.core.config import get_settings
 
