@@ -30,7 +30,6 @@ export default function LoginPage() {
     defaultValues: {
       email: "",
       password: "",
-      remember: false,
     },
   });
 
@@ -196,14 +195,7 @@ export default function LoginPage() {
             </div>
 
             <div className="row">
-              <label className="checkbox">
-                <input
-                  type="checkbox"
-                  {...register("remember")}
-                />
-                Remember me
-              </label>
-
+              <span aria-hidden="true" />
               <Link
                 href={"/password-reset" as Route}
                 className="muted small"
