@@ -32,17 +32,43 @@ export function NotificationPreferencesView() {
 
   const update = useMutation({
     mutationFn: updateNotificationPreferences,
+    onMutate: async (nextPreferences) => {
+      setNotice("Saving notification preferences...");
+      await queryClient.cancelQueries({
+        queryKey: ["notification-preferences"],
+      });
+
+      const previous =
+        queryClient.getQueryData<
+          Awaited<ReturnType<typeof getNotificationPreferences>>
+        >(["notification-preferences"]);
+
+      if (previous) {
+        queryClient.setQueryData(["notification-preferences"], {
+          ...previous,
+          preferences: nextPreferences,
+        });
+      }
+
+      return { previous };
+    },
     onSuccess: (data) => {
       queryClient.setQueryData(["notification-preferences"], data);
       setNotice("Notification preferences saved.");
     },
+    onError: (_error, _nextPreferences, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          ["notification-preferences"],
+          context.previous,
+        );
+      }
+      setNotice(null);
+    },
   });
 
   const preferences = preferencesQuery.data?.preferences ?? {};
-  const error =
-    preferencesQuery.error ??
-    update.error ??
-    null;
+  const error = preferencesQuery.error ?? update.error ?? null;
 
   return (
     <section className="card pad" style={{ marginTop: 16 }}>
