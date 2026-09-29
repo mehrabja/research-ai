@@ -1,8 +1,7 @@
 "use client";
 
-import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useState, type FormEvent } from "react";
 
 async function confirmPasswordReset(token: string, newPassword: string): Promise<string> {
   const response = await fetch("/api/v1/auth/password-reset/confirm", {
@@ -19,9 +18,11 @@ async function confirmPasswordReset(token: string, newPassword: string): Promise
   return "Password changed successfully. You can now log in.";
 }
 
-function ResetConfirmContent() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token") || "";
+type ResetConfirmContentProps = {
+  token: string;
+};
+
+function ResetConfirmContent({ token }: ResetConfirmContentProps) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [status, setStatus] = useState<"idle" | "working" | "success" | "error">("idle");
@@ -114,21 +115,20 @@ function ResetConfirmContent() {
   );
 }
 
-export default function PasswordResetConfirmPage() {
-  return (
-    <Suspense
-      fallback={
-        <main className="auth-page">
-          <section className="auth-main" style={{ width: "100%" }}>
-            <div className="auth-card">
-              <h2>Choose a new password</h2>
-              <p className="muted">Loading reset link…</p>
-            </div>
-          </section>
-        </main>
-      }
-    >
-      <ResetConfirmContent />
-    </Suspense>
-  );
+type PasswordResetConfirmPageProps = {
+  searchParams: Promise<{
+    token?: string | string[];
+  }>;
+};
+
+function firstParam(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+export default async function PasswordResetConfirmPage({
+  searchParams,
+}: PasswordResetConfirmPageProps) {
+  const params = await searchParams;
+
+  return <ResetConfirmContent token={firstParam(params.token)} />;
 }
