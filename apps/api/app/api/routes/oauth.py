@@ -1,15 +1,36 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_client_ip, get_current_user
+from app.db.models.oauth_account import OAuthAccount
 from app.db.session import get_db
 from app.schemas.auth import TokenResponse
 from app.schemas.oauth import OAuthCallbackRequest, OAuthStartResponse
 from app.services import oauth as oauth_service
 
 router = APIRouter(prefix="/auth/oauth", tags=["oauth"])
+
+
+@router.get("/accounts")
+def oauth_accounts(
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[dict[str, str]]:
+    accounts = db.execute(
+        select(OAuthAccount)
+        .where(OAuthAccount.user_id == current_user.id)
+        .order_by(OAuthAccount.created_at.asc())
+    ).scalars()
+    return [
+        {
+            "provider": account.provider,
+            "created_at": account.created_at.isoformat(),
+        }
+        for account in accounts
+    ]
 
 
 @router.get("/{provider}/start", response_model=OAuthStartResponse)
