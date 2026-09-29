@@ -26,10 +26,26 @@ export async function GET(
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
+  const oauthCookie = request.headers.get("cookie")
+    ?.split(";")
+    .map((item) => item.trim())
+    .find((item) => item.startsWith("research_ai_oauth_" + provider + "="))
+    ?.split("=")[1] ?? "";
 
-  if (!PROVIDERS.has(provider) || !code || !state) {
+  if (!PROVIDERS.has(provider) || !code || !state || !oauthCookie) {
     return NextResponse.redirect(
       new URL("/login?oauth_error=invalid_callback", request.url),
+    );
+  }
+
+  const cookieValue = decodeURIComponent(oauthCookie);
+  const separator = cookieValue.indexOf(".");
+  const cookieState = separator > 0 ? cookieValue.slice(0, separator) : "";
+  const codeVerifier = separator > 0 ? cookieValue.slice(separator + 1) : "";
+
+  if (cookieState !== state || codeVerifier.length < 43) {
+    return NextResponse.redirect(
+      new URL("/login?oauth_error=pkce_validation_failed", request.url),
     );
   }
 
@@ -43,7 +59,7 @@ export async function GET(
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ code, state }),
+        body: JSON.stringify({ code, state, code_verifier: codeVerifier }),
         cache: "no-store",
         redirect: "manual",
       },
@@ -55,9 +71,17 @@ export async function GET(
   }
 
   if (!upstream.ok) {
-    return NextResponse.redirect(
+    const response = NextResponse.redirect(
       new URL("/login?oauth_error=oauth_callback_failed", request.url),
     );
+    response.cookies.set("research_ai_oauth_" + provider, "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/oauth/" + provider + "/callback",
+      maxAge: 0,
+    });
+    return response;
   }
 
   let payload: unknown = null;
@@ -84,6 +108,13 @@ export async function GET(
   };
 
   const response = NextResponse.redirect(new URL("/dashboard", request.url));
+  response.cookies.set("research_ai_oauth_" + provider, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/oauth/" + provider + "/callback",
+    maxAge: 0,
+  });
   response.cookies.set(
     ACCESS_COOKIE,
     tokens.access_token,
