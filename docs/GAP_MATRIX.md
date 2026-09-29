@@ -39,3 +39,11 @@ Baseline commit: 106ca1fd2b5b1b86e4e9521ffa9c33f3d8ddfa91
 | G-32 | Real OpenRouter provider adapter not activated | P0 | OpenRouter generation/embedding/translation adapters registered in provider registry | F20 | Implemented |
 | G-33 | Production AI detection provider missing | P1 | configurable external HTTP detection adapter registered alongside heuristic fallback | F09/F20 | Implemented |
 | G-34 | Frontend integration hardening incomplete | P1 | session-scoped query cache reset, typed status-aware API errors/retry, provider matrix UI, durable Job Center polling/retry/cancel, and BFF tenant-isolation acceptance | F14 | Implemented |
+
+## Unified legacy Phase 12-14 status
+
+| ID | Gap | Severity | Evidence | Target phase | Status |
+|---|---|---|---|---|---|
+| G-35 | PDF Workspace persistence missing | P1 | Persistent project PDF state, PDF annotations, and project-file-backed viewer routes | Legacy Phase 12 | Implemented in code |
+| G-36 | Research Canvas persistence missing | P1 | Revisioned project canvas with validated nodes, edges, viewport, and conflict detection | Legacy Phase 13 | Implemented in code |
+| G-37 | Project File → Evidence visibility incomplete | P1 | Project evidence contract exposes extraction/source/chunk/report linkage and explicit synchronization | Legacy Phase 14 | Implemented in code |

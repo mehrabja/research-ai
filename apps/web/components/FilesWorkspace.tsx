@@ -14,6 +14,16 @@ import {
   uploadProjectFile,
 } from "@/lib/api/files";
 
+function evidenceLabel(item: ProjectFileEvidence | undefined): string {
+  if (!item) return "Not evaluated";
+  if (item.evidence_status === "synced") {
+    return "Synced · " + item.chunk_count + " chunks";
+  }
+  if (item.evidence_status === "awaiting_report") return "Waiting for report";
+  if (item.evidence_status === "unavailable") return "Unavailable";
+  return "Processing";
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
@@ -56,6 +66,16 @@ export default function FilesWorkspace() {
     queryFn: () => {
       if (!activeProjectId) throw new Error("No project is selected.");
       return listProjectFolders(activeProjectId);
+    },
+    enabled: Boolean(activeProjectId),
+    staleTime: 10_000,
+  });
+
+  const evidence = useQuery({
+    queryKey: ["project-file-evidence", activeProjectId],
+    queryFn: () => {
+      if (!activeProjectId) throw new Error("No project is selected.");
+      return getProjectFileEvidence(activeProjectId);
     },
     enabled: Boolean(activeProjectId),
     staleTime: 10_000,
@@ -113,6 +133,7 @@ export default function FilesWorkspace() {
     workspaces.error,
     projects.error,
     folders.error,
+    evidence.error,
     files.error,
     createFolder.error,
     upload.error,
@@ -135,6 +156,7 @@ export default function FilesWorkspace() {
             void projects.refetch();
             void folders.refetch();
             void files.refetch();
+            void evidence.refetch();
           }}
         >
           Retry
@@ -142,6 +164,10 @@ export default function FilesWorkspace() {
       </section>
     );
   }
+
+  const evidenceByFileId = new Map(
+    (evidence.data?.items ?? []).map((item) => [item.file_id, item]),
+  );
 
   return (
     <div className="stack" style={{ gap: 16 }}>
@@ -320,8 +346,11 @@ export default function FilesWorkspace() {
                 <td>{formatBytes(file.size_bytes)}</td>
                 <td><span className="tag">{file.status}</span></td>
                 <td>
+                  <span className="tag">{file.extraction_status}</span>
+                </td>
+                <td>
                   <span className="tag">
-                    {file.extraction_status}
+                    {evidenceLabel(evidenceByFileId.get(file.id))}
                   </span>
                 </td>
                 <td>

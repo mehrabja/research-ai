@@ -193,3 +193,16 @@ An external API is not integrated until:
 6. usage/idempotency behavior is defined
 7. at least one integration/smoke test exists
 8. failure behavior is visible in the product
+
+## Unified legacy Phase 12-14 bridge
+
+The older product roadmap contained three persistence/integration milestones that were not
+represented as standalone current F-phases. They are now tracked as one completed implementation
+bridge on `phase123-integration`:
+
+- Legacy Phase 12 — PDF Workspace persistence.
+- Legacy Phase 13 — Research Canvas persistence.
+- Legacy Phase 14 — File Intelligence → Evidence unification.
+
+The implementation is documented in `docs/PHASE12_14_PERSISTENCE_EVIDENCE.md` and must still
+pass local/backend/frontend acceptance before the later production runtime gates are closed.

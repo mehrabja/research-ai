@@ -50,6 +50,7 @@ from app.api.routes.providers import router as providers_router
 from app.api.routes.publication import router as publication_router
 from app.api.routes.rag import router as rag_router
 from app.api.routes.reports import router as reports_router
+from app.api.routes.research_canvas import router as research_canvas_router
 from app.api.routes.research_plan import (
     router as research_plan_router,
 )

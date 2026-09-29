@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { listProjectReports, listProjects } from "@/lib/api/projects";
 import { listWorkspaces } from "@/lib/api/workspaces";
@@ -8,11 +8,17 @@ import {
   getEvidenceMatrix,
   type EvidenceRow,
 } from "@/lib/api/evidence";
+import {
+  getProjectFileEvidence,
+  syncProjectFileEvidence,
+  type ProjectFileEvidence,
+} from "@/lib/api/project-file-evidence";
 
 export default function EvidenceMatrixView() {
   const [workspaceId, setWorkspaceId] = useState<string>();
   const [projectId, setProjectId] = useState<string>();
   const [reportId, setReportId] = useState<string>();
+  const queryClient = useQueryClient();
 
   const workspaces = useQuery({
     queryKey: ["workspaces"],
@@ -46,6 +52,33 @@ export default function EvidenceMatrixView() {
 
   const activeReportId = reportId ?? reports.data?.[0]?.id;
 
+  const fileEvidence = useQuery({
+    queryKey: ["project-file-evidence", activeProjectId],
+    queryFn: () => {
+      if (!activeProjectId) throw new Error("No project is selected.");
+      return getProjectFileEvidence(activeProjectId);
+    },
+    enabled: Boolean(activeProjectId),
+    staleTime: 10_000,
+  });
+
+  const sync = useMutation({
+    mutationFn: () => {
+      if (!activeProjectId) throw new Error("No project is selected.");
+      return syncProjectFileEvidence(activeProjectId, activeReportId);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["project-file-evidence", activeProjectId],
+      });
+      if (activeReportId) {
+        await queryClient.invalidateQueries({
+          queryKey: ["evidence-matrix", activeReportId],
+        });
+      }
+    },
+  });
+
   const matrix = useQuery({
     queryKey: ["evidence-matrix", activeReportId],
     queryFn: () => {
@@ -61,6 +94,8 @@ export default function EvidenceMatrixView() {
     projects.error,
     reports.error,
     matrix.error,
+    fileEvidence.error,
+    sync.error,
   ].filter(Boolean);
 
   if (errors.length) {
@@ -104,7 +139,7 @@ export default function EvidenceMatrixView() {
             <div className="eyebrow">RAG / evidence layer</div>
             <h2 style={{ marginTop: 4 }}>Evidence matrix</h2>
             <p className="muted small" style={{ marginTop: 4 }}>
-              Claims and evidence returned by the current citation run.
+              Claims, report citations, and project-file evidence linkage.
             </p>
           </div>
         </div>
@@ -164,6 +199,65 @@ export default function EvidenceMatrixView() {
             </select>
           </div>
         </div>
+      </section>
+
+      <section className="card pad">
+        <div className="row">
+          <div>
+            <h3>Project files → evidence</h3>
+            <p className="muted small">
+              Canonical ProjectFile → Source → Chunk linkage for this project.
+            </p>
+          </div>
+          <button
+            className="btn"
+            type="button"
+            disabled={!activeProjectId || sync.isPending}
+            onClick={() => sync.mutate()}
+          >
+            {sync.isPending ? "Syncing…" : "Sync ready files"}
+          </button>
+        </div>
+
+        <div className="table-wrap" style={{ marginTop: 12 }}>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Extraction</th>
+                <th>Evidence status</th>
+                <th>Sources</th>
+                <th>Chunks</th>
+                <th>Reports</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(fileEvidence.data?.items ?? []).map(
+                (item: ProjectFileEvidence) => (
+                  <tr key={item.file_id}>
+                    <td>
+                      <div className="strong">{item.filename}</div>
+                      <div className="meta">{item.file_kind}</div>
+                    </td>
+                    <td><span className="tag">{item.extraction_status}</span></td>
+                    <td><span className="tag">{item.evidence_status}</span></td>
+                    <td>{item.source_count}</td>
+                    <td>{item.chunk_count}</td>
+                    <td>{item.report_ids.length}</td>
+                  </tr>
+                ),
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {!fileEvidence.isPending &&
+          (fileEvidence.data?.items.length ?? 0) === 0 && (
+            <div className="empty" style={{ marginTop: 12 }}>
+              <div className="big">∅</div>
+              <div>No project files are available for evidence synchronization.</div>
+            </div>
+          )}
       </section>
 
       <section className="grid grid-3">

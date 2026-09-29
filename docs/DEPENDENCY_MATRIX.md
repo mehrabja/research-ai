@@ -131,3 +131,11 @@ F00
 
 F20 can run in parallel only where its prerequisites are independently satisfied, but no production
 gate can be closed without the specific external service dependencies required by that gate.
+
+## Unified legacy Phase 12-14 bridge
+
+| Legacy phase | Current implementation | Result |
+|---|---|---|
+| Phase 12 PDF Workspace persistence | Project-file-backed PDF state + annotations + protected API | Implemented (code) |
+| Phase 13 Research Canvas persistence | Revisioned JSON canvas + optimistic conflict handling + protected API | Implemented (code) |
+| Phase 14 File Intelligence → Evidence | Canonical ProjectFile → Source → Chunk bridge + project evidence API/UI | Implemented (code) |
