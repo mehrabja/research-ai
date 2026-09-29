@@ -3,6 +3,19 @@ export type ApiErrorPayload = {
   message?: unknown;
   error?: unknown;
   code?: unknown;
+  request_id?: unknown;
+  retry_after?: unknown;
+  details?: unknown;
+  extra?: unknown;
+};
+
+type StructuredApiError = {
+  code?: unknown;
+  message?: unknown;
+  request_id?: unknown;
+  retry_after?: unknown;
+  details?: unknown;
+  extra?: unknown;
 };
 
 export class ApiError extends Error {
@@ -46,24 +59,31 @@ export function apiErrorFromUnknown(
       ? (value as ApiErrorPayload)
       : null;
 
-  const code =
-    payload && typeof payload.code === "string"
-      ? payload.code
+  const nested =
+    payload?.error &&
+    typeof payload.error === "object" &&
+    payload.error !== null
+      ? (payload.error as StructuredApiError)
       : null;
 
+  const codeValue = nested?.code ?? payload?.code;
+  const requestIdValue = nested?.request_id ?? payload?.request_id;
+
   const message =
-    payload && typeof payload.detail === "string"
-      ? payload.detail
-      : payload && typeof payload.message === "string"
-        ? payload.message
-        : payload && typeof payload.error === "string"
-          ? payload.error
-          : options.fallback ?? "API request failed";
+    (typeof nested?.message === "string" && nested.message) ||
+    (typeof payload?.detail === "string" && payload.detail) ||
+    (typeof payload?.message === "string" && payload.message) ||
+    (typeof payload?.error === "string" && payload.error) ||
+    options.fallback ||
+    "API request failed";
 
   return new ApiError(message, {
     status: options.status,
-    code,
-    requestId: options.requestId,
+    code: typeof codeValue === "string" ? codeValue : null,
+    requestId:
+      typeof requestIdValue === "string"
+        ? requestIdValue
+        : options.requestId,
   });
 }
 
