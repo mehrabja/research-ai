@@ -143,6 +143,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
       - run: python scripts/frontend_security_audit.py
+      - run: python scripts/final_audit.py
       - run: |
           test -f scripts/production_smoke.py
           test -f scripts/backup_postgres.sh
