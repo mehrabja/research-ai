@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiErrorFromResponse } from "@/lib/api/errors";
 import { useResearchContext } from "@/lib/research-context";
 
 type Plan = { id: string; code: string; name: string; description: string | null };
@@ -21,17 +22,10 @@ async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
     headers: { Accept: "application/json", ...(init?.body ? { "Content-Type": "application/json" } : {}), ...(init?.headers ?? {}) },
     ...init,
   });
-  const text = await response.text();
-  let payload: unknown = null;
-  if (text) {
-    try { payload = JSON.parse(text) as unknown; } catch { payload = null; }
-  }
   if (!response.ok) {
-    const detail = payload && typeof payload === "object" && payload !== null && "detail" in payload &&
-      typeof payload.detail === "string" ? payload.detail : "Request failed (" + response.status + ")";
-    throw new Error(detail);
+    throw await apiErrorFromResponse(response, "Billing request failed.");
   }
-  return payload as T;
+  return (await response.json()) as T;
 }
 
 function formatBytes(value: number): string {
