@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { listProjectReports, listProjects } from "@/lib/api/projects";
-import { listWorkspaces } from "@/lib/api/workspaces";
+import { useResearchContext } from "@/lib/research-context";
 import { getReport } from "@/lib/api/reports";
 import {
   approveFinalReview,
@@ -22,9 +21,6 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 export default function FinalReviewStudio() {
-  const [workspaceId, setWorkspaceId] = useState<string>();
-  const [projectId, setProjectId] = useState<string>();
-  const [reportId, setReportId] = useState<string>();
   const [draftContent, setDraftContent] = useState("");
   const [draftVersionId, setDraftVersionId] = useState<string>();
   const [editNotes, setEditNotes] = useState("");
@@ -32,34 +28,21 @@ export default function FinalReviewStudio() {
   const [feedback, setFeedback] = useState<string>();
   const queryClient = useQueryClient();
 
-  const workspaces = useQuery({
-    queryKey: ["workspaces"],
-    queryFn: listWorkspaces,
-    staleTime: 30_000,
-  });
-  const activeWorkspaceId = workspaceId ?? workspaces.data?.[0]?.id;
+  const {
+    workspaceId,
+    projectId,
+    reportId,
+    workspacesQuery,
+    projectsQuery,
+    reportsQuery,
+    setWorkspace,
+    setProject,
+    setReport,
+  } = useResearchContext();
 
-  const projects = useQuery({
-    queryKey: ["projects", activeWorkspaceId],
-    queryFn: () => {
-      if (!activeWorkspaceId) throw new Error("No workspace is selected.");
-      return listProjects(activeWorkspaceId);
-    },
-    enabled: Boolean(activeWorkspaceId),
-    staleTime: 15_000,
-  });
-  const activeProjectId = projectId ?? projects.data?.[0]?.id;
-
-  const reports = useQuery({
-    queryKey: ["project-reports", activeProjectId],
-    queryFn: () => {
-      if (!activeProjectId) throw new Error("No project is selected.");
-      return listProjectReports(activeProjectId);
-    },
-    enabled: Boolean(activeProjectId),
-    staleTime: 15_000,
-  });
-  const activeReportId = reportId ?? reports.data?.[0]?.id;
+  const activeWorkspaceId = workspaceId ?? undefined;
+  const activeProjectId = projectId ?? undefined;
+  const activeReportId = reportId ?? undefined;
 
   const report = useQuery({
     queryKey: ["final-review-report", activeReportId],
@@ -167,9 +150,9 @@ export default function FinalReviewStudio() {
   });
 
   const errors = [
-    workspaces.error,
-    projects.error,
-    reports.error,
+    workspacesQuery.error,
+    projectsQuery.error,
+    reportsQuery.error,
     report.error,
     review.error,
   ].filter(Boolean);
@@ -223,12 +206,10 @@ export default function FinalReviewStudio() {
               className="input"
               value={activeWorkspaceId ?? ""}
               onChange={(event) => {
-                setWorkspaceId(event.target.value);
-                setProjectId(undefined);
-                setReportId(undefined);
+                setWorkspace(event.target.value);
               }}
             >
-              {(workspaces.data ?? []).map((workspace) => (
+              {(workspacesQuery.data ?? []).map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
                   {workspace.name}
                 </option>
@@ -243,12 +224,11 @@ export default function FinalReviewStudio() {
               className="input"
               value={activeProjectId ?? ""}
               onChange={(event) => {
-                setProjectId(event.target.value);
-                setReportId(undefined);
+                setProject(event.target.value);
               }}
-              disabled={projects.isPending}
+              disabled={projectsQuery.isPending}
             >
-              {(projects.data ?? []).map((project) => (
+              {(projectsQuery.data ?? []).map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
                 </option>
@@ -262,10 +242,10 @@ export default function FinalReviewStudio() {
               id="final-review-report"
               className="input"
               value={activeReportId ?? ""}
-              onChange={(event) => setReportId(event.target.value)}
-              disabled={reports.isPending}
+              onChange={(event) => setReport(event.target.value)}
+              disabled={reportsQuery.isPending}
             >
-              {(reports.data ?? []).map((reportItem) => (
+              {(reportsQuery.data ?? []).map((reportItem) => (
                 <option key={reportItem.id} value={reportItem.id}>
                   {reportItem.topic}
                 </option>
