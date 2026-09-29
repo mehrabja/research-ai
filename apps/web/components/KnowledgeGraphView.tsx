@@ -10,13 +10,11 @@ import {
 } from "@/lib/api/knowledgeGraph";
 
 export default function KnowledgeGraphView() {
+  const queryClient = useQueryClient();
   const {
-    workspaceId: activeWorkspaceId,
     projectId: activeProjectId,
     workspacesQuery: workspaces,
     projectsQuery: projects,
-    setWorkspace: setWorkspaceId,
-    setProject: setProjectId,
   } = useResearchContext();
 
   const graph = useQuery({
