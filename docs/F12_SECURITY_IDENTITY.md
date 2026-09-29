@@ -22,6 +22,7 @@ Callback handling:
 
 The backend persists one-time OAuth state, PKCE challenges and linked provider identities.
 The browser-facing start/callback handlers keep the verifier out of normal client-side state.
+The configured provider redirect URI should target `/oauth/{provider}/callback` on the web application.
 
 ### Two-factor authentication
 
