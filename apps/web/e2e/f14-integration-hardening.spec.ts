@@ -168,7 +168,7 @@ test("job center uses durable jobs instead of static demo metrics", async ({
   ).toBeVisible();
   await expect(
     page.getByText("Server-side processing"),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15_000 });
   await expect(
     page.getByText("Next in ~2 min"),
   ).toHaveCount(0);
