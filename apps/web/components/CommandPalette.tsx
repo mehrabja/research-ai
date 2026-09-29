@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { NAV_ITEMS } from "@/components/AppShell/nav-items";
@@ -10,7 +11,7 @@ type Command = {
   id: string;
   title: string;
   description: string;
-  href: string;
+  href: Route;
 };
 
 export function CommandPalette({
@@ -35,13 +36,13 @@ export function CommandPalette({
   useEffect(() => {
     if (!open) return;
 
-    setQuery("");
-    setActiveIndex(0);
+    const timer = window.setTimeout(() => {
+      setQuery("");
+      setActiveIndex(0);
+      inputRef.current?.focus();
+    }, 0);
 
-    window.setTimeout(
-      () => inputRef.current?.focus(),
-      0,
-    );
+    return () => window.clearTimeout(timer);
   }, [open]);
 
   const commands = useMemo<Command[]>(() => {
@@ -93,17 +94,6 @@ export function CommandPalette({
       )
     : commands;
 
-  useEffect(() => {
-    setActiveIndex((current) =>
-      filtered.length === 0
-        ? 0
-        : Math.min(
-            current,
-            filtered.length - 1,
-          ),
-    );
-  }, [filtered.length]);
-
   function onInputKeyDown(
     event: React.KeyboardEvent<HTMLInputElement>,
   ) {
@@ -133,7 +123,7 @@ export function CommandPalette({
 
     if (event.key === "Enter") {
       event.preventDefault();
-      const command = filtered[activeIndex];
+      const command = filtered[Math.min(activeIndex, Math.max(filtered.length - 1, 0))];
       if (!command) return;
       router.push(command.href);
       onClose();
@@ -142,7 +132,8 @@ export function CommandPalette({
 
   if (!open) return null;
 
-  const activeId = filtered[activeIndex]
+  const safeActiveIndex = Math.min(activeIndex, Math.max(filtered.length - 1, 0));
+  const activeId = filtered[safeActiveIndex]
     ? `command-${filtered[activeIndex].id.replace(/[^a-zA-Z0-9_-]/g, "_")}`
     : undefined;
 
@@ -203,7 +194,7 @@ export function CommandPalette({
         >
           {filtered.map((command, index) => {
             const itemId = `command-${command.id.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
-            const active = index === activeIndex;
+            const active = index === safeActiveIndex;
 
             return (
               <Link
