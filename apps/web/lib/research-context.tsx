@@ -25,6 +25,7 @@ import {
 import { isApiError } from "@/lib/api/errors";
 import {
   clearSessionUserCache,
+  SESSION_EVENT_KEY,
   syncSessionUser,
 } from "@/lib/session-cache";
 
@@ -197,6 +198,28 @@ export function ResearchContextProvider({
       router.replace("/login");
     }
   }, [queryClient, router, sessionQuery.error]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== SESSION_EVENT_KEY || !event.newValue) return;
+      try {
+        const payload = JSON.parse(event.newValue) as { type?: string };
+        if (payload.type === "logout") {
+          clearSessionUserCache(queryClient, false);
+          router.replace("/login");
+        } else if (payload.type === "authenticated") {
+          void sessionQuery.refetch();
+        }
+      } catch {
+        // Ignore malformed cross-tab session signals.
+      }
+    };
+
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [queryClient, router, sessionQuery.refetch]);
 
   const workspacesQuery = useQuery({
     queryKey: ["workspaces"],
@@ -530,6 +553,7 @@ export function ResearchContextProvider({
       sessionQuery.data,
       workspace,
       workspaceId,
+      workspaceRole,
       workspacesQuery,
     ],
   );
