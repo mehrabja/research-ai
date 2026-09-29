@@ -20,7 +20,6 @@ from app.integrations.detection.base import (
     DetectionTimeoutError,
 )
 
-
 logger = logging.getLogger(__name__)
 
 _RETRYABLE_STATUSES = {408, 429, 500, 502, 503, 504}
