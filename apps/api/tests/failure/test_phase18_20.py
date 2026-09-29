@@ -59,8 +59,8 @@ def test_permanent_provider_failure_does_not_skip_to_fallback() -> None:
 
 
 def test_placeholder_credentials_are_not_configured(monkeypatch) -> None:
-    from pathlib import Path
     import sys
+    from pathlib import Path
 
     root = Path(__file__).resolve().parents[4]
     sys.path.insert(0, str(root))
