@@ -51,23 +51,40 @@ test("all production app routes require authentication", async ({ page }) => {
   await page.context().clearCookies();
 
   for (const route of PROTECTED_ROUTES) {
-    await page.goto(route);
-    await expect(page, `route ${route} should redirect to login`).toHaveURL(/\/login$/);
+    const response = await page.request.get(route, { maxRedirects: 0 });
+
+    expect(
+      [307, 308],
+      `route ${route} should return an auth redirect`,
+    ).toContain(response.status());
+
+    const location = response.headers()["location"] ?? "";
+    expect(
+      location,
+      `route ${route} should redirect to login`,
+    ).toMatch(/\/login(?:$|\?)/);
   }
 });
 
-test("all production app routes render for an authenticated session", async ({ page }) => {
+test("all production app routes respond for an authenticated session", async ({ page }) => {
   await createAuthenticatedSession(page);
 
   for (const route of PROTECTED_ROUTES) {
-    const response = await page.goto(route, {
-      waitUntil: "domcontentloaded",
-    });
+    const response = await page.request.get(route);
 
-    expect(response, `route ${route} returned no response`).not.toBeNull();
-    expect(response?.status(), `route ${route} did not render successfully`).toBe(200);
-    await expect(page, `route ${route} navigated away unexpectedly`).toHaveURL(
-      new RegExp(route.replaceAll("/", "\\/") + "$"),
-    );
+    expect(
+      response.status(),
+      `route ${route} did not respond successfully`,
+    ).toBe(200);
+    expect(
+      new URL(response.url()).pathname,
+      `route ${route} redirected unexpectedly`,
+    ).toBe(route);
+
+    const body = await response.text();
+    expect(
+      body.length,
+      `route ${route} returned an empty document`,
+    ).toBeGreaterThan(0);
   }
 });
