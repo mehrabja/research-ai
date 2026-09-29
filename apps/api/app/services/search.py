@@ -106,7 +106,7 @@ def search_workspace(
             )
             .order_by(Source.updated_at.desc())
             .limit(per_type)
-        ).scalars()
+        ).all()
     )
     items.extend(
         {
