@@ -179,51 +179,6 @@ export default function LiteratureMap() {
           </button>
         </div>
 
-        <div className="grid grid-2" style={{ marginTop: 14 }}>
-          <div className="field">
-            <label htmlFor="literature-workspace">Workspace</label>
-            <select
-              id="literature-workspace"
-              className="input"
-              value={activeWorkspaceId ?? ""}
-              onChange={(event) => {
-                setWorkspaceId(event.target.value);
-                setProjectId(undefined);
-              }}
-              disabled={
-                workspaces.isPending ||
-                (workspaces.data?.length ?? 0) === 0
-              }
-            >
-              {(workspaces.data ?? []).map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>
-                  {workspace.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="literature-project">Project</label>
-            <select
-              id="literature-project"
-              className="input"
-              value={activeProjectId ?? ""}
-              onChange={(event) => setProjectId(event.target.value)}
-              disabled={
-                projects.isPending ||
-                (projects.data?.length ?? 0) === 0
-              }
-            >
-              {(projects.data ?? []).map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
         {!hasProject && !projects.isPending && (
           <div className="empty" style={{ marginTop: 14 }}>
             <div className="big">∅</div>
