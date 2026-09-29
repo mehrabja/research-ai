@@ -192,7 +192,7 @@ def test_account_deletion_revokes_outstanding_invitation(
         "DELETE",
         "/api/v1/auth/account",
         headers=auth(owner_token),
-        json={"password": "Secret123456789"},
+        json={"password": "Correct Horse Battery Staple!"},
     )
     assert response.status_code == 200, response.text
 
