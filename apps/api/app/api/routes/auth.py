@@ -16,6 +16,7 @@ from app.core.mfa_exceptions import MFAInvalid, MFARequired
 from app.core.security import create_access_token
 from app.db.models.user import User
 from app.db.session import get_db
+from app.schemas.activity import ActivityItem
 from app.schemas.auth import (
     LoginRequest,
     LogoutRequest,
@@ -29,6 +30,7 @@ from app.schemas.auth import (
     UserResponse,
     VerifyEmailRequest,
 )
+from app.services import activity as activity_service
 from app.services import auth as auth_service
 from app.services import mfa as mfa_service
 from app.services.email import EmailDeliveryService
@@ -262,6 +264,31 @@ def list_sessions(
         for session in auth_service.list_active_sessions(
             db,
             user_id=current_user.id,
+        )
+    ]
+
+
+@router.get(
+    "/activity",
+    response_model=list[ActivityItem],
+    summary="Return a safe user-facing security activity projection",
+)
+def activity(
+    limit: int = 50,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[ActivityItem]:
+    return [
+        ActivityItem(
+            id=item.id,
+            event=item.event,
+            summary=item.summary,
+            occurred_at=item.occurred_at,
+        )
+        for item in activity_service.list_user_activity(
+            db,
+            user_id=current_user.id,
+            limit=limit,
         )
     ]
 
