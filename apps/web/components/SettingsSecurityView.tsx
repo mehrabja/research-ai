@@ -1,3 +1,5 @@
+import {
+  const router = useRouter(); useRouter } from "next/navigation";
 "use client";
 
 import { useState } from "react";
@@ -229,7 +231,7 @@ export function SettingsSecurityView() {
       setDeleteMfaCode("");
       void queryClient.clear();
       window.setTimeout(() => {
-        window.location.assign("/login");
+        router.push("/login");
       }, 800);
     },
   });
