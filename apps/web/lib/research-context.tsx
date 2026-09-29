@@ -303,66 +303,10 @@ export function ResearchContextProvider({
     invalidProject ||
     invalidReport;
 
-  useEffect(() => {
-    if (
-      !sessionQuery.data ||
-      workspacesQuery.isPending ||
-      workspacesQuery.isError ||
-      invalid
-    ) {
-      return;
-    }
-
-    const next = new URLSearchParams(currentSearch);
-    let changed = false;
-
-    if (
-      workspaceId &&
-      next.get("workspaceId") !== workspaceId
-    ) {
-      next.set("workspaceId", workspaceId);
-      changed = true;
-    }
-
-    if (
-      projectsQuery.isSuccess &&
-      projectId &&
-      next.get("projectId") !== projectId
-    ) {
-      next.set("projectId", projectId);
-      changed = true;
-    }
-
-    if (
-      reportsQuery.isSuccess &&
-      reportId &&
-      next.get("reportId") !== reportId
-    ) {
-      next.set("reportId", reportId);
-      changed = true;
-    }
-
-    if (changed) {
-      const query = next.toString();
-      router.replace(
-        (query ? `${pathname}?${query}` : pathname) as Route,
-        { scroll: false },
-      );
-    }
-  }, [
-    currentSearch,
-    invalid,
-    pathname,
-    projectId,
-    projectsQuery.isSuccess,
-    reportId,
-    reportsQuery.isSuccess,
-    router,
-    sessionQuery.data,
-    workspaceId,
-    workspacesQuery.isError,
-    workspacesQuery.isPending,
-  ]);
+  // Context IDs are derived from the current URL when present and auto-selected
+  // from singleton resources when omitted. Do not rewrite the URL here: doing so
+  // during App Router transitions can race the target navigation, aborting page.goto
+  // and leaving destination routes on the source pathname.
 
   const setWorkspace = useCallback(
     (nextWorkspaceId: string | null) => {
