@@ -37,8 +37,6 @@ export function CommandPalette({
     if (!open) return;
 
     const timer = window.setTimeout(() => {
-      setQuery("");
-      setActiveIndex(0);
       inputRef.current?.focus();
     }, 0);
 
