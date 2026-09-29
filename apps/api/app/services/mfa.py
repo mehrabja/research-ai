@@ -10,7 +10,6 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from app.core.config import get_settings
 
-
 _RECOVERY_COUNT = 8
 
 
