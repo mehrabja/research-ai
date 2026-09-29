@@ -2,8 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { listProjects } from "@/lib/api/projects";
-import { listWorkspaces } from "@/lib/api/workspaces";
+import { useResearchContext } from "@/lib/research-context";
 import {
   generateResearchPlan,
   getResearchPlanCoverage,
@@ -14,30 +13,17 @@ import {
 } from "@/lib/api/researchPlan";
 
 export default function ResearchPlanView() {
-  const [workspaceId, setWorkspaceId] = useState<string>();
-  const [projectId, setProjectId] = useState<string>();
   const [objective, setObjective] = useState("");
   const queryClient = useQueryClient();
 
-  const workspaces = useQuery({
-    queryKey: ["workspaces"],
-    queryFn: listWorkspaces,
-    staleTime: 30_000,
-  });
-
-  const activeWorkspaceId = workspaceId ?? workspaces.data?.[0]?.id;
-
-  const projects = useQuery({
-    queryKey: ["projects", activeWorkspaceId],
-    queryFn: () => {
-      if (!activeWorkspaceId) throw new Error("No workspace is selected.");
-      return listProjects(activeWorkspaceId);
-    },
-    enabled: Boolean(activeWorkspaceId),
-    staleTime: 15_000,
-  });
-
-  const activeProjectId = projectId ?? projects.data?.[0]?.id;
+  const {
+    workspaceId: activeWorkspaceId,
+    projectId: activeProjectId,
+    workspacesQuery: workspaces,
+    projectsQuery: projects,
+    setWorkspace: setWorkspaceId,
+    setProject: setProjectId,
+  } = useResearchContext();
 
   const versions = useQuery({
     queryKey: ["research-plan-versions", activeProjectId],
