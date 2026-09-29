@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import json
 import uuid
-from sqlalchemy import select
 
 from fastapi import APIRouter, Depends, Request, Response, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_client_ip, get_current_user
@@ -22,6 +22,7 @@ from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.activity import ActivityItem
 from app.schemas.auth import (
+    AccountDeleteRequest,
     LoginRequest,
     LogoutRequest,
     MessageResponse,
@@ -33,12 +34,11 @@ from app.schemas.auth import (
     TokenResponse,
     UserResponse,
     VerifyEmailRequest,
-    AccountDeleteRequest,
 )
 from app.services import account_security as account_security_service
 from app.services import activity as activity_service
-from app.services.audit import emit_audit
 from app.services import auth as auth_service
+from app.services.audit import emit_audit
 from app.services import mfa as mfa_service
 from app.services.email import EmailDeliveryService
 from app.services.rate_limit import get_login_rate_limiter
