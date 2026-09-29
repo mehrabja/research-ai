@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -15,6 +15,7 @@ import { login } from "@/lib/api/auth";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const {
     register,
@@ -52,6 +53,18 @@ export default function LoginPage() {
   const submitForm = handleSubmit((values) => {
     loginMutation.mutate(values);
   });
+
+  const oauthError = searchParams.get("oauth_error");
+  const oauthProvider = searchParams.get("provider");
+
+  const oauthMessage =
+    oauthError === "provider_not_configured"
+      ? `Sign-in with ${oauthProvider || "this provider"} is not configured yet.`
+      : oauthError === "provider_unavailable"
+        ? `Sign-in with ${oauthProvider || "this provider"} is temporarily unavailable.`
+        : oauthError
+          ? "The social sign-in request could not be completed. Please try again."
+          : "";
 
   const emailInvalid = Boolean(errors.email);
   const passwordInvalid = Boolean(errors.password);
@@ -199,6 +212,18 @@ export default function LoginPage() {
                 Forgot password?
               </Link>
             </div>
+
+            {oauthMessage && (
+              <div
+                className="hint"
+                role="alert"
+                style={{
+                  color: "var(--danger)",
+                }}
+              >
+                {oauthMessage}
+              </div>
+            )}
 
             {errors.root && (
               <div
