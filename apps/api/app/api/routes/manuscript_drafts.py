@@ -21,7 +21,6 @@ from app.services.manuscript_drafts import (
     get_draft,
 )
 
-
 router = APIRouter(prefix="/reports", tags=["manuscript-drafts"])
 
 
