@@ -44,7 +44,7 @@ Baseline commit: 106ca1fd2b5b1b86e4e9521ffa9c33f3d8ddfa91
 | Real checkout | Yes | Stripe REST | Subscription/BillingEvent | Billing API | Implemented (code) |
 | Billing webhook | Yes | Stripe signature verification | BillingEvent | Webhook route | Implemented (code) |
 | Email | Yes | Resend adapter | EmailDelivery | Auth workflow delivery | Implemented (code) |
-| Audit | Yes | Structured audit logger | Log-based | Settings/Audit | Partial |
+| Audit | Yes | Structured audit logger + safe user activity projection | Log-based + durable security records | Settings/Security activity | Implemented (code) |
 | API tokens | Yes | X-API-Key auth | APIToken | Security UI | Implemented (code) |
 | 2FA | Yes | TOTP | User MFA fields | Security UI | Implemented (code) |
 | Health | Yes | DB/live checks | N/A | Loading/system | Implemented / not runtime-verified |
