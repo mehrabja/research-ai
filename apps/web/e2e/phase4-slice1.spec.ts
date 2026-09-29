@@ -109,7 +109,7 @@ test("literature page reads the selected project corpus from the backend", async
     timeout: 10_000,
   });
 
-  await page.goto("/literature");
+  await page.goto("/literature", { waitUntil: "domcontentloaded" });
 
   await expect(
     page.getByRole("heading", { name: "Literature map" }),
@@ -298,7 +298,7 @@ test("generation studio exposes real manuscript pipeline state", async ({ page }
     timeout: 10_000,
   });
 
-  await page.goto("/generate");
+  await page.goto("/generate", { waitUntil: "domcontentloaded" });
   await expect(
     page.getByRole("heading", { name: "Generate with evidence", exact: true }).first(),
   ).toBeVisible();
