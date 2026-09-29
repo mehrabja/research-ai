@@ -70,9 +70,9 @@ test("PDF workspace persists view state and annotations", async ({ page }) => {
 
 test("research canvas persists nodes, edges and revision", async ({ page }) => {
   await createSession(page);
-  await createProject(page, "E2E Canvas Persistence");
+  const projectId = await createProject(page, "E2E Canvas Persistence");
 
-  await page.goto("/research-canvas");
+  await page.goto("/research-canvas?projectId=" + projectId);
   await page.getByRole("button", { name: "Add node" }).click();
 
   await page.getByLabel("Title").last().fill("Primary hypothesis");
