@@ -146,7 +146,7 @@ test("authenticated app shell exposes main navigation and a working CSP nonce", 
 
   const scriptNonces = await page.locator("script[nonce]").evaluateAll((scripts) =>
     scripts
-      .map((script) => script.getAttribute("nonce"))
+      .map((script) => (script as HTMLScriptElement).nonce)
       .filter((value): value is string => Boolean(value)),
   );
   expect(scriptNonces.length).toBeGreaterThan(0);
