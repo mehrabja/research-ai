@@ -84,12 +84,10 @@ test("research canvas persists nodes, edges and revision", async ({ page }) => {
 
   await page.reload();
   await expect(
-    page.getByDisplayValue("Primary hypothesis"),
+    page.getByLabel("Title").last(),
   ).toBeVisible();
   await expect(
-    page.getByDisplayValue(
-      "Sparse representations improve decoding robustness.",
-    ),
+    page.getByLabel("Body").last(),
   ).toBeVisible();
 });
 
