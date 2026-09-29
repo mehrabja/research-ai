@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   createResearchReport,
@@ -24,15 +24,19 @@ export default function ResearchDiscovery() {
   } = useResearchContext();
 
   const [query, setQuery] = useState(DEFAULT_QUERY);
-  const [results, setResults] = useState<SourceCandidate[]>([]);
-  const [savedKeys, setSavedKeys] = useState<Set<string>>(
-    new Set(),
-  );
+  const contextKey = `${projectId ?? ""}:${reportId ?? ""}`;
+  const [resultsState, setResultsState] = useState<{
+    key: string;
+    results: SourceCandidate[];
+    savedKeys: Set<string>;
+  }>({ key: "", results: [], savedKeys: new Set() });
 
-  useEffect(() => {
-    setResults([]);
-    setSavedKeys(new Set());
-  }, [projectId, reportId]);
+  const results =
+    resultsState.key === contextKey ? resultsState.results : [];
+  const savedKeys =
+    resultsState.key === contextKey
+      ? resultsState.savedKeys
+      : new Set<string>();
 
   const createReport = useMutation({
     mutationFn: async () => {
@@ -89,7 +93,12 @@ export default function ResearchDiscovery() {
         query.trim(),
       );
     },
-    onSuccess: setResults,
+    onSuccess: (nextResults) =>
+      setResultsState({
+        key: contextKey,
+        results: nextResults,
+        savedKeys: new Set(),
+      }),
   });
 
   const save = useMutation({
@@ -102,10 +111,17 @@ export default function ResearchDiscovery() {
       return saveSource(reportId, candidate);
     },
     onSuccess: async (_source, candidate) => {
-      setSavedKeys((current) => {
-        const next = new Set(current);
+      setResultsState((current) => {
+        const next =
+          current.key === contextKey
+            ? new Set(current.savedKeys)
+            : new Set<string>();
         next.add(sourceKey(candidate));
-        return next;
+        return {
+          key: contextKey,
+          results: current.key === contextKey ? current.results : [],
+          savedKeys: next,
+        };
       });
     },
   });
