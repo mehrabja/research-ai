@@ -301,7 +301,7 @@ def _docx_xml(title: str, content: str) -> bytes:
         '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/>'
         '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>'
         "</w:sectPr></w:body></w:document>"
-    ).encode("utf-8")
+    ).encode()
 
     content_types = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
