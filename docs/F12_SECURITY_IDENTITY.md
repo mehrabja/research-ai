@@ -13,13 +13,15 @@ The login page now starts Google/GitHub OAuth through the backend provider abstr
 
 Callback handling:
 
-- validates provider, authorization code and state
-- exchanges the callback with the FastAPI OAuth contract
+- validates provider, authorization code and signed state
+- uses PKCE S256 with a server-generated verifier stored in an HttpOnly, path-scoped cookie
+- exchanges the callback with the FastAPI OAuth contract using the verifier
 - stores access and refresh credentials in HttpOnly cookies
 - redirects to the authenticated dashboard
 - routes callback errors back to /login
 
-The backend persists one-time OAuth state and linked provider identities.
+The backend persists one-time OAuth state, PKCE challenges and linked provider identities.
+The browser-facing start/callback handlers keep the verifier out of normal client-side state.
 
 ### Two-factor authentication
 
@@ -86,5 +88,6 @@ F12 E2E coverage includes:
 - security endpoint availability
 - API token create/revoke
 - MFA setup contract
-- Google/GitHub OAuth start contracts
+- Google/GitHub OAuth start contracts and PKCE parameters
+- server-side OAuth start cookie handling
 - Google OAuth login-button flow
