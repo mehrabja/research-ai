@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""Phase 20 provider activation/readiness gate."""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Check:
+    name: str
+    ok: bool
+    detail: str
+
+
+_PLACEHOLDER_MARKERS = ("YOUR_", "CHANGE_ME", "change_me", "dev-insecure", "example")
+
+
+def env(name: str) -> str:
+    return os.getenv(name, "").strip()
+
+
+def configured(name: str) -> bool:
+    value = env(name)
+    return bool(value) and not any(marker in value for marker in _PLACEHOLDER_MARKERS)
+
+
+def require_all(label: str, names: tuple[str, ...]) -> Check:
+    return Check(label, all(configured(name) for name in names), "configured" if all(configured(name) for name in names) else "missing required configuration")
+
+
+def http_json(url: str, headers: dict[str, str] | None = None) -> tuple[int, dict]:
+    request = urllib.request.Request(url, headers=headers or {"Accept": "application/json"}, method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+            return response.status, payload if isinstance(payload, dict) else {}
+    except urllib.error.HTTPError as exc:
+        return exc.code, {}
+
+
+def config_checks(strict: bool) -> list[Check]:
+    generation = env("GENERATION_PROVIDER") or "openai"
+    source = env("SOURCE_DISCOVERY_PROVIDER") or "semantic_scholar"
+    storage = env("FILE_STORAGE_BACKEND") or "local"
+    email = env("EMAIL_PROVIDER") or "none"
+    billing = env("BILLING_PROVIDER") or "none"
+    detection = env("DETECTION_PROVIDER") or "heuristic"
+
+    checks = [
+        Check("OpenRouter", generation != "openrouter" or configured("OPENROUTER_API_KEY"), "active" if generation == "openrouter" else "not active"),
+        require_all("Semantic Scholar", ("SEMANTIC_SCHOLAR_API_KEY",)) if source == "semantic_scholar" and strict else Check("Semantic Scholar", True, "not active"),
+        Check("OpenAlex", True, "configured" if configured("OPENALEX_API_KEY") else "optional/unkeyed"),
+        Check("Crossref", True, "configured" if configured("CROSSREF_MAILTO") else "public REST"),
+        Check("NCBI", True, "configured" if configured("NCBI_API_KEY") else "optional/unkeyed"),
+        Check("Unpaywall", not strict or configured("UNPAYWALL_EMAIL"), "configured" if configured("UNPAYWALL_EMAIL") else "runtime required in strict mode"),
+        Check("S3 object storage", storage != "s3" or all(configured(name) for name in ("STORAGE_ENDPOINT", "STORAGE_ACCESS_KEY_ID", "STORAGE_SECRET_ACCESS_KEY", "STORAGE_BUCKET")), "active" if storage == "s3" else "local backend"),
+        Check("Resend email", email != "resend" or (configured("RESEND_API_KEY") and configured("EMAIL_FROM")), "active" if email == "resend" else "not active"),
+        Check("Stripe billing", billing != "stripe" or (configured("STRIPE_SECRET_KEY") and configured("STRIPE_WEBHOOK_SECRET") and configured("STRIPE_PRICE_IDS")), "active" if billing == "stripe" else "not active"),
+        Check("HTTP AI detection", detection != "http" or (configured("DETECTION_API_BASE_URL") and configured("AI_DETECTION_API_KEY")), "active" if detection == "http" else "heuristic baseline"),
+    ]
+    return checks
+
+
+def external_check(name: str) -> Check:
+    try:
+        if name == "OpenRouter":
+            if not configured("OPENROUTER_API_KEY"):
+                return Check(name, True, "skipped; no configured key")
+            base = env("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1"
+            status, payload = http_json(base.rstrip("/") + "/models", {"Accept": "application/json", "Authorization": f"Bearer {env('OPENROUTER_API_KEY')}"})
+            return Check(name, status == 200 and bool(payload.get("data")), "read-only verification")
+
+        if name == "Semantic Scholar":
+            if not configured("SEMANTIC_SCHOLAR_API_KEY"):
+                return Check(name, True, "skipped; no configured key")
+            query = urllib.parse.urlencode({"query": "transformer", "limit": "1", "fields": "paperId,title"})
+            status, payload = http_json("https://api.semanticscholar.org/graph/v1/paper/search?" + query, {"Accept": "application/json", "x-api-key": env("SEMANTIC_SCHOLAR_API_KEY")})
+            return Check(name, status == 200 and "data" in payload, "read-only verification")
+
+        if name == "OpenAlex":
+            params = {"search": "transformer", "per-page": "1"}
+            if configured("OPENALEX_API_KEY"):
+                params["api_key"] = env("OPENALEX_API_KEY")
+            status, payload = http_json("https://api.openalex.org/works?" + urllib.parse.urlencode(params))
+            return Check(name, status == 200 and "results" in payload, "read-only verification")
+
+        if name == "Crossref":
+            params = {"query.bibliographic": "transformer", "rows": "1"}
+            if configured("CROSSREF_MAILTO"):
+                params["mailto"] = env("CROSSREF_MAILTO")
+            status, payload = http_json("https://api.crossref.org/works?" + urllib.parse.urlencode(params), {"Accept": "application/json", "User-Agent": "Research-AI provider activation"})
+            return Check(name, status == 200 and "message" in payload, "read-only verification")
+
+        if name == "NCBI":
+            params = {"db": "pubmed", "term": "transformer", "retmode": "json", "retmax": "1"}
+            if configured("NCBI_API_KEY"):
+                params["api_key"] = env("NCBI_API_KEY")
+            status, payload = http_json("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?" + urllib.parse.urlencode(params))
+            return Check(name, status == 200 and "esearchresult" in payload, "read-only verification")
+
+    except Exception as exc:
+        return Check(name, False, type(exc).__name__)
+
+    return Check(name, True, "configuration-only")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--strict", action="store_true")
+    parser.add_argument("--external", action="store_true")
+    args = parser.parse_args()
+
+    checks = config_checks(args.strict)
+    if args.external:
+        checks.extend(external_check(name) for name in ("OpenRouter", "Semantic Scholar", "OpenAlex", "Crossref", "NCBI"))
+
+    failures = [check for check in checks if not check.ok]
+    for check in checks:
+        print(f"{'PASS' if check.ok else 'FAIL'} {check.name}: {check.detail}")
+
+    if failures:
+        print(f"Provider activation: FAIL ({len(failures)} check(s))")
+        return 1
+
+    print("Provider activation: PASS")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
