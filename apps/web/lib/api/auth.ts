@@ -1,4 +1,5 @@
 import type { components } from "./schema";
+import { apiErrorFromResponse } from "./errors";
 
 type UserResponse = components["schemas"]["UserResponse"];
 
@@ -55,7 +56,10 @@ export async function register(
     await parseResponse<UserResponse>(response);
 
   if (!response.ok) {
-    throw payload;
+    throw await apiErrorFromResponse(
+      response,
+      "Authentication request failed.",
+    );
   }
 
   return payload as UserResponse;
@@ -85,7 +89,10 @@ export async function login(
     await parseResponse<AuthSuccess>(response);
 
   if (!response.ok) {
-    throw payload;
+    throw await apiErrorFromResponse(
+      response,
+      "Authentication request failed.",
+    );
   }
 
   return payload as AuthSuccess;
@@ -108,7 +115,10 @@ export async function refresh(): Promise<AuthSuccess> {
     await parseResponse<AuthSuccess>(response);
 
   if (!response.ok) {
-    throw payload;
+    throw await apiErrorFromResponse(
+      response,
+      "Authentication request failed.",
+    );
   }
 
   return payload as AuthSuccess;
@@ -150,7 +160,10 @@ export async function me(): Promise<AuthenticatedUser> {
     );
 
   if (!response.ok) {
-    throw payload;
+    throw await apiErrorFromResponse(
+      response,
+      "Authentication request failed.",
+    );
   }
 
   return payload as AuthenticatedUser;
