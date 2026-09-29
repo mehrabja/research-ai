@@ -1,4 +1,4 @@
-"use client";
+use client";
 
 import Link from "next/link";
 import type { Route } from "next";
@@ -52,13 +52,6 @@ export default function LoginPage() {
   const submitForm = handleSubmit((values) => {
     loginMutation.mutate(values);
   });
-
-  function onFormSubmit(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
-    void submitForm(event);
-  }
 
   const busy =
     isSubmitting || loginMutation.isPending;
@@ -131,7 +124,7 @@ export default function LoginPage() {
 
           <form
             className="auth-form"
-            onSubmit={onFormSubmit}
+            onSubmit={submitForm}
             noValidate
           >
             <div className="field">
