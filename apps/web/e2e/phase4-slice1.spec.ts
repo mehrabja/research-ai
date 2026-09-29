@@ -56,7 +56,7 @@ test("workspace creates a real project and opens project-scoped research", async
     page.getByRole("heading", { name: "Projects and research context" }),
   ).toBeVisible();
 
-  await expect(page.getByLabel("Workspace")).toBeEnabled({
+  await expect(page.getByLabel("Workspace", { exact: true })).toBeEnabled({
     timeout: 10_000,
   });
 
@@ -67,7 +67,7 @@ test("workspace creates a real project and opens project-scoped research", async
   await page.getByRole("button", { name: "Create project" }).click();
 
   await expect(
-    page.getByText(projectName, { exact: true }),
+    page.locator("article.list-item").filter({ hasText: projectName }).first(),
   ).toBeVisible({ timeout: 10_000 });
 
   const researchLink = page
@@ -97,7 +97,7 @@ test("literature page reads the selected project corpus from the backend", async
   await createAuthenticatedSession(page);
 
   await page.goto("/workspace");
-  await expect(page.getByLabel("Workspace")).toBeEnabled({
+  await expect(page.getByLabel("Workspace", { exact: true })).toBeEnabled({
     timeout: 10_000,
   });
 
@@ -105,7 +105,7 @@ test("literature page reads the selected project corpus from the backend", async
   await page.getByLabel("Project name").fill(projectName);
   await page.getByRole("button", { name: "Create project" }).click();
 
-  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+  await expect(page.locator("article.list-item").filter({ hasText: projectName }).first()).toBeVisible({
     timeout: 10_000,
   });
 
@@ -142,7 +142,7 @@ test("files page creates a real folder and uploads a real file", async ({
   await page.getByLabel("Project name").fill(projectName);
   await page.getByRole("button", { name: "Create project" }).click();
 
-  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+  await expect(page.locator("article.list-item").filter({ hasText: projectName }).first()).toBeVisible({
     timeout: 10_000,
   });
 
@@ -206,7 +206,7 @@ test("plan page reads real project plan state without synthetic metrics", async 
   await page.getByLabel("Project name").fill(projectName);
   await page.getByRole("button", { name: "Create project" }).click();
 
-  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+  await expect(page.locator("article.list-item").filter({ hasText: projectName }).first()).toBeVisible({
     timeout: 10_000,
   });
 
@@ -240,7 +240,7 @@ test("knowledge graph page reads real project graph state without synthetic metr
   await page.getByLabel("Project name").fill(projectName);
   await page.getByRole("button", { name: "Create project" }).click();
 
-  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+  await expect(page.locator("article.list-item").filter({ hasText: projectName }).first()).toBeVisible({
     timeout: 10_000,
   });
 
@@ -269,7 +269,7 @@ test("manuscript page uses real report-scoped state", async ({ page }) => {
   const projectName = "E2E Manuscript " + Date.now();
   await page.getByLabel("Project name").fill(projectName);
   await page.getByRole("button", { name: "Create project" }).click();
-  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+  await expect(page.locator("article.list-item").filter({ hasText: projectName }).first()).toBeVisible({
     timeout: 10_000,
   });
 
@@ -294,7 +294,7 @@ test("generation studio exposes real manuscript pipeline state", async ({ page }
   const projectName = "E2E Generate " + Date.now();
   await page.getByLabel("Project name").fill(projectName);
   await page.getByRole("button", { name: "Create project" }).click();
-  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+  await expect(page.locator("article.list-item").filter({ hasText: projectName }).first()).toBeVisible({
     timeout: 10_000,
   });
 
@@ -318,7 +318,7 @@ test("humanization studio is driven by manuscript state", async ({ page }) => {
   const projectName = "E2E Humanize " + Date.now();
   await page.getByLabel("Project name").fill(projectName);
   await page.getByRole("button", { name: "Create project" }).click();
-  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+  await expect(page.locator("article.list-item").filter({ hasText: projectName }).first()).toBeVisible({
     timeout: 10_000,
   });
 
@@ -345,7 +345,7 @@ test("translation studio follows the real pre-translation state machine", async 
   const projectName = "E2E Translate " + Date.now();
   await page.getByLabel("Project name").fill(projectName);
   await page.getByRole("button", { name: "Create project" }).click();
-  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+  await expect(page.locator("article.list-item").filter({ hasText: projectName }).first()).toBeVisible({
     timeout: 10_000,
   });
 
@@ -380,7 +380,7 @@ test("citations page reads real citation state without synthetic references", as
   await page.getByLabel("Project name").fill(projectName);
   await page.getByRole("button", { name: "Create project" }).click();
 
-  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+  await expect(page.locator("article.list-item").filter({ hasText: projectName }).first()).toBeVisible({
     timeout: 10_000,
   });
 
@@ -413,7 +413,7 @@ test("final review page reads real review_2 state without synthetic output", asy
   await page.getByLabel("Project name").fill(projectName);
   await page.getByRole("button", { name: "Create project" }).click();
 
-  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+  await expect(page.locator("article.list-item").filter({ hasText: projectName }).first()).toBeVisible({
     timeout: 10_000,
   });
 
@@ -439,7 +439,7 @@ test("publication page reads real target and export state without synthetic data
   await page.getByLabel("Project name").fill(projectName);
   await page.getByRole("button", { name: "Create project" }).click();
 
-  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+  await expect(page.locator("article.list-item").filter({ hasText: projectName }).first()).toBeVisible({
     timeout: 10_000,
   });
 
