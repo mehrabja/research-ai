@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   archiveProject,
@@ -25,7 +25,7 @@ export default function WorkspaceProjects() {
   const create = useMutation({
     mutationFn: () =>
       createProject({
-        workspaceId: activeWorkspaceId,
+        workspaceId: activeWorkspaceId ?? undefined,
         name: projectName.trim(),
         description: description.trim(),
       }),
