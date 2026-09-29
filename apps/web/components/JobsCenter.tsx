@@ -228,8 +228,7 @@ export function JobsCenter() {
                   </div>
                 </td>
               </tr>
-            ))}
-              )
+            ))
             )}
             {!loading && jobs.length === 0 && (
               <tr>
