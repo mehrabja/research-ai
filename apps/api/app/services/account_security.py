@@ -204,6 +204,18 @@ def delete_account(
             raise AccountDeletionOwnershipRequired()
         workspace.status = "deleted"
 
+    # Outstanding invitations created by a deleted account must not
+    # remain redeemable. Preserve accepted invitations as historical data.
+    db.execute(
+        update(WorkspaceInvitation)
+        .where(
+            WorkspaceInvitation.invited_by_user_id == user_id,
+            WorkspaceInvitation.accepted_at.is_(None),
+            WorkspaceInvitation.revoked_at.is_(None),
+        )
+        .values(revoked_at=now)
+    )
+
     db.execute(
         update(WorkspaceMembership)
         .where(
