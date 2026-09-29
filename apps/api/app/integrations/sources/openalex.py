@@ -41,7 +41,8 @@ class OpenAlexProvider:
         if year is not None:
             params["filter"] = f"from_publication_year:{year},to_publication_year:{year}"
         if open_access_only:
-            params["filter"] = ((params.get("filter") + ",") if params.get("filter") else "") + "is_oa:true"
+            current_filter = params.get("filter") or ""
+            params["filter"] = f"{current_filter}{"," if current_filter else ""}is_oa:true"
         if self._mailto:
             params["mailto"] = self._mailto
         req = urllib.request.Request(
