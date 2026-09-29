@@ -151,6 +151,7 @@ def _make_token(
         int((now + timedelta(minutes=5)).timestamp()) if exp is None else exp
     )
     payload["jti"] = str(uuid.uuid4())
+    payload["sv"] = 1
     return jwt.encode(
         payload,
         settings.jwt_secret_key if secret is None else secret,
@@ -210,6 +211,7 @@ def test_decode_rejects_missing_exp() -> None:
         "aud": settings.jwt_audience,
         "iat": int(now.timestamp()),
         "jti": str(uuid.uuid4()),
+        "sv": 1,
     }
     token = jwt.encode(
         payload,
@@ -278,6 +280,7 @@ def test_decode_rejects_alg_none() -> None:
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(minutes=5)).timestamp()),
         "jti": str(uuid.uuid4()),
+        "sv": 1,
     }
 
     def b64(obj: dict) -> str:
