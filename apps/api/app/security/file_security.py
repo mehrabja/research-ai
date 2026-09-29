@@ -41,6 +41,7 @@ def validate_upload_bytes(
     _validate_magic_consistency(content, detected_mime, extension)
 
     mime = (detected_mime or "").lower()
+    archive_extensions = {".zip", ".tar", ".tgz", ".tar.gz", ".gz", ".docx", ".xlsx", ".pptx"}
     if mime in {
         "application/zip",
         "application/gzip",
@@ -49,7 +50,7 @@ def validate_upload_bytes(
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    }:
+    } or (extension or "").lower() in archive_extensions:
         _validate_archive(
             content,
             settings.file_max_archive_entries,
