@@ -1,5 +1,6 @@
 import type { components } from "./schema";
 import { api } from "./client";
+import { apiErrorFromUnknown } from "./errors";
 
 export type Project = components["schemas"]["ProjectListItem"];
 export type ProjectRead = components["schemas"]["ProjectRead"];
@@ -8,7 +9,7 @@ export type ProjectReport = components["schemas"]["ProjectReportListItem"];
 export async function listProjects(
   workspaceId?: string,
 ): Promise<Project[]> {
-  const { data, error } = await api.GET("/api/v1/projects", {
+  const { data, error, response } = await api.GET("/api/v1/projects", {
     params: {
       query: {
         workspace_id: workspaceId,
@@ -20,7 +21,11 @@ export async function listProjects(
   });
 
   if (error) {
-    throw new Error(getApiErrorMessage(error));
+    throw apiErrorFromUnknown(error, {
+      status: response.status,
+      requestId: response.headers.get("x-request-id"),
+      fallback: "Project API request failed",
+    });
   }
 
   return data?.items ?? [];
@@ -76,7 +81,7 @@ export async function listProjectReports(
   projectId: string,
   limit = 50,
 ): Promise<ProjectReport[]> {
-  const { data, error } = await api.GET(
+  const { data, error, response } = await api.GET(
     "/api/v1/projects/{project_id}/reports",
     {
       params: {
@@ -91,7 +96,11 @@ export async function listProjectReports(
   );
 
   if (error) {
-    throw new Error(getApiErrorMessage(error));
+    throw apiErrorFromUnknown(error, {
+      status: response.status,
+      requestId: response.headers.get("x-request-id"),
+      fallback: "Project reports API request failed",
+    });
   }
 
   return data?.items ?? [];
