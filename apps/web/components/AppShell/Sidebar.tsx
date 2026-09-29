@@ -28,10 +28,7 @@ export function Sidebar({
           className="mobile-menu-backdrop"
         />
       )}
-      <aside
-        className="sidebar"
-        data-open={open ? "true" : "false"}
-      >
+      <aside className="sidebar" data-open={open ? "true" : "false"}>
         <Link className="brand" href="/">
           <span className="brand-mark">R</span>
           <span>Research AI</span>
@@ -68,14 +65,14 @@ export function Sidebar({
         <div className="sidebar-foot">
           <div className="upgrade">
             <div className="strong" style={{ fontSize: 12 }}>
-              Pro plan
+              Usage & billing
             </div>
             <div className="muted tiny" style={{ margin: "5px 0 9px" }}>
-              74% of monthly credits used
+              View live plan, usage and subscription state.
             </div>
-            <div className="progress">
-              <span style={{ width: "74%" }} />
-            </div>
+            <Link className="btn" href="/usage-billing" onClick={onClose}>
+              Open billing
+            </Link>
           </div>
         </div>
       </aside>
