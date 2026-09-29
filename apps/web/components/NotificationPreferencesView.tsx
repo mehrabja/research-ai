@@ -27,6 +27,7 @@ export function NotificationPreferencesView() {
   const preferencesQuery = useQuery({
     queryKey: ["notification-preferences"],
     queryFn: getNotificationPreferences,
+    retry: false,
   });
 
   const update = useMutation({
@@ -66,6 +67,12 @@ export function NotificationPreferencesView() {
         </div>
       )}
 
+      {preferencesQuery.isPending && (
+        <div className="muted tiny" style={{ marginTop: 10 }}>
+          Loading saved preferences; current controls use the enabled-by-default policy.
+        </div>
+      )}
+
       <div className="stack" style={{ marginTop: 14 }}>
         {PREFERENCES.map((item) => {
           const checked = preferences[item.key] ?? true;
@@ -81,7 +88,7 @@ export function NotificationPreferencesView() {
                 type="checkbox"
                 aria-label={item.title}
                 checked={checked}
-                disabled={preferencesQuery.isPending || update.isPending}
+                disabled={update.isPending}
                 onChange={(event) => {
                   const next = {
                     ...preferences,
