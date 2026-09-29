@@ -9,8 +9,6 @@ export async function listWorkspaces(): Promise<Workspace[]> {
 
   if (error) {
     throw apiErrorFromUnknown(error, {
-      status: response.status,
-      requestId: response.headers.get("x-request-id"),
       fallback: "Workspace API request failed",
     });
   }
