@@ -73,6 +73,7 @@ class ClaimEvidenceRead(BaseModel):
     source_id: uuid.UUID | None
     support_level: str
     relevance_score: float
+    provenance: dict[str, Any]
 
 
 class ClaimCitationRead(BaseModel):
