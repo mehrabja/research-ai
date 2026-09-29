@@ -13,6 +13,8 @@ class SearchResult(BaseModel):
     title: str
     snippet: str | None = None
     updated_at: datetime
+    project_id: uuid.UUID | None = None
+    report_id: uuid.UUID | None = None
 
 
 class SearchResponse(BaseModel):
