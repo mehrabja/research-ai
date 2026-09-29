@@ -33,7 +33,7 @@ test("usage and billing reads live workspace data without demo metrics", async (
   await page.goto("/usage-billing");
 
   await expect(page.getByRole("heading", { name: "Usage & billing" })).toBeVisible();
-  await expect(page.getByLabel("Workspace")).toBeEnabled({ timeout: 10_000 });
+  await expect(page.getByLabel("Workspace", { exact: true })).toBeEnabled({ timeout: 10_000 });
   await expect(page.getByText("Available plans")).toBeVisible();
 
   await expect(page.getByText("$49")).toHaveCount(0);
