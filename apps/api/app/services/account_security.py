@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import AccountDeletionOwnershipRequired
 from app.core.security import hash_password
 from app.db.models.api_token import APIToken
 from app.db.models.auth_session import AuthSession
@@ -187,6 +188,20 @@ def delete_account(
         ).with_for_update()
     ).scalars().all()
     for workspace in owned:
+        other_active_members = int(
+            db.execute(
+                select(WorkspaceMembership.user_id)
+                .where(
+                    WorkspaceMembership.workspace_id == workspace.id,
+                    WorkspaceMembership.status == "active",
+                    WorkspaceMembership.user_id != user_id,
+                )
+                .limit(1)
+            ).first()
+            is not None
+        )
+        if other_active_members:
+            raise AccountDeletionOwnershipRequired()
         workspace.status = "deleted"
 
     db.execute(
