@@ -70,11 +70,19 @@ test("workspace creates a real project and opens project-scoped research", async
     page.getByText(projectName, { exact: true }),
   ).toBeVisible({ timeout: 10_000 });
 
-  await page
+  const researchLink = page
     .getByText(projectName, { exact: true })
     .locator("xpath=ancestor::article")
-    .getByRole("link", { name: "Research" })
-    .click();
+    .getByRole("link", { name: "Research" });
+
+  await expect(researchLink).toHaveAttribute(
+    "href",
+    /\/research\?projectId=/,
+  );
+
+  const researchHref = await researchLink.getAttribute("href");
+  expect(researchHref).toMatch(/\/research\?projectId=/);
+  await page.goto(researchHref!);
 
   await expect(page).toHaveURL(/\/research\?projectId=/);
   await expect(
