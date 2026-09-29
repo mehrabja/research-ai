@@ -158,12 +158,9 @@ test("F04 Files UI moves an uploaded project file between persistent folders", a
   const folderId = (await folder.json()).id as string;
 
   await page.goto("/files");
-  await expect(page.getByLabel("Project", { exact: true })).toBeEnabled({
-    timeout: 10_000,
-  });
-  await page.getByLabel("Project", { exact: true }).selectOption({
-    label: projectName,
-  });
+  const projectSelect = page.locator("#files-project");
+  await expect(projectSelect).toBeEnabled({ timeout: 10_000 });
+  await projectSelect.selectOption({ label: projectName });
   await expect(
     page.getByRole("heading", { name: "Files & intelligence", exact: true }).first(),
   ).toBeVisible({ timeout: 10_000 });
