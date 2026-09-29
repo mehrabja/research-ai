@@ -61,42 +61,42 @@ def fetch_document(
                 trust_env=False,
                 headers={"User-Agent": _USER_AGENT, "Accept": "*/*"},
             ) as response:
-                    if response.status_code in _REDIRECT_STATUSES:
-                        location = response.headers.get("location")
-                        if not location:
-                            raise DocumentFetchFetcherError(
-                                "redirect without Location header"
-                            )
-                        next_url = urljoin(current, location)
-                        _assert_redirect_allowed(current, next_url)
-                        current = next_url
-                        continue
-
-                    if response.status_code >= 400:
+                if response.status_code in _REDIRECT_STATUSES:
+                    location = response.headers.get("location")
+                    if not location:
                         raise DocumentFetchFetcherError(
-                            f"HTTP {response.status_code}"
+                            "redirect without Location header"
                         )
+                    next_url = urljoin(current, location)
+                    _assert_redirect_allowed(current, next_url)
+                    current = next_url
+                    continue
 
-                    advertised = response.headers.get("content-length")
-                    if advertised:
-                        try:
-                            if int(advertised) > max_bytes:
-                                raise DocumentTooLargeFetcherError(
-                                    f"declared response body exceeded {max_bytes} bytes"
-                                )
-                        except ValueError:
-                            pass
-
-                    body = _read_bounded(response, max_bytes)
-                    header_ct = _extract_header_content_type(response)
-                    final_ct = _sniff_content_type(header_ct, body, current)
-                    return FetchedDocument(
-                        url=url,
-                        final_url=current,
-                        content_type=final_ct,
-                        content_length=len(body),
-                        content=body,
+                if response.status_code >= 400:
+                    raise DocumentFetchFetcherError(
+                        f"HTTP {response.status_code}"
                     )
+
+                advertised = response.headers.get("content-length")
+                if advertised:
+                    try:
+                        if int(advertised) > max_bytes:
+                            raise DocumentTooLargeFetcherError(
+                                f"declared response body exceeded {max_bytes} bytes"
+                            )
+                    except ValueError:
+                        pass
+
+                body = _read_bounded(response, max_bytes)
+                header_ct = _extract_header_content_type(response)
+                final_ct = _sniff_content_type(header_ct, body, current)
+                return FetchedDocument(
+                    url=url,
+                    final_url=current,
+                    content_type=final_ct,
+                    content_length=len(body),
+                    content=body,
+                )
 
         except (UnsafeUrlFetcherError, DocumentTooLargeFetcherError):
             raise
