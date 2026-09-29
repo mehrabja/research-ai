@@ -50,9 +50,9 @@ A feature is not complete merely because a page or button exists.
 | Full 21-page frontend | Only subset of routes exists | F13 | Complete production route/module implementation |
 | Frontend contract/type generation | Production pipeline is incomplete | F13 + F16 | Generated TS contract or centralized verified DTO layer |
 | Frontend integration hardening | Implemented | F14 | Session-scoped query cache isolation, typed API errors/status-aware retry, provider matrix UI, durable Job Center polling/retry/cancel, and tenant-isolation acceptance |
-| Security/observability hardening | Partial | F15 | XSS/content sanitization audit, correlation-safe telemetry, privacy review |
-| CI/CD release gates | Missing frontend build/typecheck/e2e/migration verification | F16 | Complete gates and migration graph repair |
-| Production smoke / external service verification | Not configured | F17 | Real staging credentials and smoke matrix |
+| Security/observability hardening | Implemented (code) | F15 | Request correlation, structured redaction, security headers, frontend sink/secret audit; deployment telemetry remains environment-specific |
+| CI/CD release gates | Implemented (code) | F16 | Backend/frontend quality gates, migration upgrade/downgrade checks, real-backend E2E, security audit, Docker, release gate |
+| Production smoke / external service verification | Implemented (code), runtime-pending | F17 | Reusable smoke runner/workflow with authenticated API and optional external-provider verification; requires deployment credentials |
 | Failure/chaos/recovery | Not verified | F18 | Provider outage, queue stall, storage/email/billing recovery tests |
 
 ## Cross-cutting F20 — External Service Provisioning & Provider Activation
