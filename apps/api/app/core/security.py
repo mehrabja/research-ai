@@ -92,7 +92,7 @@ def decode_access_token(token: str) -> dict[str, Any]:
         audience=settings.jwt_audience,
         leeway=settings.jwt_clock_skew_seconds,  # اضافه شد
         options={
-            "require": ["exp", "iat", "sub", "iss", "aud"],
+            "require": ["exp", "iat", "sub", "iss", "aud", "sv"],
             "verify_signature": True,
             "verify_exp": True,
             "verify_iat": True,
