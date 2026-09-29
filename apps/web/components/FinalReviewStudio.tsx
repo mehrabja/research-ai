@@ -255,7 +255,7 @@ export default function FinalReviewStudio() {
         </div>
       </section>
 
-      {!activeReportId && !reports.isPending && (
+      {!activeReportId && !reportsQuery.isPending && (
         <section className="card pad empty">
           <div className="big">∅</div>
           <div>No research report exists in the selected project.</div>
