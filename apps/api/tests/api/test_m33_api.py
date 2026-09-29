@@ -24,7 +24,7 @@ from app.db.models.publication import (
     PublicationTarget,
     PublicationTargetSelection,
 )
-from app.db.models.report import Report, ReportEvent
+from app.db.models.report import Report, ReportEvent, ReportVersion
 from app.db.models.research_plan import (
     ResearchEvidenceRequirement,
     ResearchPlan,
@@ -131,6 +131,9 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
         if rids:
             db.execute(delete(ReportEvent).where(
                 ReportEvent.report_id.in_(rids)
+            ))
+            db.execute(delete(ReportVersion).where(
+                ReportVersion.report_id.in_(rids)
             ))
             db.execute(delete(Report).where(Report.id.in_(rids)))
         # M37: purge owned workspaces before deleting user
