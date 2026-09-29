@@ -113,31 +113,42 @@ test("OAuth start endpoints return signed-in provider authorization URLs", async
       provider: string;
       authorization_url: string;
       state: string;
+      code_verifier: string;
     };
 
     expect(payload.provider).toBe(provider);
     expect(payload.authorization_url).toContain(
       provider === "google" ? "accounts.google.com" : "github.com",
     );
+    expect(payload.authorization_url).toContain("code_challenge=");
+    expect(payload.authorization_url).toContain("code_challenge_method=S256");
     expect(payload.state.startsWith(provider + ".")).toBe(true);
+    expect(payload.code_verifier.length).toBeGreaterThanOrEqual(43);
   }
 });
 
 
-test("login buttons start the real Google OAuth flow", async ({ page }) => {
-  await page.route("**/api/v1/auth/oauth/google/start", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        provider: "google",
-        authorization_url: "https://accounts.google.com/o/oauth2/v2/auth?client_id=test&state=google.test",
-        state: "google.test",
-      }),
-    });
+test("server oauth start route stores the verifier in an HttpOnly cookie", async ({ page }) => {
+  const response = await page.request.get("/oauth/google/start", {
+    maxRedirects: 0,
   });
+
+  expect([302, 307]).toContain(response.status());
+  expect(response.headers()["location"]).toMatch(/^https:\/\/accounts\.google\.com\/o\/oauth2/);
+
+  const cookies = await page.context().cookies();
+  const oauthCookie = cookies.find((cookie) => cookie.name === "research_ai_oauth_google");
+
+  expect(oauthCookie).toBeDefined();
+  expect(oauthCookie?.httpOnly).toBe(true);
+  expect(oauthCookie?.path).toBe("/oauth/google/callback");
+});
+
+test("login buttons start the server OAuth route", async ({ page }) => {
+  const startRequest = page.waitForRequest("**/oauth/google/start");
 
   await page.goto("/login");
   await page.getByRole("button", { name: "Continue with Google" }).click();
-  await expect(page).toHaveURL(/accounts\.google\.com\/o\/oauth2/);
+
+  await startRequest;
 });
