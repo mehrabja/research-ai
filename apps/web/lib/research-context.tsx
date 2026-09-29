@@ -7,7 +7,11 @@ import { me, type AuthenticatedUser } from "@/lib/api/auth";
 import { listWorkspaces, type Workspace } from "@/lib/api/workspaces";
 import { listProjects, listProjectReports, type Project, type ProjectReport } from "@/lib/api/projects";
 import { isApiError } from "@/lib/api/errors";
-import { clearSessionUserCache, syncSessionUser } from "@/lib/session-cache";
+import {
+  clearSessionUserCache,
+  SESSION_EVENT_KEY,
+  syncSessionUser,
+} from "@/lib/session-cache";
 
 export type ResearchContextIds = { workspaceId: string | null; projectId: string | null; reportId: string | null };
 
@@ -120,6 +124,28 @@ export function ResearchContextProvider({ children }: { children: ReactNode }) {
       router.replace("/login");
     }
   }, [queryClient, router, sessionQuery.error]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== SESSION_EVENT_KEY || !event.newValue) return;
+      try {
+        const payload = JSON.parse(event.newValue) as { type?: string };
+        if (payload.type === "logout") {
+          clearSessionUserCache(queryClient, false);
+          router.replace("/login");
+        } else if (payload.type === "authenticated") {
+          void sessionQuery.refetch();
+        }
+      } catch {
+        // Ignore malformed cross-tab signals.
+      }
+    };
+
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [queryClient, router, sessionQuery.refetch]);
 
   const workspacesQuery = useQuery({
     queryKey: ["workspaces"],
