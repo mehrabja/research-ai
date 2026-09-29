@@ -50,32 +50,6 @@ export default function LoginPage() {
     },
   });
 
-  const oauthMutation = useMutation({
-    mutationFn: async (provider: "google" | "github") => {
-      const response = await fetch("/api/v1/auth/oauth/" + provider + "/start", {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-        cache: "no-store",
-      });
-      const payload = (await response.json()) as {
-        authorization_url?: string;
-        detail?: string;
-      };
-      if (!response.ok || typeof payload.authorization_url !== "string") {
-        throw new Error(payload.detail ?? "Unable to start OAuth sign-in.");
-      }
-      return payload.authorization_url;
-    },
-    onSuccess: (authorizationUrl) => {
-      window.location.assign(authorizationUrl);
-    },
-    onError: (error) => {
-      setError("root", {
-        message: error instanceof Error ? error.message : "Unable to start OAuth sign-in.",
-      });
-    },
-  });
-
   const submitForm = handleSubmit((values) => {
     loginMutation.mutate(values);
   });
@@ -271,23 +245,17 @@ export default function LoginPage() {
               <button
                 className="btn"
                 type="button"
-                disabled={oauthMutation.isPending}
-                onClick={() => oauthMutation.mutate("google")}
+                onClick={() => window.location.assign("/oauth/google/start")}
               >
-                {oauthMutation.isPending && oauthMutation.variables === "google"
-                  ? "Connecting…"
-                  : "Continue with Google"}
+                Continue with Google
               </button>
 
               <button
                 className="btn"
                 type="button"
-                disabled={oauthMutation.isPending}
-                onClick={() => oauthMutation.mutate("github")}
+                onClick={() => window.location.assign("/oauth/github/start")}
               >
-                {oauthMutation.isPending && oauthMutation.variables === "github"
-                  ? "Connecting…"
-                  : "Continue with GitHub"}
+                Continue with GitHub
               </button>
             </div>
 
