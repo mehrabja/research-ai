@@ -131,12 +131,26 @@ test("protected routes redirect unauthenticated users to login", async ({
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test("authenticated app shell exposes main navigation", async ({
+test("authenticated app shell exposes main navigation and a working CSP nonce", async ({
   page,
 }) => {
   await createAuthenticatedSession(page);
 
-  await page.goto("/dashboard");
+  const response = await page.goto("/dashboard");
+  expect(response).not.toBeNull();
+  expect(response?.status()).toBe(200);
+
+  const csp = response?.headers()["content-security-policy"] ?? "";
+  const nonce = csp.match(/'nonce-([^']+)'/)?.[1];
+  expect(nonce).toBeTruthy();
+
+  const scriptNonces = await page.locator("script[nonce]").evaluateAll((scripts) =>
+    scripts
+      .map((script) => script.getAttribute("nonce"))
+      .filter((value): value is string => Boolean(value)),
+  );
+  expect(scriptNonces.length).toBeGreaterThan(0);
+  expect(new Set(scriptNonces)).toEqual(new Set([nonce]));
 
   await expect(
     page.locator('a[href="/dashboard"]').first(),
