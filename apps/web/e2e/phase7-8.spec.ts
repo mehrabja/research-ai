@@ -149,7 +149,9 @@ test("F08 manuscript editor autosaves a draft, exposes revision state, and commi
     { data: { async: false } },
   );
   expect(manuscript.status(), await manuscript.text()).toBe(200);
-  const generatedManuscript = await manuscript.json();
+  const generatedManuscript = await manuscript.json() as {
+    version_id: string | null;
+  };
 
   await page.goto(
     "/manuscript?workspaceId=" +
@@ -185,9 +187,8 @@ test("F08 manuscript editor autosaves a draft, exposes revision state, and commi
     .getByRole("button", { name: "Commit as version", exact: true })
     .click();
 
-  const nextVersion = generatedManuscript.version_id
-    ? 2
-    : 2;
+  expect(generatedManuscript.version_id).toBeTruthy();
+  const nextVersion = 2;
   await expect(
     page.getByText(
       "Draft committed as manuscript version " + nextVersion + ".",
