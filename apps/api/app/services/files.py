@@ -241,7 +241,8 @@ def upload_file(
         # otherwise the bounded head is sufficient for content/magic checks.
         mime = (detected_mime or "").lower()
         requires_full_scan = (
-            mime in {
+            ext in {".zip", ".tar", ".tgz", ".gz", ".docx", ".xlsx", ".pptx"}
+            or mime in {
                 "application/zip",
                 "application/gzip",
                 "application/x-gzip",
