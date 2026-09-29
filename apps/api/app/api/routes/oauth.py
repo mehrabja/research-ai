@@ -42,16 +42,23 @@ def oauth_start(
     if provider not in oauth_service.SUPPORTED:
         raise oauth_service.InvalidCredentials()
     resolved_state = oauth_service.make_state(provider)
+    code_verifier = oauth_service.make_pkce_verifier()
     oauth_service.store_state(
         db,
         provider=provider,
         state=resolved_state,
+        code_challenge=oauth_service.pkce_challenge(code_verifier),
     )
     db.commit()
     return OAuthStartResponse(
         provider=provider,
-        authorization_url=oauth_service.authorization_url(provider, resolved_state),
+        authorization_url=oauth_service.authorization_url(
+            provider,
+            resolved_state,
+            oauth_service.pkce_challenge(code_verifier),
+        ),
         state=resolved_state,
+        code_verifier=code_verifier,
     )
 
 
@@ -71,9 +78,10 @@ def oauth_callback(
         db,
         provider=provider,
         state=body.state,
+        code_verifier=body.code_verifier,
     ):
         raise oauth_service.InvalidCredentials()
-    profile = oauth_service.exchange_code(provider, body.code)
+    profile = oauth_service.exchange_code(provider, body.code, body.code_verifier)
     _user, access, refresh = oauth_service.login_or_create_oauth_user(
         db,
         provider=provider,
