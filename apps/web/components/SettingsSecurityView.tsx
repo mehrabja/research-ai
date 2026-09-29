@@ -32,6 +32,13 @@ type CreatedToken = {
 type OAuthAccount = { provider: string; created_at: string };
 type Activity = { id: string; event: string; summary: string; occurred_at: string };
 
+const scopePresets: Array<{ label: string; scopes: string[] }> = [
+  { label: "Read only", scopes: ["read:*"] },
+  { label: "Read + write", scopes: ["read:*", "write:*"] },
+  { label: "Full API access", scopes: ["*"] },
+];
+
+
 async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     credentials: "include",
@@ -205,6 +212,54 @@ export function SettingsSecurityView() {
       void queryClient.invalidateQueries({ queryKey: ["auth-activity"] });
     },
   });
+
+
+  const deleteAccount = useMutation({
+    mutationFn: () =>
+      readJson<{ message: string }>("/api/v1/auth/account", {
+        method: "DELETE",
+        body: JSON.stringify({
+          password: deletePassword,
+          mfa_code: mfa.enabled ? deleteMfaCode : null,
+        }),
+      }),
+    onSuccess: (result) => {
+      setNotice(result.message);
+      setDeletePassword("");
+      setDeleteMfaCode("");
+      void queryClient.clear();
+      window.setTimeout(() => {
+        window.location.assign("/login");
+      }, 800);
+    },
+  });
+
+  const exportData = async () => {
+    const response = await fetch("/api/v1/auth/data-export", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) {
+      let message = "Export failed (" + response.status + ")";
+      try {
+        const payload = (await response.json()) as { detail?: unknown };
+        if (typeof payload.detail === "string") message = payload.detail;
+      } catch {
+        // Keep the generic status-based message.
+      }
+      throw new Error(message);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "research-ai-data-export.json";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    setNotice("Your account data export is ready.");
+  };
 
   const queryErrors = [
     userQuery.error,
