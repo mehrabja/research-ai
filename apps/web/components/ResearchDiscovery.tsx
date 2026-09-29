@@ -70,7 +70,10 @@ export default function ResearchDiscovery() {
 
   const contextKey = projectId ?? "";
   const sameContext = resultsState.key === contextKey;
-  const results = sameContext ? resultsState.results : [];
+  const results = useMemo(
+    () => (sameContext ? resultsState.results : []),
+    [resultsState.results, sameContext],
+  );
   const savedKeys = sameContext
     ? resultsState.savedKeys
     : new Set<string>();
