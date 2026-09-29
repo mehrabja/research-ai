@@ -218,8 +218,11 @@ export default function SignupPage() {
         )}
 
         <button
-          type="submit"
+          type="button"
           disabled={signupMutation.isPending}
+          onClick={() => {
+            void handleSubmit(onSubmit)();
+          }}
         >
           {signupMutation.isPending
             ? "Creating..."
