@@ -2,8 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { listProjectReports, listProjects } from "@/lib/api/projects";
-import { listWorkspaces } from "@/lib/api/workspaces";
+import { useResearchContext } from "@/lib/research-context";
 import {
   approvePreTranslationReview,
   editPreTranslationReview,
@@ -22,9 +21,6 @@ const REVIEW_ACTION_LABELS: Record<string, string> = {
 };
 
 export default function TranslationStudio() {
-  const [workspaceId, setWorkspaceId] = useState<string>();
-  const [projectId, setProjectId] = useState<string>();
-  const [reportId, setReportId] = useState<string>();
   const [draftContent, setDraftContent] = useState("");
   const [draftVersionId, setDraftVersionId] = useState<string>();
   const [editNotes, setEditNotes] = useState("");
@@ -32,34 +28,21 @@ export default function TranslationStudio() {
   const [feedback, setFeedback] = useState<string>();
   const queryClient = useQueryClient();
 
-  const workspaces = useQuery({
-    queryKey: ["workspaces"],
-    queryFn: listWorkspaces,
-    staleTime: 30_000,
-  });
-  const activeWorkspaceId = workspaceId ?? workspaces.data?.[0]?.id;
+  const {
+    workspaceId,
+    projectId,
+    reportId,
+    workspacesQuery,
+    projectsQuery,
+    reportsQuery,
+    setWorkspace,
+    setProject,
+    setReport,
+  } = useResearchContext();
 
-  const projects = useQuery({
-    queryKey: ["projects", activeWorkspaceId],
-    queryFn: () => {
-      if (!activeWorkspaceId) throw new Error("No workspace is selected.");
-      return listProjects(activeWorkspaceId);
-    },
-    enabled: Boolean(activeWorkspaceId),
-    staleTime: 15_000,
-  });
-  const activeProjectId = projectId ?? projects.data?.[0]?.id;
-
-  const reports = useQuery({
-    queryKey: ["project-reports", activeProjectId],
-    queryFn: () => {
-      if (!activeProjectId) throw new Error("No project is selected.");
-      return listProjectReports(activeProjectId);
-    },
-    enabled: Boolean(activeProjectId),
-    staleTime: 15_000,
-  });
-  const activeReportId = reportId ?? reports.data?.[0]?.id;
+  const activeWorkspaceId = workspaceId ?? undefined;
+  const activeProjectId = projectId ?? undefined;
+  const activeReportId = reportId ?? undefined;
 
   const report = useQuery({
     queryKey: ["report", activeReportId],
@@ -159,9 +142,9 @@ export default function TranslationStudio() {
   });
 
   const loadingErrors = [
-    workspaces.error,
-    projects.error,
-    reports.error,
+    workspacesQuery.error,
+    projectsQuery.error,
+    reportsQuery.error,
     report.error,
     review.error,
   ].filter(Boolean);
@@ -221,12 +204,10 @@ export default function TranslationStudio() {
                 className="input"
                 value={activeWorkspaceId ?? ""}
                 onChange={(event) => {
-                  setWorkspaceId(event.target.value);
-                  setProjectId(undefined);
-                  setReportId(undefined);
+                  setWorkspace(event.target.value);
                 }}
               >
-                {(workspaces.data ?? []).map((workspace) => (
+                {(workspacesQuery.data ?? []).map((workspace) => (
                   <option key={workspace.id} value={workspace.id}>
                     {workspace.name}
                   </option>
@@ -241,12 +222,11 @@ export default function TranslationStudio() {
                 className="input"
                 value={activeProjectId ?? ""}
                 onChange={(event) => {
-                  setProjectId(event.target.value);
-                  setReportId(undefined);
+                  setProject(event.target.value);
                 }}
-                disabled={projects.isPending}
+                disabled={projectsQuery.isPending}
               >
-                {(projects.data ?? []).map((project) => (
+                {(projectsQuery.data ?? []).map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
                   </option>
