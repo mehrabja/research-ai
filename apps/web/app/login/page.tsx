@@ -271,17 +271,23 @@ export default function LoginPage() {
               <button
                 className="btn"
                 type="button"
-                data-toast="Google OAuth — not wired to backend yet"
+                disabled={oauthMutation.isPending}
+                onClick={() => oauthMutation.mutate("google")}
               >
-                Continue with Google
+                {oauthMutation.isPending && oauthMutation.variables === "google"
+                  ? "Connecting…"
+                  : "Continue with Google"}
               </button>
 
               <button
                 className="btn"
                 type="button"
-                data-toast="GitHub OAuth — not wired to backend yet"
+                disabled={oauthMutation.isPending}
+                onClick={() => oauthMutation.mutate("github")}
               >
-                Continue with GitHub
+                {oauthMutation.isPending && oauthMutation.variables === "github"
+                  ? "Connecting…"
+                  : "Continue with GitHub"}
               </button>
             </div>
 
