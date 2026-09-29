@@ -154,58 +154,6 @@ export default function CitationsView() {
           </div>
         </div>
 
-        <div className="grid grid-3" style={{ marginTop: 14 }}>
-          <div className="field">
-            <label htmlFor="citation-workspace">Workspace</label>
-            <select
-              id="citation-workspace"
-              className="input"
-              value={activeWorkspaceId ?? ""}
-              onChange={(event) => {
-                setWorkspaceId(event.target.value);
-                setProjectId(undefined);
-                setReportId(undefined);
-              }}
-            >
-              {(workspaces.data ?? []).map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>{workspace.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="citation-project">Project</label>
-            <select
-              id="citation-project"
-              className="input"
-              value={activeProjectId ?? ""}
-              onChange={(event) => {
-                setProjectId(event.target.value);
-                setReportId(undefined);
-              }}
-              disabled={projects.isPending}
-            >
-              {(projects.data ?? []).map((project) => (
-                <option key={project.id} value={project.id}>{project.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="citation-report">Research report</label>
-            <select
-              id="citation-report"
-              className="input"
-              value={activeReportId ?? ""}
-              onChange={(event) => setReportId(event.target.value)}
-              disabled={reports.isPending}
-            >
-              {(reports.data ?? []).map((report) => (
-                <option key={report.id} value={report.id}>{report.topic.slice(0, 60)}</option>
-              ))}
-            </select>
-          </div>
-        </div>
       </section>
 
       {!activeReportId && !reports.isPending && (
