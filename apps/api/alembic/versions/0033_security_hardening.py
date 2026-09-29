@@ -58,9 +58,7 @@ def upgrade() -> None:
     op.create_index("ix_audit_events_project_occurred", "audit_events", ["project_id", "occurred_at"])
     op.create_index("ix_audit_events_code_occurred", "audit_events", ["event_code", "occurred_at"])
 
-    # Existing API tokens predate scopes and remain usable, but are explicitly
-    # granted read-only access until the owner rotates or recreates them.
-    op.execute(sa.text("UPDATE api_tokens SET scopes = '[\\"read:*\\"]'::jsonb WHERE scopes IS NULL"))
+    # Adding the non-null column with a server default backfills existing rows.
 
 
 def downgrade() -> None:
