@@ -31,7 +31,9 @@ from app.api.routes.notifications import router as notifications_router
 from app.api.routes.oauth import router as oauth_router
 from app.api.routes.orchestration import router as orchestration_router
 from app.api.routes.pdf_workspace import router as pdf_workspace_router
-from app.api.routes.post_translation_humanization import router as post_translation_humanization_router
+from app.api.routes.post_translation_humanization import (
+    router as post_translation_humanization_router,
+)
 from app.api.routes.project_file_evidence import router as project_file_evidence_router
 from app.api.routes.projects import router as projects_router
 from app.api.routes.providers import router as providers_router
