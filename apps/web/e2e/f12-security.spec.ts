@@ -163,6 +163,11 @@ test("settings can sign out all active sessions", async ({ page }) => {
 
   const meAfterLogout = await page.request.get("/api/v1/auth/me");
   expect(meAfterLogout.status()).toBe(401);
+
+  const authCookies = (await page.context().cookies()).filter((cookie) =>
+    ["research_ai_access", "research_ai_refresh"].includes(cookie.name),
+  );
+  expect(authCookies).toHaveLength(0);
 });
 
 test("authenticated shell can sign out and clears the session", async ({ page }) => {
