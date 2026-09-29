@@ -166,69 +166,69 @@ export function JobsCenter() {
               </tr>
             ) : (
               jobs.map((job) => (
-              <tr key={job.id}>
-                <td>
-                  <div className="strong">{job.job_type}</div>
-                  {job.last_error_message && (
-                    <div
-                      className="meta"
-                      style={{ marginTop: 4 }}
-                    >
-                      {job.last_error_code ?? "error"}:{" "}
-                      {job.last_error_message}
-                    </div>
-                  )}
-                </td>
-                <td>
-                  <span className={statusClass(job.status)}>
-                    {statusLabel(job.status)}
-                  </span>
-                </td>
-                <td>
-                  {job.attempt_count} / {job.max_attempts}
-                </td>
-                <td>{formatDate(job.created_at)}</td>
-                <td>{formatDate(job.updated_at)}</td>
-                <td>
-                  <div className="actions">
-                    {(job.status === "failed" ||
-                      job.status === "cancelled") && (
-                      <button
-                        className="btn ghost"
-                        type="button"
-                        disabled={
-                          retryMutation.isPending &&
+                <tr key={job.id}>
+                  <td>
+                    <div className="strong">{job.job_type}</div>
+                    {job.last_error_message && (
+                      <div
+                        className="meta"
+                        style={{ marginTop: 4 }}
+                      >
+                        {job.last_error_code ?? "error"}:{" "}
+                        {job.last_error_message}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <span className={statusClass(job.status)}>
+                      {statusLabel(job.status)}
+                    </span>
+                  </td>
+                  <td>
+                    {job.attempt_count} / {job.max_attempts}
+                  </td>
+                  <td>{formatDate(job.created_at)}</td>
+                  <td>{formatDate(job.updated_at)}</td>
+                  <td>
+                    <div className="actions">
+                      {(job.status === "failed" ||
+                        job.status === "cancelled") && (
+                        <button
+                          className="btn ghost"
+                          type="button"
+                          disabled={
+                            retryMutation.isPending &&
+                            retryMutation.variables === job.id
+                          }
+                          onClick={() => retryMutation.mutate(job.id)}
+                        >
+                          {retryMutation.isPending &&
                           retryMutation.variables === job.id
-                        }
-                        onClick={() => retryMutation.mutate(job.id)}
-                      >
-                        {retryMutation.isPending &&
-                        retryMutation.variables === job.id
-                          ? "Retrying…"
-                          : "Retry"}
-                      </button>
-                    )}
-                    {(job.status === "queued" ||
-                      job.status === "retrying") && (
-                      <button
-                        className="btn ghost"
-                        type="button"
-                        disabled={
-                          cancelMutation.isPending &&
+                            ? "Retrying…"
+                            : "Retry"}
+                        </button>
+                      )}
+                      {(job.status === "queued" ||
+                        job.status === "retrying") && (
+                        <button
+                          className="btn ghost"
+                          type="button"
+                          disabled={
+                            cancelMutation.isPending &&
+                            cancelMutation.variables === job.id
+                          }
+                          onClick={() => cancelMutation.mutate(job.id)}
+                        >
+                          {cancelMutation.isPending &&
                           cancelMutation.variables === job.id
-                        }
-                        onClick={() => cancelMutation.mutate(job.id)}
-                      >
-                        {cancelMutation.isPending &&
-                        cancelMutation.variables === job.id
-                          ? "Cancelling…"
-                          : "Cancel"}
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))
+                            ? "Cancelling…"
+                            : "Cancel"}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
             )}
             {!loading && jobs.length === 0 && (
               <tr>
