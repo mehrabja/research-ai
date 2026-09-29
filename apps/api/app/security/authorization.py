@@ -168,7 +168,7 @@ def enforce_api_token_request(
         request.url.path,
         settings.api_prefix,
     )
-    if not scope_allows(principal.scopes, required):
+    if required == "__forbidden__" or not scope_allows(principal.scopes, required):
         raise APITokenScopeError()
 
     has_restrictions = bool(principal.workspace_ids or principal.project_ids)
