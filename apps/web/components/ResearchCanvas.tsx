@@ -38,7 +38,6 @@ export default function ResearchCanvas() {
   const {
     projectId: activeProjectId,
     projectsQuery: projects,
-    workspacesQuery: workspaces,
   } = useResearchContext();
 
   const canvas = useQuery({
