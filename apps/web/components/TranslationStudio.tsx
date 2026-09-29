@@ -240,10 +240,10 @@ export default function TranslationStudio() {
                 id="translate-report"
                 className="input"
                 value={activeReportId ?? ""}
-                onChange={(event) => setReportId(event.target.value)}
-                disabled={reports.isPending}
+                onChange={(event) => setReport(event.target.value)}
+                disabled={reportsQuery.isPending}
               >
-                {(reports.data ?? []).map((reportItem) => (
+                {(reportsQuery.data ?? []).map((reportItem) => (
                   <option key={reportItem.id} value={reportItem.id}>
                     {reportItem.topic}
                   </option>
@@ -254,7 +254,7 @@ export default function TranslationStudio() {
         </div>
       </section>
 
-      {!activeReportId && !reports.isPending && (
+      {!activeReportId && !reportsQuery.isPending && (
         <section className="card pad empty">
           <div className="big">∅</div>
           <div>No research report exists in the selected project.</div>
