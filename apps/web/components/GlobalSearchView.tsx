@@ -149,7 +149,7 @@ export default function GlobalSearchView() {
               <SearchResultItem
                 key={item.resource_type + ":" + item.id}
                 item={item}
-                href={buildResultHref(item)}
+                href={buildResultHref(item, workspaceId!)}
               />
             ))}
 
@@ -202,27 +202,43 @@ function SearchResultItem({
   );
 }
 
-function buildResultHref(item: SearchResult): string {
+function buildResultHref(
+  item: SearchResult,
+  workspaceId: string,
+): string {
+  const workspaceParam = "?workspaceId=" + encodeURIComponent(workspaceId);
   switch (item.resource_type) {
     case "project":
-      return "/workspace?projectId=" + item.id;
+      return (
+        "/workspace" +
+        workspaceParam +
+        "&projectId=" +
+        encodeURIComponent(item.id)
+      );
     case "report":
       return (
-        "/reports/" +
-        item.id +
-        "?projectId=" +
-        item.project_id +
+        "/manuscript" +
+        workspaceParam +
+        "&projectId=" +
+        encodeURIComponent(item.project_id ?? "") +
         "&reportId=" +
-        item.id
+        encodeURIComponent(item.report_id ?? item.id)
       );
     case "source":
       return (
-        "/sources?projectId=" +
-        item.project_id +
+        "/sources" +
+        workspaceParam +
+        "&projectId=" +
+        encodeURIComponent(item.project_id ?? "") +
         "&reportId=" +
-        item.report_id
+        encodeURIComponent(item.report_id ?? "")
       );
     case "file":
-      return "/files?projectId=" + item.project_id;
+      return (
+        "/files" +
+        workspaceParam +
+        "&projectId=" +
+        encodeURIComponent(item.project_id ?? "")
+      );
   }
 }
