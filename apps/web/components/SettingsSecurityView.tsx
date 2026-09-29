@@ -220,6 +220,8 @@ export function SettingsSecurityView() {
     revokeToken.error,
     revokeSession.error,
     disconnectOauth.error,
+    auditQuery.error,
+    deleteAccount.error,
   ];
   const error = queryErrors.find((value): value is Error => value instanceof Error);
 
