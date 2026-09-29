@@ -130,7 +130,7 @@ export function UsageBillingView() {
       setUsage(usageRow);
       setCurrentPlan(planRow);
       const raw = subscriptionRow.subscription;
-      setSubscription(raw && Object.keys(raw).length > 0 ? (raw as Subscription) : null);
+      setSubscription(raw && Object.keys(raw).length > 0 ? (raw as unknown as Subscription) : null);
     } catch (requestError) {
       setError(
         requestError instanceof Error
