@@ -14,7 +14,7 @@ const backendServer = {
 const frontendServer = {
   command: "npm run build && node .next/standalone/server.js",
   url: "http://localhost:3000",
-  reuseExistingServer: true,
+  reuseExistingServer: false,
   timeout: 120_000,
   ...(process.env.CI
     ? {}
