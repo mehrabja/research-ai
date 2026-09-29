@@ -106,7 +106,7 @@ def _validate_archive(
             raise MaliciousFileError("invalid ZIP/OOXML container") from exc
         return
 
-    if content.startswith((b"",)):
+    if content.startswith(b"\\x1f\\x8b"):
         try:
             with tarfile.open(fileobj=io.BytesIO(content), mode="r:gz") as archive:
                 _validate_tar_members(archive, max_entries, max_uncompressed_bytes)
