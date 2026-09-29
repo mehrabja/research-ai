@@ -88,11 +88,11 @@ from app.db.models.ops import (
     ModelPricing,
     UsageLog,
 )
-from app.db.models.pdf_workspace import PdfAnnotation, PdfWorkspaceState
 from app.db.models.orchestration import (
     ResearchOrchestrationNode,
     ResearchOrchestrationRun,
 )
+from app.db.models.pdf_workspace import PdfAnnotation, PdfWorkspaceState
 from app.db.models.pipeline import (
     DetectionRun,
     DetectionSegment,
@@ -110,13 +110,13 @@ from app.db.models.publication import (
     PublicationTarget,
     PublicationTargetSelection,
 )
-from app.db.models.research_canvas import ResearchCanvas
 from app.db.models.report import (
     Report,
     ReportEvent,
     ReportVersion,
     ReviewEvent,
 )
+from app.db.models.research_canvas import ResearchCanvas
 from app.db.models.research_classification import (
     ClassificationEvidence,
     ProjectClassification,
