@@ -36,6 +36,7 @@ function KnowledgeGraphView() {
     projectsQuery: projects,
   } = useResearchContext();
   const [nodeQuery, setNodeQuery] = useState("");
+  const [nodeType, setNodeType] = useState("");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const graph = useQuery({
@@ -55,10 +56,11 @@ function KnowledgeGraphView() {
   const hasGraph = Boolean(graph.data || summary.data);
 
   const nodes = useQuery({
-    queryKey: ["knowledge-graph-nodes", activeProjectId, nodeQuery],
+    queryKey: ["knowledge-graph-nodes", activeProjectId, nodeQuery, nodeType],
     queryFn: () =>
       listKnowledgeGraphNodes(activeProjectId!, {
         q: nodeQuery.trim() || undefined,
+        nodeType: nodeType || undefined,
         limit: 100,
       }),
     enabled: Boolean(activeProjectId && hasGraph),
@@ -260,14 +262,33 @@ function KnowledgeGraphView() {
                 </span>
               </div>
 
-              <input
-                className="input"
-                style={{ marginTop: 12 }}
-                value={nodeQuery}
-                onChange={(event) => setNodeQuery(event.target.value)}
-                placeholder="Filter by node label or key…"
-                aria-label="Knowledge graph node filter"
-              />
+              <div className="row" style={{ marginTop: 12 }}>
+                <input
+                  className="input"
+                  style={{ flex: 1 }}
+                  value={nodeQuery}
+                  onChange={(event) => setNodeQuery(event.target.value)}
+                  placeholder="Filter by node label or key…"
+                  aria-label="Knowledge graph node filter"
+                />
+                <select
+                  className="input"
+                  style={{ width: 220 }}
+                  value={nodeType}
+                  onChange={(event) => {
+                    setNodeType(event.target.value);
+                    setSelectedNodeId(null);
+                  }}
+                  aria-label="Knowledge graph node type"
+                >
+                  <option value="">All node types</option>
+                  {nodeTypes.map(([type]) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div className="list" style={{ marginTop: 10 }}>
                 {(nodes.data ?? []).map((node) => (
