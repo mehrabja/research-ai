@@ -82,5 +82,5 @@ test("password reset confirmation rejects missing reset token", async ({ page })
   await page.getByLabel("Confirm password").fill(testPassword + "A");
   await page.getByRole("button", { name: "Update password" }).click();
 
-  await expect(page.getByRole("alert")).toContainText("missing its token");
+  await expect(page.locator('p[role="alert"]')).toContainText("missing its token");
 });
