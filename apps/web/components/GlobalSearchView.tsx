@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import {
   searchWorkspace,
   type SearchResult,
@@ -40,7 +40,7 @@ export default function GlobalSearchView() {
       item.resource_type === resourceFilter,
   );
 
-  function submit(event: React.FormEvent<HTMLFormElement>) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const next = query.trim();
     if (next.length < 2) return;
