@@ -53,13 +53,14 @@ def fetch_document(
     for _ in range(max_redirects + 1):
         _assert_url_safe(current)
         try:
-            with httpx.Client(
+            with httpx.stream(
+                "GET",
+                current,
                 timeout=timeout_seconds,
                 follow_redirects=False,
                 trust_env=False,
                 headers={"User-Agent": _USER_AGENT, "Accept": "*/*"},
-            ) as client:
-                with client.stream("GET", current) as response:
+            ) as response:
                     if response.status_code in _REDIRECT_STATUSES:
                         location = response.headers.get("location")
                         if not location:
