@@ -21,6 +21,8 @@ const backendServer = {
   url: localE2eBackendUrl + "/api/v1/health/live",
   reuseExistingServer: false,
   timeout: 120_000,
+  stdout: "pipe",
+  stderr: "pipe",
   env: {
     ...process.env,
     APP_ENV: "test",
