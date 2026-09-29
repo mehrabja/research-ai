@@ -8,6 +8,7 @@ import {
   getResearchPlanCoverage,
   listResearchPlanVersions,
   saveResearchPlanRevision,
+  restoreResearchPlanVersion,
   validateResearchPlan,
   type ResearchPlan,
 } from "@/lib/api/researchPlan";
@@ -71,6 +72,20 @@ export default function ResearchPlanView() {
     },
   });
 
+  const restore = useMutation({
+    mutationFn: (targetVersion: number) =>
+      restoreResearchPlanVersion(activeProjectId!, targetVersion),
+    onSuccess: async () => {
+      setObjective("");
+      await queryClient.invalidateQueries({
+        queryKey: ["research-plan-versions", activeProjectId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["research-plan-coverage", activeProjectId],
+      });
+    },
+  });
+
   const generate = useMutation({
     mutationFn: () => generateResearchPlan(activeProjectId!, false),
     onSuccess: async () => {
@@ -90,6 +105,7 @@ export default function ResearchPlanView() {
     coverage.error,
     validate.error,
     save.error,
+    restore.error,
     generate.error,
   ].filter(Boolean);
 
@@ -254,6 +270,58 @@ export default function ResearchPlanView() {
                 </div>
               </div>
             </section>
+          </section>
+
+          <section className="card pad">
+            <div className="row">
+              <div>
+                <h3>Revision history</h3>
+                <div className="muted small">
+                  Immutable plan versions persisted by the planning API.
+                </div>
+              </div>
+              <span className="tag">{versions.data?.length ?? 0} versions</span>
+            </div>
+
+            <div className="list" style={{ marginTop: 12 }}>
+              {(versions.data ?? []).map((version) => {
+                const current = version.version === plan.version;
+                return (
+                  <div className="list-item" key={version.id}>
+                    <div className="row">
+                      <div style={{ minWidth: 0 }}>
+                        <div className="title">
+                          Version {version.version}
+                        </div>
+                        <div className="meta">
+                          {version.status} · {version.planner_version} ·{" "}
+                          {new Date(version.created_at).toLocaleString()}
+                        </div>
+                      </div>
+                      {current ? (
+                        <span className="tag success">Current</span>
+                      ) : (
+                        <button
+                          className="btn ghost"
+                          type="button"
+                          disabled={restore.isPending}
+                          onClick={() => restore.mutate(version.version)}
+                        >
+                          {restore.isPending
+                            ? "Restoring…"
+                            : "Restore this version"}
+                        </button>
+                      )}
+                    </div>
+                    {version.supersedes_plan_id && (
+                      <div className="meta" style={{ marginTop: 6 }}>
+                        Supersedes an earlier plan revision.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </section>
 
           <section className="grid grid-2">
