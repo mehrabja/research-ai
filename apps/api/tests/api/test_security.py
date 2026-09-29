@@ -232,6 +232,7 @@ def test_decode_rejects_missing_iat() -> None:
         "aud": settings.jwt_audience,
         "exp": int((now + timedelta(minutes=5)).timestamp()),
         "jti": str(uuid.uuid4()),
+        "sv": 1,
     }
     token = jwt.encode(
         payload,
