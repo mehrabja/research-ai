@@ -154,7 +154,6 @@ export default function FilesWorkspace() {
     files.error,
     createFolder.error,
     upload.error,
-    move.error,
     remove.error,
   ].filter(Boolean);
 
@@ -330,6 +329,11 @@ export default function FilesWorkspace() {
       </section>
 
       <section className="card table-wrap">
+        {move.error instanceof Error && (
+          <div className="muted small" role="alert" style={{ padding: "0 16px 12px" }}>
+            {move.error.message}
+          </div>
+        )}
         <div className="row" style={{ padding: "0 16px 12px" }}>
           <div>
             <h3>Project files</h3>
