@@ -1,26 +1,22 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 async function verifyEmail(token: string): Promise<string> {
   const response = await fetch("/api/v1/auth/verify-email", {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ token }),
   });
   const payload = (await response.json().catch(() => ({}))) as {
     detail?: string;
     message?: string;
   };
-  if (!response.ok) {
-    throw new Error(payload.detail || payload.message || "Verification failed.");
-  }
+  if (!response.ok) throw new Error(payload.detail || payload.message || "Verification failed.");
   return "Your email address is verified.";
 }
 
@@ -28,56 +24,50 @@ async function resendVerification(email: string): Promise<string> {
   const response = await fetch("/api/v1/auth/verification/resend", {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ email }),
   });
   const payload = (await response.json().catch(() => ({}))) as {
     detail?: string;
     message?: string;
   };
-  if (!response.ok) {
-    throw new Error(payload.detail || payload.message || "Unable to send verification email.");
-  }
+  if (!response.ok) throw new Error(payload.detail || payload.message || "Unable to send verification email.");
   return payload.message || "Verification instructions were requested.";
 }
 
-export default function EmailVerifyPage() {
+function EmailVerifyContent() {
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<"idle" | "working" | "success" | "error">("idle");
-  const [message, setMessage] = useState("");
-  const [email, setEmail] = useState(searchParams.get("email") || "");
+  const token = searchParams.get("token") || "";
+  const [email, setEmail] = useState(() => searchParams.get("email") || "");
 
-  useEffect(() => {
-    const token = searchParams.get("token");
-    if (!token) return;
+  const verification = useQuery({
+    queryKey: ["email-verification", token],
+    queryFn: () => verifyEmail(token),
+    enabled: Boolean(token),
+    retry: false,
+  });
 
-    setStatus("working");
-    void verifyEmail(token)
-      .then((result) => {
-        setStatus("success");
-        setMessage(result);
-      })
-      .catch((error) => {
-        setStatus("error");
-        setMessage(error instanceof Error ? error.message : "Verification failed.");
-      });
-  }, [searchParams]);
+  const resend = useMutation({
+    mutationFn: resendVerification,
+  });
 
-  async function submitResend(event: FormEvent<HTMLFormElement>) {
+  const status =
+    verification.isPending
+      ? "working"
+      : verification.isSuccess || resend.isSuccess
+        ? "success"
+        : verification.isError || resend.isError
+          ? "error"
+          : "idle";
+  const message =
+    verification.data ||
+    (verification.error instanceof Error ? verification.error.message : "") ||
+    resend.data ||
+    (resend.error instanceof Error ? resend.error.message : "");
+
+  function submitResend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setStatus("working");
-    setMessage("");
-    try {
-      const result = await resendVerification(email);
-      setStatus("success");
-      setMessage(result);
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to send verification email.");
-    }
+    resend.mutate(email);
   }
 
   return (
@@ -93,9 +83,7 @@ export default function EmailVerifyPage() {
             Use the link sent to your email address to verify your Research-AI account.
           </p>
 
-          {status === "working" && (
-            <p className="muted" role="status">Processing…</p>
-          )}
+          {status === "working" && <p className="muted" role="status">Processing…</p>}
           {message && (
             <p
               role={status === "error" ? "alert" : "status"}
@@ -105,7 +93,7 @@ export default function EmailVerifyPage() {
             </p>
           )}
 
-          {status !== "working" && searchParams.get("token") == null && (
+          {!token && (
             <form className="auth-form" onSubmit={submitResend} noValidate>
               <div className="field">
                 <label htmlFor="verification-email">Email</label>
@@ -119,8 +107,8 @@ export default function EmailVerifyPage() {
                   required
                 />
               </div>
-              <button className="btn primary" type="submit" disabled={!email}>
-                Send verification email
+              <button className="btn primary" type="submit" disabled={!email || resend.isPending}>
+                {resend.isPending ? "Sending…" : "Send verification email"}
               </button>
             </form>
           )}
@@ -131,5 +119,24 @@ export default function EmailVerifyPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function EmailVerifyPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="auth-page">
+          <section className="auth-main" style={{ width: "100%" }}>
+            <div className="auth-card">
+              <h2>Verify your email</h2>
+              <p className="muted">Loading verification link…</p>
+            </div>
+          </section>
+        </main>
+      }
+    >
+      <EmailVerifyContent />
+    </Suspense>
   );
 }
