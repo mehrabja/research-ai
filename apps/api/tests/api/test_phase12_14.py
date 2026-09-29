@@ -13,8 +13,8 @@ from app.db.models.jobs import Job
 from app.db.models.pdf_workspace import PdfAnnotation, PdfWorkspaceState
 from app.db.models.project import Project, ProjectEvent
 from app.db.models.project_file import ProjectFile, ProjectFileEvent
-from app.db.models.research_canvas import ResearchCanvas
 from app.db.models.report import Report
+from app.db.models.research_canvas import ResearchCanvas
 from app.db.models.source import Source
 from app.db.models.user import User
 from app.db.models.workspace import Workspace
