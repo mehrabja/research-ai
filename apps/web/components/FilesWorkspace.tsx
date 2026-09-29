@@ -10,6 +10,7 @@ import {
   deleteProjectFile,
   listProjectFiles,
   listProjectFolders,
+  moveProjectFile,
   projectFileContentUrl,
   uploadProjectFile,
 } from "@/lib/api/files";
@@ -121,6 +122,21 @@ export default function FilesWorkspace() {
     },
   });
 
+  const move = useMutation({
+    mutationFn: ({
+      fileId,
+      folderId,
+    }: {
+      fileId: string;
+      folderId?: string;
+    }) => moveProjectFile(fileId, folderId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["files", activeProjectId],
+      });
+    },
+  });
+
   const remove = useMutation({
     mutationFn: (fileId: string) => deleteProjectFile(fileId),
     onSuccess: async () => {
@@ -138,6 +154,7 @@ export default function FilesWorkspace() {
     files.error,
     createFolder.error,
     upload.error,
+    move.error,
     remove.error,
   ].filter(Boolean);
 
@@ -331,6 +348,7 @@ export default function FilesWorkspace() {
               <th>Size</th>
               <th>Status</th>
               <th>Extraction</th>
+              <th>Move</th>
               <th />
             </tr>
           </thead>
@@ -353,6 +371,30 @@ export default function FilesWorkspace() {
                   <span className="tag">
                     {evidenceLabel(evidenceByFileId.get(file.id))}
                   </span>
+                </td>
+                <td>
+                  <select
+                    className="input"
+                    aria-label={"Move " + file.original_filename}
+                    defaultValue=""
+                    disabled={move.isPending}
+                    onChange={(event) => {
+                      const target = event.target.value;
+                      event.currentTarget.value = "";
+                      void move.mutateAsync({
+                        fileId: file.id,
+                        folderId: target || undefined,
+                      });
+                    }}
+                  >
+                    <option value="">Select destination</option>
+                    <option value="">Project root</option>
+                    {(folders.data ?? []).map((folder) => (
+                      <option key={folder.id} value={folder.id}>
+                        {folder.name}
+                      </option>
+                    ))}
+                  </select>
                 </td>
                 <td>
                   <div className="actions">
