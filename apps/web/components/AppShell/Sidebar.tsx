@@ -13,7 +13,6 @@ function initials(email: string): string {
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const { user, workspace, project, contextHref } = useResearchContext();
-  let lastSection: string | null = null;
 
   return <>
     {open && <div onClick={onClose} aria-hidden="true" className="mobile-menu-backdrop" style={{position:"fixed",inset:0,background:"rgba(16,24,40,.35)",zIndex:20}} />}
@@ -21,7 +20,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       <Link className="brand" href={contextHref("/dashboard")}>
         <span className="brand-mark">R</span><span>Research AI</span>
       </Link>
-      <Link className="workspace-switch" href={contextHref("/workspace")} onClick={onClose} aria-label="Open current research workspace">
+      <Link className="workspace-switch" href={contextHref("/workspace")} onClick={onClose} aria-label="Open selected research context">
         <div className="ws-row">
           <div className="avatar">{workspace ? initials(user.email) : "—"}</div>
           <div className="ws-info">
@@ -33,9 +32,8 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         </div>
       </Link>
       <nav className="nav" aria-label="Primary navigation">
-        {NAV_ITEMS.map((item) => {
-          const showSection = item.section !== lastSection;
-          lastSection = item.section;
+        {NAV_ITEMS.map((item, index) => {
+          const showSection = index === 0 || NAV_ITEMS[index - 1]?.section !== item.section;
           const active = pathname === item.href || pathname.startsWith(item.href + "/");
           return <div key={item.href}>
             {showSection && <div className="nav-title">{item.section}</div>}
