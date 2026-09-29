@@ -74,22 +74,23 @@ def fetch_document(
     current = url
     for _ in range(max_redirects + 1):
         _assert_url_safe(current)
-
         try:
-            with httpx.stream(
-                "GET",
-                current,
+            with httpx.Client(
                 timeout=timeout_seconds,
                 follow_redirects=False,
+                trust_env=False,
                 headers={"User-Agent": _USER_AGENT, "Accept": "*/*"},
-            ) as response:
+            ) as client:
+                with client.stream("GET", current) as response:
                 if response.status_code in _REDIRECT_STATUSES:
                     location = response.headers.get("location")
                     if not location:
                         raise DocumentFetchFetcherError(
                             "redirect without Location header"
                         )
-                    current = urljoin(current, location)
+                    next_url = urljoin(current, location)
+                    _assert_redirect_allowed(current, next_url)
+                    current = next_url
                     continue
 
                 if response.status_code >= 400:
@@ -97,6 +98,15 @@ def fetch_document(
                         f"HTTP {response.status_code}"
                     )
 
+                advertised = response.headers.get("content-length")
+                if advertised:
+                    try:
+                        if int(advertised) > max_bytes:
+                            raise DocumentTooLargeFetcherError(
+                                f"declared response body exceeded {max_bytes} bytes"
+                            )
+                    except ValueError:
+                        pass
                 body = _read_bounded(response, max_bytes)
                 header_ct = _extract_header_content_type(response)
                 final_ct = _sniff_content_type(header_ct, body, current)
@@ -154,34 +164,57 @@ def _sniff_content_type(header_ct: str, body: bytes, url: str) -> str:
     return header_ct or "application/octet-stream"
 
 
-def _assert_url_safe(url: str) -> None:
-    parsed = urlparse(url)
-    if parsed.scheme not in _ALLOWED_SCHEMES:
-        raise UnsafeUrlFetcherError(
-            f"unsupported scheme: {parsed.scheme!r}"
-        )
-    host = parsed.hostname
-    if not host:
-        raise UnsafeUrlFetcherError("missing host")
-
+def _resolve_public_ips(host: str, port: int) -> set[str]:
     try:
-        infos = socket.getaddrinfo(
-            host, parsed.port or _default_port(parsed.scheme)
-        )
+        infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
     except socket.gaierror as exc:
         raise UnsafeUrlFetcherError("could not resolve host") from exc
 
+    ips: set[str] = set()
     for _family, _socktype, _proto, _canon, sockaddr in infos:
-        ip_str = sockaddr[0]
         try:
-            ip = ipaddress.ip_address(ip_str)
+            ip = ipaddress.ip_address(sockaddr[0])
         except ValueError:
             raise UnsafeUrlFetcherError("invalid resolved IP") from None
         if _is_unsafe_ip(ip):
-            logger.warning(
-                "ssrf_blocked host=%s ip=%s", host, ip_str
-            )
+            logger.warning("ssrf_blocked host=%s ip=%s", host, ip)
             raise UnsafeUrlFetcherError("resolved IP is not public")
+        ips.add(ip.compressed)
+    if not ips:
+        raise UnsafeUrlFetcherError("host did not resolve to a public address")
+    return ips
+
+
+def _assert_url_safe(url: str) -> set[str]:
+    parsed = urlparse(url)
+    if parsed.scheme not in _ALLOWED_SCHEMES:
+        raise UnsafeUrlFetcherError(f"unsupported scheme: {parsed.scheme!r}")
+    if parsed.username or parsed.password:
+        raise UnsafeUrlFetcherError("credentials in URL are not allowed")
+    if parsed.fragment:
+        raise UnsafeUrlFetcherError("URL fragments are not allowed")
+    host = parsed.hostname
+    if not host:
+        raise UnsafeUrlFetcherError("missing host")
+    port = parsed.port or _default_port(parsed.scheme)
+    if port not in (80, 443):
+        raise UnsafeUrlFetcherError("non-standard destination port is not allowed")
+    first = _resolve_public_ips(host, port)
+    second = _resolve_public_ips(host, port)
+    if first != second:
+        logger.warning("ssrf_dns_rebinding_detected host=%s", host)
+        raise UnsafeUrlFetcherError("DNS resolution changed during validation")
+    return first
+
+
+def _assert_redirect_allowed(current: str, target: str) -> None:
+    current_parsed = urlparse(current)
+    target_parsed = urlparse(target)
+    if target_parsed.scheme not in _ALLOWED_SCHEMES:
+        raise UnsafeUrlFetcherError("redirect target scheme is not allowed")
+    if current_parsed.scheme == "https" and target_parsed.scheme != "https":
+        raise UnsafeUrlFetcherError("HTTPS to HTTP downgrade is not allowed")
+    _assert_url_safe(target)
 
 
 def _default_port(scheme: str) -> int:
