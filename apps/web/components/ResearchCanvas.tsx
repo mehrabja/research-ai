@@ -67,10 +67,13 @@ export default function ResearchCanvas() {
 
   useEffect(() => {
     if (!canvas.data) return;
-    setNodes(canvas.data.nodes);
-    setEdges(canvas.data.edges);
-    setViewport(canvas.data.viewport);
-    setRevision(canvas.data.revision);
+    const timer = window.setTimeout(() => {
+      setNodes(canvas.data?.nodes ?? []);
+      setEdges(canvas.data?.edges ?? []);
+      setViewport(canvas.data?.viewport ?? { x: 0, y: 0, zoom: 1 });
+      setRevision(canvas.data?.revision ?? 1);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [canvas.data]);
 
   const nodeOptions = useMemo(
