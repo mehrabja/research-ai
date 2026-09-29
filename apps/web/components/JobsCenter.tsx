@@ -89,19 +89,19 @@ export function JobsCenter() {
       (value): value is Error => value instanceof Error,
     );
 
-  if (jobsQuery.isPending) {
-    return (
-      <section className="card pad" aria-busy="true">
-        <h2>Loading job center…</h2>
-        <p className="muted">
-          Reading durable job state from the API.
-        </p>
-      </section>
-    );
-  }
+  const loading = jobsQuery.isPending;
 
   return (
     <>
+      {loading && (
+        <section className="card pad" aria-busy="true">
+          <h2>Loading job center…</h2>
+          <p className="muted">
+            Reading durable job state from the API.
+          </p>
+        </section>
+      )}
+
       {error && (
         <section className="card pad" role="alert">
           <div className="row">
@@ -123,22 +123,22 @@ export function JobsCenter() {
       <div className="grid grid-4">
         <div className="card metric">
           <div className="label">Running</div>
-          <div className="value">{running}</div>
+          <div className="value">{loading ? "…" : running}</div>
           <div className="delta">Server-side processing</div>
         </div>
         <div className="card metric">
           <div className="label">Queued</div>
-          <div className="value">{queued}</div>
+          <div className="value">{loading ? "…" : queued}</div>
           <div className="delta">Waiting or retrying</div>
         </div>
         <div className="card metric">
           <div className="label">Succeeded today</div>
-          <div className="value">{succeededToday}</div>
+          <div className="value">{loading ? "…" : succeededToday}</div>
           <div className="delta good">Persisted completed jobs</div>
         </div>
         <div className="card metric">
           <div className="label">Failed</div>
-          <div className="value">{failed}</div>
+          <div className="value">{loading ? "…" : failed}</div>
           <div className="delta bad">Eligible failures shown below</div>
         </div>
       </div>
@@ -156,7 +156,16 @@ export function JobsCenter() {
             </tr>
           </thead>
           <tbody>
-            {jobs.map((job) => (
+            {loading ? (
+              <tr>
+                <td colSpan={6}>
+                  <div className="empty" aria-busy="true">
+                    <div>Loading durable jobs…</div>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              jobs.map((job) => (
               <tr key={job.id}>
                 <td>
                   <div className="strong">{job.job_type}</div>
@@ -220,7 +229,9 @@ export function JobsCenter() {
                 </td>
               </tr>
             ))}
-            {jobs.length === 0 && (
+              )
+            )}
+            {!loading && jobs.length === 0 && (
               <tr>
                 <td colSpan={6}>
                   <div className="empty">
