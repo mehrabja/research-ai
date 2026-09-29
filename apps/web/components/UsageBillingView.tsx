@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listWorkspaces, type Workspace } from "@/lib/api/workspaces";
+import { useResearchContext } from "@/lib/research-context";
 
 type Plan = { id: string; code: string; name: string; description: string | null };
 type Entitlement = { feature: string; limit_value: number | null; unit: string };
@@ -62,18 +62,17 @@ function displayValue(value: number, unit: string): string {
 }
 
 export function UsageBillingView() {
-  const [workspaceOverride, setWorkspaceOverride] = useState("");
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const workspacesQuery = useQuery({
-    queryKey: ["workspaces"],
-    queryFn: listWorkspaces,
-  });
+  const {
+    workspaceId: contextWorkspaceId,
+    workspace: selectedWorkspace,
+    workspacesQuery,
+    setWorkspace,
+  } = useResearchContext();
   const workspaces = workspacesQuery.data ?? [];
-  const workspaceId = workspaceOverride || workspaces[0]?.id || "";
-  const selectedWorkspace: Workspace | null =
-    workspaces.find((item: Workspace) => item.id === workspaceId) ?? null;
+  const workspaceId = contextWorkspaceId ?? "";
 
   const plansQuery = useQuery({
     queryKey: ["billing-plans"],
@@ -164,7 +163,7 @@ export function UsageBillingView() {
         <div className="actions">
           <label className="field" style={{ minWidth: 240 }}>
             <span className="small muted">Workspace</span>
-            <select className="input" aria-label="Workspace" value={workspaceId} onChange={(event) => setWorkspaceOverride(event.target.value)}>
+            <select className="input" aria-label="Workspace" value={workspaceId} onChange={(event) => setWorkspace(event.target.value)}>
               {workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
             </select>
           </label>
