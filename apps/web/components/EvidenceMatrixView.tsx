@@ -331,10 +331,29 @@ function EvidenceRows({ rows }: { rows: EvidenceRow[] }) {
                 {row.evidence && row.evidence.length > 0 && (
                   <div className="pillbar" style={{ marginTop: 6 }}>
                     {row.evidence.slice(0, 4).map((item) => (
-                      <span className="tag" key={item.id}>
-                        {item.support_level} ·{" "}
-                        {item.relevance_score.toFixed(2)}
-                      </span>
+                      <details key={item.id} style={{ width: "100%" }}>
+                        <summary style={{ cursor: "pointer" }}>
+                          <span className="tag">
+                            {item.support_level} ·{" "}
+                            {item.relevance_score.toFixed(2)}
+                          </span>
+                        </summary>
+                        <div className="muted tiny" style={{ marginTop: 6 }}>
+                          Evidence: {item.evidence_type} · {item.evidence_id}
+                        </div>
+                        <div className="muted tiny" style={{ marginTop: 3 }}>
+                          Source: {item.source_id ?? "none"}
+                        </div>
+                        <pre
+                          style={{
+                            whiteSpace: "pre-wrap",
+                            marginTop: 6,
+                            fontSize: 11,
+                          }}
+                        >
+                          {JSON.stringify(item.provenance, null, 2)}
+                        </pre>
+                      </details>
                     ))}
                   </div>
                 )}
