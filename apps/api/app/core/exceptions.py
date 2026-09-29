@@ -1083,3 +1083,9 @@ class NotificationNotFound(AppError):
     code = "NOTIFICATION_NOT_FOUND"
     status_code = 404
     message = "Notification not found."
+
+
+class OAuthLastAuthMethod(AppError):
+    code = "OAUTH_LAST_AUTH_METHOD"
+    status_code = 409
+    message = "The last connected sign-in method cannot be removed."
