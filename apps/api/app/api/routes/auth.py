@@ -139,7 +139,10 @@ def login(
             else:
                 raise MFAInvalid()
 
-    token = create_access_token(subject=str(user.id))
+    token = create_access_token(
+        subject=str(user.id),
+        security_version=user.security_version,
+    )
     _session, refresh_token = auth_service.create_refresh_session(
         db,
         user_id=user.id,
@@ -182,7 +185,10 @@ def refresh(
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("user-agent"),
     )
-    access_token = create_access_token(subject=str(user.id))
+    access_token = create_access_token(
+        subject=str(user.id),
+        security_version=user.security_version,
+    )
     db.commit()
     return TokenResponse(
         access_token=access_token,
