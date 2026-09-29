@@ -276,6 +276,9 @@ export default function ManuscriptView() {
     },
   });
 
+  const autosavePending = autosave.isPending;
+  const autosaveMutate = autosave.mutate;
+
   const discard = useMutation({
     mutationFn: () => discardManuscriptDraft(activeReportId!),
     onSuccess: async () => {
@@ -335,13 +338,13 @@ export default function ManuscriptView() {
       !draftContent ||
       !dirty ||
       conflict ||
-      autosave.isPending
+      autosavePending
     ) {
       return;
     }
 
     const timer = window.setTimeout(() => {
-      autosave.mutate({
+      autosaveMutate({
         baseVersionId,
         revision,
         content: draftContent,
@@ -351,7 +354,8 @@ export default function ManuscriptView() {
     return () => window.clearTimeout(timer);
   }, [
     activeReportId,
-    autosave,
+    autosaveMutate,
+    autosavePending,
     baseVersionId,
     conflict,
     dirty,
