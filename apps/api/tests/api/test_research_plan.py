@@ -171,3 +171,49 @@ def test_validate_endpoint(client):
     assert resp.status_code == 200
     body = resp.json()
     assert body["validation_status"] in ("valid", "invalid")
+
+
+def test_save_revision_and_restore(client):
+    c, uid = client
+    pid = _mk_project(uid)
+
+    generated = c.post(
+        f"/api/v1/projects/{pid}/research-plan/generate",
+        json={"async": False},
+    )
+    assert generated.status_code == 200
+    original = generated.json()["plan"]
+    original_version = original["version"]
+    original_objective = original["research_objective_snapshot"]
+
+    saved = c.patch(
+        f"/api/v1/projects/{pid}/research-plan",
+        json={
+            "research_objective_snapshot": "A revised research objective",
+            "planning_mode": original["planning_mode"],
+        },
+    )
+    assert saved.status_code == 200
+    draft = saved.json()
+    assert draft["version"] == original_version + 1
+    assert draft["status"] == "draft"
+    assert draft["supersedes_plan_id"] == original["id"]
+
+    versions = c.get(f"/api/v1/projects/{pid}/research-plan/versions")
+    assert versions.status_code == 200
+    version_numbers = [item["version"] for item in versions.json()["items"]]
+    assert version_numbers[:2] == [original_version + 1, original_version]
+
+    restored = c.post(
+        f"/api/v1/projects/{pid}/research-plan/restore",
+        json={"target_version": original_version},
+    )
+    assert restored.status_code == 200
+    restored_body = restored.json()
+    assert restored_body["version"] == original_version + 2
+    assert restored_body["status"] == "ready"
+    assert restored_body["research_objective_snapshot"] == original_objective
+
+    current = c.get(f"/api/v1/projects/{pid}/research-plan")
+    assert current.status_code == 200
+    assert current.json()["version"] == original_version + 2
