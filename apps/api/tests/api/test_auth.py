@@ -6,6 +6,7 @@ import uuid
 from sqlalchemy import delete, select
 
 from app.db.models.membership import WorkspaceMembership
+from app.db.models.user import User
 from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
 from tests._m37_api_helpers import PW, auth, client
@@ -28,7 +29,7 @@ def test_register_with_workspace_persists_profile_and_workspace() -> None:
 
     user_id = uuid.UUID(response.json()["id"])
     with SessionLocal() as db:
-        user = db.get(__import__("app.db.models.user", fromlist=["User"]).User, user_id)
+        user = db.get(User, user_id)
         assert user is not None
         assert user.full_name == "Regression Researcher"
         workspace = db.execute(
