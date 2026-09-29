@@ -187,27 +187,25 @@ def search_source_candidates(
                 for person in (candidate.authors or ())
             ):
                 continue
+            meta = candidate.source_meta or {}
             if venue_q:
-                meta = candidate.source_meta or {}
                 venue_value = str(
                     meta.get("venue") or meta.get("journal") or ""
                 ).lower()
-                if venue_q not in venue_value:
+                if not venue_value or venue_q not in venue_value:
                     continue
-            if open_access_only:
-                meta = candidate.source_meta or {}
-                oa = meta.get("is_open_access")
-                if oa is False:
-                    continue
+            if open_access_only and meta.get("is_open_access") is not True:
+                continue
             if publication_type:
-                meta = candidate.source_meta or {}
                 type_value = str(meta.get("publication_type") or "").lower()
-                if type_value and publication_type.lower() not in type_value:
+                if (
+                    not type_value
+                    or publication_type.lower() not in type_value
+                ):
                     continue
             if language:
-                meta = candidate.source_meta or {}
                 lang_value = str(meta.get("language") or "").lower()
-                if lang_value and language.lower() != lang_value:
+                if not lang_value or language.lower() != lang_value:
                     continue
             filtered.append(candidate)
         candidates = filtered
