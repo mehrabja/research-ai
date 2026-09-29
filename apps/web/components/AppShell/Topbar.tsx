@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Notification = {
   id: string;
@@ -60,7 +60,7 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   });
   const [notificationError, setNotificationError] = useState<string | null>(null);
 
-  async function refreshNotifications() {
+  const refreshNotifications = useCallback(async () => {
     try {
       const result = await readNotifications();
       setNotifications(result);
