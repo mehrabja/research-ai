@@ -141,7 +141,6 @@ def authenticate_api_token(
             APIToken.revoked_at.is_(None),
             (APIToken.expires_at.is_(None) | (APIToken.expires_at > datetime.now(UTC))),
         )
-        .with_for_update()
     ).scalar_one_or_none()
     if row is None:
         raise APITokenInvalid()
