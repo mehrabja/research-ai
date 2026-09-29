@@ -124,13 +124,54 @@ function buildAnonymousHeaders(
   return headers;
 }
 
+function isLoopbackHost(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  return (
+    normalized === "localhost" ||
+    normalized === "127.0.0.1" ||
+    normalized === "0.0.0.0" ||
+    normalized === "::1"
+  );
+}
+
 function isSameOriginRequest(
   req: NextRequest,
 ): boolean {
   const origin = req.headers.get("origin");
 
   if (origin) {
-    return origin === req.nextUrl.origin;
+    try {
+      const originUrl = new URL(origin);
+      const forwardedHost =
+        req.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+      const requestHost =
+        forwardedHost || req.headers.get("host") || req.nextUrl.host;
+      const forwardedProto =
+        req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+      const requestProtocol =
+        forwardedProto || req.nextUrl.protocol.replace(/:$/, "");
+
+      if (
+        originUrl.protocol === requestProtocol + ":" &&
+        originUrl.host === requestHost
+      ) {
+        return true;
+      }
+
+      const requestUrl = new URL(req.nextUrl.toString());
+      if (
+        originUrl.protocol === requestUrl.protocol &&
+        originUrl.port === requestUrl.port &&
+        isLoopbackHost(originUrl.hostname) &&
+        isLoopbackHost(requestUrl.hostname)
+      ) {
+        return true;
+      }
+    } catch {
+      return false;
+    }
+
+    return false;
   }
 
   const fetchSite = req.headers.get("sec-fetch-site");
