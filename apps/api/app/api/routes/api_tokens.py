@@ -30,8 +30,6 @@ def create_api_token(
         allowed_workspace_ids=body.allowed_workspace_ids,
         allowed_project_ids=body.allowed_project_ids,
     )
-    db.commit()
-    db.refresh(row)
     emit_audit(
         "API_TOKEN_CREATED",
         db=db,
