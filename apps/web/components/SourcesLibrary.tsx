@@ -103,72 +103,6 @@ export default function SourcesLibrary() {
           </Link>
         </div>
 
-        <div className="grid grid-3" style={{ marginTop: 14 }}>
-          <div className="field">
-            <label htmlFor="source-workspace">Workspace</label>
-            <select
-              id="source-workspace"
-              className="input"
-              value={activeWorkspaceId ?? ""}
-              onChange={(event) => {
-                setWorkspaceId(event.target.value);
-                setProjectId(undefined);
-                setReportId(undefined);
-              }}
-              disabled={workspaces.isPending || (workspaces.data?.length ?? 0) === 0}
-            >
-              {(workspaces.data ?? []).map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>
-                  {workspace.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="source-project">Project</label>
-            <select
-              id="source-project"
-              className="input"
-              value={activeProjectId ?? ""}
-              onChange={(event) => {
-                setProjectId(event.target.value);
-                setReportId(undefined);
-              }}
-              disabled={
-                projects.isPending ||
-                (projects.data?.length ?? 0) === 0
-              }
-            >
-              {(projects.data ?? []).map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="source-report">Research report</label>
-            <select
-              id="source-report"
-              className="input"
-              value={activeReportId ?? ""}
-              onChange={(event) => setReportId(event.target.value)}
-              disabled={
-                reports.isPending ||
-                (reports.data?.length ?? 0) === 0
-              }
-            >
-              {(reports.data ?? []).map((report) => (
-                <option key={report.id} value={report.id}>
-                  {report.topic.slice(0, 60)}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
         <div className="field" style={{ marginTop: 12 }}>
           <label htmlFor="source-filter">Filter sources</label>
           <input
@@ -248,7 +182,7 @@ export default function SourcesLibrary() {
         <section className="card pad empty">
           <div className="big">∅</div>
           <div>Create a project in Workspace before saving report sources.</div>
-          <Link className="btn" href="/workspace" style={{ marginTop: 12 }}>
+          <Link className="btn" href={contextHref("/workspace")} style={{ marginTop: 12 }}>
             Open workspace
           </Link>
         </section>
