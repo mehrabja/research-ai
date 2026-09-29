@@ -5,7 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useResearchContext } from "@/lib/research-context";
 import {
   generateKnowledgeGraph,
@@ -16,7 +16,7 @@ import {
   listKnowledgeGraphNodes,
 } from "@/lib/api/knowledgeGraph";
 
-export default function neighborLabel(value: {
+function neighborLabel(value: {
   [key: string]: unknown;
 }): string {
   if (typeof value.label === "string" && value.label.trim()) {
@@ -67,28 +67,19 @@ function KnowledgeGraphView() {
     staleTime: 10_000,
   });
 
-  useEffect(() => {
-    if (!selectedNodeId && nodes.data?.[0]?.id) {
-      setSelectedNodeId(nodes.data[0].id);
-      return;
-    }
-    if (
-      selectedNodeId &&
-      nodes.data &&
-      !nodes.data.some((node) => node.id === selectedNodeId)
-    ) {
-      setSelectedNodeId(nodes.data[0]?.id ?? null);
-    }
-  }, [nodes.data, selectedNodeId]);
+  const effectiveSelectedNodeId =
+    selectedNodeId && nodes.data?.some((node) => node.id === selectedNodeId)
+      ? selectedNodeId
+      : nodes.data?.[0]?.id ?? null;
 
   const neighbors = useQuery({
-    queryKey: ["knowledge-graph-neighbors", activeProjectId, selectedNodeId],
+    queryKey: ["knowledge-graph-neighbors", activeProjectId, effectiveSelectedNodeId],
     queryFn: () =>
-      getKnowledgeGraphNeighbors(activeProjectId!, selectedNodeId!, {
+      getKnowledgeGraphNeighbors(activeProjectId!, effectiveSelectedNodeId!, {
         direction: "both",
         limit: 50,
       }),
-    enabled: Boolean(activeProjectId && selectedNodeId && hasGraph),
+    enabled: Boolean(activeProjectId && effectiveSelectedNodeId && hasGraph),
     staleTime: 10_000,
   });
 
@@ -149,7 +140,7 @@ function KnowledgeGraphView() {
     summary.data?.relation_type_counts ?? {},
   );
   const selectedNode = nodes.data?.find(
-    (node) => node.id === selectedNodeId,
+    (node) => node.id === effectiveSelectedNodeId,
   );
 
   return (
@@ -463,3 +454,4 @@ function KnowledgeGraphView() {
     </div>
   );
 }
+export default KnowledgeGraphView;
