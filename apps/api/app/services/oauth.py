@@ -20,7 +20,6 @@ from app.db.models.oauth_state import OAuthState
 from app.db.models.user import User
 from app.services.auth import create_refresh_session, get_user_by_email
 
-
 SUPPORTED = {"google", "github"}
 
 
@@ -52,7 +51,7 @@ def verify_state(provider: str, state: str) -> bool:
         return False
     if abs(int(time.time()) - issued_at) > 600:
         return False
-    payload = f"{provider}:{issued_at}:{nonce}".encode("utf-8")
+    payload = f"{provider}:{issued_at}:{nonce}".encode()
     expected = hmac.new(
         get_settings().jwt_secret_key.encode("utf-8"),
         payload,
