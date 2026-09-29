@@ -205,7 +205,7 @@ function SearchResultItem({
 function buildResultHref(item: SearchResult): string {
   switch (item.resource_type) {
     case "project":
-      return "/projects/" + item.id + "?projectId=" + item.id;
+      return "/workspace?projectId=" + item.id;
     case "report":
       return (
         "/reports/" +
