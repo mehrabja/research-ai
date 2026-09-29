@@ -1,6 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { apiErrorFromResponse } from "@/lib/api/errors";
+import { logoutAll } from "@/lib/api/auth";
 import { clearSessionUserCache } from "@/lib/session-cache";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -51,27 +53,15 @@ async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
     },
     ...init,
   });
-  const text = await response.text();
-  let payload: unknown = null;
-  if (text) {
-    try {
-      payload = JSON.parse(text) as unknown;
-    } catch {
-      payload = null;
-    }
-  }
+
   if (!response.ok) {
-    const detail =
-      payload &&
-      typeof payload === "object" &&
-      payload !== null &&
-      "detail" in payload &&
-      typeof payload.detail === "string"
-        ? payload.detail
-        : "Request failed (" + response.status + ")";
-    throw new Error(detail);
+    throw await apiErrorFromResponse(
+      response,
+      "Security request failed.",
+    );
   }
-  return payload as T;
+
+  return (await response.json()) as T;
 }
 
 function formatDate(value: string | null): string {
@@ -206,6 +196,14 @@ export function SettingsSecurityView() {
     },
   });
 
+  const logoutAllMutation = useMutation({
+    mutationFn: logoutAll,
+    onSuccess: () => {
+      clearSessionUserCache(queryClient, false);
+      router.replace("/login");
+    },
+  });
+
   const disconnectOauth = useMutation({
     mutationFn: (provider: string) =>
       readJson<void>("/api/v1/auth/oauth/" + provider, { method: "DELETE" }),
@@ -241,14 +239,10 @@ export function SettingsSecurityView() {
       headers: { Accept: "application/json" },
     });
     if (!response.ok) {
-      let message = "Export failed (" + response.status + ")";
-      try {
-        const payload = (await response.json()) as { detail?: unknown };
-        if (typeof payload.detail === "string") message = payload.detail;
-      } catch {
-        // Keep the generic status-based message.
-      }
-      throw new Error(message);
+      throw await apiErrorFromResponse(
+        response,
+        "Data export failed.",
+      );
     }
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
@@ -278,6 +272,7 @@ export function SettingsSecurityView() {
     disconnectOauth.error,
     auditQuery.error,
     deleteAccount.error,
+    logoutAllMutation.error,
   ];
   const error = queryErrors.find((value): value is Error => value instanceof Error);
 
@@ -444,7 +439,17 @@ export function SettingsSecurityView() {
             <h3>Active sessions</h3>
             <div className="muted small">Refresh sessions stored server-side and independently revocable.</div>
           </div>
-          <span className="tag">{sessions.length} active</span>
+          <div className="actions">
+            <span className="tag">{sessions.length} active</span>
+            <button
+              className="btn ghost"
+              type="button"
+              disabled={logoutAllMutation.isPending}
+              onClick={() => logoutAllMutation.mutate()}
+            >
+              {logoutAllMutation.isPending ? "Signing out…" : "Sign out all"}
+            </button>
+          </div>
         </div>
         <div className="stack" style={{ marginTop: 14 }}>
           {sessions.map((session) => (
