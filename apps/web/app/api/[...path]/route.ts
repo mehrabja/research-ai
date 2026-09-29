@@ -383,13 +383,19 @@ async function proxy(
       return response;
     }
 
-    return NextResponse.json(payload, {
+    const response = NextResponse.json(payload, {
       status: upstream.status,
       headers:
         responseHeadersWithoutBodyMetadata(
           upstream.headers,
         ),
     });
+
+    if (!upstream.ok) {
+      clearAuthCookies(response);
+    }
+
+    return response;
   }
 
   if (isAuthPath(path, "refresh")) {
