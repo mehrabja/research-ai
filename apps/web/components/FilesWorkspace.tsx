@@ -254,7 +254,7 @@ export default function FilesWorkspace() {
               }
               disabled={!activeProjectId || folders.isPending}
             >
-              <option value="">Project root</option>
+              <option value="__root__">Project root</option>
               {(folders.data ?? []).map((folder) => (
                 <option key={folder.id} value={folder.id}>
                   {folder.name}
@@ -383,7 +383,7 @@ export default function FilesWorkspace() {
                       event.currentTarget.value = "";
                       void move.mutateAsync({
                         fileId: file.id,
-                        folderId: target || undefined,
+                        folderId: target === "__root__" ? undefined : target || undefined,
                       });
                     }}
                   >
