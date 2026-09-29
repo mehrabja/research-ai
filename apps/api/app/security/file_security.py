@@ -66,7 +66,7 @@ def _validate_magic_consistency(content: bytes, detected_mime: str | None, exten
         raise MaliciousFileError("PDF extension does not match content")
     if ext in {".png", ".jpg", ".jpeg", ".gif", ".webp"} and not mime.startswith("image/"):
         raise MaliciousFileError("image extension does not match content")
-    if ext in {".zip", ".docx", ".xlsx", ".pptx"} and not (content.startswith(b"PK") or content.startswith(b"\\x1f\\x8b")):
+    if ext in {".zip", ".docx", ".xlsx", ".pptx"} and not (content.startswith(b"PK") or content.startswith(b"\x1f\x8b")):
         raise MaliciousFileError("archive extension does not match content")
     if ext == ".html" and mime not in {"text/html", "application/xhtml+xml"}:
         # Do not force a MIME mismatch when the detector could not identify text.
