@@ -144,13 +144,22 @@ test("authenticated app shell exposes main navigation and a working CSP nonce", 
   const nonce = csp.match(/'nonce-([^']+)'/)?.[1];
   expect(nonce).toBeTruthy();
 
-  const scriptNonces = await page.locator("script").evaluateAll((scripts) =>
+  const executableScriptNonces = await page.locator("script").evaluateAll((scripts) =>
     scripts
-      .map((script) => (script as HTMLScriptElement).nonce)
-      .filter((value): value is string => Boolean(value)),
+      .filter((script) => {
+        const type = (script.getAttribute("type") ?? "").trim().toLowerCase();
+        return (
+          type === "" ||
+          type === "text/javascript" ||
+          type === "application/javascript" ||
+          type === "module"
+        );
+      })
+      .map((script) => (script as HTMLScriptElement).nonce),
   );
-  expect(scriptNonces.length).toBeGreaterThan(0);
-  expect(new Set(scriptNonces)).toEqual(new Set([nonce]));
+  expect(executableScriptNonces.length).toBeGreaterThan(0);
+  expect(executableScriptNonces.every(Boolean)).toBe(true);
+  expect(new Set(executableScriptNonces)).toEqual(new Set([nonce]));
 
   await expect(
     page.locator('a[href="/dashboard"]').first(),
