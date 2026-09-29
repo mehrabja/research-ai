@@ -1,13 +1,16 @@
 import "server-only";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
+function backendBaseUrl(): string {
+  return process.env.BACKEND_URL ?? "http://localhost:8000";
+}
 
 /**
  * Builds the upstream FastAPI URL for a given API-proxy path + querystring.
  */
 export function backendUrl(path: string[], search: string) {
   const joined = path.join("/");
-  return `${BACKEND_URL.replace(/\/$/, "")}/${joined}${search ? `?${search}` : ""}`;
+  const baseUrl = backendBaseUrl().replace(/\/$/, "");
+  return `${baseUrl}/${joined}${search ? `?${search}` : ""}`;
 }
 
 const HOP_BY_HOP_REQUEST_HEADERS = new Set([
