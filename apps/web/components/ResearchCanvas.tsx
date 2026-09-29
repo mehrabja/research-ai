@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useResearchContext } from "@/lib/research-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -34,6 +34,7 @@ export default function ResearchCanvas() {
   const [targetNodeId, setTargetNodeId] = useState("");
   const [feedback, setFeedback] = useState("");
   const queryClient = useQueryClient();
+  const hasLocalChangesRef = useRef(false);
 
   const {
     projectId: activeProjectId,
@@ -50,9 +51,30 @@ export default function ResearchCanvas() {
   useEffect(() => {
     if (!canvas.data) return;
     const timer = window.setTimeout(() => {
-      setNodes(canvas.data?.nodes ?? []);
-      setEdges(canvas.data?.edges ?? []);
-      setViewport(canvas.data?.viewport ?? { x: 0, y: 0, zoom: 1 });
+      const serverNodes = canvas.data?.nodes ?? [];
+      const serverEdges = canvas.data?.edges ?? [];
+
+      if (!hasLocalChangesRef.current) {
+        setNodes(serverNodes);
+        setEdges(serverEdges);
+        setViewport(canvas.data?.viewport ?? { x: 0, y: 0, zoom: 1 });
+      } else {
+        setNodes((current) => {
+          const currentIds = new Set(current.map((node) => node.id));
+          return [
+            ...serverNodes.filter((node) => !currentIds.has(node.id)),
+            ...current,
+          ];
+        });
+        setEdges((current) => {
+          const currentIds = new Set(current.map((edge) => edge.id));
+          return [
+            ...serverEdges.filter((edge) => !currentIds.has(edge.id)),
+            ...current,
+          ];
+        });
+      }
+
       setRevision(canvas.data?.revision ?? 1);
     }, 0);
     return () => window.clearTimeout(timer);
@@ -74,6 +96,7 @@ export default function ResearchCanvas() {
       });
     },
     onSuccess: (data) => {
+      hasLocalChangesRef.current = false;
       setRevision(data.revision);
       queryClient.setQueryData(
         ["research-canvas", activeProjectId],
@@ -99,6 +122,7 @@ export default function ResearchCanvas() {
   });
 
   const addNode = () => {
+    hasLocalChangesRef.current = true;
     setNodes((current) => [
       ...current,
       {
@@ -116,6 +140,7 @@ export default function ResearchCanvas() {
     nodeId: string,
     changes: Partial<CanvasNode>,
   ) => {
+    hasLocalChangesRef.current = true;
     setNodes((current) =>
       current.map((node) =>
         node.id === nodeId ? { ...node, ...changes } : node,
@@ -124,6 +149,7 @@ export default function ResearchCanvas() {
   };
 
   const removeNode = (nodeId: string) => {
+    hasLocalChangesRef.current = true;
     setNodes((current) => current.filter((node) => node.id !== nodeId));
     setEdges((current) =>
       current.filter(
@@ -136,6 +162,7 @@ export default function ResearchCanvas() {
     if (!sourceNodeId || !targetNodeId || sourceNodeId === targetNodeId) {
       return;
     }
+    hasLocalChangesRef.current = true;
     setEdges((current) => {
       if (
         current.some(
@@ -346,8 +373,8 @@ export default function ResearchCanvas() {
                 setViewport((current) => ({
                   ...current,
                   x: Number(event.target.value) || 0,
-                }))
-              }
+                }));
+              }}
             />
           </div>
           <div className="field">
@@ -361,8 +388,8 @@ export default function ResearchCanvas() {
                 setViewport((current) => ({
                   ...current,
                   y: Number(event.target.value) || 0,
-                }))
-              }
+                }));
+              }}
             />
           </div>
           <div className="field">
@@ -382,8 +409,8 @@ export default function ResearchCanvas() {
                     4,
                     Math.max(0.25, Number(event.target.value) || 1),
                   ),
-                }))
-              }
+                }));
+              }}
             />
           </div>
         </div>
