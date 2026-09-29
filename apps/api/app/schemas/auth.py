@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=15, max_length=256)
+    full_name: str | None = Field(default=None, min_length=1, max_length=160)
 
 
 class LoginRequest(BaseModel):
