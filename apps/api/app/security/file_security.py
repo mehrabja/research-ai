@@ -2,12 +2,9 @@
 from __future__ import annotations
 
 import io
-import math
 import socket
 import tarfile
 import zipfile
-from collections.abc import Iterable
-from typing import BinaryIO
 
 from app.core.config import get_settings
 from app.core.exceptions import AppError
