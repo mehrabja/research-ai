@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -8,23 +8,18 @@ async function confirmPasswordReset(token: string, newPassword: string): Promise
   const response = await fetch("/api/v1/auth/password-reset/confirm", {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ token, new_password: newPassword }),
   });
   const payload = (await response.json().catch(() => ({}))) as {
     detail?: string;
     message?: string;
   };
-  if (!response.ok) {
-    throw new Error(payload.detail || payload.message || "Unable to reset password.");
-  }
+  if (!response.ok) throw new Error(payload.detail || payload.message || "Unable to reset password.");
   return "Password changed successfully. You can now log in.";
 }
 
-export default function PasswordResetConfirmPage() {
+function ResetConfirmContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") || "";
   const [password, setPassword] = useState("");
@@ -71,7 +66,6 @@ export default function PasswordResetConfirmPage() {
           </Link>
           <h2>Choose a new password</h2>
           <p className="muted">Use the secure link from the password-reset email.</p>
-
           {message && (
             <p
               role={status === "error" ? "alert" : "status"}
@@ -80,7 +74,6 @@ export default function PasswordResetConfirmPage() {
               {message}
             </p>
           )}
-
           <form className="auth-form" onSubmit={submit} noValidate>
             <div className="field">
               <label htmlFor="new-password">New password</label>
@@ -112,12 +105,30 @@ export default function PasswordResetConfirmPage() {
               {status === "working" ? "Updating…" : "Update password"}
             </button>
           </form>
-
           <div className="hint" style={{ marginTop: 14 }}>
             <Link href="/login">Return to login</Link>
           </div>
         </div>
       </section>
     </main>
+  );
+}
+
+export default function PasswordResetConfirmPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="auth-page">
+          <section className="auth-main" style={{ width: "100%" }}>
+            <div className="auth-card">
+              <h2>Choose a new password</h2>
+              <p className="muted">Loading reset link…</p>
+            </div>
+          </section>
+        </main>
+      }
+    >
+      <ResetConfirmContent />
+    </Suspense>
   );
 }
