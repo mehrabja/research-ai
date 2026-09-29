@@ -16,3 +16,44 @@ export async function listWorkspaces(): Promise<Workspace[]> {
   return data?.items ?? [];
 }
 
+
+export type WorkspaceRead = components["schemas"]["WorkspaceRead"];
+
+async function updateWorkspaceLifecycle(
+  action: "suspend" | "reactivate",
+  workspaceId: string,
+): Promise<WorkspaceRead> {
+  const { data, error } = await api.POST(
+    action === "suspend"
+      ? "/api/v1/workspaces/{workspace_id}/suspend"
+      : "/api/v1/workspaces/{workspace_id}/reactivate",
+    {
+      params: {
+        path: { workspace_id: workspaceId },
+      },
+    },
+  );
+
+  if (error || !data) {
+    throw apiErrorFromUnknown(error, {
+      fallback:
+        action === "suspend"
+          ? "Workspace suspension failed"
+          : "Workspace reactivation failed",
+    });
+  }
+
+  return data;
+}
+
+export function suspendWorkspace(
+  workspaceId: string,
+): Promise<WorkspaceRead> {
+  return updateWorkspaceLifecycle("suspend", workspaceId);
+}
+
+export function reactivateWorkspace(
+  workspaceId: string,
+): Promise<WorkspaceRead> {
+  return updateWorkspaceLifecycle("reactivate", workspaceId);
+}
