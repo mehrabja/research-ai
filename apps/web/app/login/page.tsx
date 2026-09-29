@@ -245,7 +245,7 @@ export default function LoginPage() {
               <button
                 className="btn"
                 type="button"
-                onClick={() => window.location.assign("/oauth/google/start")}
+                onClick={() => router.push("/oauth/google/start")}
               >
                 Continue with Google
               </button>
@@ -253,7 +253,7 @@ export default function LoginPage() {
               <button
                 className="btn"
                 type="button"
-                onClick={() => window.location.assign("/oauth/github/start")}
+                onClick={() => router.push("/oauth/github/start")}
               >
                 Continue with GitHub
               </button>
