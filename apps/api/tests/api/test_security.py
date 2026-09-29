@@ -311,6 +311,7 @@ def test_production_rejects_default_secret() -> None:
             app_env="production",
             jwt_secret_key=DEV_JWT_SECRET,
             database_url="postgresql+psycopg://test:test@localhost/test",
+            file_malware_scan_mode="required",
         )
 
 
@@ -320,6 +321,7 @@ def test_production_rejects_short_secret() -> None:
             app_env="production",
             jwt_secret_key="too-short",
             database_url="postgresql+psycopg://test:test@localhost/test",
+            file_malware_scan_mode="required",
         )
 
 
