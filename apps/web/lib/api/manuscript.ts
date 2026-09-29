@@ -12,6 +12,99 @@ export type ManuscriptProseGenerateResponse =
 export type ManuscriptValidation =
   components["schemas"]["ManuscriptValidationRead"];
 
+
+export type ManuscriptDraft =
+  components["schemas"]["ManuscriptDraftRead"];
+
+export class ManuscriptDraftConflictError extends Error {
+  readonly status = 409;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "ManuscriptDraftConflictError";
+  }
+}
+
+export async function getManuscriptDraft(
+  reportId: string,
+): Promise<ManuscriptDraft | null> {
+  const { data, error, response } = await api.GET(
+    "/api/v1/reports/{report_id}/manuscript/draft",
+    { params: { path: { report_id: reportId } } },
+  );
+  if (error) {
+    if (response.status === 404) return null;
+    throw new Error(getApiErrorMessage(error));
+  }
+  return data ?? null;
+}
+
+export async function saveManuscriptDraft(
+  reportId: string,
+  input: {
+    baseVersionId: string;
+    revision: number;
+    content: Record<string, unknown>;
+  },
+): Promise<ManuscriptDraft> {
+  const { data, error, response } = await api.PUT(
+    "/api/v1/reports/{report_id}/manuscript/draft",
+    {
+      params: { path: { report_id: reportId } },
+      body: {
+        base_version_id: input.baseVersionId,
+        revision: input.revision,
+        content: input.content,
+      },
+    },
+  );
+  if (error || !data) {
+    const message = getApiErrorMessage(error);
+    if (response.status === 409) {
+      throw new ManuscriptDraftConflictError(message);
+    }
+    throw new Error(message);
+  }
+  return data;
+}
+
+export async function commitManuscriptDraft(
+  reportId: string,
+  baseVersionId: string,
+  revision: number,
+): Promise<components["schemas"]["ManuscriptVersionRead"]> {
+  const { data, error, response } = await api.POST(
+    "/api/v1/reports/{report_id}/manuscript/draft/commit",
+    {
+      params: { path: { report_id: reportId } },
+      body: {
+        base_version_id: baseVersionId,
+        revision,
+      },
+    },
+  );
+  if (error || !data) {
+    const message = getApiErrorMessage(error);
+    if (response.status === 409) {
+      throw new ManuscriptDraftConflictError(message);
+    }
+    throw new Error(message);
+  }
+  return data;
+}
+
+export async function discardManuscriptDraft(
+  reportId: string,
+): Promise<void> {
+  const { error, response } = await api.DELETE(
+    "/api/v1/reports/{report_id}/manuscript/draft",
+    { params: { path: { report_id: reportId } } },
+  );
+  if (error || !response.ok) {
+    throw new Error(getApiErrorMessage(error));
+  }
+}
+
 export async function getCurrentManuscript(
   reportId: string,
 ): Promise<ManuscriptCurrent | null> {
