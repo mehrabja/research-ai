@@ -23,6 +23,8 @@ export class ApiError extends Error {
   readonly code: string | null;
   readonly requestId: string | null;
   readonly retryable: boolean;
+  readonly retryAfter: number | null;
+  readonly details: unknown;
 
   constructor(
     message: string,
@@ -31,6 +33,8 @@ export class ApiError extends Error {
       code?: string | null;
       requestId?: string | null;
       retryable?: boolean;
+      retryAfter?: number | null;
+      details?: unknown;
     } = {},
   ) {
     super(message);
@@ -38,6 +42,8 @@ export class ApiError extends Error {
     this.status = options.status ?? 0;
     this.code = options.code ?? null;
     this.requestId = options.requestId ?? null;
+    this.retryAfter = options.retryAfter ?? null;
+    this.details = options.details;
     this.retryable =
       options.retryable ??
       (this.status === 408 ||
@@ -68,6 +74,12 @@ export function apiErrorFromUnknown(
 
   const codeValue = nested?.code ?? payload?.code;
   const requestIdValue = nested?.request_id ?? payload?.request_id;
+  const retryAfterValue = nested?.retry_after ?? payload?.retry_after;
+  const details =
+    nested?.details ??
+    nested?.extra ??
+    payload?.details ??
+    payload?.extra;
 
   const message =
     (typeof nested?.message === "string" && nested.message) ||
@@ -84,6 +96,11 @@ export function apiErrorFromUnknown(
       typeof requestIdValue === "string"
         ? requestIdValue
         : options.requestId,
+    retryAfter:
+      typeof retryAfterValue === "number"
+        ? retryAfterValue
+        : null,
+    details,
   });
 }
 
