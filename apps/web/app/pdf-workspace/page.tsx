@@ -1,8 +1,10 @@
+import { headers } from "next/headers";
 import { Suspense } from "react";
 import PDFWorkspace from "@/components/PDFWorkspace";
 import { ResearchContextProvider } from "@/lib/research-context";
 
-export default function Page() {
+export default async function Page() {
+  await headers();
   return (
     <Suspense
       fallback={
