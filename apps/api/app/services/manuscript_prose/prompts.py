@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 
 from app.domain.manuscript_prose import PROSE_PROMPT_VERSION
+from app.security.trust_boundary import wrap_untrusted_text
 from app.services.manuscript_prose.contracts import SectionContract
 from app.services.manuscript_prose.evidence import EvidencePacket
 
@@ -71,7 +72,7 @@ def _evidence_block(packet: EvidencePacket) -> str:
             f"- identity_id={c.identity_id} "
             f"source_id={c.source_id} label={c.display_label!r}"
         )
-    return "\n".join(lines)
+    return wrap_untrusted_text("\n".join(lines), max_chars=50_000)
 
 
 OUTPUT_SCHEMA = {
@@ -122,20 +123,23 @@ def build_prompt(
         SYSTEM_CONTRACT,
         "",
         "### SECTION CONTRACT",
-        json.dumps(
-            {
-                "section_key": contract.section_key,
-                "section_type": contract.section_type,
-                "title": contract.title,
-                "purpose": contract.purpose,
-                "research_objective": contract.research_objective,
-                "retrieval_intents": contract.retrieval_intents,
-                "requirement_keys": contract.requirement_keys,
-                "citation_required": contract.citation_required,
-                "word_budget": contract.word_budget,
-            },
-            indent=2,
-            sort_keys=True,
+        wrap_untrusted_text(
+            json.dumps(
+                {
+                    "section_key": contract.section_key,
+                    "section_type": contract.section_type,
+                    "title": contract.title,
+                    "purpose": contract.purpose,
+                    "research_objective": contract.research_objective,
+                    "retrieval_intents": contract.retrieval_intents,
+                    "requirement_keys": contract.requirement_keys,
+                    "citation_required": contract.citation_required,
+                    "word_budget": contract.word_budget,
+                },
+                indent=2,
+                sort_keys=True,
+            ),
+            max_chars=20_000,
         ),
         "",
         _evidence_block(packet),
