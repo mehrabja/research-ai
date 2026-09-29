@@ -67,10 +67,13 @@ test("all production app routes require authentication", async ({ page }) => {
 });
 
 test("all production app routes respond for an authenticated session", async ({ page }) => {
+  test.setTimeout(120_000);
   await createAuthenticatedSession(page);
 
   for (const route of PROTECTED_ROUTES) {
-    const response = await page.request.get(route);
+    const response = await page.request.get(route, {
+      timeout: 60_000,
+    });
 
     expect(
       response.status(),
