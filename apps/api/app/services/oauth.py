@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
-import base64
+import secrets
 import time
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -119,7 +120,6 @@ def authorization_url(provider: str, state: str, code_challenge: str) -> str:
         params = {
             "client_id": settings.google_oauth_client_id,
             "redirect_uri": settings.google_oauth_redirect_uri,
-            "code_verifier": code_verifier,
             "response_type": "code",
             "scope": "openid email profile",
             "state": state,
@@ -133,7 +133,6 @@ def authorization_url(provider: str, state: str, code_challenge: str) -> str:
         params = {
             "client_id": settings.github_oauth_client_id,
             "redirect_uri": settings.github_oauth_redirect_uri,
-            "code_verifier": code_verifier,
             "scope": "read:user user:email",
             "state": state,
             "code_challenge": code_challenge,
