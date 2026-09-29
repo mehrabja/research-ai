@@ -10,7 +10,7 @@ import { Topbar } from "@/components/AppShell/Topbar";
 import { Breadcrumbs } from "@/components/AppShell/Breadcrumbs";
 import { ResearchContextProvider } from "@/lib/research-context";
 
-export default function AppGroupLayout({
+export function AppGroupShell({
   children,
 }: {
   children: ReactNode;
