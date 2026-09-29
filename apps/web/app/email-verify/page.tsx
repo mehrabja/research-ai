@@ -1,8 +1,7 @@
 "use client";
 
-import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useState, type FormEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 async function verifyEmail(token: string): Promise<string> {
@@ -35,10 +34,16 @@ async function resendVerification(email: string): Promise<string> {
   return payload.message || "Verification instructions were requested.";
 }
 
-function EmailVerifyContent() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token") || "";
-  const [email, setEmail] = useState(() => searchParams.get("email") || "");
+type EmailVerifyContentProps = {
+  token: string;
+  initialEmail: string;
+};
+
+function EmailVerifyContent({
+  token,
+  initialEmail,
+}: EmailVerifyContentProps) {
+  const [email, setEmail] = useState(initialEmail);
 
   const verification = useQuery({
     queryKey: ["email-verification", token],
@@ -122,21 +127,26 @@ function EmailVerifyContent() {
   );
 }
 
-export default function EmailVerifyPage() {
+type EmailVerifyPageProps = {
+  searchParams: Promise<{
+    token?: string | string[];
+    email?: string | string[];
+  }>;
+};
+
+function firstParam(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+export default async function EmailVerifyPage({
+  searchParams,
+}: EmailVerifyPageProps) {
+  const params = await searchParams;
+
   return (
-    <Suspense
-      fallback={
-        <main className="auth-page">
-          <section className="auth-main" style={{ width: "100%" }}>
-            <div className="auth-card">
-              <h2>Verify your email</h2>
-              <p className="muted">Loading verification link…</p>
-            </div>
-          </section>
-        </main>
-      }
-    >
-      <EmailVerifyContent />
-    </Suspense>
+    <EmailVerifyContent
+      token={firstParam(params.token)}
+      initialEmail={firstParam(params.email)}
+    />
   );
 }
