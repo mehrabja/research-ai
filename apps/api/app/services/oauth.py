@@ -223,7 +223,7 @@ def _exchange_github(code: str, code_verifier: str) -> dict[str, Any]:
     try:
         response = httpx.post(
             "https://github.com/login/oauth/access_token",
-        headers={"Accept": "application/json"},
+            headers={"Accept": "application/json"},
             data={
                 "client_id": client_id,
                 "client_secret": client_secret,
@@ -243,9 +243,9 @@ def _exchange_github(code: str, code_verifier: str) -> dict[str, Any]:
     try:
         profile = httpx.get(
             "https://api.github.com/user",
-        headers={
-            "Authorization": f"Bearer {access}",
-            "Accept": "application/vnd.github+json",
+            headers={
+                "Authorization": f"Bearer {access}",
+                "Accept": "application/vnd.github+json",
             },
             timeout=20,
         )
@@ -258,8 +258,8 @@ def _exchange_github(code: str, code_verifier: str) -> dict[str, Any]:
         try:
             emails = httpx.get(
                 "https://api.github.com/user/emails",
-            headers={
-                "Authorization": f"Bearer {access}",
+                headers={
+                    "Authorization": f"Bearer {access}",
                     "Accept": "application/vnd.github+json",
                 },
                 timeout=20,
