@@ -35,7 +35,7 @@ class CanvasViewport(BaseModel):
 
 
 class ResearchCanvasRead(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
 
     id: uuid.UUID
     project_id: uuid.UUID
