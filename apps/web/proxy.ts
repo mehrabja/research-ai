@@ -34,6 +34,7 @@ export const config = {
     "/plan/:path*",
     "/publication/:path*",
     "/research/:path*",
+    "/search/:path*",
     "/research-canvas/:path*",
     "/settings/:path*",
     "/sources/:path*",
