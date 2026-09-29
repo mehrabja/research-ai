@@ -209,75 +209,18 @@ export default function PublicationStudio() {
             </p>
           </div>
           <div className="actions">
-            <Link className="btn" href="/final-review">Final review</Link>
-            <Link className="btn" href="/citations">Citations</Link>
+            <Link className="btn" href={contextHref("/final-review")}>Final review</Link>
+            <Link className="btn" href={contextHref("/citations")}>Citations</Link>
           </div>
         </div>
 
-        <div className="grid grid-3" style={{ marginTop: 14 }}>
-          <div className="field">
-            <label htmlFor="publication-workspace">Workspace</label>
-            <select
-              id="publication-workspace"
-              className="input"
-              value={activeWorkspaceId ?? ""}
-              onChange={(event) => {
-                setWorkspaceId(event.target.value);
-                setProjectId(undefined);
-                setReportId(undefined);
-                setTargetId(undefined);
-              }}
-            >
-              {(workspaces.data ?? []).map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>{workspace.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="publication-project">Project</label>
-            <select
-              id="publication-project"
-              className="input"
-              value={activeProjectId ?? ""}
-              onChange={(event) => {
-                setProjectId(event.target.value);
-                setReportId(undefined);
-                setTargetId(undefined);
-              }}
-              disabled={projects.isPending}
-            >
-              {(projects.data ?? []).map((project) => (
-                <option key={project.id} value={project.id}>{project.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="publication-report">Research report</label>
-            <select
-              id="publication-report"
-              className="input"
-              value={activeReportId ?? ""}
-              onChange={(event) => {
-                setReportId(event.target.value);
-                setTargetId(undefined);
-              }}
-              disabled={reports.isPending}
-            >
-              {(reports.data ?? []).map((report) => (
-                <option key={report.id} value={report.id}>{report.topic}</option>
-              ))}
-            </select>
-          </div>
-        </div>
       </section>
 
       {!activeReportId && !reports.isPending && (
         <section className="card pad empty">
           <div className="big">∅</div>
           <div>No research report exists in the selected project.</div>
-          <Link className="btn" href="/research" style={{ marginTop: 12 }}>Open Research</Link>
+          <Link className="btn" href={contextHref("/research")} style={{ marginTop: 12 }}>Open Research</Link>
         </section>
       )}
 
