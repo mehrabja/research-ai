@@ -33,16 +33,10 @@ from app.schemas.research_plan import (
     ResearchPlanVersionListResponse,
 )
 from app.services.projects import get_project
+from app.services.research_planning import jobs as jobs_svc
+from app.services.research_planning import planner as planner_svc
 from app.services.research_planning import revisions as revisions_svc
-from app.services.research_planning import (
-    jobs as jobs_svc,
-)
-from app.services.research_planning import (
-    planner as planner_svc,
-)
-from app.services.research_planning import (
-    validation as validation_svc,
-)
+from app.services.research_planning import validation as validation_svc
 
 router = APIRouter(prefix="/projects", tags=["research-plan"])
 
