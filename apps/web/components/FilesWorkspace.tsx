@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { listProjects } from "@/lib/api/projects";
-import { listWorkspaces } from "@/lib/api/workspaces";
+import { useResearchContext } from "@/lib/research-context";
 import {
   createProjectFolder,
   deleteProjectFile,
@@ -36,32 +35,22 @@ function formatBytes(bytes: number): string {
 }
 
 export default function FilesWorkspace() {
-  const [workspaceId, setWorkspaceId] = useState<string>();
-  const [projectId, setProjectId] = useState<string>();
   const [folderId, setFolderId] = useState<string>();
   const [folderName, setFolderName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
-  const workspaces = useQuery({
-    queryKey: ["workspaces"],
-    queryFn: listWorkspaces,
-    staleTime: 30_000,
-  });
+  const {
+    workspaceId,
+    projectId,
+    workspacesQuery,
+    projectsQuery,
+    setWorkspace,
+    setProject,
+  } = useResearchContext();
 
-  const activeWorkspaceId = workspaceId ?? workspaces.data?.[0]?.id;
-
-  const projects = useQuery({
-    queryKey: ["projects", activeWorkspaceId],
-    queryFn: () => {
-      if (!activeWorkspaceId) throw new Error("No workspace is selected.");
-      return listProjects(activeWorkspaceId);
-    },
-    enabled: Boolean(activeWorkspaceId),
-    staleTime: 15_000,
-  });
-
-  const activeProjectId = projectId ?? projects.data?.[0]?.id;
+  const activeWorkspaceId = workspaceId ?? undefined;
+  const activeProjectId = projectId ?? undefined;
 
   const folders = useQuery({
     queryKey: ["folders", activeProjectId],
@@ -147,8 +136,8 @@ export default function FilesWorkspace() {
   });
 
   const errors = [
-    workspaces.error,
-    projects.error,
+    workspacesQuery.error,
+    projectsQuery.error,
     folders.error,
     evidence.error,
     files.error,
@@ -169,8 +158,8 @@ export default function FilesWorkspace() {
           type="button"
           style={{ marginTop: 14 }}
           onClick={() => {
-            void workspaces.refetch();
-            void projects.refetch();
+            void workspacesQuery.refetch();
+            void projectsQuery.refetch();
             void folders.refetch();
             void files.refetch();
             void evidence.refetch();
@@ -209,12 +198,11 @@ export default function FilesWorkspace() {
               className="input"
               value={activeWorkspaceId ?? ""}
               onChange={(event) => {
-                setWorkspaceId(event.target.value);
-                setProjectId(undefined);
+                setWorkspace(event.target.value);
                 setFolderId(undefined);
               }}
             >
-              {(workspaces.data ?? []).map((workspace) => (
+              {(workspacesQuery.data ?? []).map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
                   {workspace.name}
                 </option>
@@ -229,12 +217,12 @@ export default function FilesWorkspace() {
               className="input"
               value={activeProjectId ?? ""}
               onChange={(event) => {
-                setProjectId(event.target.value);
+                setProject(event.target.value);
                 setFolderId(undefined);
               }}
-              disabled={!activeWorkspaceId || projects.isPending}
+              disabled={!activeWorkspaceId || projectsQuery.isPending}
             >
-              {(projects.data ?? []).map((project) => (
+              {(projectsQuery.data ?? []).map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
                 </option>
