@@ -6,9 +6,9 @@ import { useState } from "react";
 import {
   archiveProject,
   createProject,
-  listProjects,
   type Project,
 } from "@/lib/api/projects";
+import { useResearchContext } from "@/lib/research-context";
 
 export default function WorkspaceProjects() {
   const [projectName, setProjectName] = useState("");
