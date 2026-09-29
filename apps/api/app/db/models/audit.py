@@ -12,7 +12,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base, CreatedAtMixin, UUIDPKMixin
 
 
-class AuditEvent(Base, UUIDPKMixin, CreatedAtMixin):
+class AuditEvent(Base, UUIDPKMixin):
     __tablename__ = "audit_events"
 
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
