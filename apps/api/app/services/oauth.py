@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import secrets
+import base64
 import time
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -60,10 +60,26 @@ def verify_state(provider: str, state: str) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
-def store_state(db: Session, *, provider: str, state: str) -> OAuthState:
+def make_pkce_verifier() -> str:
+    return secrets.token_urlsafe(64).rstrip("=")
+
+
+def pkce_challenge(verifier: str) -> str:
+    digest = hashlib.sha256(verifier.encode("ascii")).digest()
+    return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
+
+
+def store_state(
+    db: Session,
+    *,
+    provider: str,
+    state: str,
+    code_challenge: str,
+) -> OAuthState:
     row = OAuthState(
         provider=provider,
         state_hash=hashlib.sha256(state.encode("utf-8")).hexdigest(),
+        code_challenge=code_challenge,
         expires_at=datetime.now(UTC) + timedelta(minutes=10),
     )
     db.add(row)
@@ -71,7 +87,13 @@ def store_state(db: Session, *, provider: str, state: str) -> OAuthState:
     return row
 
 
-def consume_state(db: Session, *, provider: str, state: str) -> bool:
+def consume_state(
+    db: Session,
+    *,
+    provider: str,
+    state: str,
+    code_verifier: str,
+) -> bool:
     digest = hashlib.sha256(state.encode("utf-8")).hexdigest()
     row = db.execute(
         select(OAuthState)
@@ -83,21 +105,26 @@ def consume_state(db: Session, *, provider: str, state: str) -> bool:
         )
         .with_for_update()
     ).scalar_one_or_none()
-    if row is None:
+    if row is None or row.code_challenge is None:
+        return False
+    if not hmac.compare_digest(row.code_challenge, pkce_challenge(code_verifier)):
         return False
     row.consumed_at = datetime.now(UTC)
     db.flush()
     return True
 
-def authorization_url(provider: str, state: str) -> str:
+def authorization_url(provider: str, state: str, code_challenge: str) -> str:
     settings = get_settings()
     if provider == "google":
         params = {
             "client_id": settings.google_oauth_client_id,
             "redirect_uri": settings.google_oauth_redirect_uri,
+            "code_verifier": code_verifier,
             "response_type": "code",
             "scope": "openid email profile",
             "state": state,
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
             "access_type": "offline",
             "prompt": "select_account",
         }
@@ -106,14 +133,17 @@ def authorization_url(provider: str, state: str) -> str:
         params = {
             "client_id": settings.github_oauth_client_id,
             "redirect_uri": settings.github_oauth_redirect_uri,
+            "code_verifier": code_verifier,
             "scope": "read:user user:email",
             "state": state,
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
         }
         return "https://github.com/login/oauth/authorize?" + parse.urlencode(params)
     raise InvalidCredentials()
 
 
-def _exchange_google(code: str) -> dict[str, Any]:
+def _exchange_google(code: str, code_verifier: str) -> dict[str, Any]:
     settings = get_settings()
     response = httpx.post(
         "https://oauth2.googleapis.com/token",
@@ -145,7 +175,7 @@ def _exchange_google(code: str) -> dict[str, Any]:
     }
 
 
-def _exchange_github(code: str) -> dict[str, Any]:
+def _exchange_github(code: str, code_verifier: str) -> dict[str, Any]:
     settings = get_settings()
     response = httpx.post(
         "https://github.com/login/oauth/access_token",
@@ -195,11 +225,11 @@ def _exchange_github(code: str) -> dict[str, Any]:
     }
 
 
-def exchange_code(provider: str, code: str) -> dict[str, Any]:
+def exchange_code(provider: str, code: str, code_verifier: str) -> dict[str, Any]:
     if provider == "google":
-        return _exchange_google(code)
+        return _exchange_google(code, code_verifier)
     if provider == "github":
-        return _exchange_github(code)
+        return _exchange_github(code, code_verifier)
     raise InvalidCredentials()
 
 
