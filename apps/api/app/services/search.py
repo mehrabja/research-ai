@@ -54,6 +54,8 @@ def search_workspace(
             "title": p.name,
             "snippet": p.description,
             "updated_at": p.updated_at,
+            "project_id": p.id,
+            "report_id": None,
         }
         for p in projects
     )
@@ -81,6 +83,8 @@ def search_workspace(
             "title": r.topic,
             "snippet": r.domain,
             "updated_at": r.updated_at,
+            "project_id": r.project_id,
+            "report_id": r.id,
         }
         for r in reports
     )
@@ -111,6 +115,8 @@ def search_workspace(
             "title": s.title,
             "snippet": s.doi or s.url,
             "updated_at": s.updated_at,
+            "project_id": s.report.project_id if getattr(s, "report", None) is not None else None,
+            "report_id": s.report_id,
         }
         for s in sources
     )
@@ -139,6 +145,8 @@ def search_workspace(
             "title": f.original_filename,
             "snippet": f.file_kind,
             "updated_at": f.updated_at,
+            "project_id": f.project_id,
+            "report_id": None,
         }
         for f in project_files
     )
