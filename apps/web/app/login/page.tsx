@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
@@ -20,7 +19,6 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
-    watch,
     formState: {
       errors,
       isSubmitting,
@@ -149,8 +147,8 @@ export default function LoginPage() {
                 type="email"
                 placeholder="you@lab.edu"
                 autoComplete="email"
-                aria-invalid={emailInvalid ? "true" : "false"}
                 {...register("email")}
+                aria-invalid={emailInvalid ? "true" : "false"}
               />
 
               {errors.email && (
@@ -176,8 +174,8 @@ export default function LoginPage() {
                 type="password"
                 placeholder="••••••••"
                 autoComplete="current-password"
-                aria-invalid={passwordInvalid ? "true" : "false"}
                 {...register("password")}
+                aria-invalid={passwordInvalid ? "true" : "false"}
               />
 
               {errors.password && (
@@ -221,12 +219,8 @@ export default function LoginPage() {
 
             <button
               className="btn primary"
-              type="button"
+              type="submit"
               disabled={busy}
-              onClick={() => {
-                setSubmitted(true);
-                void submitForm();
-              }}
             >
               {busy ? "Logging in…" : "Log in"}
             </button>
