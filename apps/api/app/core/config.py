@@ -1024,6 +1024,10 @@ class Settings(BaseSettings):
                 )
         if self.db_max_overflow < 0:
             raise ValueError("db_max_overflow must be >= 0")
+        if self.app_env.lower() == "production" and self.file_malware_scan_mode != "required":
+            raise ValueError(
+                "Production requires malware scanning to be enabled in required mode."
+            )
         if self.db_pool_size < 1:
             raise ValueError("db_pool_size must be >= 1")
         if not self.backup_directory.strip():
