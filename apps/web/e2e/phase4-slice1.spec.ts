@@ -415,3 +415,35 @@ test("final review page reads real review_2 state without synthetic output", asy
   ).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText("Synthetic final result", { exact: true })).toHaveCount(0);
 });
+
+
+test("publication page reads real target and export state without synthetic data", async ({ page }) => {
+  await createAuthenticatedSession(page);
+
+  await page.goto("/workspace");
+  await expect(page.getByLabel("Project name")).toBeEnabled({ timeout: 10_000 });
+
+  const projectName = "E2E Publication " + Date.now();
+  await page.getByLabel("Project name").fill(projectName);
+  await page.getByRole("button", { name: "Create project" }).click();
+
+  await expect(page.getByText(projectName, { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await page.goto("/publication");
+
+  await expect(
+    page.getByRole("heading", { name: "Publication & export", exact: true }).first(),
+  ).toBeVisible();
+  await expect(page.getByLabel("Project")).toBeEnabled({ timeout: 10_000 });
+  await page.getByLabel("Project").selectOption({ label: projectName });
+
+  await expect(
+    page.getByText("No research report exists in the selected project.", { exact: true }),
+  ).toBeVisible({ timeout: 10_000 });
+
+  await expect(page.getByText("Publication target", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Download DOCX", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("74%", { exact: true })).toHaveCount(0);
+});
