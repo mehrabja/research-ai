@@ -15,6 +15,9 @@ type APIToken = {
   expires_at: string | null;
   revoked_at: string | null;
   created_at: string;
+  scopes: string[];
+  allowed_workspace_ids: string[];
+  allowed_project_ids: string[];
 };
 type CreatedToken = {
   id: string;
@@ -22,6 +25,9 @@ type CreatedToken = {
   token: string;
   token_prefix: string;
   expires_at: string | null;
+  scopes: string[];
+  allowed_workspace_ids: string[];
+  allowed_project_ids: string[];
 };
 type OAuthAccount = { provider: string; created_at: string };
 type Activity = { id: string; event: string; summary: string; occurred_at: string };
@@ -69,6 +75,9 @@ export function SettingsSecurityView() {
   const queryClient = useQueryClient();
   const [tokenName, setTokenName] = useState("");
   const [tokenExpiry, setTokenExpiry] = useState("");
+  const [tokenScopes, setTokenScopes] = useState<string[]>(["read:*"]);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteMfaCode, setDeleteMfaCode] = useState("");
   const [createdToken, setCreatedToken] = useState<CreatedToken | null>(null);
   const [mfaSetup, setMfaSetup] = useState<MFASetup | null>(null);
   const [mfaCode, setMfaCode] = useState("");
@@ -98,6 +107,14 @@ export function SettingsSecurityView() {
   const activityQuery = useQuery({
     queryKey: ["auth-activity"],
     queryFn: () => readJson<Activity[]>("/api/v1/auth/activity?limit=50"),
+  });
+  const auditQuery = useQuery({
+    queryKey: ["auth-audit-log"],
+    queryFn: () => readJson<Array<{
+      id: string; event_code: string; resource_type: string | null;
+      resource_id: string | null; outcome: string; reason: string | null;
+      occurred_at: string;
+    }>>("/api/v1/auth/audit-log?limit=100"),
   });
 
   const setupMfa = useMutation({
@@ -145,12 +162,14 @@ export function SettingsSecurityView() {
         body: JSON.stringify({
           name: tokenName,
           expires_at: tokenExpiry ? new Date(tokenExpiry).toISOString() : null,
+          scopes: tokenScopes,
         }),
       }),
     onSuccess: (result) => {
       setCreatedToken(result);
       setTokenName("");
       setTokenExpiry("");
+      setTokenScopes(["read:*"]);
       setNotice("The token was created. The raw secret is shown only in this view.");
       void queryClient.invalidateQueries({ queryKey: ["auth-api-tokens"] });
       void queryClient.invalidateQueries({ queryKey: ["auth-activity"] });
@@ -415,6 +434,15 @@ export function SettingsSecurityView() {
             <span>Expiry (optional)</span>
             <input className="input" type="datetime-local" value={tokenExpiry} onChange={(event) => setTokenExpiry(event.target.value)} />
           </label>
+          <label className="field">
+            <span>Permissions</span>
+            <select className="input" value={scopePresets.find((preset) => JSON.stringify(preset.scopes) === JSON.stringify(tokenScopes))?.label ?? "custom"} onChange={(event) => {
+              const preset = scopePresets.find((item) => item.label === event.target.value);
+              if (preset) setTokenScopes(preset.scopes);
+            }}>
+              {scopePresets.map((preset) => <option key={preset.label}>{preset.label}</option>)}
+            </select>
+          </label>
           <div className="actions" style={{ alignItems: "end" }}>
             <button className="btn primary" type="button" disabled={!tokenName.trim() || createToken.isPending} onClick={() => createToken.mutate()}>
               {createToken.isPending ? "Creating…" : "Create token"}
@@ -428,7 +456,7 @@ export function SettingsSecurityView() {
               <div className="row">
                 <div>
                   <strong>{token.name}</strong>
-                  <div className="muted tiny">{token.token_prefix} · created {formatDate(token.created_at)}</div>
+                  <div className="muted tiny">{token.token_prefix} · {token.scopes.join(", ")} · created {formatDate(token.created_at)}</div>
                   <div className="muted tiny">{token.revoked_at ? "Revoked " + formatDate(token.revoked_at) : token.expires_at ? "Expires " + formatDate(token.expires_at) : "No expiry"}</div>
                   {token.last_used_at && <div className="muted tiny">Last used {formatDate(token.last_used_at)}</div>}
                 </div>
@@ -464,6 +492,67 @@ export function SettingsSecurityView() {
           {activity.length === 0 && <p className="muted small">No security activity recorded yet.</p>}
         </div>
       </section>
+
+      <div className="grid grid-2" style={{ marginTop: 16 }}>
+        <section className="card pad">
+          <div className="row">
+            <div>
+              <h3>Audit log</h3>
+              <div className="muted small">Durable security events associated with this account.</div>
+            </div>
+            <span className="tag">{auditQuery.data?.length ?? 0} events</span>
+          </div>
+          <div className="stack" style={{ marginTop: 14 }}>
+            {(auditQuery.data ?? []).slice(0, 20).map((item) => (
+              <div className="list-item" key={item.id}>
+                <div className="row">
+                  <strong>{item.event_code}</strong>
+                  <span className="muted tiny">{formatDate(item.occurred_at)}</span>
+                </div>
+                <div className="muted tiny">{item.reason ?? item.outcome}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="card pad">
+          <div className="row">
+            <div>
+              <h3>Privacy & account data</h3>
+              <div className="muted small">Export portable metadata or permanently deactivate this account.</div>
+            </div>
+          </div>
+          <div className="actions" style={{ marginTop: 16 }}>
+            <button className="btn" type="button" onClick={() => void exportData()}>
+              Export my data
+            </button>
+          </div>
+          <div className="stack" style={{ marginTop: 18 }}>
+            <label className="field">
+              <span>Current password</span>
+              <input className="input" type="password" autoComplete="current-password" value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} />
+            </label>
+            {mfa.enabled && (
+              <label className="field">
+                <span>MFA code</span>
+                <input className="input" inputMode="numeric" value={deleteMfaCode} onChange={(event) => setDeleteMfaCode(event.target.value)} />
+              </label>
+            )}
+            <button
+              className="btn"
+              type="button"
+              disabled={!deletePassword || (mfa.enabled && !deleteMfaCode) || deleteAccount.isPending}
+              onClick={() => {
+                if (window.confirm("Permanently delete this account and its access credentials?")) {
+                  deleteAccount.mutate();
+                }
+              }}
+            >
+              {deleteAccount.isPending ? "Deleting…" : "Delete account"}
+            </button>
+          </div>
+        </section>
+      </div>
     </>
   );
 }
