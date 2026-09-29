@@ -371,6 +371,10 @@ class Settings(BaseSettings):
     detection_api_model: str = "ai-detector-v1"
     detection_timeout_seconds: float = 20.0
     detection_max_input_chars: int = 100_000
+    detection_max_retries: int = Field(default=2, ge=0, le=10)
+    detection_retry_base_seconds: float = Field(default=1.0, ge=0.1, le=60.0)
+    detection_retry_max_seconds: float = Field(default=30.0, ge=1.0, le=600.0)
+    detection_retry_jitter_fraction: float = Field(default=0.25, ge=0.0, le=1.0)
 
     classification_enabled: bool = True
     classification_use_llm: bool = False
@@ -876,6 +880,22 @@ class Settings(BaseSettings):
         if self.detection_minimum_text_chars < 0:
             raise ValueError(
                 "detection_minimum_text_chars must be >= 0"
+            )
+        if self.detection_timeout_seconds <= 0:
+            raise ValueError("detection_timeout_seconds must be > 0")
+        if (
+            self.detection_retry_max_seconds
+            < self.detection_retry_base_seconds
+        ):
+            raise ValueError(
+                "detection_retry_max_seconds must be >= detection_retry_base_seconds"
+            )
+        if (
+            self.detection_provider.strip().lower() == "http"
+            and not self.detection_api_base_url.strip()
+        ):
+            raise ValueError(
+                "detection_api_base_url is required when detection_provider='http'"
             )
         return self
 
