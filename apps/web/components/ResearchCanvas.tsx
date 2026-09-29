@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useResearchContext } from "@/lib/research-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -36,10 +37,13 @@ export default function ResearchCanvas() {
   const queryClient = useQueryClient();
   const hasLocalChangesRef = useRef(false);
 
+  const searchParams = useSearchParams();
+  const requestedProjectId = searchParams.get("projectId");
   const {
-    projectId: activeProjectId,
+    projectId: contextProjectId,
     projectsQuery: projects,
   } = useResearchContext();
+  const activeProjectId = requestedProjectId ?? contextProjectId;
 
   const canvas = useQuery({
     queryKey: ["research-canvas", activeProjectId],
@@ -186,7 +190,7 @@ export default function ResearchCanvas() {
   };
 
   const error = [
-    projects.error,
+    requestedProjectId ? null : projects.error,
     canvas.error,
   ].find((value): value is Error => value instanceof Error);
 
