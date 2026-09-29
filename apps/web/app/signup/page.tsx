@@ -6,9 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
-import { api } from "@/lib/api/client";
-import { apiErrorFromUnknown } from "@/lib/api/errors";
-import { register as registerUser, login, logout } from "@/lib/api/auth";
+import { register as registerUser, login } from "@/lib/api/auth";
 import {
   signupSchema,
   type SignupInput,
@@ -33,35 +31,14 @@ export default function SignupPage() {
         .filter(Boolean)
         .join(" ");
 
-      await registerUser(values.email, values.password, fullName);
-      await login(values.email, values.password);
-
-      const workspaceResponse = await api.POST(
-        "/api/v1/workspaces",
-        {
-          body: {
-            name: values.workspaceName.trim(),
-          },
-        },
+      const user = await registerUser(
+        values.email,
+        values.password,
+        fullName,
+        values.workspaceName,
       );
-
-      if (workspaceResponse.error) {
-        try {
-          await logout();
-        } catch {
-          // Best-effort session cleanup.
-        }
-
-        throw apiErrorFromUnknown(
-          workspaceResponse.error,
-          {
-            status: 500,
-            fallback: "Unable to create your workspace.",
-          },
-        );
-      }
-
-      return workspaceResponse.data;
+      await login(values.email, values.password);
+      return user;
     },
 
     onSuccess: () => {
