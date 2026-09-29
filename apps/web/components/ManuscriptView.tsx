@@ -132,6 +132,10 @@ export default function ManuscriptView() {
   const [notice, setNotice] = useState<string | null>(null);
   const draftContentRef = useRef<DraftContent | null>(null);
   const lastSentFingerprintRef = useRef<string | null>(null);
+  const committedNoticeRef = useRef<{
+    reportId: string;
+    versionId: string;
+  } | null>(null);
 
   const manuscript = useQuery({
     queryKey: ["manuscript-current", activeReportId],
@@ -239,6 +243,10 @@ export default function ManuscriptView() {
         revision,
       ),
     onSuccess: async (version) => {
+      committedNoticeRef.current = {
+        reportId: activeReportId!,
+        versionId: version.id,
+      };
       setNotice(`Draft committed as manuscript version ${version.version}.`);
       setDirty(false);
       setConflict(false);
@@ -310,6 +318,9 @@ export default function ManuscriptView() {
     const nextContent = recovered
       ? mergeDraft(current, recovered)
       : buildBaseDraft(current);
+    const pendingCommitNotice = committedNoticeRef.current;
+    const preserveCommitNotice =
+      pendingCommitNotice?.reportId === activeReportId;
 
     const timer = window.setTimeout(() => {
       setDraftContent(nextContent);
@@ -317,11 +328,17 @@ export default function ManuscriptView() {
       setRevision(recovered?.revision ?? 0);
       setDirty(Boolean(recovered));
       setConflict(false);
-      setNotice(
-        recovered
-          ? `Recovered autosaved draft · revision ${recovered.revision}`
-          : null,
-      );
+      if (preserveCommitNotice) {
+        if (pendingCommitNotice?.versionId === current.version.id) {
+          committedNoticeRef.current = null;
+        }
+      } else {
+        setNotice(
+          recovered
+            ? `Recovered autosaved draft · revision ${recovered.revision}`
+            : null,
+        );
+      }
       lastSentFingerprintRef.current = recovered
         ? fingerprint(nextContent)
         : null;
