@@ -71,7 +71,10 @@ test("F05 global search returns a real workspace project", async ({ page }) => {
   await expect(page.getByText("Live API", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: projectName }).click();
   await expect(
-    page.getByRole("heading", { name: "Workspace", exact: true }),
+    page.getByRole("heading", {
+      name: "Projects and research context",
+      exact: true,
+    }),
   ).toBeVisible({ timeout: 10_000 });
 });
 
