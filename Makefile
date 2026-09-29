@@ -50,5 +50,6 @@ release-gate:
 	$(MAKE) web-typecheck
 	$(MAKE) web-build
 	$(MAKE) web-test
+	$(MAKE) web-e2e
 	$(MAKE) frontend-security-audit
 	$(MAKE) final-audit
