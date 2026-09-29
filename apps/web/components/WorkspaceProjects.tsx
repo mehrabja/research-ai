@@ -67,24 +67,18 @@ export default function WorkspaceProjects() {
     archive.isPending ||
     lifecycle.isPending;
 
-  if (workspaces.error || projects.error) {
-    const message =
-      workspaces.error?.message ??
-      projects.error?.message ??
-      "Workspace or project data could not be loaded.";
-
+  if (workspaces.error) {
     return (
       <section className="card pad" role="alert">
         <h2>Workspace unavailable</h2>
-        <p className="muted" style={{ marginTop: 6 }}>{message}</p>
+        <p className="muted" style={{ marginTop: 6 }}>
+          {workspaces.error.message}
+        </p>
         <button
           className="btn"
           type="button"
           style={{ marginTop: 14 }}
-          onClick={() => {
-            void workspaces.refetch();
-            void projects.refetch();
-          }}
+          onClick={() => void workspaces.refetch()}
         >
           Retry
         </button>
@@ -155,6 +149,13 @@ export default function WorkspaceProjects() {
             </div>
             <span className="tag">{projects.data?.length ?? 0}</span>
           </div>
+
+          {projects.error && (
+            <p className="muted small" role="status" style={{ marginTop: 12 }}>
+              Project data is temporarily unavailable for this workspace state.
+              Reactivation can still be managed above.
+            </p>
+          )}
 
           <div className="list" style={{ marginTop: 12 }}>
             {(projects.data ?? []).map((project) => (
