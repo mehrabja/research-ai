@@ -78,7 +78,7 @@ export default function HumanizeStudio() {
         </div></div>
     </section>
 
-    {!activeReportId && !reports.isPending && <section className="card pad empty"><div className="big">∅</div><div>No research report exists in the selected project.</div></section>}
+    {!activeReportId && !reportsQuery.isPending && <section className="card pad empty"><div className="big">∅</div><div>No research report exists in the selected project.</div></section>}
     {activeReportId && !manuscript.data && !manuscript.isPending && <section className="card pad empty"><div className="big">∅</div><div>Generate the manuscript before running humanization.</div></section>}
 
     {manuscript.data && <>
