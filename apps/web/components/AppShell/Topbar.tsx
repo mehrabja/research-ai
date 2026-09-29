@@ -417,6 +417,7 @@ export function Topbar({
       </header>
 
       <CommandPalette
+        key={commandOpen ? "command-open" : "command-closed"}
         open={commandOpen}
         onClose={() => setCommandOpen(false)}
       />
