@@ -107,7 +107,7 @@ jobs:
         with: {node-version: 20}
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
-      - run: npm install
+      - run: npm ci
       - working-directory: apps/api
         run: pip install -e ".[dev]"
       - working-directory: apps/api
