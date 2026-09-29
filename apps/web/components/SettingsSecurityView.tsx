@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { clearSessionUserCache } from "@/lib/session-cache";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -229,10 +230,8 @@ export function SettingsSecurityView() {
       setNotice(result.message);
       setDeletePassword("");
       setDeleteMfaCode("");
-      void queryClient.clear();
-      window.setTimeout(() => {
-        router.push("/login");
-      }, 800);
+      clearSessionUserCache(queryClient);
+      router.replace("/login");
     },
   });
 
