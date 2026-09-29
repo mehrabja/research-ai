@@ -36,6 +36,8 @@ test("unwraps the canonical nested error envelope", () => {
         code: "RATE_LIMITED",
         message: "Too many requests",
         request_id: "rid-123",
+        retry_after: 17,
+        details: { limit: 10 },
       },
     },
     { status: 429 },
@@ -45,4 +47,6 @@ test("unwraps the canonical nested error envelope", () => {
   expect(error.code).toBe("RATE_LIMITED");
   expect(error.requestId).toBe("rid-123");
   expect(error.retryable).toBe(true);
+  expect(error.retryAfter).toBe(17);
+  expect(error.details).toEqual({ limit: 10 });
 });
