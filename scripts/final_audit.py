@@ -42,7 +42,7 @@ def tracked_forbidden_files() -> list[str]:
     )
     forbidden: list[str] = []
     for raw in result.stdout.splitlines():
-        path = raw.replace("\", "/")
+        path = raw.replace("\\", "/")
         name = Path(path).name
         if name == ".env" or (name.startswith(".env.") and name != ".env.example"):
             forbidden.append(path)
