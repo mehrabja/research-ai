@@ -23,6 +23,7 @@ from app.core.security import hash_password, password_needs_rehash, verify_passw
 from app.db.models.auth_session import AuthSession
 from app.db.models.auth_token import AuthOneTimeToken
 from app.db.models.user import User
+from app.services import workspaces as workspaces_service
 
 logger = logging.getLogger(__name__)
 
