@@ -27,9 +27,9 @@ export class ApiError extends Error {
     this.requestId = options.requestId ?? null;
     this.retryable =
       options.retryable ??
-      this.status === 408 ||
-      this.status === 429 ||
-      this.status >= 500;
+      (this.status === 408 ||
+        this.status === 429 ||
+        this.status >= 500);
   }
 }
 
