@@ -548,33 +548,33 @@ export default function ManuscriptView() {
         </section>
       )}
 
+      {notice && (
+        <section
+          className="card pad"
+          role={conflict ? "alert" : "status"}
+        >
+          <div className="row">
+            <div>
+              <div className="strong">{conflict ? "Draft conflict" : "Draft status"}</div>
+              <div className="muted small" style={{ marginTop: 4 }}>
+                {notice}
+              </div>
+            </div>
+            {conflict && (
+              <button
+                className="btn primary"
+                type="button"
+                onClick={() => void reloadLatest()}
+              >
+                Reload latest
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
       {current && draftContent && (
         <>
-          {notice && (
-            <section
-              className="card pad"
-              role={conflict ? "alert" : "status"}
-            >
-              <div className="row">
-                <div>
-                  <div className="strong">{conflict ? "Draft conflict" : "Draft status"}</div>
-                  <div className="muted small" style={{ marginTop: 4 }}>
-                    {notice}
-                  </div>
-                </div>
-                {conflict && (
-                  <button
-                    className="btn primary"
-                    type="button"
-                    onClick={() => void reloadLatest()}
-                  >
-                    Reload latest
-                  </button>
-                )}
-              </div>
-            </section>
-          )}
-
           <section className="card pad">
             <div className="row">
               <div>
