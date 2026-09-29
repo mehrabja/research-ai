@@ -25,6 +25,7 @@ if git grep -nE '(BEGIN (PRIVATE|SECRET)|sk-[A-Za-z0-9]{20,}|rk_live_|whsec_)' \
      ':!apps/api/.env.test.example' \
      ':!scripts/final_audit.py' \
      ':!scripts/final_audit.sh' \
+     ':!scripts/frontend_security_audit.py' \
      ':!apps/api/app/core/logging.py' \
      ':!apps/web/e2e/f15-security-observability.spec.ts'; then
   echo "Potential credential material detected."
