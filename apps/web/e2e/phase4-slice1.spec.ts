@@ -315,6 +315,8 @@ test("humanization studio is driven by manuscript state", async ({ page }) => {
   });
 
   await page.goto("/humanize");
+  await expect(page.getByLabel("Project")).toBeEnabled({ timeout: 10_000 });
+  await page.getByLabel("Project").selectOption({ label: projectName });
   await expect(
     page.getByRole("heading", { name: "Humanize manuscript", exact: true }).first(),
   ).toBeVisible();
@@ -340,6 +342,8 @@ test("translation studio follows the real pre-translation state machine", async 
   });
 
   await page.goto("/translate");
+  await expect(page.getByLabel("Project")).toBeEnabled({ timeout: 10_000 });
+  await page.getByLabel("Project").selectOption({ label: projectName });
   await expect(
     page.getByRole("heading", { name: "Translate research content", exact: true }).first(),
   ).toBeVisible();
