@@ -30,6 +30,8 @@ const frontendServer = {
   timeout: 120_000,
   env: {
     ...process.env,
+    APP_ENV: "test",
+    RATE_LIMIT_ENABLED: "false",
     BACKEND_URL: e2eBackendUrl,
   },
 };
