@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listWorkspaces, type Workspace } from "@/lib/api/workspaces";
 
@@ -72,10 +72,8 @@ export function UsageBillingView() {
   });
   const workspaces = workspacesQuery.data ?? [];
   const workspaceId = workspaceOverride || workspaces[0]?.id || "";
-  const selectedWorkspace = useMemo(
-    () => workspaces.find((item: Workspace) => item.id === workspaceId) ?? null,
-    [workspaces, workspaceId],
-  );
+  const selectedWorkspace: Workspace | null =
+    workspaces.find((item: Workspace) => item.id === workspaceId) ?? null;
 
   const plansQuery = useQuery({
     queryKey: ["billing-plans"],
