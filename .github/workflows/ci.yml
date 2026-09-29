@@ -101,6 +101,7 @@ jobs:
       JWT_SECRET_KEY: ci-test-secret-not-used-in-production-min-32b
       APP_ENV: test
       DEBUG: "false"
+      RATE_LIMIT_ENABLED: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
