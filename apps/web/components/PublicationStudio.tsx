@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { listProjectReports, listProjects } from "@/lib/api/projects";
-import { listWorkspaces } from "@/lib/api/workspaces";
+import { useResearchContext } from "@/lib/research-context";
 import {
   downloadPublication,
   generatePublicationCompliance,
@@ -36,42 +35,23 @@ function findingClass(finding: PublicationComplianceFinding): string {
 }
 
 export default function PublicationStudio() {
-  const [workspaceId, setWorkspaceId] = useState<string>();
-  const [projectId, setProjectId] = useState<string>();
-  const [reportId, setReportId] = useState<string>();
   const [targetId, setTargetId] = useState<string>();
   const [format, setFormat] = useState<"markdown" | "html" | "json" | "docx">("docx");
   const [feedback, setFeedback] = useState<string>();
   const queryClient = useQueryClient();
 
-  const workspaces = useQuery({
-    queryKey: ["workspaces"],
-    queryFn: listWorkspaces,
-    staleTime: 30_000,
-  });
-  const activeWorkspaceId = workspaceId ?? workspaces.data?.[0]?.id;
-
-  const projects = useQuery({
-    queryKey: ["projects", activeWorkspaceId],
-    queryFn: () => {
-      if (!activeWorkspaceId) throw new Error("No workspace is selected.");
-      return listProjects(activeWorkspaceId);
-    },
-    enabled: Boolean(activeWorkspaceId),
-    staleTime: 15_000,
-  });
-  const activeProjectId = projectId ?? projects.data?.[0]?.id;
-
-  const reports = useQuery({
-    queryKey: ["project-reports", activeProjectId],
-    queryFn: () => {
-      if (!activeProjectId) throw new Error("No project is selected.");
-      return listProjectReports(activeProjectId);
-    },
-    enabled: Boolean(activeProjectId),
-    staleTime: 15_000,
-  });
-  const activeReportId = reportId ?? reports.data?.[0]?.id;
+  const {
+    workspaceId: activeWorkspaceId,
+    projectId: activeProjectId,
+    reportId: activeReportId,
+    workspacesQuery: workspaces,
+    projectsQuery: projects,
+    reportsQuery: reports,
+    setWorkspace: setWorkspaceId,
+    setProject: setProjectId,
+    setReport: setReportId,
+    contextHref,
+  } = useResearchContext();
 
   const manuscript = useQuery({
     queryKey: ["publication-manuscript", activeReportId],
@@ -389,7 +369,7 @@ export default function PublicationStudio() {
             {!manuscript.data && !manuscript.isPending ? (
               <div className="empty" style={{ marginTop: 12 }}>
                 <div>No manuscript version is available for this report yet.</div>
-                <Link className="btn" href="/manuscript" style={{ marginTop: 12 }}>Open Manuscript</Link>
+                <Link className="btn" href={contextHref("/manuscript")} style={{ marginTop: 12 }}>Open Manuscript</Link>
               </div>
             ) : (
               <div className="actions" style={{ marginTop: 12 }}>
