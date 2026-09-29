@@ -69,7 +69,6 @@ export function UsageBillingView() {
     workspaceId: contextWorkspaceId,
     workspace: selectedWorkspace,
     workspacesQuery,
-    setWorkspace,
   } = useResearchContext();
   const workspaces = workspacesQuery.data ?? [];
   const workspaceId = contextWorkspaceId ?? "";
@@ -160,14 +159,6 @@ export function UsageBillingView() {
     <>
       <div className="page-head">
         <div><div className="eyebrow">Workspace plan</div><h1>Usage & billing</h1><p>Live workspace usage, plan entitlements and subscription state.</p></div>
-        <div className="actions">
-          <label className="field" style={{ minWidth: 240 }}>
-            <span className="small muted">Workspace</span>
-            <select className="input" aria-label="Workspace" value={workspaceId} onChange={(event) => setWorkspace(event.target.value)}>
-              {workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
-            </select>
-          </label>
-        </div>
       </div>
 
       {firstError && (
