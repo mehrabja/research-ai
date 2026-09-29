@@ -33,3 +33,22 @@ test("signup creates an account and the requested workspace", async ({ page }) =
     payload.items.some((item) => item.name === workspaceName),
   ).toBe(true);
 });
+
+
+test("login page signs into a registered account and reaches dashboard", async ({ page }) => {
+  const email = "e2e-login-" + randomUUID() + "@example.com";
+  const password = "Secret123456789";
+
+  const register = await page.request.post(
+    "/api/v1/auth/register",
+    { data: { email, password } },
+  );
+  expect(register.status(), await register.text()).toBe(201);
+
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Log in" }).click();
+
+  await expect(page).toHaveURL(/\/dashboard$/);
+});
