@@ -50,8 +50,28 @@ export async function GET(
     typeof (payload as { state?: unknown }).state !== "string" ||
     typeof (payload as { code_verifier?: unknown }).code_verifier !== "string"
   ) {
+    const nested =
+      (payload as { error?: unknown } | null)?.error;
+    const code =
+      nested &&
+      typeof nested === "object" &&
+      typeof (nested as { code?: unknown }).code === "string"
+        ? (nested as { code: string }).code
+        : "";
+    const query =
+      code === "OAUTH_PROVIDER_NOT_CONFIGURED"
+        ? "provider_not_configured"
+        : code === "OAUTH_PROVIDER_UNAVAILABLE"
+          ? "provider_unavailable"
+          : "oauth_start_failed";
     return NextResponse.redirect(
-      new URL("/login?oauth_error=oauth_start_failed", request.url),
+      new URL(
+        "/login?oauth_error=" +
+          query +
+          "&provider=" +
+          encodeURIComponent(provider),
+        request.url,
+      ),
     );
   }
 
