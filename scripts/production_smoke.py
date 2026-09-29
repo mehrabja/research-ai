@@ -47,6 +47,14 @@ def expect(status: int, expected: int, label: str) -> None:
         raise RuntimeError(f"{label} failed: HTTP {status}, expected {expected}.")
 
 
+def header_value(headers: dict[str, str], name: str) -> str | None:
+    expected = name.lower()
+    for key, value in headers.items():
+        if key.lower() == expected:
+            return value
+    return None
+
+
 def auth_headers() -> dict[str, str]:
     headers = {"Accept": "application/json"}
     token = os.getenv("SMOKE_ACCESS_TOKEN", "").strip()
@@ -66,9 +74,11 @@ def core_smoke(base_url: str, headers: dict[str, str]) -> None:
     ):
         status, response_headers, _ = json_request(base_url + path, headers)
         expect(status, 200, label)
-        request_id = response_headers.get("X-Request-ID")
+        request_id = header_value(response_headers, "X-Request-ID")
         if not request_id:
-            raise RuntimeError(f"{label} is missing X-Request-ID.")
+            raise RuntimeError(
+                f"{label} is missing X-Request-ID; the deployed API may be stale or misconfigured."
+            )
         print(f"PASS {label} request_id={request_id}")
 
     if "Authorization" not in headers and "X-API-Key" not in headers:
