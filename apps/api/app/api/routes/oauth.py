@@ -5,10 +5,10 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_client_ip, get_current_user
-from app.db.models.oauth_account import OAuthAccount
 from app.core.exceptions import OAuthLastAuthMethod
-from app.services.audit import emit_audit
+from app.db.models.oauth_account import OAuthAccount
 from app.db.session import get_db
+from app.services.audit import emit_audit
 from app.schemas.auth import TokenResponse
 from app.schemas.oauth import OAuthCallbackRequest, OAuthStartResponse
 from app.services import oauth as oauth_service
