@@ -1,0 +1,45 @@
+name: Chaos & Recovery
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "apps/api/app/providers/**"
+      - "apps/api/app/services/jobs.py"
+      - "apps/api/tests/failure/**"
+      - "apps/api/tests/providers/**"
+      - "apps/api/tests/storage/**"
+      - "apps/api/tests/workers/**"
+      - "scripts/chaos_recovery.py"
+permissions:
+  contents: read
+jobs:
+  recovery:
+    name: Phase 18 recovery suite
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: research
+          POSTGRES_PASSWORD: research_test_password
+          POSTGRES_DB: research_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U research -d research_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    defaults:
+      run:
+        working-directory: apps/api
+    env:
+      DATABASE_URL: postgresql+psycopg://research:research_test_password@localhost:5432/research_test
+      TEST_DATABASE_URL: postgresql+psycopg://research:research_test_password@localhost:5432/research_test
+      JWT_SECRET_KEY: ci-test-secret-not-used-in-production-min-32b
+      APP_ENV: test
+      DEBUG: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install -e ".[dev]"
+      - run: alembic upgrade head
+      - run: python ../../scripts/chaos_recovery.py
