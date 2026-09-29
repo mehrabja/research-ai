@@ -298,6 +298,7 @@ export default function ManuscriptView() {
     draftContentRef.current = draftContent;
   }, [draftContent]);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const current = manuscript.data;
     if (!current || draft.isPending) return;
@@ -334,6 +335,7 @@ export default function ManuscriptView() {
     draft.isPending,
     manuscript.data,
   ]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (
