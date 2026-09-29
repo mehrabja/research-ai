@@ -39,3 +39,12 @@ Production surfaces implemented on this branch include persistent auth sessions,
     make web-build
     make web-test
     make web-e2e
+
+
+Release verification:
+
+    make release-gate
+    set SMOKE_BASE_URL=http://localhost:8000
+    python scripts/production_smoke.py
+
+The GitHub Actions workflow named Production Smoke is manual and reads deployment/provider credentials only from GitHub Environment secrets and variables.
