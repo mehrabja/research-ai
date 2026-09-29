@@ -168,6 +168,7 @@ export default function ResearchDiscovery() {
               research project and report.
             </p>
           </div>
+          <span className="tag">Project scoped</span>
           {activeReportId && (
             <span className="tag success">
               Report selected
