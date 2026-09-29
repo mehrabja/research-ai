@@ -47,10 +47,17 @@ test("F03 notification preferences persist through the authenticated UI", async 
   await expect(invitationPreference).toBeEnabled({ timeout: 10_000 });
   await expect(invitationPreference).toBeChecked();
 
+  const savedNotice = page.getByText("Notification preferences saved.", {
+    exact: true,
+  });
+  const disableResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      response.url().includes("/api/v1/notifications/preferences"),
+  );
   await invitationPreference.uncheck();
-  await expect(
-    page.getByText("Notification preferences saved.", { exact: true }),
-  ).toBeVisible({ timeout: 10_000 });
+  expect((await disableResponse).status()).toBe(200);
+  await expect(savedNotice).toBeVisible({ timeout: 10_000 });
 
   const disabled = await page.request.get(
     "/api/v1/notifications/preferences",
@@ -61,10 +68,14 @@ test("F03 notification preferences persist through the authenticated UI", async 
   };
   expect(disabledPayload.preferences.member_invited).toBe(false);
 
+  const enableResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      response.url().includes("/api/v1/notifications/preferences"),
+  );
   await invitationPreference.check();
-  await expect(
-    page.getByText("Notification preferences saved.", { exact: true }),
-  ).toBeVisible({ timeout: 10_000 });
+  expect((await enableResponse).status()).toBe(200);
+  await expect(savedNotice).toBeVisible({ timeout: 10_000 });
 
   const enabled = await page.request.get(
     "/api/v1/notifications/preferences",
