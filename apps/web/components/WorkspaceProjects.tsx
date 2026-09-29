@@ -19,7 +19,6 @@ export default function WorkspaceProjects() {
     workspaceId: activeWorkspaceId,
     workspacesQuery: workspaces,
     projectsQuery: projects,
-    setWorkspace: setWorkspaceId,
     contextHref,
   } = useResearchContext();
 
