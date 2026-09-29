@@ -231,11 +231,7 @@ def commit_draft(
             source_research_plan_section_id=base_section.source_research_plan_section_id,
             section_key=base_section.section_key,
             title=str(override.get("title") or base_section.title),
-            purpose=(
-                override["purpose"]
-                if "purpose" in override
-                else base_section.purpose
-            ),
+            purpose=override.get("purpose", base_section.purpose),
             section_type=base_section.section_type,
             display_order=int(override.get("display_order", base_section.display_order)),
             required=base_section.required,
