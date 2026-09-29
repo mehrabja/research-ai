@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { backendUrl } from "@/lib/api/backend";
 
 const ACCESS_COOKIE = "research_ai_access";
@@ -18,7 +18,7 @@ function authCookieOptions(maxAge: number) {
 }
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ provider: string }> },
 ) {
   const { provider: rawProvider } = await context.params;
@@ -26,11 +26,7 @@ export async function GET(
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
-  const oauthCookie = request.headers.get("cookie")
-    ?.split(";")
-    .map((item) => item.trim())
-    .find((item) => item.startsWith("research_ai_oauth_" + provider + "="))
-    ?.split("=")[1] ?? "";
+  const oauthCookie = request.cookies.get("research_ai_oauth_" + provider)?.value ?? "";
 
   if (!PROVIDERS.has(provider) || !code || !state || !oauthCookie) {
     return NextResponse.redirect(
