@@ -104,6 +104,29 @@ export async function uploadProjectFile(
   return (await response.json()) as ProjectFileRead;
 }
 
+export async function moveProjectFile(
+  fileId: string,
+  folderId?: string,
+): Promise<ProjectFileRead> {
+  const { data, error } = await api.PATCH(
+    "/api/v1/files/{file_id}",
+    {
+      params: {
+        path: { file_id: fileId },
+      },
+      body: {
+        folder_id: folderId ?? null,
+      },
+    },
+  );
+
+  if (error || !data) {
+    throw new Error(getApiErrorMessage(error));
+  }
+
+  return data;
+}
+
 export async function deleteProjectFile(
   fileId: string,
 ): Promise<void> {
