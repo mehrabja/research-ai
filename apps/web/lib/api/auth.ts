@@ -17,12 +17,20 @@ async function parseSuccess<T>(response: Response, fallback: string): Promise<T>
   return parseResponse<T>(response);
 }
 
-export async function register(email: string, password: string): Promise<UserResponse> {
+export async function register(
+  email: string,
+  password: string,
+  fullName?: string,
+): Promise<UserResponse> {
   const response = await fetch("/api/v1/auth/register", {
     method: "POST",
     credentials: "include",
     headers: {"Content-Type":"application/json",Accept:"application/json"},
-    body: JSON.stringify({email,password}),
+    body: JSON.stringify({
+      email,
+      password,
+      ...(fullName?.trim() ? { full_name: fullName.trim() } : {}),
+    }),
   });
   return parseSuccess<UserResponse>(response, "Registration request failed.");
 }
