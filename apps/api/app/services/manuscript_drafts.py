@@ -10,7 +10,12 @@ from app.core.manuscript_exceptions import (
     ManuscriptDraftConflictError,
     ManuscriptDraftNotFound,
 )
-from app.db.models.manuscript import Manuscript, ManuscriptVersion
+from app.db.models.manuscript import (
+    Manuscript,
+    ManuscriptSection,
+    ManuscriptSectionDependency,
+    ManuscriptVersion,
+)
 from app.db.models.manuscript_draft import ManuscriptDraft
 from app.services.reports import get_report
 
@@ -167,6 +172,35 @@ def commit_draft(
     if abstract_direction is not None and not isinstance(abstract_direction, dict):
         raise ManuscriptDraftConflictError(message="Invalid abstract payload.")
 
+    base_sections = list(
+        db.execute(
+            select(ManuscriptSection)
+            .where(ManuscriptSection.manuscript_version_id == base.id)
+            .order_by(ManuscriptSection.display_order.asc())
+        ).scalars().all()
+    )
+    raw_sections = content.get("sections")
+    if raw_sections is None:
+        raw_sections = []
+    if not isinstance(raw_sections, list):
+        raise ManuscriptDraftConflictError(message="Invalid manuscript sections payload.")
+
+    overrides_by_key: dict[str, dict[str, Any]] = {}
+    for item in raw_sections:
+        if not isinstance(item, dict):
+            raise ManuscriptDraftConflictError(message="Invalid manuscript section payload.")
+        key = str(item.get("section_key") or "").strip()
+        if not key or key in overrides_by_key:
+            raise ManuscriptDraftConflictError(message="Duplicate or missing section key.")
+        overrides_by_key[key] = item
+
+    base_keys = {section.section_key for section in base_sections}
+    unknown_keys = sorted(set(overrides_by_key) - base_keys)
+    if unknown_keys:
+        raise ManuscriptDraftConflictError(
+            message="Draft contains unknown manuscript sections: " + ", ".join(unknown_keys)
+        )
+
     version = ManuscriptVersion(
         manuscript_id=manuscript.id,
         version=version_no,
@@ -188,6 +222,65 @@ def commit_draft(
     )
     db.add(version)
     db.flush()
+
+    section_id_by_key: dict[str, uuid.UUID] = {}
+    for base_section in base_sections:
+        override = overrides_by_key.get(base_section.section_key, {})
+        section = ManuscriptSection(
+            manuscript_version_id=version.id,
+            source_research_plan_section_id=base_section.source_research_plan_section_id,
+            section_key=base_section.section_key,
+            title=str(override.get("title") or base_section.title),
+            purpose=(
+                override["purpose"]
+                if "purpose" in override
+                else base_section.purpose
+            ),
+            section_type=base_section.section_type,
+            display_order=int(override.get("display_order", base_section.display_order)),
+            required=base_section.required,
+            word_budget=max(
+                0,
+                int(override.get("word_budget", base_section.word_budget)),
+            ),
+            budget_weight=base_section.budget_weight,
+            evidence_coverage_target=base_section.evidence_coverage_target,
+            research_objective=base_section.research_objective,
+            writing_objective=base_section.writing_objective,
+            citation_required=base_section.citation_required,
+            research_contract=base_section.research_contract,
+            section_meta=base_section.section_meta,
+            status=str(override.get("status") or base_section.status),
+        )
+        db.add(section)
+        db.flush()
+        section_id_by_key[section.section_key] = section.id
+
+    base_dependencies = list(
+        db.execute(
+            select(ManuscriptSectionDependency)
+            .where(ManuscriptSectionDependency.manuscript_version_id == base.id)
+        ).scalars().all()
+    )
+    for dependency in base_dependencies:
+        upstream_base = db.get(ManuscriptSection, dependency.upstream_section_id)
+        downstream_base = db.get(ManuscriptSection, dependency.downstream_section_id)
+        if upstream_base is None or downstream_base is None:
+            continue
+        upstream_id = section_id_by_key.get(upstream_base.section_key)
+        downstream_id = section_id_by_key.get(downstream_base.section_key)
+        if upstream_id is None or downstream_id is None:
+            continue
+        db.add(
+            ManuscriptSectionDependency(
+                manuscript_version_id=version.id,
+                upstream_section_id=upstream_id,
+                downstream_section_id=downstream_id,
+                dependency_type=dependency.dependency_type,
+                dependency_meta=dependency.dependency_meta,
+            )
+        )
+
     manuscript.current_version_id = version.id
     db.delete(draft)
     db.flush()
