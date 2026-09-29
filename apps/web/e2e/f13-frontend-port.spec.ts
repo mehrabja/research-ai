@@ -21,6 +21,7 @@ const PROTECTED_ROUTES = [
   "/publication",
   "/research",
   "/research-canvas",
+  "/search",
   "/settings",
   "/sources",
   "/team",
