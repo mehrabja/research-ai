@@ -32,7 +32,7 @@ def list_project_file_evidence(
     ] = defaultdict(list)
 
     if file_ids:
-        rows = db.execute(
+        query_rows = db.execute(
             select(
                 Source.id,
                 Source.external_source_id,
@@ -55,7 +55,7 @@ def list_project_file_evidence(
             )
         ).all()
 
-        for source_id, external_id, report_id, updated_at, chunk_count in rows:
+        for source_id, external_id, report_id, updated_at, chunk_count in query_rows:
             if external_id:
                 source_map[external_id].append(
                     (
@@ -68,20 +68,20 @@ def list_project_file_evidence(
 
     result: list[dict[str, Any]] = []
     for pf in files:
-        rows = source_map.get(str(pf.id), [])
-        source_ids = [row[0] for row in rows]
+        source_rows = source_map.get(str(pf.id), [])
+        source_ids = [row[0] for row in source_rows]
         report_ids = sorted(
-            {row[1] for row in rows},
+            {row[1] for row in source_rows},
             key=str,
         )
-        chunk_count = sum(row[2] for row in rows)
+        chunk_count = sum(row[2] for row in source_rows)
         last_synced_at = max(
-            (row[3] for row in rows),
+            (row[3] for row in source_rows),
             default=None,
         )
 
         if pf.extraction_status == "completed":
-            evidence_status = "synced" if rows else "awaiting_report"
+            evidence_status = "synced" if source_rows else "awaiting_report"
         elif pf.extraction_status in ("failed", "not_supported"):
             evidence_status = "unavailable"
         else:
