@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { listWorkspaces, type Workspace } from "@/lib/api/workspaces";
 
 type Plan = { id: string; code: string; name: string; description: string | null };
@@ -100,7 +100,7 @@ export function UsageBillingView() {
     [workspaces, workspaceId],
   );
 
-  async function loadWorkspaces() {
+  const loadWorkspaces = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -114,7 +114,7 @@ export function UsageBillingView() {
     }
   }
 
-  async function loadDetails(id: string) {
+  const loadDetails = useCallback(async (id: string) => {
     setLoadingDetails(true);
     setError(null);
     try {
@@ -145,8 +145,8 @@ export function UsageBillingView() {
     }
   }
 
-  useEffect(() => { void loadWorkspaces(); }, []);
-  useEffect(() => { if (workspaceId) void loadDetails(workspaceId); }, [workspaceId]);
+  useEffect(() => { void loadWorkspaces(); }, [loadWorkspaces]);
+  useEffect(() => { if (workspaceId) void loadDetails(workspaceId); }, [workspaceId, loadDetails]);
 
   async function changePlan(plan: Plan) {
     if (!workspaceId) return;
