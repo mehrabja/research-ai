@@ -21,6 +21,7 @@ export async function register(
   email: string,
   password: string,
   fullName?: string,
+  workspaceName?: string,
 ): Promise<UserResponse> {
   const response = await fetch("/api/v1/auth/register", {
     method: "POST",
@@ -30,6 +31,7 @@ export async function register(
       email,
       password,
       ...(fullName?.trim() ? { full_name: fullName.trim() } : {}),
+      ...(workspaceName?.trim() ? { workspace_name: workspaceName.trim() } : {}),
     }),
   });
   return parseSuccess<UserResponse>(response, "Registration request failed.");
