@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
@@ -19,6 +20,7 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: {
       errors,
       isSubmitting,
@@ -52,6 +54,15 @@ export default function LoginPage() {
   const submitForm = handleSubmit((values) => {
     loginMutation.mutate(values);
   });
+
+  const [submitted, setSubmitted] = useState(false);
+  const emailValue = watch("email");
+  const passwordValue = watch("password");
+
+  const emailInvalid =
+    Boolean(errors.email) || (submitted && !emailValue);
+  const passwordInvalid =
+    Boolean(errors.password) || (submitted && !passwordValue);
 
   const busy =
     isSubmitting || loginMutation.isPending;
@@ -138,9 +149,7 @@ export default function LoginPage() {
                 type="email"
                 placeholder="you@lab.edu"
                 autoComplete="email"
-                aria-invalid={
-                  errors.email ? "true" : "false"
-                }
+                aria-invalid={emailInvalid ? "true" : "false"}
                 {...register("email")}
               />
 
@@ -167,11 +176,7 @@ export default function LoginPage() {
                 type="password"
                 placeholder="••••••••"
                 autoComplete="current-password"
-                aria-invalid={
-                  errors.password
-                    ? "true"
-                    : "false"
-                }
+                aria-invalid={passwordInvalid ? "true" : "false"}
                 {...register("password")}
               />
 
@@ -216,8 +221,12 @@ export default function LoginPage() {
 
             <button
               className="btn primary"
-              type="submit"
+              type="button"
               disabled={busy}
+              onClick={() => {
+                setSubmitted(true);
+                void submitForm();
+              }}
             >
               {busy ? "Logging in…" : "Log in"}
             </button>
