@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 
 async function confirmPasswordReset(token: string, newPassword: string): Promise<string> {
   const response = await fetch("/api/v1/auth/password-reset/confirm", {
@@ -30,8 +30,7 @@ export default function PasswordResetConfirmClient({
   const [status, setStatus] = useState<"idle" | "working" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submit() {
     if (password.length < 15) {
       setStatus("error");
       setMessage("Password must be at least 15 characters.");
@@ -77,7 +76,14 @@ export default function PasswordResetConfirmClient({
               {message}
             </p>
           )}
-          <form className="auth-form" onSubmit={submit} noValidate>
+          <form
+            className="auth-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submit();
+            }}
+            noValidate
+          >
             <div className="field">
               <label htmlFor="new-password">New password</label>
               <input
@@ -109,9 +115,7 @@ export default function PasswordResetConfirmClient({
               type="button"
               disabled={status === "working"}
               onClick={() => {
-                void submit({
-                  preventDefault() {},
-                } as FormEvent<HTMLFormElement>);
+                void submit();
               }}
             >
               {status === "working" ? "Updating…" : "Update password"}
