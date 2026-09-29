@@ -69,7 +69,7 @@ test("F07 plan revision history saves an immutable revision and restores a prior
   );
 
   await expect(
-    page.getByRole("heading", { name: "Research plan", exact: true }),
+    page.getByRole("heading", { name: "Research plan", exact: true, level: 1 }),
   ).toBeVisible();
   const objective = page.getByLabel("Research objective", { exact: true });
   await expect(objective).toBeVisible();
@@ -164,7 +164,7 @@ test("F08 manuscript editor autosaves a draft, exposes revision state, and commi
   );
 
   await expect(
-    page.getByRole("heading", { name: "Manuscript", exact: true }),
+    page.getByRole("heading", { name: "Manuscript", exact: true, level: 1 }),
   ).toBeVisible();
 
   const draftTitle = page.getByLabel("Draft title", { exact: true });
