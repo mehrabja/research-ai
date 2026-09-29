@@ -16,6 +16,7 @@ from app.db.session import get_db
 from app.schemas.post_translation_humanization import (
     PostTranslationHumanizationCurrentResponse,
 )
+from app.schemas.manuscript_humanization import HumanizationRunRead
 from app.services import post_translation_humanization_jobs as m17_jobs
 from app.services.humanization_profile import (
     build_post_translation_policy_from_settings,
@@ -96,7 +97,7 @@ def get_current_post_translation_humanization(
         raise HTTPException(status_code=404, detail='post-translation humanization not found')
     policy = run.policy_json or {}
     return PostTranslationHumanizationCurrentResponse(
-        run=run,
+        run=HumanizationRunRead.model_validate(run),
         translated_version_id=(
             uuid.UUID(policy["translated_version_id"])
             if policy.get("translated_version_id")
