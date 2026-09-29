@@ -104,7 +104,16 @@ export default function PasswordResetConfirmClient({
                 required
               />
             </div>
-            <button className="btn primary" type="submit" disabled={status === "working"}>
+            <button
+              className="btn primary"
+              type="button"
+              disabled={status === "working"}
+              onClick={() => {
+                void submit({
+                  preventDefault() {},
+                } as FormEvent<HTMLFormElement>);
+              }}
+            >
               {status === "working" ? "Updating…" : "Update password"}
             </button>
           </form>
