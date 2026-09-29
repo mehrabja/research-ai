@@ -37,6 +37,7 @@ from app.schemas.publication import (
     PublicationTargetSelectionRead,
     PublicationTargetSelectRequest,
 )
+from app.services.publication import export as pub_export
 from app.services.publication import jobs as pub_jobs
 from app.services.publication import persistence as pub_persist
 from app.services.publication import profiles as pub_profiles
@@ -402,5 +403,36 @@ def validate_publication_compliance(
 
 # Ensure unused import is retained for future iterations
 _ = PublicationTarget
+
+
+# ---------------------------------------------------------------------------
+# Export
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/reports/{report_id}/publication/export",
+    response_class=Response,
+)
+def export_publication(
+    report_id: uuid.UUID,
+    export_format: str = Query(default="markdown", alias="format"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    report = get_report(db, user_id=current_user.id, report_id=report_id)
+    artifact = pub_export.build_publication_export(
+        db,
+        report=report,
+        export_format=export_format,
+    )
+    response = Response(
+        content=artifact.content,
+        media_type=artifact.media_type,
+    )
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{artifact.filename}"'
+    )
+    return response
 
 __all__ = ["router"]
