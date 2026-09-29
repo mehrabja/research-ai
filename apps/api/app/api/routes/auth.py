@@ -123,7 +123,7 @@ def login(
             raise MFARequired()
         valid_mfa = bool(
             user.mfa_secret
-            and mfa_service.verify_code(
+            and mfa_service.verify_encrypted_code(
                 user.mfa_secret,
                 payload.mfa_code,
             )
