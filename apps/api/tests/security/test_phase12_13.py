@@ -64,3 +64,14 @@ def test_prompt_injection_is_wrapped_as_data() -> None:
 def test_private_ip_classifier_covers_metadata_endpoint() -> None:
     assert fetcher._is_unsafe_ip(ipaddress.ip_address("127.0.0.1"))
     assert fetcher._is_unsafe_ip(ipaddress.ip_address("169.254.169.254"))
+
+
+def test_plain_tar_path_traversal_is_blocked() -> None:
+    import tarfile
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as archive:
+        info = tarfile.TarInfo("../evil.txt")
+        info.size = 4
+        archive.addfile(info, io.BytesIO(b"pwn!"))
+    with pytest.raises(ArchiveUnsafeError):
+        validate_upload_bytes(buf.getvalue(), detected_mime="application/x-tar", extension=".tar")
