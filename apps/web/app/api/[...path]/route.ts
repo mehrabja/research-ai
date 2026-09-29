@@ -433,6 +433,37 @@ async function proxy(
     return response;
   }
 
+  if (isAuthPath(path, "logout-all")) {
+    let upstream: Response;
+
+    try {
+      upstream = await fetch(url, {
+        method: req.method,
+        headers: buildAuthenticatedHeaders(req, accessToken),
+        body: requestBody,
+        redirect: "manual",
+        cache: "no-store",
+      });
+    } catch {
+      return NextResponse.json(
+        { error: "Backend unreachable" },
+        { status: 502 },
+      );
+    }
+
+    const response = new NextResponse(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: forwardableResponseHeaders(upstream.headers),
+    });
+
+    if (upstream.ok) {
+      clearAuthCookies(response);
+    }
+
+    return response;
+  }
+
   if (isAuthPath(path, "account")) {
     let upstream: Response;
 
