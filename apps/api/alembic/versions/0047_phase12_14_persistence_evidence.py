@@ -20,18 +20,9 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.create_table(
         "pdf_workspace_states",
-        sa.Column(
-            "id",
-            postgresql.UUID(as_uuid=True),
-            server_default=sa.text("gen_random_uuid()"),
-            nullable=False,
-        ),
+        sa.Column("id", postgresql.UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), nullable=False),
         sa.Column("project_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column(
-            "active_file_id",
-            postgresql.UUID(as_uuid=True),
-            nullable=True,
-        ),
+        sa.Column("active_file_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("page_number", sa.Integer(), server_default=sa.text("1"), nullable=False),
         sa.Column("zoom", sa.Float(), server_default=sa.text("1.0"), nullable=False),
         sa.Column("scroll_x", sa.Float(), server_default=sa.text("0.0"), nullable=False),
@@ -44,27 +35,15 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("project_id"),
         sa.CheckConstraint("page_number >= 1", name="ck_pdf_workspace_page_pos"),
-        sa.CheckConstraint(
-            "zoom >= 0.25 AND zoom <= 4.0",
-            name="ck_pdf_workspace_zoom_range",
-        ),
+        sa.CheckConstraint("zoom >= 0.25 AND zoom <= 4.0", name="ck_pdf_workspace_zoom_range"),
         sa.CheckConstraint("scroll_x >= 0", name="ck_pdf_workspace_scroll_x_nonneg"),
         sa.CheckConstraint("scroll_y >= 0", name="ck_pdf_workspace_scroll_y_nonneg"),
     )
-    op.create_index(
-        "ix_pdf_workspace_states_project",
-        "pdf_workspace_states",
-        ["project_id"],
-    )
+    op.create_index("ix_pdf_workspace_states_project", "pdf_workspace_states", ["project_id"])
 
     op.create_table(
         "pdf_annotations",
-        sa.Column(
-            "id",
-            postgresql.UUID(as_uuid=True),
-            server_default=sa.text("gen_random_uuid()"),
-            nullable=False,
-        ),
+        sa.Column("id", postgresql.UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), nullable=False),
         sa.Column("project_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("file_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_by_user", postgresql.UUID(as_uuid=True), nullable=False),
@@ -91,30 +70,15 @@ def upgrade() -> None:
 
     op.create_table(
         "research_canvases",
-        sa.Column(
-            "id",
-            postgresql.UUID(as_uuid=True),
-            server_default=sa.text("gen_random_uuid()"),
-            nullable=False,
-        ),
+        sa.Column("id", postgresql.UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), nullable=False),
         sa.Column("project_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("revision", sa.Integer(), server_default=sa.text("1"), nullable=False),
-        sa.Column(
-            "nodes",
-            postgresql.JSONB(),
-            server_default=sa.text("'[]'::jsonb"),
-            nullable=False,
-        ),
-        sa.Column(
-            "edges",
-            postgresql.JSONB(),
-            server_default=sa.text("'[]'::jsonb"),
-            nullable=False,
-        ),
+        sa.Column("nodes", postgresql.JSONB(), server_default=sa.text("'[]'::jsonb"), nullable=False),
+        sa.Column("edges", postgresql.JSONB(), server_default=sa.text("'[]'::jsonb"), nullable=False),
         sa.Column(
             "viewport",
             postgresql.JSONB(),
-            server_default=sa.text("'{\"x\":0,\"y\":0,\"zoom\":1}'::jsonb"),
+            server_default=sa.text("jsonb_build_object('x', 0, 'y', 0, 'zoom', 1)"),
             nullable=False,
         ),
         sa.Column("updated_by_user", postgresql.UUID(as_uuid=True), nullable=True),
@@ -126,23 +90,13 @@ def upgrade() -> None:
         sa.UniqueConstraint("project_id"),
         sa.CheckConstraint("revision >= 1", name="ck_research_canvases_revision_pos"),
     )
-    op.create_index(
-        "ix_research_canvases_project",
-        "research_canvases",
-        ["project_id"],
-    )
+    op.create_index("ix_research_canvases_project", "research_canvases", ["project_id"])
 
 
 def downgrade() -> None:
     op.drop_index("ix_research_canvases_project", table_name="research_canvases")
     op.drop_table("research_canvases")
-    op.drop_index(
-        "ix_pdf_annotations_project_file_page",
-        table_name="pdf_annotations",
-    )
+    op.drop_index("ix_pdf_annotations_project_file_page", table_name="pdf_annotations")
     op.drop_table("pdf_annotations")
-    op.drop_index(
-        "ix_pdf_workspace_states_project",
-        table_name="pdf_workspace_states",
-    )
+    op.drop_index("ix_pdf_workspace_states_project", table_name="pdf_workspace_states")
     op.drop_table("pdf_workspace_states")
