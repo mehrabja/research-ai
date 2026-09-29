@@ -9,33 +9,19 @@ import {
   listProjects,
   type Project,
 } from "@/lib/api/projects";
-import { listWorkspaces } from "@/lib/api/workspaces";
 
 export default function WorkspaceProjects() {
-  const [workspaceId, setWorkspaceId] = useState<string>();
   const [projectName, setProjectName] = useState("");
   const [description, setDescription] = useState("");
   const queryClient = useQueryClient();
 
-  const workspaces = useQuery({
-    queryKey: ["workspaces"],
-    queryFn: listWorkspaces,
-    staleTime: 30_000,
-  });
-
-  const activeWorkspaceId = workspaceId ?? workspaces.data?.[0]?.id;
-
-  const projects = useQuery({
-    queryKey: ["projects", activeWorkspaceId],
-    queryFn: () => {
-      if (!activeWorkspaceId) {
-        throw new Error("No workspace is selected.");
-      }
-      return listProjects(activeWorkspaceId);
-    },
-    enabled: Boolean(activeWorkspaceId),
-    staleTime: 15_000,
-  });
+  const {
+    workspaceId: activeWorkspaceId,
+    workspacesQuery: workspaces,
+    projectsQuery: projects,
+    setWorkspace: setWorkspaceId,
+    contextHref,
+  } = useResearchContext();
 
   const create = useMutation({
     mutationFn: () =>
@@ -156,7 +142,7 @@ export default function WorkspaceProjects() {
                   <div className="actions">
                     <Link
                       className="btn"
-                      href={{ pathname: "/research", query: { projectId: project.id } }}
+                      href={contextHref("/research?projectId="+project.id)}
                     >
                       Research
                     </Link>
