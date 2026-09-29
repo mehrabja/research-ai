@@ -126,6 +126,48 @@ def get_summary(
 
 
 @router.get(
+    "/{project_id}/knowledge-graph/nodes",
+    response_model=list[KnowledgeGraphNodeRead],
+    operation_id="list_knowledge_graph_nodes",
+)
+def list_nodes(
+    project_id: uuid.UUID,
+    node_type: str | None = Query(default=None, min_length=1, max_length=80),
+    q: str | None = Query(default=None, min_length=1, max_length=200),
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[KnowledgeGraphNodeRead]:
+    get_project(db, user_id=current_user.id, project_id=project_id)
+    graph = queries_svc.get_graph(db, project_id=project_id)
+
+    stmt = select(KnowledgeGraphNode).where(
+        KnowledgeGraphNode.graph_version_id == graph.id,
+    )
+    if node_type:
+        stmt = stmt.where(KnowledgeGraphNode.node_type == node_type)
+    if q:
+        pattern = "%" + q.strip() + "%"
+        stmt = stmt.where(
+            KnowledgeGraphNode.label.ilike(pattern)
+            | KnowledgeGraphNode.node_key.ilike(pattern)
+        )
+
+    rows = list(
+        db.execute(
+            stmt.order_by(
+                KnowledgeGraphNode.label.asc().nullslast(),
+                KnowledgeGraphNode.id.asc(),
+            )
+            .limit(limit)
+            .offset(offset)
+        ).scalars().all()
+    )
+    return [KnowledgeGraphNodeRead.model_validate(row) for row in rows]
+
+
+@router.get(
     "/{project_id}/knowledge-graph/nodes/{node_id}",
     response_model=KnowledgeGraphNodeRead,
 )
