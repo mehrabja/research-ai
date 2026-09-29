@@ -62,7 +62,7 @@ def test_placeholder_credentials_are_not_configured(monkeypatch) -> None:
     from pathlib import Path
     import sys
 
-    root = Path(__file__).resolve().parents[3]
+    root = Path(__file__).resolve().parents[4]
     sys.path.insert(0, str(root))
     monkeypatch.setenv("OPENROUTER_API_KEY", "YOUR_API_KEY")
     from scripts.provider_activation import configured
