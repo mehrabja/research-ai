@@ -52,7 +52,7 @@ export type ResearchContextValue = ResearchContextIds & {
   setProject: (projectId: string | null) => void;
   setReport: (reportId: string | null) => void;
   resetContext: () => void;
-  contextHref: (href: string) => string;
+  contextHref: (href: string) => Route;
 };
 
 const ResearchContext = createContext<ResearchContextValue | null>(null);
@@ -126,7 +126,7 @@ function changeContextUrl(
   pathname: string,
   currentSearch: string,
   patch: Partial<ResearchContextIds>,
-): string {
+): Route {
   const params = new URLSearchParams(currentSearch);
 
   if ("workspaceId" in patch) {
@@ -453,7 +453,7 @@ export function ResearchContextProvider({
 
     const query = next.toString();
     router.replace(
-      query ? `${pathname}?${query}` : pathname,
+      (query ? `${pathname}?${query}` : pathname) as Route,
       { scroll: false },
     );
   }, [currentSearch, pathname, router]);
