@@ -2,41 +2,24 @@
 
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { listProjectReports, listProjects } from "@/lib/api/projects";
-import { listWorkspaces } from "@/lib/api/workspaces";
+import { useResearchContext } from "@/lib/research-context";
 import { generateManuscript, generateManuscriptProse, getCurrentManuscript, getCurrentManuscriptProse } from "@/lib/api/manuscript";
 
 export default function GenerateStudio() {
-  const [workspaceId, setWorkspaceId] = useState<string>();
-  const [projectId, setProjectId] = useState<string>();
-  const [reportId, setReportId] = useState<string>();
   const queryClient = useQueryClient();
 
-
-  const workspaces = useQuery({ queryKey: ["workspaces"], queryFn: listWorkspaces, staleTime: 30_000 });
-  const activeWorkspaceId = workspaceId ?? workspaces.data?.[0]?.id;
-  const projects = useQuery({
-    queryKey: ["projects", activeWorkspaceId],
-    queryFn: () => {
-      if (!activeWorkspaceId) throw new Error("No workspace is selected.");
-      return listProjects(activeWorkspaceId);
-    },
-    enabled: Boolean(activeWorkspaceId),
-    staleTime: 15_000,
-  });
-  const activeProjectId = projectId ?? projects.data?.[0]?.id;
-  const reports = useQuery({
-    queryKey: ["project-reports", activeProjectId],
-    queryFn: () => {
-      if (!activeProjectId) throw new Error("No project is selected.");
-      return listProjectReports(activeProjectId);
-    },
-    enabled: Boolean(activeProjectId),
-    staleTime: 15_000,
-  });
-  const activeReportId = reportId ?? reports.data?.[0]?.id;
-
+  const {
+    workspaceId: activeWorkspaceId,
+    projectId: activeProjectId,
+    reportId: activeReportId,
+    workspacesQuery: workspaces,
+    projectsQuery: projects,
+    reportsQuery: reports,
+    setWorkspace: setWorkspaceId,
+    setProject: setProjectId,
+    setReport: setReportId,
+    contextHref,
+  } = useResearchContext();
 
   const manuscript = useQuery({ queryKey: ["manuscript-current", activeReportId], queryFn: () => getCurrentManuscript(activeReportId!), enabled: Boolean(activeReportId), staleTime: 10_000 });
   const prose = useQuery({ queryKey: ["manuscript-prose-current", activeReportId], queryFn: () => getCurrentManuscriptProse(activeReportId!), enabled: Boolean(activeReportId), staleTime: 10_000 });
@@ -62,7 +45,7 @@ export default function GenerateStudio() {
 
   return <div className="stack" style={{ gap: 16 }}>
     <section className="card pad">
-      <div className="row"><div><div className="eyebrow">AI Studio</div><h2 style={{ marginTop: 4 }}>Generate with evidence</h2><p className="muted small" style={{ marginTop: 4 }}>Run the manuscript architecture and evidence-grounded prose pipelines against a real research report.</p></div><Link className="btn" href="/evidence">Evidence</Link></div>
+      <div className="row"><div><div className="eyebrow">AI Studio</div><h2 style={{ marginTop: 4 }}>Generate with evidence</h2><p className="muted small" style={{ marginTop: 4 }}>Run the manuscript architecture and evidence-grounded prose pipelines against a real research report.</p></div><Link className="btn" href={contextHref("/evidence")}>Evidence</Link></div>
       <div style={{ marginTop: 14 }}><div className="grid grid-3">
           <div className="field">
             <label htmlFor="generate-workspace">Workspace</label>
@@ -89,7 +72,7 @@ export default function GenerateStudio() {
         </div></div>
     </section>
 
-    {!activeReportId && !reports.isPending && <section className="card pad empty"><div className="big">∅</div><div>No research report exists in the selected project.</div><Link className="btn" href="/research" style={{ marginTop: 12 }}>Open Research</Link></section>}
+    {!activeReportId && !reports.isPending && <section className="card pad empty"><div className="big">∅</div><div>No research report exists in the selected project.</div><Link className="btn" href={contextHref("/research")} style={{ marginTop: 12 }}>Open Research</Link></section>}
 
     {activeReportId && <section className="grid grid-2">
       <section className="card pad">
