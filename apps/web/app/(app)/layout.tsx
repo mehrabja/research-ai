@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Sidebar } from "@/components/AppShell/Sidebar";
 import { Topbar } from "@/components/AppShell/Topbar";
+import {
+  clearSessionUserCache,
+  syncSessionUser,
+} from "@/lib/session-cache";
 
 type AuthState = "checking" | "authenticated" | "error";
 
@@ -14,6 +19,7 @@ function SessionGate({
 }) {
   const [authState, setAuthState] = useState<AuthState>("checking");
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -36,11 +42,23 @@ function SessionGate({
         }
 
         if (response.ok) {
+          const payload = (await response.json()) as {
+            id?: unknown;
+          };
+
+          if (typeof payload.id !== "string") {
+            clearSessionUserCache(queryClient);
+            setAuthState("error");
+            return;
+          }
+
+          syncSessionUser(queryClient, payload.id);
           setAuthState("authenticated");
           return;
         }
 
         if (response.status === 401) {
+          clearSessionUserCache(queryClient);
           router.replace("/login");
           return;
         }
@@ -62,7 +80,7 @@ function SessionGate({
       active = false;
       controller.abort();
     };
-  }, [router]);
+  }, [queryClient, router]);
 
   if (authState === "checking") {
     return (
