@@ -3,7 +3,8 @@ from __future__ import annotations
 import uuid
 
 from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin, UUIDPKMixin
