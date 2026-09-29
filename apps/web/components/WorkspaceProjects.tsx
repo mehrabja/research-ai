@@ -77,45 +77,7 @@ export default function WorkspaceProjects() {
   }
 
   return (
-    <div className="stack" style={{ gap: 16 }}>
-      <section className="card pad">
-        <div className="row">
-          <div>
-            <div className="eyebrow">Workspace</div>
-            <h2 style={{ marginTop: 4 }}>Workspace context</h2>
-            <p className="muted small" style={{ marginTop: 4 }}>
-              Select the workspace whose projects you want to work with.
-            </p>
-          </div>
-          <span className="tag success">Real data</span>
-        </div>
-
-        <div className="field" style={{ marginTop: 14 }}>
-          <label htmlFor="workspace-select">Workspace</label>
-          <select
-            id="workspace-select"
-            className="input"
-            value={activeWorkspaceId ?? ""}
-            onChange={(event) => setWorkspaceId(event.target.value)}
-            disabled={busy || (workspaces.data?.length ?? 0) === 0}
-          >
-            {(workspaces.data ?? []).map((workspace) => (
-              <option key={workspace.id} value={workspace.id}>
-                {workspace.name} · {workspace.role}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {workspaces.data?.length === 0 && (
-          <div className="empty" style={{ marginTop: 14 }}>
-            <div className="big">∅</div>
-            <div>No workspace is available for this account.</div>
-          </div>
-        )}
-      </section>
-
-      <section className="grid grid-2">
+    <div className="stack" style={{ gap: 16 }}>      <section className="grid grid-2">
         <div className="card pad">
           <div className="row">
             <div>
