@@ -50,9 +50,13 @@ def validate_upload_bytes(
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     }:
-        _validate_archive(content, settings.file_max_archive_entries,
-                          settings.file_max_archive_uncompressed_bytes,
-                          settings.file_max_archive_ratio)
+        _validate_archive(
+            content,
+            settings.file_max_archive_entries,
+            settings.file_max_archive_uncompressed_bytes,
+            settings.file_max_archive_ratio,
+            extension=extension,
+        )
 
     if settings.file_malware_scan_mode != "off":
         _clamav_scan(content)
@@ -79,6 +83,8 @@ def _validate_archive(
     max_entries: int,
     max_uncompressed_bytes: int,
     max_ratio: float,
+    *,
+    extension: str | None,
 ) -> None:
     if content.startswith(b"PK"):
         try:
@@ -104,6 +110,14 @@ def _validate_archive(
                     raise ArchiveUnsafeError("archive compression ratio exceeds limit")
         except zipfile.BadZipFile as exc:
             raise MaliciousFileError("invalid ZIP/OOXML container") from exc
+        return
+
+    if (extension or "").lower() in {".tar", ".tgz", ".tar.gz", ".gz"}:
+        try:
+            with tarfile.open(fileobj=io.BytesIO(content), mode="r:*") as archive:
+                _validate_tar_members(archive, max_entries, max_uncompressed_bytes)
+        except (tarfile.TarError, OSError) as exc:
+            raise MaliciousFileError("invalid TAR archive") from exc
         return
 
     if content.startswith(b"\x1f\x8b"):
