@@ -14,6 +14,7 @@ SCOPE_READ = "read"
 SCOPE_WRITE = "write"
 SCOPE_MANAGE = "manage"
 DEFAULT_SCOPES: tuple[str, ...] = ("read:*",)
+_UNKNOWN_RESOURCE = "__unknown__"
 
 RESOURCES: frozenset[str] = frozenset({
     "auth", "api_tokens", "workspaces", "projects", "reports", "sources",
@@ -87,12 +88,14 @@ def resource_for_path(path: str, api_prefix: str = "/api/v1") -> str:
         "intelligence": "intelligence", "classification": "classification",
         "research": "research", "dashboard": "dashboard",
     }
-    return aliases.get(first, first if first in RESOURCES else "auth")
+    return aliases.get(first, first if first in RESOURCES else _UNKNOWN_RESOURCE)
 
 
 def required_scope_for_request(method: str, path: str, api_prefix: str = "/api/v1") -> str:
     resource = resource_for_path(path, api_prefix)
     method = method.upper()
+    if resource == _UNKNOWN_RESOURCE:
+        return "__forbidden__"
     if resource == "auth" and "/api-tokens" in path:
         return "read:api_tokens" if method == "GET" else "manage:api_tokens"
     if resource == "api_tokens":
