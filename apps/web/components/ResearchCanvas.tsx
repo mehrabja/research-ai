@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useResearchContext } from "@/lib/research-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listProjects } from "@/lib/api/projects";
-import { listWorkspaces } from "@/lib/api/workspaces";
 import {
   getResearchCanvas,
   saveResearchCanvas,
@@ -23,8 +22,6 @@ function makeEdgeId(): string {
 }
 
 export default function ResearchCanvas() {
-  const [workspaceId, setWorkspaceId] = useState<string>();
-  const [projectId, setProjectId] = useState<string>();
   const [nodes, setNodes] = useState<CanvasNode[]>([]);
   const [edges, setEdges] = useState<CanvasEdge[]>([]);
   const [viewport, setViewport] = useState<CanvasViewport>({
@@ -38,25 +35,11 @@ export default function ResearchCanvas() {
   const [feedback, setFeedback] = useState("");
   const queryClient = useQueryClient();
 
-  const workspaces = useQuery({
-    queryKey: ["workspaces"],
-    queryFn: listWorkspaces,
-    staleTime: 30_000,
-  });
-
-  const activeWorkspaceId = workspaceId ?? workspaces.data?.[0]?.id;
-
-  const projects = useQuery({
-    queryKey: ["projects", activeWorkspaceId],
-    queryFn: () => {
-      if (!activeWorkspaceId) throw new Error("No workspace is selected.");
-      return listProjects(activeWorkspaceId);
-    },
-    enabled: Boolean(activeWorkspaceId),
-    staleTime: 15_000,
-  });
-
-  const activeProjectId = projectId ?? projects.data?.[0]?.id;
+  const {
+    projectId: activeProjectId,
+    projectsQuery: projects,
+    workspacesQuery: workspaces,
+  } = useResearchContext();
 
   const canvas = useQuery({
     queryKey: ["research-canvas", activeProjectId],
@@ -177,7 +160,6 @@ export default function ResearchCanvas() {
   };
 
   const error = [
-    workspaces.error,
     projects.error,
     canvas.error,
   ].find((value): value is Error => value instanceof Error);
@@ -221,43 +203,6 @@ export default function ResearchCanvas() {
           </Link>
         </div>
 
-        <div className="grid grid-2" style={{ marginTop: 14 }}>
-          <div className="field">
-            <label htmlFor="canvas-workspace">Workspace</label>
-            <select
-              id="canvas-workspace"
-              className="input"
-              value={activeWorkspaceId ?? ""}
-              onChange={(event) => {
-                setWorkspaceId(event.target.value);
-                setProjectId(undefined);
-              }}
-            >
-              {(workspaces.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="canvas-project">Project</label>
-            <select
-              id="canvas-project"
-              className="input"
-              value={activeProjectId ?? ""}
-              onChange={(event) => setProjectId(event.target.value)}
-              disabled={projects.isPending}
-            >
-              {(projects.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
 
         <div className="row" style={{ marginTop: 14 }}>
           <span className="tag">Revision {revision}</span>
