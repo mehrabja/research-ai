@@ -36,7 +36,7 @@ export async function createProject(input: {
   name: string;
   description?: string;
 }): Promise<ProjectRead> {
-  const { data, error } = await api.POST("/api/v1/projects", {
+  const { data, error, response } = await api.POST("/api/v1/projects", {
     params: {
       query: {
         workspace_id: input.workspaceId,
@@ -50,7 +50,11 @@ export async function createProject(input: {
   });
 
   if (error || !data) {
-    throw new Error(getApiErrorMessage(error));
+    throw apiErrorFromUnknown(error, {
+      status: response.status,
+      requestId: response.headers.get("x-request-id"),
+      fallback: "Project creation failed",
+    });
   }
 
   return data;
@@ -60,7 +64,7 @@ export async function archiveProject(
   projectId: string,
   workspaceId?: string,
 ): Promise<ProjectRead> {
-  const { data, error } = await api.POST(
+  const { data, error, response } = await api.POST(
     "/api/v1/projects/{project_id}/archive",
     {
       params: {
@@ -71,7 +75,11 @@ export async function archiveProject(
   );
 
   if (error || !data) {
-    throw new Error(getApiErrorMessage(error));
+    throw apiErrorFromUnknown(error, {
+      status: response.status,
+      requestId: response.headers.get("x-request-id"),
+      fallback: "Project archive failed",
+    });
   }
 
   return data;
@@ -106,12 +114,3 @@ export async function listProjectReports(
   return data?.items ?? [];
 }
 
-function getApiErrorMessage(error: unknown): string {
-  if (error && typeof error === "object") {
-    const value = error as { detail?: unknown; message?: unknown };
-    if (typeof value.detail === "string") return value.detail;
-    if (typeof value.message === "string") return value.message;
-  }
-
-  return "Project API request failed";
-}
