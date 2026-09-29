@@ -278,3 +278,91 @@ def test_cross_user_isolation(client):
         db.commit()
 
     assert resp.status_code == 404
+
+
+def test_manuscript_draft_autosave_conflict_and_commit(client):
+    c, uid = client
+    _pid, rid = _setup(uid)
+
+    generated = c.post(
+        f"/api/v1/reports/{rid}/manuscript/generate",
+        json={"async": False},
+    )
+    assert generated.status_code == 200
+
+    current = c.get(f"/api/v1/reports/{rid}/manuscript")
+    assert current.status_code == 200
+    base = current.json()
+    base_version_id = base["version"]["id"]
+    sections = [
+        {
+            "section_key": section["section_key"],
+            "title": section["title"] + " edited",
+            "purpose": section["purpose"],
+            "display_order": section["display_order"],
+            "word_budget": section["word_budget"],
+        }
+        for section in base["sections"]
+    ]
+    content = {
+        "title": base["version"]["title"] + " edited",
+        "word_target": base["version"]["word_target"],
+        "abstract_direction": base["version"]["abstract_direction"],
+        "sections": sections,
+    }
+
+    created = c.put(
+        f"/api/v1/reports/{rid}/manuscript/draft",
+        json={
+            "base_version_id": base_version_id,
+            "revision": 0,
+            "content": content,
+        },
+    )
+    assert created.status_code == 200
+    assert created.json()["revision"] == 0
+
+    updated = c.put(
+        f"/api/v1/reports/{rid}/manuscript/draft",
+        json={
+            "base_version_id": base_version_id,
+            "revision": 0,
+            "content": content,
+        },
+    )
+    assert updated.status_code == 200
+    assert updated.json()["revision"] == 1
+
+    stale = c.put(
+        f"/api/v1/reports/{rid}/manuscript/draft",
+        json={
+            "base_version_id": base_version_id,
+            "revision": 0,
+            "content": content,
+        },
+    )
+    assert stale.status_code == 409
+
+    committed = c.post(
+        f"/api/v1/reports/{rid}/manuscript/draft/commit",
+        json={
+            "base_version_id": base_version_id,
+            "revision": 1,
+        },
+    )
+    assert committed.status_code == 201
+    new_version = committed.json()
+    assert new_version["version"] == base["version"]["version"] + 1
+    assert new_version["title"].endswith("edited")
+
+    latest = c.get(f"/api/v1/reports/{rid}/manuscript")
+    assert latest.status_code == 200
+    latest_body = latest.json()
+    assert latest_body["version"]["id"] == new_version["id"]
+    assert len(latest_body["sections"]) == len(base["sections"])
+    assert latest_body["sections"][0]["title"].endswith("edited")
+
+    draft_after_commit = c.get(
+        f"/api/v1/reports/{rid}/manuscript/draft"
+    )
+    assert draft_after_commit.status_code == 404
