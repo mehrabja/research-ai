@@ -70,11 +70,11 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         error instanceof Error ? error.message : "Unable to load notifications.",
       );
     }
-  }
+  }, []);
 
   useEffect(() => {
     void refreshNotifications();
-  }, []);
+  }, [refreshNotifications]);
 
   async function handleRead(id: string) {
     try {
