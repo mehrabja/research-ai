@@ -89,9 +89,9 @@ def search_workspace(
         for r in reports
     )
 
-    sources = list(
+    source_rows = list(
         db.execute(
-            select(Source)
+            select(Source, Project.id)
             .join(Report, Report.id == Source.report_id)
             .join(Project, Project.id == Report.project_id)
             .where(
@@ -115,10 +115,10 @@ def search_workspace(
             "title": s.title,
             "snippet": s.doi or s.url,
             "updated_at": s.updated_at,
-            "project_id": s.report.project_id if getattr(s, "report", None) is not None else None,
+            "project_id": project_id,
             "report_id": s.report_id,
         }
-        for s in sources
+        for s, project_id in source_rows
     )
 
     project_files = list(
