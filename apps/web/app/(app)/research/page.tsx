@@ -31,17 +31,17 @@ export default function ResearchPage() {
         <section className="card metric">
           <div className="label">Candidate papers</div>
           <div className="value">Live</div>
-          <div className="delta">From federated provider search</div>
+          <div className="delta">From the federated discovery API</div>
         </section>
         <section className="card metric">
-          <div className="label">Duplicate suppression</div>
+          <div className="label">Advanced filters</div>
           <div className="value">On</div>
-          <div className="delta good">DOI / title-year-author merge</div>
+          <div className="delta">Year, citations, author, venue, type, language</div>
         </section>
         <section className="card metric">
-          <div className="label">Evidence-ready</div>
-          <div className="value">Next</div>
-          <div className="delta">Full-text extraction in the next slice</div>
+          <div className="label">Evidence pipeline</div>
+          <div className="value">Ready</div>
+          <div className="delta">Extraction and file-to-evidence linkage are available</div>
         </section>
       </div>
     </>
