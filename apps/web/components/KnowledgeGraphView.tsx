@@ -16,7 +16,19 @@ import {
   listKnowledgeGraphNodes,
 } from "@/lib/api/knowledgeGraph";
 
-export default function KnowledgeGraphView() {
+export default function neighborLabel(value: {
+  [key: string]: unknown;
+}): string {
+  if (typeof value.label === "string" && value.label.trim()) {
+    return value.label;
+  }
+  if (typeof value.node_key === "string" && value.node_key.trim()) {
+    return value.node_key;
+  }
+  return "Neighbor";
+}
+
+function KnowledgeGraphView() {
   const queryClient = useQueryClient();
   const {
     projectId: activeProjectId,
@@ -325,7 +337,7 @@ export default function KnowledgeGraphView() {
                     {(neighbors.data ?? []).map((item) => (
                       <div className="list-item" key={item.edge_id}>
                         <div className="row">
-                          <strong>{item.neighbor.label ?? item.neighbor.node_key ?? "Neighbor"}</strong>
+                          <strong>{neighborLabel(item.neighbor)}</strong>
                           <span className="tag">{item.relation_type}</span>
                         </div>
                         <div className="meta" style={{ marginTop: 4 }}>
