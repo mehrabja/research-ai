@@ -477,6 +477,13 @@ def confirm_password_reset(
         token=payload.token,
         new_password=payload.new_password,
     )
+    emit_audit(
+        "PASSWORD_RESET",
+        db=db,
+        user_id=str(user.id),
+        reason="password_reset_token_consumed",
+        category="authentication",
+    )
     db.commit()
     db.refresh(user)
     return user
