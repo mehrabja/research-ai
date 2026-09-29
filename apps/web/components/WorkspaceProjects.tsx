@@ -16,7 +16,7 @@ export default function WorkspaceProjects() {
   const queryClient = useQueryClient();
 
   const {
-    workspaceId: activeWorkspaceId ?? undefined,
+    workspaceId: activeWorkspaceId,
     workspacesQuery: workspaces,
     projectsQuery: projects,
     setWorkspace: setWorkspaceId,
