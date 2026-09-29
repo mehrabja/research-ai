@@ -4,8 +4,9 @@ import hashlib
 import hmac
 import secrets
 import time
-import urllib.parse
+from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib import parse
 
 import httpx
 from sqlalchemy import select
@@ -61,8 +62,6 @@ def verify_state(provider: str, state: str) -> bool:
 
 
 def store_state(db: Session, *, provider: str, state: str) -> OAuthState:
-    from datetime import UTC, datetime, timedelta
-
     row = OAuthState(
         provider=provider,
         state_hash=hashlib.sha256(state.encode("utf-8")).hexdigest(),
@@ -74,8 +73,6 @@ def store_state(db: Session, *, provider: str, state: str) -> OAuthState:
 
 
 def consume_state(db: Session, *, provider: str, state: str) -> bool:
-    from datetime import UTC, datetime
-
     digest = hashlib.sha256(state.encode("utf-8")).hexdigest()
     row = db.execute(
         select(OAuthState)
@@ -105,7 +102,7 @@ def authorization_url(provider: str, state: str) -> str:
             "access_type": "offline",
             "prompt": "select_account",
         }
-        return "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
+        return "https://accounts.google.com/o/oauth2/v2/auth?" + parse.urlencode(params)
     if provider == "github":
         params = {
             "client_id": settings.github_oauth_client_id,
@@ -113,7 +110,7 @@ def authorization_url(provider: str, state: str) -> str:
             "scope": "read:user user:email",
             "state": state,
         }
-        return "https://github.com/login/oauth/authorize?" + urllib.parse.urlencode(params)
+        return "https://github.com/login/oauth/authorize?" + parse.urlencode(params)
     raise InvalidCredentials()
 
 
@@ -250,7 +247,6 @@ def login_or_create_oauth_user(
         db.add(account)
 
     if bool(profile.get("email_verified")) and user.email_verified_at is None:
-        from datetime import UTC, datetime
         user.email_verified_at = datetime.now(UTC)
 
     access = create_access_token(subject=str(user.id))
