@@ -810,6 +810,10 @@ class Settings(BaseSettings):
                     f"{_MIN_JWT_SECRET_BYTES} bytes when "
                     "APP_ENV=production."
                 )
+            if self.file_malware_scan_mode != "required":
+                raise ValueError(
+                    "FILE_MALWARE_SCAN_MODE must be 'required' in production."
+                )
         return self
 
     @model_validator(mode="after")
