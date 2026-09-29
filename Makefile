@@ -1,7 +1,7 @@
 API_DIR=apps/api
 WEB_DIR=apps/web
 
-.PHONY: api-lint api-typecheck api-migrate api-test web-typecheck web-build web-test web-e2e frontend-security-audit production-smoke release-gate
+.PHONY: api-lint api-typecheck api-migrate api-test web-typecheck web-build web-test web-e2e frontend-security-audit production-smoke chaos-recovery provider-activation final-audit release-gate
 
 api-lint:
 	cd $(API_DIR) && ruff check app tests
@@ -33,6 +33,15 @@ frontend-security-audit:
 production-smoke:
 	python scripts/production_smoke.py
 
+chaos-recovery:
+	python scripts/chaos_recovery.py
+
+provider-activation:
+	python scripts/provider_activation.py
+
+final-audit:
+	python scripts/final_audit.py
+
 release-gate:
 	$(MAKE) api-lint
 	$(MAKE) api-typecheck
@@ -42,3 +51,4 @@ release-gate:
 	$(MAKE) web-build
 	$(MAKE) web-test
 	$(MAKE) frontend-security-audit
+	$(MAKE) final-audit
