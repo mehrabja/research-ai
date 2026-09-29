@@ -155,8 +155,8 @@ class StripeBillingProvider:
         self._post(
             f"subscriptions/{subscription_id}",
             data={
-                f"items[0][id]": item_id,
-                f"items[0][price]": price_id,
+                "items[0][id]": item_id,
+                "items[0][price]": price_id,
                 "proration_behavior": "create_prorations",
             },
             idempotency_key=idempotency_key,
