@@ -1,5 +1,6 @@
 """Register every model so ``Base.metadata`` is complete for Alembic."""
 
+from app.db.models.audit import AuditEvent  # noqa: F401
 from app.db.models.academic_qa import (
     AcademicQAFinding,
     AcademicQARun,
@@ -270,4 +271,5 @@ __all__ = [
     "APIToken",
     "OAuthAccount",
     "OAuthState",
+    "AuditEvent",
 ]
