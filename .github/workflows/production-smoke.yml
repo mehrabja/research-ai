@@ -1,0 +1,45 @@
+name: Production Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployment environment to verify
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: External production/staging smoke
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      SMOKE_BASE_URL: ${{ secrets.PRODUCTION_SMOKE_BASE_URL }}
+      SMOKE_ACCESS_TOKEN: ${{ secrets.PRODUCTION_SMOKE_ACCESS_TOKEN }}
+      SMOKE_API_KEY: ${{ secrets.PRODUCTION_SMOKE_API_KEY }}
+      SMOKE_EXPECT_PROVIDER: ${{ vars.PRODUCTION_SMOKE_EXPECT_PROVIDER }}
+      SMOKE_VERIFY_OPENROUTER: ${{ vars.PRODUCTION_SMOKE_VERIFY_OPENROUTER }}
+      SMOKE_VERIFY_SEMANTIC_SCHOLAR: ${{ vars.PRODUCTION_SMOKE_VERIFY_SEMANTIC_SCHOLAR }}
+      SMOKE_VERIFY_OPENALEX: ${{ vars.PRODUCTION_SMOKE_VERIFY_OPENALEX }}
+      SMOKE_VERIFY_CROSSREF: ${{ vars.PRODUCTION_SMOKE_VERIFY_CROSSREF }}
+      SMOKE_VERIFY_NCBI: ${{ vars.PRODUCTION_SMOKE_VERIFY_NCBI }}
+      SMOKE_VERIFY_UNPAYWALL: ${{ vars.PRODUCTION_SMOKE_VERIFY_UNPAYWALL }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENROUTER_BASE_URL: ${{ vars.OPENROUTER_BASE_URL }}
+      SEMANTIC_SCHOLAR_API_KEY: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
+      OPENALEX_API_KEY: ${{ secrets.OPENALEX_API_KEY }}
+      CROSSREF_MAILTO: ${{ vars.CROSSREF_MAILTO }}
+      NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
+      UNPAYWALL_EMAIL: ${{ vars.UNPAYWALL_EMAIL }}
+      UNPAYWALL_SMOKE_DOI: ${{ vars.UNPAYWALL_SMOKE_DOI }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run production smoke
+        run: python scripts/production_smoke.py
