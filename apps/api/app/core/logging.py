@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sys
 from datetime import UTC, date, datetime
 from enum import Enum
@@ -64,6 +65,12 @@ _REDACTED_SUBSTRINGS = (
     "postgresql+psycopg://",
 )
 
+_REDACTED_PATTERNS = (
+    re.compile(r"(?i)\bsk-or-v1-[A-Za-z0-9._-]{16,}\b"),
+    re.compile(r"(?i)\bsk-[A-Za-z0-9_-]{16,}\b"),
+    re.compile(r"(?i)\bwhsec_[A-Za-z0-9_-]{16,}\b"),
+)
+
 
 def _safe_serialize(value: Any) -> Any:
     if value is None or isinstance(value, (bool, int, float, str)):
@@ -95,6 +102,8 @@ def redact(value: Any) -> Any:
     if isinstance(value, str):
         low = value.lower()
         if any(s in low for s in _REDACTED_SUBSTRINGS):
+            return "***"
+        if any(pattern.search(value) for pattern in _REDACTED_PATTERNS):
             return "***"
         return value
     return value
