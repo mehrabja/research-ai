@@ -54,9 +54,12 @@ export default function PDFWorkspace() {
 
   useEffect(() => {
     if (!workspace.data) return;
-    setActiveFileId(workspace.data.active_file_id);
-    setPageNumber(workspace.data.page_number);
-    setZoom(workspace.data.zoom);
+    const timer = window.setTimeout(() => {
+      setActiveFileId(workspace.data?.active_file_id ?? null);
+      setPageNumber(workspace.data?.page_number ?? 1);
+      setZoom(workspace.data?.zoom ?? 1);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [workspace.data]);
 
   const selectedFile = useMemo(
