@@ -227,6 +227,51 @@ def test_advanced_filters_overfetch_provider_batch(
     assert provider.last_limit == 10
 
 
+def test_advanced_metadata_filters_exclude_missing_values(
+    cleanup_users: list[uuid.UUID],
+    override_provider: dict,
+) -> None:
+    _, token = _register(cleanup_users)
+    rep = _create_report(token)
+    override_provider["provider"] = _FakeProvider(
+        candidates=[
+            SourceCandidate(
+                source_api="openalex",
+                external_source_id="with-meta",
+                title="With metadata",
+                year=2024,
+                citation_count=10,
+                authors=["Alice"],
+                source_meta={
+                    "venue": "NeurIPS",
+                    "publication_type": "journal-article",
+                    "language": "en",
+                    "is_open_access": True,
+                },
+            ),
+            SourceCandidate(
+                source_api="openalex",
+                external_source_id="missing-meta",
+                title="Missing metadata",
+                year=2024,
+                citation_count=20,
+                authors=["Alice"],
+                source_meta={},
+            ),
+        ],
+    )
+
+    r = client.get(
+        f"/api/v1/reports/{rep['id']}/sources/search"
+        "?q=hello&limit=10&venue=NeurIPS&publication_type=journal-article"
+        "&language=en&open_access=true",
+        headers=_auth(token),
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert [item["external_source_id"] for item in body["candidates"]] == ["with-meta"]
+
+
 def test_search_foreign_report_404(
     cleanup_users: list[uuid.UUID],
     override_provider: dict,
