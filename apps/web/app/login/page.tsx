@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -204,7 +205,7 @@ export default function LoginPage() {
               </label>
 
               <Link
-                href="/password-reset"
+                href={"/password-reset" as Route}
                 className="muted small"
                 style={{
                   background: "none",
