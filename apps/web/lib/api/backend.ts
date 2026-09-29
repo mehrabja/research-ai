@@ -6,11 +6,13 @@ function backendBaseUrl(): string {
 
 /**
  * Builds the upstream FastAPI URL for a given API-proxy path + querystring.
+ * The Next BFF owns the public /api prefix, while FastAPI exposes its router
+ * under /api/v1. Callers pass the route portion beginning at v1.
  */
 export function backendUrl(path: string[], search: string) {
   const joined = path.join("/");
   const baseUrl = backendBaseUrl().replace(/\/$/, "");
-  return `${baseUrl}/${joined}${search ? `?${search}` : ""}`;
+  return `${baseUrl}/api/${joined}${search ? `?${search}` : ""}`;
 }
 
 const HOP_BY_HOP_REQUEST_HEADERS = new Set([
