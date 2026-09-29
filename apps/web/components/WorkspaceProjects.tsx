@@ -8,6 +8,10 @@ import {
   createProject,
   type Project,
 } from "@/lib/api/projects";
+import {
+  reactivateWorkspace,
+  suspendWorkspace,
+} from "@/lib/api/workspaces";
 import { useResearchContext } from "@/lib/research-context";
 
 export default function WorkspaceProjects() {
@@ -44,11 +48,24 @@ export default function WorkspaceProjects() {
     },
   });
 
+  const lifecycle = useMutation({
+    mutationFn: async (action: "suspend" | "reactivate") => {
+      if (!activeWorkspaceId) throw new Error("No workspace is selected.");
+      return action === "suspend"
+        ? suspendWorkspace(activeWorkspaceId)
+        : reactivateWorkspace(activeWorkspaceId);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+    },
+  });
+
   const busy =
     workspaces.isPending ||
     projects.isPending ||
     create.isPending ||
-    archive.isPending;
+    archive.isPending ||
+    lifecycle.isPending;
 
   if (workspaces.error || projects.error) {
     const message =
@@ -75,8 +92,59 @@ export default function WorkspaceProjects() {
     );
   }
 
+  const activeWorkspace =
+    (workspaces.data ?? []).find(
+      (workspace) => workspace.id === activeWorkspaceId,
+    ) ?? null;
+  const isSuspended = activeWorkspace?.status === "suspended";
+  const owner = activeWorkspace?.role === "owner";
+
   return (
-    <div className="stack" style={{ gap: 16 }}>      <section className="grid grid-2">
+    <div className="stack" style={{ gap: 16 }}>
+      <section className="card pad">
+        <div className="row">
+          <div>
+            <h2>Workspace lifecycle</h2>
+            <p className="muted small" style={{ marginTop: 4 }}>
+              Owner-only suspend/reactivate controls backed by the workspace lifecycle API.
+            </p>
+          </div>
+          <span className={"tag " + (isSuspended ? "" : "success")}>
+            {activeWorkspace?.status ?? "Loading…"}
+          </span>
+        </div>
+        {lifecycle.error && (
+          <p className="muted" role="alert" style={{ marginTop: 10 }}>
+            {lifecycle.error instanceof Error
+              ? lifecycle.error.message
+              : "Workspace lifecycle request failed."}
+          </p>
+        )}
+        <div className="actions" style={{ marginTop: 12 }}>
+          {owner && isSuspended ? (
+            <button
+              className="btn primary"
+              type="button"
+              disabled={busy}
+              onClick={() => lifecycle.mutate("reactivate")}
+            >
+              {lifecycle.isPending ? "Reactivating…" : "Reactivate workspace"}
+            </button>
+          ) : owner ? (
+            <button
+              className="btn"
+              type="button"
+              disabled={busy}
+              onClick={() => lifecycle.mutate("suspend")}
+            >
+              {lifecycle.isPending ? "Suspending…" : "Suspend workspace"}
+            </button>
+          ) : (
+            <span className="muted small">Only the workspace owner can change lifecycle state.</span>
+          )}
+        </div>
+      </section>
+      <section className="grid grid-2">
         <div className="card pad">
           <div className="row">
             <div>
