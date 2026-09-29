@@ -2,43 +2,32 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { listProjectReports, listProjects } from "@/lib/api/projects";
-import { listWorkspaces } from "@/lib/api/workspaces";
+import { useResearchContext } from "@/lib/research-context";
 import { getCurrentManuscript } from "@/lib/api/manuscript";
 import { generateManuscriptHumanization, getCurrentManuscriptHumanization, validateManuscriptHumanization } from "@/lib/api/humanization";
 
 const MODES = ["conservative", "academic", "natural_academic", "journal_targeted"];
 
 export default function HumanizeStudio() {
-  const [workspaceId, setWorkspaceId] = useState<string>();
-  const [projectId, setProjectId] = useState<string>();
-  const [reportId, setReportId] = useState<string>();
   const [mode, setMode] = useState("academic");
   const queryClient = useQueryClient();
 
 
-  const workspaces = useQuery({ queryKey: ["workspaces"], queryFn: listWorkspaces, staleTime: 30_000 });
-  const activeWorkspaceId = workspaceId ?? workspaces.data?.[0]?.id;
-  const projects = useQuery({
-    queryKey: ["projects", activeWorkspaceId],
-    queryFn: () => {
-      if (!activeWorkspaceId) throw new Error("No workspace is selected.");
-      return listProjects(activeWorkspaceId);
-    },
-    enabled: Boolean(activeWorkspaceId),
-    staleTime: 15_000,
-  });
-  const activeProjectId = projectId ?? projects.data?.[0]?.id;
-  const reports = useQuery({
-    queryKey: ["project-reports", activeProjectId],
-    queryFn: () => {
-      if (!activeProjectId) throw new Error("No project is selected.");
-      return listProjectReports(activeProjectId);
-    },
-    enabled: Boolean(activeProjectId),
-    staleTime: 15_000,
-  });
-  const activeReportId = reportId ?? reports.data?.[0]?.id;
+  const {
+    workspaceId,
+    projectId,
+    reportId,
+    workspacesQuery,
+    projectsQuery,
+    reportsQuery,
+    setWorkspace,
+    setProject,
+    setReport,
+  } = useResearchContext();
+
+  const activeWorkspaceId = workspaceId ?? undefined;
+  const activeProjectId = projectId ?? undefined;
+  const activeReportId = reportId ?? undefined;
 
 
   const manuscript = useQuery({ queryKey: ["manuscript-current", activeReportId], queryFn: () => getCurrentManuscript(activeReportId!), enabled: Boolean(activeReportId), staleTime: 10_000 });
@@ -53,7 +42,7 @@ export default function HumanizeStudio() {
   });
   const validate = useMutation({ mutationFn: () => validateManuscriptHumanization(activeReportId!) });
 
-  const errors = [workspaces.error, projects.error, reports.error, manuscript.error, humanization.error, generate.error, validate.error].filter(Boolean);
+  const errors = [workspacesQuery.error, projectsQuery.error, reportsQuery.error, manuscript.error, humanization.error, generate.error, validate.error].filter(Boolean);
   const firstError = errors.find((error): error is Error => error instanceof Error);
   if (firstError) return <section className="card pad" role="alert"><h2>Humanization unavailable</h2><p className="muted" style={{ marginTop: 6 }}>{firstError.message}</p></section>;
 
@@ -67,23 +56,23 @@ export default function HumanizeStudio() {
           <div className="field">
             <label htmlFor="humanize-workspace">Workspace</label>
             <select id="humanize-workspace" className="input" value={activeWorkspaceId ?? ""} onChange={(event) => {
-              setWorkspaceId(event.target.value); setProjectId(undefined); setReportId(undefined);
+              setWorkspace(event.target.value);
             }}>
-              {(workspaces.data ?? []).map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
+              {(workspacesQuery.data ?? []).map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
             </select>
           </div>
           <div className="field">
             <label htmlFor="humanize-project">Project</label>
             <select id="humanize-project" className="input" value={activeProjectId ?? ""} onChange={(event) => {
-              setProjectId(event.target.value); setReportId(undefined);
-            }} disabled={projects.isPending}>
-              {(projects.data ?? []).map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+              setProject(event.target.value);
+            }} disabled={projectsQuery.isPending}>
+              {(projectsQuery.data ?? []).map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
             </select>
           </div>
           <div className="field">
             <label htmlFor="humanize-report">Research report</label>
-            <select id="humanize-report" className="input" value={activeReportId ?? ""} onChange={(event) => setReportId(event.target.value)} disabled={reports.isPending}>
-              {(reports.data ?? []).map((report) => <option key={report.id} value={report.id}>{report.topic}</option>)}
+            <select id="humanize-report" className="input" value={activeReportId ?? ""} onChange={(event) => setReport(event.target.value)} disabled={reportsQuery.isPending}>
+              {(reportsQuery.data ?? []).map((report) => <option key={report.id} value={report.id}>{report.topic}</option>)}
             </select>
           </div>
         </div></div>
