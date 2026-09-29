@@ -225,6 +225,11 @@ def search_source_candidates(
 
         if sort_by != "relevance":
             candidates.sort(key=sort_key, reverse=sort_order == "desc")
+
+        # Provider overfetch supports accurate post-filtering while the
+        # public API still honors the caller's requested page size.
+        candidates = candidates[:effective_limit]
+
         report = get_report(
             db,
             user_id=user_id,
@@ -249,7 +254,7 @@ def search_source_candidates(
                 idempotency_key=f"source-search:{uuid.uuid4()}",
             )
             db.commit()
-        return candidates[:effective_limit]
+        return candidates
     except SourceProviderTimeoutError as exc:
         raise app_exceptions.SourceProviderUnavailable() from exc
     except SourceProviderUnavailableError as exc:
