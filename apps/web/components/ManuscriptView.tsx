@@ -74,33 +74,9 @@ export default function ManuscriptView() {
             <Link className="btn primary" href={contextHref("/generate")}>AI Studio</Link>
           </div>
         </div>
-        <div style={{ marginTop: 14 }}><div className="grid grid-3">
-          <div className="field">
-            <label htmlFor="manuscript-workspace">Workspace</label>
-            <select id="manuscript-workspace" className="input" value={activeWorkspaceId ?? ""} onChange={(event) => {
-              setWorkspaceId(event.target.value); setProjectId(undefined); setReportId(undefined);
-            }}>
-              {(workspaces.data ?? []).map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="manuscript-project">Project</label>
-            <select id="manuscript-project" className="input" value={activeProjectId ?? ""} onChange={(event) => {
-              setProjectId(event.target.value); setReportId(undefined);
-            }} disabled={projects.isPending}>
-              {(projects.data ?? []).map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="manuscript-report">Research report</label>
-            <select id="manuscript-report" className="input" value={activeReportId ?? ""} onChange={(event) => setReportId(event.target.value)} disabled={reports.isPending}>
-              {(reports.data ?? []).map((report) => <option key={report.id} value={report.id}>{report.topic}</option>)}
-            </select>
-          </div>
-        </div></div>
       </section>
 
-      {!activeReportId && !reports.isPending && <section className="card pad empty"><div className="big">∅</div><div>No research report exists in this project yet.</div><Link className="btn" href="/research" style={{ marginTop: 12 }}>Open Research</Link></section>}
+      {!activeReportId && !reports.isPending && <section className="card pad empty"><div className="big">∅</div><div>No research report exists in this project yet.</div><Link className="btn" href={contextHref("/research")} style={{ marginTop: 12 }}>Open Research</Link></section>}
 
       {activeReportId && !current && !manuscript.isPending && (
         <section className="card pad empty">
