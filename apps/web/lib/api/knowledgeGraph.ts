@@ -8,6 +8,75 @@ export type KnowledgeGraphSummary =
 export type KnowledgeGraphBuildResponse =
   components["schemas"]["KnowledgeGraphBuildResponse"];
 
+export type KnowledgeGraphNode =
+  components["schemas"]["KnowledgeGraphNodeRead"];
+export type KnowledgeGraphNeighbor =
+  components["schemas"]["KnowledgeGraphNeighborRead"];
+
+export async function listKnowledgeGraphNodes(
+  projectId: string,
+  options: {
+    nodeType?: string;
+    q?: string;
+    limit?: number;
+    offset?: number;
+  } = {},
+): Promise<KnowledgeGraphNode[]> {
+  const { data, error } = await api.GET(
+    "/api/v1/projects/{project_id}/knowledge-graph/nodes",
+    {
+      params: {
+        path: { project_id: projectId },
+        query: {
+          node_type: options.nodeType,
+          q: options.q,
+          limit: options.limit ?? 100,
+          offset: options.offset ?? 0,
+        },
+      },
+    },
+  );
+
+  if (error || !data) {
+    throw new Error(getApiErrorMessage(error));
+  }
+
+  return data;
+}
+
+export async function getKnowledgeGraphNeighbors(
+  projectId: string,
+  nodeId: string,
+  options: {
+    direction?: "in" | "out" | "both";
+    relationTypes?: string[];
+    limit?: number;
+  } = {},
+): Promise<KnowledgeGraphNeighbor[]> {
+  const { data, error } = await api.GET(
+    "/api/v1/projects/{project_id}/knowledge-graph/nodes/{node_id}/neighbors",
+    {
+      params: {
+        path: {
+          project_id: projectId,
+          node_id: nodeId,
+        },
+        query: {
+          direction: options.direction ?? "both",
+          relation_types: options.relationTypes,
+          limit: options.limit ?? 50,
+        },
+      },
+    },
+  );
+
+  if (error || !data) {
+    throw new Error(getApiErrorMessage(error));
+  }
+
+  return data;
+}
+
 export async function getKnowledgeGraphSummary(
   projectId: string,
 ): Promise<KnowledgeGraphSummary | null> {
