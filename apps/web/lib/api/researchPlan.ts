@@ -68,6 +68,22 @@ export async function saveResearchPlanRevision(
   return data;
 }
 
+export async function restoreResearchPlanVersion(
+  projectId: string,
+  targetVersion: number,
+): Promise<ResearchPlan> {
+  const { data, error } = await api.POST(
+    "/api/v1/projects/{project_id}/research-plan/restore",
+    {
+      params: { path: { project_id: projectId } },
+      body: { target_version: targetVersion },
+    },
+  );
+
+  if (error || !data) throw new Error(getApiErrorMessage(error));
+  return data;
+}
+
 export async function validateResearchPlan(
   projectId: string,
 ): Promise<ResearchPlanValidation> {
