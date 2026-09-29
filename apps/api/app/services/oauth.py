@@ -114,6 +114,7 @@ def consume_state(
     db.flush()
     return True
 
+
 def authorization_url(provider: str, state: str, code_challenge: str) -> str:
     settings = get_settings()
     if provider == "google":
