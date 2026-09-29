@@ -1,7 +1,7 @@
 API_DIR=apps/api
 WEB_DIR=apps/web
 
-.PHONY: api-lint api-typecheck api-migrate api-test web-typecheck web-build web-test web-e2e
+.PHONY: api-lint api-typecheck api-migrate api-test web-typecheck web-build web-test web-e2e frontend-security-audit production-smoke release-gate
 
 api-lint:
 	cd $(API_DIR) && ruff check app tests
@@ -26,3 +26,19 @@ web-test:
 
 web-e2e:
 	cd $(WEB_DIR) && npm run test:e2e
+
+frontend-security-audit:
+	python scripts/frontend_security_audit.py
+
+production-smoke:
+	python scripts/production_smoke.py
+
+release-gate:
+	$(MAKE) api-lint
+	$(MAKE) api-typecheck
+	$(MAKE) api-migrate
+	$(MAKE) api-test
+	$(MAKE) web-typecheck
+	$(MAKE) web-build
+	$(MAKE) web-test
+	$(MAKE) frontend-security-audit
