@@ -3883,6 +3883,10 @@ export interface components {
             support_level: string;
             /** Relevance Score */
             relevance_score: number;
+            /** Provenance */
+            provenance: {
+                [key: string]: unknown;
+            };
         };
         /** ClaimRead */
         ClaimRead: {
