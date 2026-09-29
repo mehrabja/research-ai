@@ -2,8 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { listProjects } from "@/lib/api/projects";
-import { listWorkspaces } from "@/lib/api/workspaces";
+import { useResearchContext } from "@/lib/research-context";
 import {
   analyzeLiterature,
   listLiterature,
@@ -23,33 +22,17 @@ const SCREENING_OPTIONS = [
 ] as const;
 
 export default function LiteratureMap() {
-  const [workspaceId, setWorkspaceId] = useState<string>();
-  const [projectId, setProjectId] = useState<string>();
   const [screening, setScreening] =
     useState<(typeof SCREENING_OPTIONS)[number]>("all");
-  const queryClient = useQueryClient();
 
-  const workspaces = useQuery({
-    queryKey: ["workspaces"],
-    queryFn: listWorkspaces,
-    staleTime: 30_000,
-  });
-
-  const activeWorkspaceId =
-    workspaceId ?? workspaces.data?.[0]?.id;
-
-  const projects = useQuery({
-    queryKey: ["projects", activeWorkspaceId],
-    queryFn: () => {
-      if (!activeWorkspaceId) throw new Error("No workspace is selected.");
-      return listProjects(activeWorkspaceId);
-    },
-    enabled: Boolean(activeWorkspaceId),
-    staleTime: 15_000,
-  });
-
-  const activeProjectId =
-    projectId ?? projects.data?.[0]?.id;
+  const {
+    workspaceId: activeWorkspaceId,
+    projectId: activeProjectId,
+    workspacesQuery: workspaces,
+    projectsQuery: projects,
+    setWorkspace: setWorkspaceId,
+    setProject: setProjectId,
+  } = useResearchContext();
 
   const literature = useQuery({
     queryKey: ["literature", activeProjectId, screening],
