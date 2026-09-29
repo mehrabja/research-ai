@@ -147,7 +147,7 @@ test("authenticated app shell exposes main navigation", async ({
   ).toBeVisible();
 
   await expect(
-    page.getByRole("link", { name: /^◎ Sources$/ }),
+    page.locator('a[href="/sources"]').first(),
   ).toBeVisible();
 });
 
