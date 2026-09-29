@@ -9,12 +9,14 @@ import {
 describe("session query cache isolation", () => {
   it("clears cache when the authenticated user changes", () => {
     const queryClient = new QueryClient();
+    queryClient.setQueryData(["session", "user"], { id: "user-a" });
     queryClient.setQueryData(["workspace-usage", "tenant-a"], {
       workspace_id: "tenant-a",
     });
 
     expect(syncSessionUser(queryClient, "user-a")).toBe(true);
     expect(queryClient.getQueryData(["workspace-usage", "tenant-a"])).toBeUndefined();
+    expect(queryClient.getQueryData(["session", "user"])).toEqual({ id: "user-a" });
 
     queryClient.setQueryData(["workspace-usage", "tenant-a"], {
       workspace_id: "tenant-a",
