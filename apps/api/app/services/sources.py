@@ -131,10 +131,30 @@ def search_source_candidates(
     if effective_limit > settings.source_search_limit_max:
         effective_limit = settings.source_search_limit_max
 
+    advanced_filter_count = sum(
+        value is not None
+        for value in (
+            year_from,
+            year_to,
+            min_citations,
+            max_citations,
+            author,
+            venue,
+            publication_type,
+            language,
+        )
+    )
+    provider_limit = effective_limit
+    if advanced_filter_count or sort_by != "relevance":
+        provider_limit = min(
+            settings.source_search_limit_max,
+            max(effective_limit, effective_limit * 5),
+        )
+
     try:
         candidates = provider.search(
             query=q,
-            limit=effective_limit,
+            limit=provider_limit,
             year=year,
             open_access_only=open_access_only,
         )
