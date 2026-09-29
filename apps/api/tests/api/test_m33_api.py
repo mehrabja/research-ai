@@ -1,7 +1,9 @@
 """M33 — API tests."""
 from __future__ import annotations
 
+import io
 import uuid
+import zipfile
 from collections.abc import Iterator
 
 import pytest
@@ -35,6 +37,7 @@ from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal, get_db
 from app.main import app
 from app.services import projects as projects_service
+from app.services import report_versions as report_versions_service
 from app.services.manuscript import builder as builder_svc
 from app.services.publication import profiles as pub_profiles
 from app.services.research_planning import planner as planner_svc
@@ -384,3 +387,54 @@ def test_cross_user_404(cleanup_users) -> None:
 
 
 _ = PublicationTarget
+
+
+def test_publication_export_formats(client) -> None:
+    c, uid = client
+    rid, _vid = _setup(uid)
+
+    with SessionLocal() as db:
+        report = db.get(Report, rid)
+        assert report is not None
+        report.status = "completed"
+        db.commit()
+
+        version = report_versions_service.create_report_version(
+            db,
+            user_id=uid,
+            report_id=rid,
+            language="en",
+            content="# Export title\\n\\nThis is a persisted final report.",
+            created_by_user=True,
+            change_type="humanized_post_translation",
+            commit=True,
+        )
+        version_id = version.id
+
+    assert version_id is not None
+
+    expected = {
+        "markdown": "text/markdown",
+        "html": "text/html",
+        "json": "application/json",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+
+    for export_format, media_type in expected.items():
+        response = c.get(
+            f"/api/v1/reports/{rid}/publication/export",
+            params={"format": export_format},
+        )
+        assert response.status_code == 200, response.text
+        assert response.headers["content-type"].startswith(media_type)
+        assert "attachment;" in response.headers["content-disposition"]
+        assert len(response.content) > 0
+
+        if export_format == "json":
+            payload = response.json()
+            assert payload["metadata"]["report_id"] == str(rid)
+            assert payload["content"].startswith("# Export title")
+        elif export_format == "docx":
+            with zipfile.ZipFile(io.BytesIO(response.content)) as package:
+                assert package.testzip() is None
+                assert "word/document.xml" in package.namelist()
