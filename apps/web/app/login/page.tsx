@@ -53,14 +53,8 @@ export default function LoginPage() {
     loginMutation.mutate(values);
   });
 
-  const [submitted, setSubmitted] = useState(false);
-  const emailValue = watch("email");
-  const passwordValue = watch("password");
-
-  const emailInvalid =
-    Boolean(errors.email) || (submitted && !emailValue);
-  const passwordInvalid =
-    Boolean(errors.password) || (submitted && !passwordValue);
+  const emailInvalid = Boolean(errors.email);
+  const passwordInvalid = Boolean(errors.password);
 
   const busy =
     isSubmitting || loginMutation.isPending;
