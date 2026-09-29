@@ -198,7 +198,7 @@ export default function ManuscriptView() {
       lastSentFingerprintRef.current = fingerprint(variables.content);
       setNotice(null);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (data) => {
       setRevision(data.revision);
       queryClient.setQueryData(
         ["manuscript-draft", activeReportId],
