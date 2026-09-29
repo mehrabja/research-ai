@@ -1665,6 +1665,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/knowledge-graph/nodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Knowledge Graph Nodes */
+        get: operations["list_knowledge_graph_nodes_api_v1_projects__project_id__knowledge_graph_nodes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/knowledge-graph/nodes/{node_id}": {
         parameters: {
             query?: never;
@@ -8085,6 +8102,10 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /** Project Id */
+            project_id?: string | null;
+            /** Report Id */
+            report_id?: string | null;
         };
         /** SectionResearchCurrentRead */
         SectionResearchCurrentRead: {
@@ -12502,6 +12523,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KnowledgeGraphSummaryRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_knowledge_graph_nodes_api_v1_projects__project_id__knowledge_graph_nodes_get: {
+        parameters: {
+            query: {
+                node_type?: string | null;
+                q?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeGraphNodeRead"][];
                 };
             };
             /** @description Validation Error */
