@@ -330,6 +330,7 @@ def test_production_accepts_strong_secret(monkeypatch) -> None:
         app_env="production",
         jwt_secret_key="x" * 64,
         database_url="postgresql+psycopg://test:test@localhost/test",
+        file_malware_scan_mode="required",
     )
     assert s.app_env == "production"
 
