@@ -150,7 +150,6 @@ export default function GlobalSearchView() {
                 key={item.resource_type + ":" + item.id}
                 item={item}
                 href={buildResultHref(item)}
-                contextHref={contextHref}
               />
             ))}
 
@@ -179,7 +178,6 @@ function SearchResultItem({
 }: {
   item: SearchResult;
   href: string;
-  contextHref: (href: string) => Route;
 }) {
   return (
     <Link className="list-item" href={href as Route}>
