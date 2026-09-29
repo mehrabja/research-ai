@@ -42,6 +42,7 @@ def register_user(
     email: str,
     password: str,
     full_name: str | None = None,
+    workspace_name: str | None = None,
 ) -> User:
     if get_user_by_email(db, email) is not None:
         raise UserAlreadyExists()
@@ -54,6 +55,18 @@ def register_user(
 
     try:
         db.add(user)
+        db.flush()
+
+        if workspace_name is not None:
+            name = workspace_name.strip()
+            if not name:
+                raise ValueError("workspace_name must not be empty")
+            workspaces_service.create_workspace(
+                db,
+                name=name,
+                owner_user_id=user.id,
+            )
+
         db.commit()
         db.refresh(user)
     except IntegrityError as exc:
