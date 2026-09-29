@@ -1,12 +1,19 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { useResearchContext } from "@/lib/research-context";
 import {
   generateKnowledgeGraph,
   getKnowledgeGraph,
+  getKnowledgeGraphNeighbors,
   getKnowledgeGraphSummary,
   knowledgeGraphExportUrl,
+  listKnowledgeGraphNodes,
 } from "@/lib/api/knowledgeGraph";
 
 export default function KnowledgeGraphView() {
@@ -16,6 +23,8 @@ export default function KnowledgeGraphView() {
     workspacesQuery: workspaces,
     projectsQuery: projects,
   } = useResearchContext();
+  const [nodeQuery, setNodeQuery] = useState("");
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const graph = useQuery({
     queryKey: ["knowledge-graph", activeProjectId],
@@ -31,6 +40,44 @@ export default function KnowledgeGraphView() {
     staleTime: 10_000,
   });
 
+  const hasGraph = Boolean(graph.data || summary.data);
+
+  const nodes = useQuery({
+    queryKey: ["knowledge-graph-nodes", activeProjectId, nodeQuery],
+    queryFn: () =>
+      listKnowledgeGraphNodes(activeProjectId!, {
+        q: nodeQuery.trim() || undefined,
+        limit: 100,
+      }),
+    enabled: Boolean(activeProjectId && hasGraph),
+    staleTime: 10_000,
+  });
+
+  useEffect(() => {
+    if (!selectedNodeId && nodes.data?.[0]?.id) {
+      setSelectedNodeId(nodes.data[0].id);
+      return;
+    }
+    if (
+      selectedNodeId &&
+      nodes.data &&
+      !nodes.data.some((node) => node.id === selectedNodeId)
+    ) {
+      setSelectedNodeId(nodes.data[0]?.id ?? null);
+    }
+  }, [nodes.data, selectedNodeId]);
+
+  const neighbors = useQuery({
+    queryKey: ["knowledge-graph-neighbors", activeProjectId, selectedNodeId],
+    queryFn: () =>
+      getKnowledgeGraphNeighbors(activeProjectId!, selectedNodeId!, {
+        direction: "both",
+        limit: 50,
+      }),
+    enabled: Boolean(activeProjectId && selectedNodeId && hasGraph),
+    staleTime: 10_000,
+  });
+
   const generate = useMutation({
     mutationFn: () => generateKnowledgeGraph(activeProjectId!, false),
     onSuccess: async () => {
@@ -40,6 +87,9 @@ export default function KnowledgeGraphView() {
       await queryClient.invalidateQueries({
         queryKey: ["knowledge-graph-summary", activeProjectId],
       });
+      await queryClient.invalidateQueries({
+        queryKey: ["knowledge-graph-nodes", activeProjectId],
+      });
     },
   });
 
@@ -48,6 +98,8 @@ export default function KnowledgeGraphView() {
     projects.error,
     graph.error,
     summary.error,
+    nodes.error,
+    neighbors.error,
     generate.error,
   ].filter(Boolean);
 
@@ -66,6 +118,8 @@ export default function KnowledgeGraphView() {
             void projects.refetch();
             void graph.refetch();
             void summary.refetch();
+            void nodes.refetch();
+            void neighbors.refetch();
           }}
         >
           Retry
@@ -74,10 +128,14 @@ export default function KnowledgeGraphView() {
     );
   }
 
-  const hasGraph = Boolean(graph.data || summary.data);
-  const nodeTypes = Object.entries(summary.data?.node_type_counts ?? {});
+  const nodeTypes = Object.entries(
+    summary.data?.node_type_counts ?? {},
+  );
   const relationTypes = Object.entries(
     summary.data?.relation_type_counts ?? {},
+  );
+  const selectedNode = nodes.data?.find(
+    (node) => node.id === selectedNodeId,
   );
 
   return (
@@ -88,8 +146,8 @@ export default function KnowledgeGraphView() {
             <div className="eyebrow">Project knowledge</div>
             <h2 style={{ marginTop: 4 }}>Knowledge graph</h2>
             <p className="muted small" style={{ marginTop: 4 }}>
-              Graph metadata and aggregate topology from the project graph
-              service. No synthetic nodes are rendered.
+              Persisted graph topology, provenance, and bounded neighborhood
+              traversal. No synthetic nodes are rendered.
             </p>
           </div>
           <div className="actions">
@@ -98,7 +156,11 @@ export default function KnowledgeGraphView() {
               disabled={!activeProjectId || generate.isPending}
               onClick={() => generate.mutate()}
             >
-              {generate.isPending ? "Generating…" : hasGraph ? "Regenerate" : "Generate graph"}
+              {generate.isPending
+                ? "Generating…"
+                : hasGraph
+                  ? "Regenerate"
+                  : "Generate graph"}
             </button>
             {hasGraph && activeProjectId && (
               <a
@@ -110,13 +172,14 @@ export default function KnowledgeGraphView() {
             )}
           </div>
         </div>
-
       </section>
 
       {!activeProjectId && !projects.isPending && (
         <section className="card pad empty">
           <div className="big">∅</div>
-          <div>Create a project in Workspace before generating a knowledge graph.</div>
+          <div>
+            Create a project in Workspace before generating a knowledge graph.
+          </div>
         </section>
       )}
 
@@ -174,6 +237,126 @@ export default function KnowledgeGraphView() {
           <section className="grid grid-2">
             <section className="card pad">
               <div className="row">
+                <div>
+                  <h3>Nodes</h3>
+                  <div className="muted small">
+                    Select a persisted node to inspect its neighbors.
+                  </div>
+                </div>
+                <span className="tag">
+                  {nodes.data?.length ?? 0}
+                </span>
+              </div>
+
+              <input
+                className="input"
+                style={{ marginTop: 12 }}
+                value={nodeQuery}
+                onChange={(event) => setNodeQuery(event.target.value)}
+                placeholder="Filter by node label or key…"
+                aria-label="Knowledge graph node filter"
+              />
+
+              <div className="list" style={{ marginTop: 10 }}>
+                {(nodes.data ?? []).map((node) => (
+                  <button
+                    key={node.id}
+                    type="button"
+                    className="list-item"
+                    onClick={() => setSelectedNodeId(node.id)}
+                    style={{
+                      textAlign: "left",
+                      border:
+                        node.id === selectedNodeId
+                          ? "1px solid var(--primary)"
+                          : undefined,
+                    }}
+                  >
+                    <div className="row">
+                      <strong>{node.label ?? node.node_key}</strong>
+                      <span className="tag">{node.node_type}</span>
+                    </div>
+                    <div className="meta" style={{ marginTop: 4 }}>
+                      {node.node_key}
+                    </div>
+                  </button>
+                ))}
+                {nodes.data?.length === 0 && (
+                  <div className="empty">
+                    <div className="big">∅</div>
+                    <div>No graph nodes match the current filter.</div>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="card pad">
+              <div className="row">
+                <div>
+                  <h3>Selected node</h3>
+                  <div className="muted small">
+                    Bounded two-way neighbor traversal from the persisted graph.
+                  </div>
+                </div>
+              </div>
+
+              {!selectedNode && (
+                <div className="empty" style={{ marginTop: 12 }}>
+                  <div className="big">∅</div>
+                  <div>Select a node to inspect its relationships.</div>
+                </div>
+              )}
+
+              {selectedNode && (
+                <>
+                  <div
+                    className="card"
+                    style={{ marginTop: 12, padding: 12 }}
+                  >
+                    <div className="strong">
+                      {selectedNode.label ?? selectedNode.node_key}
+                    </div>
+                    <div className="meta" style={{ marginTop: 4 }}>
+                      {selectedNode.node_type} · {selectedNode.node_key}
+                    </div>
+                  </div>
+
+                  <div className="list" style={{ marginTop: 10 }}>
+                    {(neighbors.data ?? []).map((item) => (
+                      <div className="list-item" key={item.edge_id}>
+                        <div className="row">
+                          <strong>{item.neighbor.label ?? item.neighbor.node_key ?? "Neighbor"}</strong>
+                          <span className="tag">{item.relation_type}</span>
+                        </div>
+                        <div className="meta" style={{ marginTop: 4 }}>
+                          {item.direction} ·{" "}
+                          {item.provenance_type}
+                          {item.provenance_ref
+                            ? " · " + item.provenance_ref
+                            : ""}
+                        </div>
+                        {item.confidence !== null && (
+                          <div className="muted tiny" style={{ marginTop: 4 }}>
+                            Confidence {item.confidence.toFixed(2)} · Weight{" "}
+                            {item.weight.toFixed(2)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {neighbors.data?.length === 0 && (
+                      <div className="empty">
+                        <div>No neighbors were returned for this node.</div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </section>
+          </section>
+
+          <section className="grid grid-2">
+            <section className="card pad">
+              <div className="row">
                 <h3>Node types</h3>
                 <span className="tag">{nodeTypes.length}</span>
               </div>
@@ -224,11 +407,17 @@ export default function KnowledgeGraphView() {
             <div className="stack" style={{ marginTop: 12 }}>
               <div className="row">
                 <span className="muted">Context hash</span>
-                <code>{summary.data?.context_hash ?? graph.data?.context_hash ?? "n/a"}</code>
+                <code>
+                  {summary.data?.context_hash ??
+                    graph.data?.context_hash ??
+                    "n/a"}
+                </code>
               </div>
               <div className="row">
                 <span className="muted">Literature run</span>
-                <span>{graph.data?.source_literature_run_id ?? "n/a"}</span>
+                <span>
+                  {graph.data?.source_literature_run_id ?? "n/a"}
+                </span>
               </div>
               <div className="row">
                 <span className="muted">Research plan</span>
