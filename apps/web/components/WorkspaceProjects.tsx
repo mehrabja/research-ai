@@ -16,7 +16,7 @@ export default function WorkspaceProjects() {
   const queryClient = useQueryClient();
 
   const {
-    workspaceId: activeWorkspaceId,
+    workspaceId: activeWorkspaceId ?? undefined,
     workspacesQuery: workspaces,
     projectsQuery: projects,
     setWorkspace: setWorkspaceId,
@@ -39,7 +39,7 @@ export default function WorkspaceProjects() {
 
   const archive = useMutation({
     mutationFn: (project: Project) =>
-      archiveProject(project.id, activeWorkspaceId),
+      archiveProject(project.id, activeWorkspaceId ?? undefined),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
