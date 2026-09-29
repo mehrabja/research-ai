@@ -1,21 +1,37 @@
 "use client";
 
-import { Suspense, useState, type ReactNode } from "react";
+import {
+  Suspense,
+  useState,
+  type ReactNode,
+} from "react";
 import { Sidebar } from "@/components/AppShell/Sidebar";
 import { Topbar } from "@/components/AppShell/Topbar";
 import { Breadcrumbs } from "@/components/AppShell/Breadcrumbs";
 import { ResearchContextProvider } from "@/lib/research-context";
 
-export default function AppGroupLayout({ children }: { children: ReactNode }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
+export default function AppGroupLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const [mobileOpen, setMobileOpen] =
+    useState(false);
 
   return (
     <Suspense
       fallback={
-        <main className="main shell-gate" aria-busy="true">
+        <main
+          className="main shell-gate"
+          aria-busy="true"
+        >
           <section className="card pad shell-gate-card">
-            <div className="eyebrow">Research AI</div>
-            <h1>Loading your research workspace…</h1>
+            <div className="eyebrow">
+              Research AI
+            </div>
+            <h1>
+              Loading your research workspace…
+            </h1>
           </section>
         </main>
       }
@@ -28,7 +44,10 @@ export default function AppGroupLayout({ children }: { children: ReactNode }) {
           />
           <main className="main">
             <Topbar
-              onMenuClick={() => setMobileOpen((value) => !value)}
+              mobileMenuOpen={mobileOpen}
+              onMenuClick={() =>
+                setMobileOpen((value) => !value)
+              }
             />
             <div className="content">
               <Breadcrumbs />
