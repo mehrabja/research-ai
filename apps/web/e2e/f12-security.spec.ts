@@ -122,3 +122,22 @@ test("OAuth start endpoints return signed-in provider authorization URLs", async
     expect(payload.state.startsWith(provider + ".")).toBe(true);
   }
 });
+
+
+test("login buttons start the real Google OAuth flow", async ({ page }) => {
+  await page.route("**/api/v1/auth/oauth/google/start", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        provider: "google",
+        authorization_url: "https://accounts.google.com/o/oauth2/v2/auth?client_id=test&state=google.test",
+        state: "google.test",
+      }),
+    });
+  });
+
+  await page.goto("/login");
+  await page.getByRole("button", { name: "Continue with Google" }).click();
+  await expect(page).toHaveURL(/accounts\.google\.com\/o\/oauth2/);
+});
