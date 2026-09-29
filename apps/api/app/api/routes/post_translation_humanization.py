@@ -13,10 +13,10 @@ from app.db.models.humanization import HumanizationRun
 from app.db.models.report import Report
 from app.db.models.user import User
 from app.db.session import get_db
+from app.schemas.manuscript_humanization import HumanizationRunRead
 from app.schemas.post_translation_humanization import (
     PostTranslationHumanizationCurrentResponse,
 )
-from app.schemas.manuscript_humanization import HumanizationRunRead
 from app.services import post_translation_humanization_jobs as m17_jobs
 from app.services.humanization_profile import (
     build_post_translation_policy_from_settings,
