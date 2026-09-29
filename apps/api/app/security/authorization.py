@@ -147,6 +147,21 @@ def enforce_api_token_request(
     if not principal.is_api_token:
         return
 
+    # API keys are machine credentials, not interactive identity proof.
+    # Never allow them to alter authentication factors, mint/revoke other
+    # credentials, unlink OAuth identities, or delete/export an account.
+    sensitive_auth_paths = (
+        "/auth/mfa",
+        "/auth/oauth/",
+        "/auth/api-tokens",
+        "/auth/account",
+        "/auth/data-export",
+    )
+    if any(fragment in request.url.path.lower() for fragment in sensitive_auth_paths):
+        raise APITokenScopeError(
+            "Interactive authentication controls require a bearer session."
+        )
+
     settings = get_settings()
     required = required_scope_for_request(
         request.method,
