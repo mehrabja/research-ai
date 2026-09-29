@@ -1,7 +1,6 @@
-import {
-  const router = useRouter(); useRouter } from "next/navigation";
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -81,6 +80,7 @@ function formatDate(value: string | null): string {
 }
 
 export function SettingsSecurityView() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [tokenName, setTokenName] = useState("");
   const [tokenExpiry, setTokenExpiry] = useState("");
