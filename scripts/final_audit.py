@@ -30,6 +30,7 @@ ENV_EXAMPLE_NAMES = {
 AUDIT_REFERENCE_FILES = {
     "scripts/final_audit.py",
     "scripts/final_audit.sh",
+    "scripts/frontend_security_audit.py",
     "apps/api/app/core/logging.py",
     "apps/web/e2e/f15-security-observability.spec.ts",
 }
