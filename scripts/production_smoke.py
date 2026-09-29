@@ -11,10 +11,15 @@ import urllib.request
 from typing import Any
 
 
+_PLACEHOLDER_MARKERS = ("YOUR_", "CHANGE_ME", "change_me", "dev-insecure", "example")
+
+
 def required(name: str) -> str:
     value = os.getenv(name, "").strip()
     if not value:
         raise RuntimeError(f"{name} is required.")
+    if any(marker in value for marker in _PLACEHOLDER_MARKERS):
+        raise RuntimeError(f"{name} contains a placeholder value; provide a real credential.")
     return value
 
 
@@ -59,6 +64,10 @@ def auth_headers() -> dict[str, str]:
     headers = {"Accept": "application/json"}
     token = os.getenv("SMOKE_ACCESS_TOKEN", "").strip()
     api_key = os.getenv("SMOKE_API_KEY", "").strip()
+    if token and any(marker in token for marker in _PLACEHOLDER_MARKERS):
+        raise RuntimeError("SMOKE_ACCESS_TOKEN contains a placeholder value; provide a real credential.")
+    if api_key and any(marker in api_key for marker in _PLACEHOLDER_MARKERS):
+        raise RuntimeError("SMOKE_API_KEY contains a placeholder value; provide a real credential.")
     if token:
         headers["Authorization"] = f"Bearer {token}"
     elif api_key:
