@@ -1,5 +1,6 @@
 import type { components } from "./schema";
 import { apiErrorFromResponse } from "./errors";
+import { broadcastSessionEvent } from "../session-cache";
 
 type UserResponse = components["schemas"]["UserResponse"];
 export type AuthenticatedUser = UserResponse;
@@ -33,7 +34,12 @@ export async function login(email: string, password: string): Promise<AuthSucces
     headers: {"Content-Type":"application/json",Accept:"application/json"},
     body: JSON.stringify({email,password}),
   });
-  return parseSuccess<AuthSuccess>(response, "Authentication request failed.");
+  const result = await parseSuccess<AuthSuccess>(
+    response,
+    "Authentication request failed.",
+  );
+  broadcastSessionEvent("authenticated");
+  return result;
 }
 
 export async function refresh(): Promise<AuthSuccess> {
@@ -54,6 +60,7 @@ export async function logout(): Promise<void> {
     body: JSON.stringify({}),
   });
   await parseSuccess<unknown>(response, "Logout failed.");
+  broadcastSessionEvent("logout");
 }
 
 export async function me(): Promise<AuthenticatedUser> {
