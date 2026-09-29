@@ -35,9 +35,10 @@ const frontendServer = {
   timeout: 120_000,
   env: {
     ...process.env,
-    APP_ENV: "test",
+    APP_ENV: process.env.APP_ENV,
     RATE_LIMIT_ENABLED: "false",
     BACKEND_URL: e2eBackendUrl,
+    E2E_HTTP_COOKIES: "1",
   },
 };
 
