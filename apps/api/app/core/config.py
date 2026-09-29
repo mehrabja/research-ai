@@ -324,6 +324,13 @@ class Settings(BaseSettings):
     )
     file_max_filename_length: int = Field(default=255, ge=32, le=1024)
     file_extraction_max_attempts: int = Field(default=3, ge=1, le=10)
+    file_malware_scan_mode: Literal["off", "optional", "required"] = "off"
+    file_malware_scan_host: str = "127.0.0.1"
+    file_malware_scan_port: int = Field(default=3310, ge=1, le=65535)
+    file_malware_scan_timeout_seconds: float = Field(default=15.0, ge=1.0, le=120.0)
+    file_max_archive_entries: int = Field(default=20_000, ge=1_000, le=200_000)
+    file_max_archive_uncompressed_bytes: int = Field(default=1_000_000_000, ge=1_024, le=5_000_000_000)
+    file_max_archive_ratio: float = Field(default=200.0, ge=1.0, le=10_000.0)
 
     # --- Code & Data Intelligence (Milestone 20) --------------------------
     intelligence_analysis_version: str = "m20.1"
@@ -918,6 +925,8 @@ class Settings(BaseSettings):
     def _validate_file_config(self) -> Settings:
         if self.file_storage_backend == "local" and not self.file_storage_local_root.strip():
             raise ValueError("file_storage_local_root must not be empty")
+        if self.file_malware_scan_mode == "required" and not self.file_malware_scan_host.strip():
+            raise ValueError("file_malware_scan_host is required when malware scanning is required")
         if self.file_storage_backend == "s3":
             if not self.storage_bucket.strip():
                 raise ValueError(
