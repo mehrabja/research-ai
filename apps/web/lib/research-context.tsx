@@ -44,6 +44,7 @@ export type ResearchContextValue = ResearchContextIds & {
   reportsQuery: UseQueryResult<ProjectReport[], Error>;
   isLoading: boolean;
   error: Error | null;
+  workspaceRole: Workspace["role"] | null;
   invalid: boolean;
   setWorkspace: (workspaceId: string | null) => void;
   setProject: (projectId: string | null) => void;
@@ -215,6 +216,7 @@ export function ResearchContextProvider({
   );
 
   const workspaceId = workspace?.id ?? null;
+  const workspaceRole = workspace?.role ?? null;
   const invalidWorkspace =
     Boolean(workspaceParam) &&
     workspacesQuery.isSuccess &&
@@ -495,6 +497,7 @@ export function ResearchContextProvider({
       workspaceId,
       projectId,
       reportId,
+      workspaceRole,
       workspacesQuery,
       projectsQuery,
       reportsQuery,
