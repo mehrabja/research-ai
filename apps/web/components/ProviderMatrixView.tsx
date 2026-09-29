@@ -8,16 +8,23 @@ import { apiErrorFromUnknown } from "@/lib/api/errors";
 type ProviderCapability =
   components["schemas"]["ProviderCapabilityRead"];
 
+type ProviderMatrixResult = {
+  data?: {
+    capabilities: ProviderCapability[];
+  };
+  error?: unknown;
+  response: Response;
+};
+
 async function getProviderMatrix(): Promise<ProviderCapability[]> {
-  const result = await api.GET(
+  const result = (await api.GET(
     "/api/v1/providers/matrix",
-  );
-  const response = (result as { response: Response }).response;
+  )) as ProviderMatrixResult;
 
   if (result.error || !result.data) {
     throw apiErrorFromUnknown(result.error, {
-      status: response.status,
-      requestId: response.headers.get("x-request-id"),
+      status: result.response.status,
+      requestId: result.response.headers.get("x-request-id"),
       fallback: "Provider matrix request failed",
     });
   }
