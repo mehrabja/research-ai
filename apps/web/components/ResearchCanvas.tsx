@@ -175,7 +175,6 @@ export default function ResearchCanvas() {
           type="button"
           style={{ marginTop: 12 }}
           onClick={() => {
-            void workspaces.refetch();
             void projects.refetch();
             void canvas.refetch();
           }}
