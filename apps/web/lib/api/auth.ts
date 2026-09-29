@@ -52,6 +52,17 @@ export async function refresh(): Promise<AuthSuccess> {
   return parseSuccess<AuthSuccess>(response, "Session refresh failed.");
 }
 
+export async function logoutAll(): Promise<void> {
+  const response = await fetch("/api/v1/auth/logout-all", {
+    method: "POST",
+    credentials: "include",
+    headers: {Accept:"application/json"},
+    body: JSON.stringify({}),
+  });
+  await parseSuccess<unknown>(response, "Logout all sessions failed.");
+  broadcastSessionEvent("logout");
+}
+
 export async function logout(): Promise<void> {
   const response = await fetch("/api/v1/auth/logout", {
     method: "POST",
