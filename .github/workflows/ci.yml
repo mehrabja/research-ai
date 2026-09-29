@@ -61,7 +61,7 @@ jobs:
         with: {node-version: 20}
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
-      - run: npm install
+      - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
