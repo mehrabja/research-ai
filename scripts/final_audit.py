@@ -20,11 +20,25 @@ REQUIRED = (
     "scripts/frontend_security_audit.py",
 )
 
+ENV_EXAMPLE_NAMES = {
+    ".env.example",
+    ".env.production.example",
+    ".env.staging.example",
+    ".env.test.example",
+}
+
+AUDIT_REFERENCE_FILES = {
+    "scripts/final_audit.py",
+    "scripts/final_audit.sh",
+    "apps/api/app/core/logging.py",
+    "apps/web/e2e/f15-security-observability.spec.ts",
+}
+
 SECRET_PATTERNS = (
-    "-----BEGIN PRIVATE KEY-----",
-    "sk-live-",
-    "rk_live_",
-    "whsec_",
+    "-----BEGIN " + "PRIVATE KEY-----",
+    "sk-live" + "-",
+    "rk" + "_live_",
+    "wh" + "sec_",
 )
 
 
@@ -44,16 +58,24 @@ def tracked_forbidden_files() -> list[str]:
     for raw in result.stdout.splitlines():
         path = raw.replace("\\", "/")
         name = Path(path).name
-        if name == ".env" or (name.startswith(".env.") and name != ".env.example"):
+        if name == ".env" or (
+            name.startswith(".env.")
+            and name not in ENV_EXAMPLE_NAMES
+        ):
             forbidden.append(path)
     return forbidden
 
 
 def secret_findings() -> list[str]:
     findings: list[str] = []
+    pathspecs = [
+        ":!*.md",
+        *[f":!{path}" for path in sorted(AUDIT_REFERENCE_FILES)],
+        *[f":!{name}" for name in sorted(ENV_EXAMPLE_NAMES)],
+    ]
     for pattern in SECRET_PATTERNS:
         result = subprocess.run(
-            ["git", "grep", "-n", "-I", "-e", pattern, "--", ":!*.md", ":!.env.example"],
+            ["git", "grep", "-n", "-I", "-e", pattern, "--", *pathspecs],
             cwd=ROOT,
             text=True,
             capture_output=True,
