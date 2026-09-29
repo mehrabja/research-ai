@@ -94,9 +94,9 @@ def required_scope_for_request(method: str, path: str, api_prefix: str = "/api/v
     resource = resource_for_path(path, api_prefix)
     method = method.upper()
     if resource == "auth" and "/api-tokens" in path:
-        return "manage:api_tokens"
+        return "read:api_tokens" if method == "GET" else "manage:api_tokens"
     if resource == "api_tokens":
-        return "manage:api_tokens"
+        return "read:api_tokens" if method == "GET" else "manage:api_tokens"
     if resource == "auth" and any(x in path for x in ("/mfa", "/oauth/")):
         return "manage:auth"
     if resource == "workspaces" and any(x in path for x in ("/members", "/invitations", "/suspend", "/reactivate")) and method != "GET":
