@@ -127,3 +127,45 @@ def test_input_limit_is_enforced_before_request(monkeypatch: pytest.MonkeyPatch)
 
 def test_rate_limit_type_is_exposed_for_fallback_policy() -> None:
     assert issubclass(DetectionRateLimitError, Exception)
+
+def test_timeout_retries_then_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = 0
+
+    def fake_post(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise httpx.ReadTimeout("timed out")
+        return _response(200, {"probability": 0.4})
+
+    sleeps: list[float] = []
+    monkeypatch.setattr(detection_http, "get_settings", lambda: _settings(max_retries=2))
+    monkeypatch.setattr(detection_http.httpx, "post", fake_post)
+
+    provider = HTTPDetectionProvider(_sleep=sleeps.append, _random=lambda: 0.0)
+    result = provider.detect(text="hello")
+
+    assert result.probability == 0.4
+    assert calls == 2
+    assert sleeps == [0.5]
+
+
+def test_server_error_retries_until_exhausted(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = 0
+
+    def fake_post(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return _response(503, {"error": "unavailable"})
+
+    sleeps: list[float] = []
+    monkeypatch.setattr(detection_http, "get_settings", lambda: _settings(max_retries=2))
+    monkeypatch.setattr(detection_http.httpx, "post", fake_post)
+
+    with pytest.raises(detection_http.DetectionProviderUnavailableError):
+        HTTPDetectionProvider(_sleep=sleeps.append, _random=lambda: 0.0).detect(
+            text="hello"
+        )
+
+    assert calls == 3
+    assert sleeps == [0.5, 1.0]
