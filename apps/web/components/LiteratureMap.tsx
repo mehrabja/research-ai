@@ -24,14 +24,12 @@ const SCREENING_OPTIONS = [
 export default function LiteratureMap() {
   const [screening, setScreening] =
     useState<(typeof SCREENING_OPTIONS)[number]>("all");
+  const queryClient = useQueryClient();
 
   const {
-    workspaceId: activeWorkspaceId,
     projectId: activeProjectId,
     workspacesQuery: workspaces,
     projectsQuery: projects,
-    setWorkspace: setWorkspaceId,
-    setProject: setProjectId,
   } = useResearchContext();
 
   const literature = useQuery({
