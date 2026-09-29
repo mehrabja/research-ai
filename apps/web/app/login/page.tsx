@@ -203,8 +203,8 @@ export default function LoginPage() {
                 Remember me
               </label>
 
-              <button
-                type="button"
+              <Link
+                href="/password-reset"
                 className="muted small"
                 style={{
                   background: "none",
@@ -212,15 +212,9 @@ export default function LoginPage() {
                   padding: 0,
                   cursor: "pointer",
                 }}
-                onClick={() => {
-                  setError("root", {
-                    message:
-                      "Password reset is not connected yet.",
-                  });
-                }}
               >
                 Forgot password?
-              </button>
+              </Link>
             </div>
 
             {errors.root && (
