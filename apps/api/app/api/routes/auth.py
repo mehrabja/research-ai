@@ -64,6 +64,7 @@ def register(
         email=payload.email,
         password=payload.password,
         full_name=payload.full_name,
+        workspace_name=payload.workspace_name,
     )
     # The raw token is intentionally not returned by the API. F11 email
     # delivery will send the token through the configured transactional
