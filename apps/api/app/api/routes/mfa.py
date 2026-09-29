@@ -14,6 +14,8 @@ from app.schemas.mfa import (
     MFAVerifyRequest,
 )
 from app.services import mfa as mfa_service
+from app.services.audit import emit_audit
+from app.services.auth import revoke_all_sessions
 
 router = APIRouter(prefix="/auth/mfa", tags=["mfa"])
 
@@ -54,12 +56,19 @@ def enable_mfa(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> MFAStatusResponse:
-    if not current_user.mfa_secret or not mfa_service.verify_code(
-        current_user.mfa_secret,
-        body.code,
-    ):
+    if not mfa_service.verify_encrypted_code(current_user.mfa_secret, body.code):
         raise MFAInvalid()
     current_user.mfa_enabled = True
+    current_user.security_version += 1
+    revoke_all_sessions(db, user_id=current_user.id)
+    emit_audit(
+        "MFA_ENABLED",
+        db=db,
+        user_id=str(current_user.id),
+        resource_type="mfa",
+        reason="mfa_enabled",
+        category="authentication",
+    )
     db.commit()
     return MFAStatusResponse(
         enabled=True,
@@ -73,10 +82,19 @@ def disable_mfa(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> MFAStatusResponse:
-    secret = current_user.mfa_secret
-    if not secret or not mfa_service.verify_code(secret, body.code):
+    if not mfa_service.verify_encrypted_code(current_user.mfa_secret, body.code):
         raise MFAInvalid()
     current_user.mfa_enabled = False
+    current_user.security_version += 1
+    revoke_all_sessions(db, user_id=current_user.id)
+    emit_audit(
+        "MFA_DISABLED",
+        db=db,
+        user_id=str(current_user.id),
+        resource_type="mfa",
+        reason="mfa_disabled",
+        category="authentication",
+    )
     current_user.mfa_secret = None
     current_user.mfa_recovery_code_hashes = None
     db.commit()
