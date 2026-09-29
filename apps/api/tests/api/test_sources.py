@@ -74,6 +74,7 @@ class _FakeProvider:
     ) -> None:
         self._candidates = candidates or []
         self._error = error
+        self.last_limit: int | None = None
 
     def search(
         self,
@@ -83,6 +84,7 @@ class _FakeProvider:
         year: int | None = None,
         open_access_only: bool = False,
     ) -> list[SourceCandidate]:
+        self.last_limit = limit
         if self._error is not None:
             raise self._error
         return list(self._candidates)
@@ -191,6 +193,38 @@ def test_search_returns_candidates(
     assert len(body["candidates"]) == 1
     assert body["candidates"][0]["external_source_id"] == "P1"
     assert body["candidates"][0]["source_meta"]["federated"]["hit_count"] == 2
+
+
+def test_advanced_filters_overfetch_provider_batch(
+    cleanup_users: list[uuid.UUID],
+    override_provider: dict,
+) -> None:
+    _, token = _register(cleanup_users)
+    rep = _create_report(token)
+    provider = _FakeProvider(
+        candidates=[
+            SourceCandidate(
+                source_api="semantic_scholar",
+                external_source_id=f"P{i}",
+                title=f"Paper {i}",
+                year=2020 + i,
+                citation_count=i,
+            )
+            for i in range(1, 21)
+        ],
+    )
+    override_provider["provider"] = provider
+
+    r = client.get(
+        f"/api/v1/reports/{rep['id']}/sources/search"
+        "?q=hello&limit=2&min_citations=18",
+        headers=_auth(token),
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert len(body["candidates"]) == 2
+    assert all(item["citation_count"] >= 18 for item in body["candidates"])
+    assert provider.last_limit == 10
 
 
 def test_search_foreign_report_404(
