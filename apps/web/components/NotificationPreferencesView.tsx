@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getNotificationPreferences,
   updateNotificationPreferences,
@@ -22,7 +22,12 @@ const PREFERENCES = [
 
 export function NotificationPreferencesView() {
   const queryClient = useQueryClient();
+  const defaultPreferences = Object.fromEntries(
+    PREFERENCES.map((item) => [item.key, true]),
+  );
   const [notice, setNotice] = useState<string | null>(null);
+  const [localPreferences, setLocalPreferences] =
+    useState<Record<string, boolean>>(defaultPreferences);
 
   const preferencesQuery = useQuery({
     queryKey: ["notification-preferences"],
@@ -30,44 +35,28 @@ export function NotificationPreferencesView() {
     retry: false,
   });
 
+  useEffect(() => {
+    if (preferencesQuery.data?.preferences) {
+      setLocalPreferences(preferencesQuery.data.preferences);
+    }
+  }, [preferencesQuery.data?.preferences]);
+
   const update = useMutation({
     mutationFn: updateNotificationPreferences,
-    onMutate: async (nextPreferences) => {
-      setNotice("Saving notification preferences...");
-      await queryClient.cancelQueries({
-        queryKey: ["notification-preferences"],
-      });
-
-      const previous =
-        queryClient.getQueryData<
-          Awaited<ReturnType<typeof getNotificationPreferences>>
-        >(["notification-preferences"]);
-
-      if (previous) {
-        queryClient.setQueryData(["notification-preferences"], {
-          ...previous,
-          preferences: nextPreferences,
-        });
-      }
-
-      return { previous };
-    },
     onSuccess: (data) => {
       queryClient.setQueryData(["notification-preferences"], data);
+      setLocalPreferences(data.preferences);
       setNotice("Notification preferences saved.");
     },
-    onError: (_error, _nextPreferences, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(
-          ["notification-preferences"],
-          context.previous,
-        );
-      }
+    onError: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["notification-preferences"],
+      });
       setNotice(null);
     },
   });
 
-  const preferences = preferencesQuery.data?.preferences ?? {};
+  const preferences = localPreferences;
   const error = preferencesQuery.error ?? update.error ?? null;
 
   return (
@@ -120,6 +109,7 @@ export function NotificationPreferencesView() {
                     ...preferences,
                     [item.key]: event.target.checked,
                   };
+                  setLocalPreferences(next);
                   update.mutate(next);
                 }}
               />
