@@ -10,6 +10,12 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(ROOT / ".env", override=False)
 
 
 @dataclass(frozen=True)
@@ -47,6 +53,8 @@ def http_json(url: str, headers: dict[str, str] | None = None) -> tuple[int, dic
 
 def config_checks(strict: bool) -> list[Check]:
     generation = env("GENERATION_PROVIDER") or "openai"
+    embedding = env("EMBEDDING_PROVIDER") or "openai"
+    translation = env("TRANSLATION_PROVIDER") or "openai"
     source = env("SOURCE_DISCOVERY_PROVIDER") or "semantic_scholar"
     storage = env("FILE_STORAGE_BACKEND") or "local"
     email = env("EMAIL_PROVIDER") or "none"
@@ -54,7 +62,36 @@ def config_checks(strict: bool) -> list[Check]:
     detection = env("DETECTION_PROVIDER") or "heuristic"
 
     checks = [
-        Check("OpenRouter", generation != "openrouter" or configured("OPENROUTER_API_KEY"), "active" if generation == "openrouter" else "not active"),
+        Check(
+            "Generation credentials",
+            generation != "openrouter" and generation != "openai"
+            or (
+                configured("OPENROUTER_API_KEY")
+                if generation == "openrouter"
+                else configured("GENERATION_OPENAI_API_KEY")
+            ),
+            f"configured {generation}",
+        ),
+        Check(
+            "Embedding credentials",
+            embedding not in ("openrouter", "openai")
+            or (
+                configured("OPENROUTER_API_KEY")
+                if embedding == "openrouter"
+                else configured("EMBEDDING_OPENAI_API_KEY")
+            ),
+            f"configured {embedding}",
+        ),
+        Check(
+            "Translation credentials",
+            translation not in ("openrouter", "openai")
+            or (
+                configured("OPENROUTER_API_KEY")
+                if translation == "openrouter"
+                else configured("GENERATION_OPENAI_API_KEY")
+            ),
+            f"configured {translation}",
+        ),
         require_all("Semantic Scholar", ("SEMANTIC_SCHOLAR_API_KEY",)) if source == "semantic_scholar" and strict else Check("Semantic Scholar", True, "not active"),
         Check("OpenAlex", True, "configured" if configured("OPENALEX_API_KEY") else "optional/unkeyed"),
         Check("Crossref", True, "configured" if configured("CROSSREF_MAILTO") else "public REST"),
