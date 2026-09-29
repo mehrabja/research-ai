@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from app.domain.generation import EvidenceSet
+from app.security.trust_boundary import wrap_untrusted_text
 
 _SYSTEM_PROMPT = """You are a research assistant producing an evidence-grounded report draft.
 
@@ -83,8 +84,7 @@ def build_user_prompt(
 
 
 def _quote_evidence(content: str) -> str:
-    indented = "\n".join(f"    {line}" for line in content.splitlines())
-    return "<<<EVIDENCE\n" + indented + "\nEVIDENCE>>>"
+    return wrap_untrusted_text(content)
 
 
 def build_evidence_set(retrieved: list, max_items: int) -> EvidenceSet:
