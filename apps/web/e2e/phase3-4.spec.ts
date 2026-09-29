@@ -44,6 +44,7 @@ test("F03 notification preferences persist through the authenticated UI", async 
     exact: true,
   });
   await expect(invitationPreference).toBeVisible({ timeout: 10_000 });
+  await expect(invitationPreference).toBeEnabled({ timeout: 10_000 });
   await expect(invitationPreference).toBeChecked();
 
   await invitationPreference.uncheck();
