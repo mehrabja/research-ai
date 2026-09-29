@@ -30,6 +30,8 @@ class SecurityHeadersMiddleware:
                     (b"referrer-policy", b"strict-origin-when-cross-origin"),
                     (b"permissions-policy", b"camera=(), microphone=(), geolocation=()"),
                     (b"cross-origin-opener-policy", b"same-origin"),
+                    (b"cross-origin-resource-policy", b"same-origin"),
+                    (b"x-permitted-cross-domain-policies", b"none"),
                 ]
                 if self.hsts:
                     defaults.append(
