@@ -12,7 +12,7 @@ async function getProviderMatrix(): Promise<ProviderCapability[]> {
   const result = await api.GET(
     "/api/v1/providers/matrix",
   );
-  const response = result.response;
+  const response = (result as { response: Response }).response;
 
   if (result.error || !result.data) {
     throw apiErrorFromUnknown(result.error, {
