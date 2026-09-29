@@ -51,6 +51,18 @@ class AuthenticationRateLimited(AppError):
     message = "Too many authentication attempts. Please try again later."
 
 
+class OAuthProviderNotConfigured(AppError):
+    code = "OAUTH_PROVIDER_NOT_CONFIGURED"
+    status_code = 503
+    message = "This sign-in provider is not configured."
+
+
+class OAuthProviderUnavailable(AppError):
+    code = "OAUTH_PROVIDER_UNAVAILABLE"
+    status_code = 502
+    message = "The sign-in provider could not complete authentication."
+
+
 class ReportNotFound(AppError):
     code = "REPORT_NOT_FOUND"
     status_code = 404
