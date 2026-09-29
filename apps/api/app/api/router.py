@@ -8,12 +8,8 @@ from app.api.routes.api_tokens import router as api_tokens_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.billing import router as billing_router
 from app.api.routes.citations import router as citations_router
-from app.api.routes.classification import (
-    router as classification_router,
-)
-from app.api.routes.collaboration import (
-    router as collaboration_router,
-)
+from app.api.routes.classification import router as classification_router
+from app.api.routes.collaboration import router as collaboration_router
 from app.api.routes.detection import router as detection_router
 from app.api.routes.embeddings import router as embeddings_router
 from app.api.routes.files import files_router
@@ -24,45 +20,31 @@ from app.api.routes.humanization import router as humanization_router
 from app.api.routes.intelligence import router as intelligence_router
 from app.api.routes.invitations import router as invitations_router
 from app.api.routes.jobs import router as jobs_router
-from app.api.routes.knowledge_graph import (
-    router as knowledge_graph_router,
-)
+from app.api.routes.knowledge_graph import router as knowledge_graph_router
 from app.api.routes.literature import router as literature_router
 from app.api.routes.manuscript import router as manuscript_router
 from app.api.routes.manuscript_drafts import router as manuscript_drafts_router
-from app.api.routes.manuscript_humanization import (
-    router as manuscript_humanization_router,
-)
-from app.api.routes.manuscript_prose import (
-    router as manuscript_prose_router,
-)
+from app.api.routes.manuscript_humanization import router as manuscript_humanization_router
+from app.api.routes.manuscript_prose import router as manuscript_prose_router
 from app.api.routes.mfa import router as mfa_router
 from app.api.routes.notifications import router as notifications_router
 from app.api.routes.oauth import router as oauth_router
-from app.api.routes.orchestration import (
-    router as orchestration_router,
-)
-from app.api.routes.post_translation_humanization import (
-    router as post_translation_humanization_router,
-)
+from app.api.routes.orchestration import router as orchestration_router
+from app.api.routes.pdf_workspace import router as pdf_workspace_router
+from app.api.routes.post_translation_humanization import router as post_translation_humanization_router
+from app.api.routes.project_file_evidence import router as project_file_evidence_router
 from app.api.routes.projects import router as projects_router
 from app.api.routes.providers import router as providers_router
 from app.api.routes.publication import router as publication_router
 from app.api.routes.rag import router as rag_router
 from app.api.routes.reports import router as reports_router
 from app.api.routes.research_canvas import router as research_canvas_router
-from app.api.routes.research_plan import (
-    router as research_plan_router,
-)
+from app.api.routes.research_plan import router as research_plan_router
 from app.api.routes.reviews import router as reviews_router
 from app.api.routes.search import router as search_router
-from app.api.routes.section_research import (
-    router as section_research_router,
-)
+from app.api.routes.section_research import router as section_research_router
 from app.api.routes.sources import router as sources_router
-from app.api.routes.technical_intelligence import (
-    router as technical_intelligence_router,
-)
+from app.api.routes.technical_intelligence import router as technical_intelligence_router
 from app.api.routes.translation import router as translation_router
 from app.api.routes.webhooks import router as webhooks_router
 from app.api.routes.workspaces import router as workspaces_router
@@ -107,6 +89,9 @@ api_router.include_router(manuscript_prose_router)
 api_router.include_router(publication_router)
 api_router.include_router(collaboration_router)
 api_router.include_router(orchestration_router)
+api_router.include_router(research_canvas_router)
+api_router.include_router(pdf_workspace_router)
+api_router.include_router(project_file_evidence_router)
 api_router.include_router(workspaces_router)
 api_router.include_router(webhooks_router)
 api_router.include_router(invitations_router)
