@@ -23,6 +23,7 @@ def test_request_scope_policy() -> None:
     assert required_scope_for_request("POST", "/api/v1/projects") == "write:projects"
     assert required_scope_for_request("GET", "/api/v1/auth/api-tokens") == "read:api_tokens"
     assert required_scope_for_request("POST", "/api/v1/auth/api-tokens") == "manage:api_tokens"
+    assert required_scope_for_request("GET", "/api/v1/not-a-real-resource") == "__forbidden__"
 
 def test_jwt_contains_security_epoch() -> None:
     token = create_access_token("00000000-0000-0000-0000-000000000001", security_version=7)
