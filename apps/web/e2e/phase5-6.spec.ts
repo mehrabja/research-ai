@@ -69,6 +69,10 @@ test("F05 global search returns a real workspace project", async ({ page }) => {
     timeout: 10_000,
   });
   await expect(page.getByText("Live API", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: projectName }).click();
+  await expect(
+    page.getByRole("heading", { name: "Workspace", exact: true }),
+  ).toBeVisible({ timeout: 10_000 });
 });
 
 test("F06 knowledge graph node browser and export use persisted graph contracts", async ({
