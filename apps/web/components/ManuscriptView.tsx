@@ -311,19 +311,23 @@ export default function ManuscriptView() {
       ? mergeDraft(current, recovered)
       : buildBaseDraft(current);
 
-    setDraftContent(nextContent);
-    setBaseVersionId(current.version.id);
-    setRevision(recovered?.revision ?? 0);
-    setDirty(Boolean(recovered));
-    setConflict(false);
-    setNotice(
-      recovered
-        ? `Recovered autosaved draft · revision ${recovered.revision}`
-        : null,
-    );
-    lastSentFingerprintRef.current = recovered
-      ? fingerprint(nextContent)
-      : null;
+    const timer = window.setTimeout(() => {
+      setDraftContent(nextContent);
+      setBaseVersionId(current.version.id);
+      setRevision(recovered?.revision ?? 0);
+      setDirty(Boolean(recovered));
+      setConflict(false);
+      setNotice(
+        recovered
+          ? `Recovered autosaved draft · revision ${recovered.revision}`
+          : null,
+      );
+      lastSentFingerprintRef.current = recovered
+        ? fingerprint(nextContent)
+        : null;
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [
     baseVersionId,
     draft.data,
@@ -363,6 +367,23 @@ export default function ManuscriptView() {
     revision,
   ]);
 
+  const current = manuscript.data;
+  const sections = current?.sections ?? [];
+  const draftSections = useMemo(
+    () => draftContent?.sections ?? [],
+    [draftContent],
+  );
+  const draftByKey = useMemo(
+    () =>
+      new Map(
+        draftSections.map((section) => [
+          section.section_key,
+          section,
+        ]),
+      ),
+    [draftSections],
+  );
+
   const errors = [
     workspaces.error,
     projects.error,
@@ -390,8 +411,6 @@ export default function ManuscriptView() {
       </section>
     );
   }
-
-  const current = manuscript.data;
   const canCommit =
     Boolean(activeReportId && draft.data && baseVersionId && !conflict) &&
     !autosave.isPending &&
@@ -440,14 +459,6 @@ export default function ManuscriptView() {
     setDirty(true);
     setNotice(null);
   }
-
-  const sections = current?.sections ?? [];
-  const draftSections = draftContent?.sections ?? [];
-
-  const draftByKey = useMemo(
-    () => new Map(draftSections.map((section) => [section.section_key, section])),
-    [draftSections],
-  );
 
   return (
     <div className="stack" style={{ gap: 16 }}>
