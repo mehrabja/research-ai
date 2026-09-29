@@ -128,7 +128,7 @@ export function NotificationPreferencesView() {
                     ...preferences,
                     [item.key]: event.target.checked,
                   };
-                  void update.mutateAsync(next);
+                  update.mutate(next);
                 }}
               />
             </label>
