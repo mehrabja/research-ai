@@ -10,6 +10,7 @@ export default function SourcesLibrary() {
   const [filter, setFilter] = useState("");
 
   const {
+    projectId: activeProjectId,
     reportId: activeReportId,
     workspacesQuery: workspaces,
     projectsQuery: projects,
