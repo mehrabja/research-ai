@@ -13,7 +13,9 @@ logging filters) can read it uniformly.
 from __future__ import annotations
 
 import contextvars
+import logging
 import re
+import time
 import uuid
 from typing import Any, Final
 
@@ -22,6 +24,8 @@ _REQUEST_ID_RE: Final = re.compile(r"^[A-Za-z0-9._:\-]{1,128}$")
 _current: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "current_request_id", default=None
 )
+
+logger = logging.getLogger(__name__)
 
 
 def generate_request_id() -> str:
@@ -111,9 +115,13 @@ class RequestIdMiddleware:
             self._header_bytes,
             request_id.encode("latin-1"),
         )
+        started_at = time.monotonic()
+        response_status = 500
 
         async def send_wrapper(message: dict[str, Any]) -> None:
+            nonlocal response_status
             if message["type"] == "http.response.start":
+                response_status = int(message.get("status", 500))
                 headers = [
                     (k, v)
                     for (k, v) in (message.get("headers") or [])
@@ -127,6 +135,15 @@ class RequestIdMiddleware:
         try:
             await self.app(scope, receive, send_wrapper)
         finally:
+            duration_ms = round((time.monotonic() - started_at) * 1000, 2)
+            logger.info(
+                "request_complete method=%s path=%s status=%s duration_ms=%s",
+                scope.get("method", ""),
+                scope.get("path", ""),
+                response_status,
+                duration_ms,
+                extra={"event": "request_complete"},
+            )
             reset_request_id(token)
 
 
