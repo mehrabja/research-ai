@@ -66,6 +66,8 @@ F19 is the final repository release-readiness gate after F18 recovery contracts 
 
 ## Cross-cutting F20 — External Service Provisioning & Provider Activation
 
+**Status: Implemented (code), runtime-pending.**
+
 F20 is an operational gate rather than another UI milestone.
 
 It starts after F01 provider architecture and feeds F02/F04/F05/F09/F11/F15/F17.
