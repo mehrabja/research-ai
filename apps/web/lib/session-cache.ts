@@ -10,7 +10,9 @@ export function syncSessionUser(
     return false;
   }
 
-  queryClient.clear();
+  queryClient.removeQueries({
+    predicate: (query) => query.queryKey[0] !== "session",
+  });
   knownSessionUserId = userId;
   return true;
 }
