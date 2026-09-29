@@ -16,6 +16,7 @@ from app.core.exceptions import (
     InvalidJobStateError,
 )
 from app.db.models.pipeline import DetectionRun
+from app.db.models.project import Project
 from app.db.models.report import Report, ReportVersion
 from app.domain.detection import (
     DetectionLabel,
