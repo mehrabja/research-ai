@@ -34,11 +34,3 @@ export async function listWorkspaceReports(
   return data ?? [];
 }
 
-function getApiErrorMessage(error: unknown): string {
-  if (error && typeof error === "object") {
-    const value = error as { detail?: unknown; message?: unknown };
-    if (typeof value.detail === "string") return value.detail;
-    if (typeof value.message === "string") return value.message;
-  }
-  return "Report API request failed";
-}
