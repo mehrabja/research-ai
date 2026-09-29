@@ -139,46 +139,6 @@ export default function ResearchPlanView() {
           </span>
         </div>
 
-        <div className="grid grid-2" style={{ marginTop: 14 }}>
-          <div className="field">
-            <label htmlFor="plan-workspace">Workspace</label>
-            <select
-              id="plan-workspace"
-              className="input"
-              value={activeWorkspaceId ?? ""}
-              onChange={(event) => {
-                setWorkspaceId(event.target.value);
-                setProjectId(undefined);
-              }}
-            >
-              {(workspaces.data ?? []).map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>
-                  {workspace.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="plan-project">Project</label>
-            <select
-              id="plan-project"
-              className="input"
-              value={activeProjectId ?? ""}
-              onChange={(event) => {
-                setProjectId(event.target.value);
-                setObjective("");
-              }}
-              disabled={projects.isPending}
-            >
-              {(projects.data ?? []).map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
 
         {activeProjectId && !plan && !versions.isPending && (
           <div className="empty" style={{ marginTop: 14 }}>
