@@ -152,6 +152,7 @@ def _exchange_google(code: str, code_verifier: str) -> dict[str, Any]:
             "code": code,
             "grant_type": "authorization_code",
             "redirect_uri": settings.google_oauth_redirect_uri,
+            "code_verifier": code_verifier,
         },
         timeout=20,
     )
@@ -184,6 +185,7 @@ def _exchange_github(code: str, code_verifier: str) -> dict[str, Any]:
             "client_secret": settings.github_oauth_client_secret,
             "code": code,
             "redirect_uri": settings.github_oauth_redirect_uri,
+            "code_verifier": code_verifier,
         },
         timeout=20,
     )
