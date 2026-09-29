@@ -369,7 +369,8 @@ export default function ResearchCanvas() {
               className="input"
               type="number"
               value={viewport.x}
-              onChange={(event) =>
+              onChange={(event) => {
+                hasLocalChangesRef.current = true;
                 setViewport((current) => ({
                   ...current,
                   x: Number(event.target.value) || 0,
@@ -384,7 +385,8 @@ export default function ResearchCanvas() {
               className="input"
               type="number"
               value={viewport.y}
-              onChange={(event) =>
+              onChange={(event) => {
+                hasLocalChangesRef.current = true;
                 setViewport((current) => ({
                   ...current,
                   y: Number(event.target.value) || 0,
@@ -402,7 +404,8 @@ export default function ResearchCanvas() {
               max={4}
               step={0.25}
               value={viewport.zoom}
-              onChange={(event) =>
+              onChange={(event) => {
+                hasLocalChangesRef.current = true;
                 setViewport((current) => ({
                   ...current,
                   zoom: Math.min(
