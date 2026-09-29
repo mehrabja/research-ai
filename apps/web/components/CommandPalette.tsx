@@ -48,7 +48,7 @@ export function CommandPalette({
       id: item.href,
       title: item.label,
       description: item.section,
-      href: contextHref(item.href),
+      href: contextHref(item.href) as Route,
     }));
 
     const currentResearch: Command = {
@@ -57,7 +57,7 @@ export function CommandPalette({
         ? "Open " + project.name
         : "Open current project",
       description: "Current research context",
-      href: contextHref("/research"),
+      href: contextHref("/research") as Route,
     };
 
     const currentReport: Command[] = report
@@ -66,7 +66,7 @@ export function CommandPalette({
             id: "current-report",
             title: "Open current report",
             description: report.topic,
-            href: contextHref("/manuscript"),
+            href: contextHref("/manuscript") as Route,
           },
         ]
       : [];
@@ -132,7 +132,7 @@ export function CommandPalette({
 
   const safeActiveIndex = Math.min(activeIndex, Math.max(filtered.length - 1, 0));
   const activeId = filtered[safeActiveIndex]
-    ? `command-${filtered[activeIndex].id.replace(/[^a-zA-Z0-9_-]/g, "_")}`
+    ? `command-${filtered[safeActiveIndex].id.replace(/[^a-zA-Z0-9_-]/g, "_")}`
     : undefined;
 
   return (
