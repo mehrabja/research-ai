@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getNotificationPreferences,
   updateNotificationPreferences,
@@ -28,6 +28,7 @@ export function NotificationPreferencesView() {
   const [notice, setNotice] = useState<string | null>(null);
   const [localPreferences, setLocalPreferences] =
     useState<Record<string, boolean>>(defaultPreferences);
+  const localPreferencesDirtyRef = useRef(false);
 
   const preferencesQuery = useQuery({
     queryKey: ["notification-preferences"],
@@ -36,7 +37,10 @@ export function NotificationPreferencesView() {
   });
 
   useEffect(() => {
-    if (preferencesQuery.data?.preferences) {
+    if (
+      !localPreferencesDirtyRef.current &&
+      preferencesQuery.data?.preferences
+    ) {
       setLocalPreferences(preferencesQuery.data.preferences);
     }
   }, [preferencesQuery.data?.preferences]);
@@ -46,9 +50,11 @@ export function NotificationPreferencesView() {
     onSuccess: (data) => {
       queryClient.setQueryData(["notification-preferences"], data);
       setLocalPreferences(data.preferences);
+      localPreferencesDirtyRef.current = false;
       setNotice("Notification preferences saved.");
     },
     onError: () => {
+      localPreferencesDirtyRef.current = false;
       queryClient.invalidateQueries({
         queryKey: ["notification-preferences"],
       });
@@ -109,6 +115,7 @@ export function NotificationPreferencesView() {
                     ...preferences,
                     [item.key]: event.target.checked,
                   };
+                  localPreferencesDirtyRef.current = true;
                   setLocalPreferences(next);
                   update.mutate(next);
                 }}
