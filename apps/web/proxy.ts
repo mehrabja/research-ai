@@ -33,6 +33,7 @@ export function proxy(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", securityHeaders(nonce));
 
   const response = NextResponse.next({
     request: { headers: requestHeaders },
