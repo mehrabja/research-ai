@@ -280,7 +280,10 @@ def login_or_create_oauth_user(
     if bool(profile.get("email_verified")) and user.email_verified_at is None:
         user.email_verified_at = datetime.now(UTC)
 
-    access = create_access_token(subject=str(user.id))
+    access = create_access_token(
+        subject=str(user.id),
+        security_version=user.security_version,
+    )
     _, refresh = create_refresh_session(
         db,
         user_id=user.id,
