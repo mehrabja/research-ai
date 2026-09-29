@@ -150,6 +150,12 @@ test("files page creates a real folder and uploads a real file", async ({
   await expect(
     page.getByRole("heading", { name: "Files & intelligence", exact: true }).first(),
   ).toBeVisible();
+  await expect(page.locator("#files-project")).toBeEnabled({
+    timeout: 10_000,
+  });
+  await expect(page.getByLabel("Folder name", { exact: true })).toBeEnabled({
+    timeout: 10_000,
+  });
 
   await page.getByLabel("Folder name").fill("e2e-data");
   await page.getByRole("button", { name: "Create folder" }).click();
