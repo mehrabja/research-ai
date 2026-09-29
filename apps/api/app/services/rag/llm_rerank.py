@@ -16,6 +16,7 @@ from app.integrations.generation.base import (
     GenerationRateLimitError,
     GenerationTimeoutError,
 )
+from app.security.trust_boundary import wrap_untrusted_text
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +43,9 @@ def _build_user_prompt(query: str, items: list[dict]) -> str:
     lines = [f"Query: {query}", "", "Candidates:"]
     for it in items:
         snippet = (it["snippet"] or "")[:MAX_SNIPPET_CHARS]
-        lines.append(
-            f"- chunk_id={it['chunk_id']} "
-            f"score={it['score']:.4f} "
-            f"text={snippet!r}"
-        )
+        lines.append(f"- chunk_id={it['chunk_id']} score={it['score']:.4f}")
+        lines.append("  snippet:")
+        lines.append(wrap_untrusted_text(snippet, max_chars=MAX_SNIPPET_CHARS))
     return "\n".join(lines)
 
 
