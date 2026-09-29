@@ -9,6 +9,7 @@ from app.core.exceptions import OAuthLastAuthMethod
 from app.db.models.oauth_account import OAuthAccount
 from app.db.session import get_db
 from app.services.audit import emit_audit
+from app.services.auth import revoke_all_sessions
 from app.schemas.auth import TokenResponse
 from app.schemas.oauth import OAuthCallbackRequest, OAuthStartResponse
 from app.services import oauth as oauth_service
@@ -122,6 +123,7 @@ def disconnect_oauth(
         raise OAuthLastAuthMethod()
 
     current_user.security_version += 1
+    revoke_all_sessions(db, user_id=current_user.id)
     emit_audit(
         "OAUTH_DISCONNECTED",
         db=db,
