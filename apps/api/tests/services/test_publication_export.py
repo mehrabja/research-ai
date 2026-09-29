@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 import uuid
 import zipfile
@@ -125,7 +126,7 @@ def test_build_publication_export_supports_all_formats(
         assert payload["metadata"]["compliance"]["finding_count"] == 2
         assert payload["content"] == "# Abstract\n\nFinal reviewed manuscript content."
     else:
-        with zipfile.ZipFile(artifact.content) as package:
+        with zipfile.ZipFile(io.BytesIO(artifact.content)) as package:
             assert "word/document.xml" in package.namelist()
             assert "word/styles.xml" in package.namelist()
             document = package.read("word/document.xml").decode("utf-8")
