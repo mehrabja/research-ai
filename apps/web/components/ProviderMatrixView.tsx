@@ -9,19 +9,20 @@ type ProviderCapability =
   components["schemas"]["ProviderCapabilityRead"];
 
 async function getProviderMatrix(): Promise<ProviderCapability[]> {
-  const { data, error, response } = await api.GET(
+  const result = await api.GET(
     "/api/v1/providers/matrix",
   );
+  const response = result.response;
 
-  if (error || !data) {
-    throw apiErrorFromUnknown(error, {
+  if (result.error || !result.data) {
+    throw apiErrorFromUnknown(result.error, {
       status: response.status,
       requestId: response.headers.get("x-request-id"),
       fallback: "Provider matrix request failed",
     });
   }
 
-  return data.capabilities;
+  return result.data.capabilities;
 }
 
 const LABELS: Record<string, string> = {
