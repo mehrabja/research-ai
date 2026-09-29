@@ -249,7 +249,7 @@ def search_source_candidates(
                 idempotency_key=f"source-search:{uuid.uuid4()}",
             )
             db.commit()
-        return candidates
+        return candidates[:effective_limit]
     except SourceProviderTimeoutError as exc:
         raise app_exceptions.SourceProviderUnavailable() from exc
     except SourceProviderUnavailableError as exc:
