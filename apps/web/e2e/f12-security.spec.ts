@@ -152,3 +152,15 @@ test("login buttons start the server OAuth route", async ({ page }) => {
 
   await startRequest;
 });
+
+
+test("authenticated shell can sign out and clears the session", async ({ page }) => {
+  await createAuthenticatedSession(page);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\\/login$/);
+
+  const meAfterLogout = await page.request.get("/api/v1/auth/me");
+  expect(meAfterLogout.status()).toBe(401);
+});
