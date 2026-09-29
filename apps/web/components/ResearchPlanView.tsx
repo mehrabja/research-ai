@@ -17,7 +17,6 @@ export default function ResearchPlanView() {
   const queryClient = useQueryClient();
 
   const {
-    projectId: activeProjectId,
     workspacesQuery: workspaces,
     projectsQuery: projects,
   } = useResearchContext();
