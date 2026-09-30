@@ -6,8 +6,8 @@ from types import SimpleNamespace
 from app.schemas.evidence import EvidenceRecord
 from app.services.evidence_contract import (
     from_chunk,
-    from_project_file,
     from_claim_evidence,
+    from_project_file,
     from_section_research,
     from_technical_fact,
 )
@@ -101,6 +101,7 @@ def test_claim_evidence_adapter_uses_underlying_kind() -> None:
 def test_chunk_adapter_keeps_precise_locator() -> None:
     source_id = uuid.uuid4()
     chunk_id = uuid.uuid4()
+    project_file_id = uuid.uuid4()
     row = SimpleNamespace(
         id=chunk_id,
         source_id=source_id,
@@ -111,7 +112,7 @@ def test_chunk_adapter_keeps_precise_locator() -> None:
         chunk_index=3,
         embedding_status="completed",
         embedding_model_version="v1",
-        chunk_meta={"project_file_id": str(uuid.uuid4())},
+        chunk_meta={"project_file_id": str(project_file_id)},
         created_at=None,
     )
 
@@ -120,6 +121,7 @@ def test_chunk_adapter_keeps_precise_locator() -> None:
     assert out.kind == "retrieval_chunk"
     assert out.source_id == source_id
     assert out.chunk_id == chunk_id
+    assert out.project_file_id == project_file_id
     assert out.locator.page_number == 7
     assert out.locator.char_start == 100
     assert out.locator.char_end == 180
