@@ -8,6 +8,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 EvidenceKind = Literal[
+    "project_file",
     "m28_evidence",
     "m29_technical_fact",
     "m29_experiment_result",
