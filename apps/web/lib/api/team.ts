@@ -1,5 +1,3 @@
-import { api } from "./client";
-
 export type TeamMember = {
   id: string;
   user_id: string;
@@ -149,6 +147,3 @@ export async function acceptInvitation(token: string): Promise<{
   };
 }
 
-// Keep this import exercised so bundlers retain the authenticated BFF client
-// contract alongside the raw invite calls.
-void api;
