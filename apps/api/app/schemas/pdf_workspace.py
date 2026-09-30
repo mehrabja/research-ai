@@ -18,6 +18,15 @@ class PdfWorkspaceDocumentRead(BaseModel):
     content_url: str
 
 
+class PdfAnnotationRect(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    x: float
+    y: float
+    width: float = Field(gt=0)
+    height: float = Field(gt=0)
+
+
 class PdfAnnotationRead(BaseModel):
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
@@ -29,7 +38,7 @@ class PdfAnnotationRead(BaseModel):
     page_number: int
     selected_text: str | None
     note: str | None
-    rect: dict | None
+    rect: PdfAnnotationRect | None
     annotation_meta: dict | None
     created_at: datetime
     updated_at: datetime
@@ -68,7 +77,7 @@ class PdfAnnotationCreate(BaseModel):
     page_number: int = Field(default=1, ge=1)
     selected_text: str | None = Field(default=None, max_length=10_000)
     note: str | None = Field(default=None, max_length=10_000)
-    rect: dict | None = None
+    rect: PdfAnnotationRect | None = None
 
 
 class PdfAnnotationUpdate(BaseModel):
