@@ -115,11 +115,16 @@ def disconnect_oauth(
     if account_count <= 1:
         raise OAuthLastAuthMethod()
 
-    result = db.execute(delete(OAuthAccount).where(
-        OAuthAccount.user_id == current_user.id,
-        OAuthAccount.provider == provider,
-    ))
-    if result.rowcount == 0:
+    deleted_id = db.execute(
+        delete(OAuthAccount)
+        .where(
+            OAuthAccount.user_id == current_user.id,
+            OAuthAccount.provider == provider,
+        )
+        .returning(OAuthAccount.id)
+    ).scalar_one_or_none()
+
+    if deleted_id is None:
         raise OAuthLastAuthMethod()
 
     current_user.security_version += 1
