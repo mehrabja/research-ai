@@ -1,6 +1,5 @@
 "use client";
 
-import type { Metadata } from "next";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -11,10 +10,6 @@ import {
   type WorkspaceInvitation,
 } from "@/lib/api/team";
 import { useResearchContext } from "@/lib/research-context";
-
-export const metadata: Metadata = {
-  title: "Team · Research AI",
-};
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
