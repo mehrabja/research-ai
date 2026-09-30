@@ -70,12 +70,12 @@ def _token_target_ids(request: Request, db: Session) -> tuple[set[str], set[str]
             pid = uuid.UUID(str(raw))
         except (ValueError, TypeError):
             continue
-        row = db.execute(
+        project_row = db.execute(
             select(Project.workspace_id).where(Project.id == pid)
         ).first()
-        if row:
+        if project_row:
             project_ids.add(str(pid))
-            workspace_ids.add(str(row[0]))
+            workspace_ids.add(str(project_row[0]))
             has_target = True
 
     has_target |= add_uuid(workspace_ids, path_params.get("workspace_id"))
@@ -89,14 +89,14 @@ def _token_target_ids(request: Request, db: Session) -> tuple[set[str], set[str]
             rid = uuid.UUID(str(raw))
         except (ValueError, TypeError):
             continue
-        row = db.execute(
+        report_row = db.execute(
             select(Report.project_id, Project.workspace_id)
             .join(Project, Project.id == Report.project_id)
             .where(Report.id == rid)
         ).first()
-        if row:
-            project_ids.add(str(row[0]))
-            workspace_ids.add(str(row[1]))
+        if report_row:
+            project_ids.add(str(report_row[0]))
+            workspace_ids.add(str(report_row[1]))
             has_target = True
 
     for raw in (
@@ -107,15 +107,15 @@ def _token_target_ids(request: Request, db: Session) -> tuple[set[str], set[str]
             sid = uuid.UUID(str(raw))
         except (ValueError, TypeError):
             continue
-        row = db.execute(
+        source_row = db.execute(
             select(Report.project_id, Project.workspace_id)
             .join(Report, Report.id == Source.report_id)
             .join(Project, Project.id == Report.project_id)
             .where(Source.id == sid)
         ).first()
-        if row:
-            project_ids.add(str(row[0]))
-            workspace_ids.add(str(row[1]))
+        if source_row:
+            project_ids.add(str(source_row[0]))
+            workspace_ids.add(str(source_row[1]))
             has_target = True
 
     for raw in (
@@ -126,14 +126,14 @@ def _token_target_ids(request: Request, db: Session) -> tuple[set[str], set[str]
             fid = uuid.UUID(str(raw))
         except (ValueError, TypeError):
             continue
-        row = db.execute(
+        file_row = db.execute(
             select(ProjectFile.project_id, Project.workspace_id)
             .join(Project, Project.id == ProjectFile.project_id)
             .where(ProjectFile.id == fid)
         ).first()
-        if row:
-            project_ids.add(str(row[0]))
-            workspace_ids.add(str(row[1]))
+        if file_row:
+            project_ids.add(str(file_row[0]))
+            workspace_ids.add(str(file_row[1]))
             has_target = True
 
     return workspace_ids, project_ids, has_target
@@ -182,13 +182,17 @@ def enforce_api_token_request(
     if not has_target and not identity_only:
         raise APITokenTargetError()
 
-    if principal.workspace_ids:
-        if not workspace_ids or not workspace_ids.issubset(principal.workspace_ids):
-            raise APITokenTargetError()
+    if principal.workspace_ids and (
+        not workspace_ids
+        or not workspace_ids.issubset(principal.workspace_ids)
+    ):
+        raise APITokenTargetError()
 
-    if principal.project_ids:
-        if not project_ids or not project_ids.issubset(principal.project_ids):
-            raise APITokenTargetError()
+    if principal.project_ids and (
+        not project_ids
+        or not project_ids.issubset(principal.project_ids)
+    ):
+        raise APITokenTargetError()
 
 
 def ensure_bearer_security_version(request: Request, user: object) -> None:
