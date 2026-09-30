@@ -6,10 +6,39 @@ from types import SimpleNamespace
 from app.schemas.evidence import EvidenceRecord
 from app.services.evidence_contract import (
     from_chunk,
+    from_project_file,
     from_claim_evidence,
     from_section_research,
     from_technical_fact,
 )
+
+
+def test_project_file_adapter_is_file_scoped_and_preserves_extraction_meta() -> None:
+    project_file_id = uuid.uuid4()
+    row = SimpleNamespace(
+        id=project_file_id,
+        original_filename="paper.pdf",
+        normalized_filename="paper.pdf",
+        file_kind="pdf",
+        status="ready",
+        extraction_status="completed",
+        extracted_text="extracted project file text",
+        sha256="a" * 64,
+        storage_provider="local",
+        extraction_pipeline_version="pdf-v1",
+        created_at=None,
+    )
+
+    out = from_project_file(row)
+
+    assert out.kind == "project_file"
+    assert out.evidence_id == project_file_id
+    assert out.project_file_id == project_file_id
+    assert out.title == "paper.pdf"
+    assert out.text == "extracted project file text"
+    assert out.provenance["origin"] == "project_file"
+    assert out.provenance["extraction_status"] == "completed"
+    assert out.provenance["extraction_pipeline_version"] == "pdf-v1"
 
 
 def test_section_research_adapter_preserves_retrieval_provenance() -> None:
@@ -82,6 +111,7 @@ def test_chunk_adapter_keeps_precise_locator() -> None:
         chunk_index=3,
         embedding_status="completed",
         embedding_model_version="v1",
+        chunk_meta={"project_file_id": str(uuid.uuid4())},
         created_at=None,
     )
 
