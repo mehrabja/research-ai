@@ -157,7 +157,7 @@ export default function PDFWorkspace() {
       <section className="card pad">
         <div className="row">
           <div>
-            <div className="eyebrow">Legacy Phase 12</div>
+            <div className="eyebrow">Research workspace</div>
             <h2 style={{ marginTop: 4 }}>PDF Research Workspace</h2>
             <p className="muted small" style={{ marginTop: 4 }}>
               Persistent PDF selection, viewer position, highlights and notes.
@@ -264,7 +264,7 @@ export default function PDFWorkspace() {
                 </div>
                 <a
                   className="btn ghost"
-                  href={projectFileContentUrl(selectedFile.id)}
+                  href={projectFileContentUrl(selectedFile.id, true)}
                 >
                   Open file
                 </a>
@@ -281,7 +281,7 @@ export default function PDFWorkspace() {
               >
                 <iframe
                   title="PDF document viewer"
-                  src={projectFileContentUrl(selectedFile.id)}
+                  src={projectFileContentUrl(selectedFile.id, true)}
                   style={{
                     width: "100%",
                     height: "100%",
