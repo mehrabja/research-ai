@@ -38,8 +38,8 @@ from app.schemas.auth import (
 from app.services import account_security as account_security_service
 from app.services import activity as activity_service
 from app.services import auth as auth_service
-from app.services.audit import emit_audit
 from app.services import mfa as mfa_service
+from app.services.audit import emit_audit
 from app.services.email import EmailDeliveryService
 from app.services.rate_limit import get_login_rate_limiter
 
