@@ -52,6 +52,10 @@ class MemberListResponse(BaseModel):
     total: int
 
 
+class InvitationAcceptRequest(BaseModel):
+    token: str = Field(..., min_length=32, max_length=512)
+
+
 class InvitationAcceptResponse(BaseModel):
     workspace_id: uuid.UUID
     user_id: uuid.UUID
