@@ -50,10 +50,6 @@ def _result_row_to_read(r: RetrievalResult) -> RetrievedChunkRead:
         ),
         chunk_id=r.chunk_id,
         source_id=r.source_id,
-        project_file_id=(
-            _project_file_id_from_result(r)
-            if r.chunk_id is not None else None
-        ),
         final_score=float(r.final_score),
         vector_score=(
             float(r.vector_score) if r.vector_score is not None else None
