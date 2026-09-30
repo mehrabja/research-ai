@@ -1,7 +1,7 @@
 """Adapters into the canonical evidence contract."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from app.db.models.citation import ClaimEvidence
 from app.db.models.experiment_result import ExperimentResult
@@ -79,7 +79,7 @@ def from_claim_evidence(evidence: ClaimEvidence) -> EvidenceRecord:
     provenance["evidence_type"] = evidence.evidence_type
     provenance["underlying_evidence_id"] = str(evidence.evidence_id)
     kind: EvidenceKind = (
-        evidence.evidence_type
+        cast(EvidenceKind, evidence.evidence_type)
         if evidence.evidence_type in {
             "m28_evidence",
             "m29_technical_fact",
