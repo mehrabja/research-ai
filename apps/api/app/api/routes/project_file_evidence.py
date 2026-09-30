@@ -8,7 +8,10 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user
 from app.db.models.user import User
 from app.db.session import get_db
-from app.schemas.evidence import EvidenceKind, EvidenceListResponse
+from app.schemas.evidence import (
+    CanonicalProjectEvidenceKind,
+    EvidenceListResponse,
+)
 from app.schemas.project_file_evidence import (
     ProjectFileEvidenceListResponse,
     ProjectFileEvidenceRead,
@@ -29,7 +32,7 @@ router = APIRouter(prefix="/projects", tags=["file-evidence"])
 )
 def list_canonical_evidence(
     project_id: uuid.UUID,
-    kind: EvidenceKind | None = Query(default=None),
+    kind: CanonicalProjectEvidenceKind | None = Query(default=None),
     file_id: uuid.UUID | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
