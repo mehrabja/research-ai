@@ -8,6 +8,9 @@ from sqlalchemy import delete, select
 from app.api.dependencies import get_current_user
 from app.core.config import get_settings
 from app.db.models.project import Project, ProjectEvent
+from app.db.models.project_file import ProjectFile
+from app.db.models.report import Report
+from app.db.models.source import Chunk, Source
 from app.db.models.user import User
 from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal, get_db
@@ -191,3 +194,110 @@ def test_canonical_project_evidence_endpoint_empty(client):
         params={"kind": "m29_metric"},
     )
     assert invalid.status_code == 422
+
+
+def test_canonical_project_evidence_endpoint_returns_file_and_chunk_records(client):
+    c, uid = client
+    pid = _mk_project(uid)
+    file_id = uuid.uuid4()
+    report_id = uuid.uuid4()
+    source_id = uuid.uuid4()
+    chunk_id = uuid.uuid4()
+
+    with SessionLocal() as db:
+        db.add(
+            ProjectFile(
+                id=file_id,
+                project_id=pid,
+                uploaded_by=uid,
+                original_filename="evidence.pdf",
+                normalized_filename="evidence.pdf",
+                extension="pdf",
+                storage_key=f"projects/{pid}/evidence.pdf",
+                storage_provider="local",
+                size_bytes=123,
+                sha256="a" * 64,
+                client_mime_type="application/pdf",
+                detected_mime_type="application/pdf",
+                file_kind="pdf",
+                status="ready",
+                extraction_status="completed",
+                extracted_text="canonical project file text",
+                extraction_pipeline_version="pdf-v1",
+            )
+        )
+        db.add(
+            Report(
+                id=report_id,
+                user_id=uid,
+                project_id=pid,
+                topic="Evidence API contract",
+                status="draft",
+                output_language="en",
+            )
+        )
+        db.add(
+            Source(
+                id=source_id,
+                report_id=report_id,
+                title="evidence.pdf",
+                source_api="project_file",
+                external_source_id=str(file_id),
+                full_text="canonical project file text",
+                status="full_text",
+            )
+        )
+        db.add(
+            Chunk(
+                id=chunk_id,
+                source_id=source_id,
+                content="retrieval chunk text",
+                chunk_index=0,
+                char_start=0,
+                char_end=21,
+                page_number=1,
+                embedding_status="completed",
+                chunk_meta={"project_file_id": str(file_id)},
+            )
+        )
+        db.commit()
+
+    try:
+        resp = c.get(f"/api/v1/projects/{pid}/evidence")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["total"] == 2
+        assert body["limit"] == 100
+        assert body["offset"] == 0
+
+        records = {item["kind"]: item for item in body["items"]}
+        assert set(records) == {"project_file", "retrieval_chunk"}
+        assert records["project_file"]["evidence_id"] == str(file_id)
+        assert records["project_file"]["project_file_id"] == str(file_id)
+        assert records["project_file"]["text"] == "canonical project file text"
+        assert records["retrieval_chunk"]["evidence_id"] == str(chunk_id)
+        assert records["retrieval_chunk"]["chunk_id"] == str(chunk_id)
+        assert records["retrieval_chunk"]["project_file_id"] == str(file_id)
+        assert records["retrieval_chunk"]["locator"] == {
+            "page_number": 1,
+            "char_start": 0,
+            "char_end": 21,
+        }
+
+        filtered = c.get(
+            f"/api/v1/projects/{pid}/evidence",
+            params={"kind": "retrieval_chunk", "file_id": str(file_id)},
+        )
+        assert filtered.status_code == 200
+        filtered_body = filtered.json()
+        assert filtered_body["total"] == 1
+        assert len(filtered_body["items"]) == 1
+        assert filtered_body["items"][0]["kind"] == "retrieval_chunk"
+        assert filtered_body["items"][0]["project_file_id"] == str(file_id)
+    finally:
+        with SessionLocal() as db:
+            db.execute(delete(Chunk).where(Chunk.id == chunk_id))
+            db.execute(delete(Source).where(Source.id == source_id))
+            db.execute(delete(Report).where(Report.id == report_id))
+            db.execute(delete(ProjectFile).where(ProjectFile.id == file_id))
+            db.commit()
