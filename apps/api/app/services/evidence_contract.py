@@ -4,9 +4,9 @@ from __future__ import annotations
 from typing import Any, cast
 
 from app.db.models.citation import ClaimEvidence
-from app.db.models.project_file import ProjectFile
 from app.db.models.experiment_result import ExperimentResult
 from app.db.models.metric import Metric
+from app.db.models.project_file import ProjectFile
 from app.db.models.section_research import SectionResearchEvidence
 from app.db.models.source import Chunk
 from app.db.models.technical_fact import TechnicalFact
