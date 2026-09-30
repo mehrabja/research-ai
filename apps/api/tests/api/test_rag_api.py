@@ -172,3 +172,21 @@ def test_canonical_project_evidence_endpoint_empty(client):
     assert resp.status_code == 200
     body = resp.json()
     assert body == {"items": [], "total": 0, "limit": 100, "offset": 0}
+
+    filtered = c.get(
+        f"/api/v1/projects/{pid}/evidence",
+        params={"kind": "retrieval_chunk", "limit": 10},
+    )
+    assert filtered.status_code == 200
+    assert filtered.json() == {
+        "items": [],
+        "total": 0,
+        "limit": 10,
+        "offset": 0,
+    }
+
+    invalid = c.get(
+        f"/api/v1/projects/{pid}/evidence",
+        params={"kind": "m29_metric"},
+    )
+    assert invalid.status_code == 422
