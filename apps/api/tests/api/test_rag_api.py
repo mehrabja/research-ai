@@ -196,7 +196,9 @@ def test_canonical_project_evidence_endpoint_empty(client):
     assert invalid.status_code == 422
 
 
-def test_canonical_project_evidence_endpoint_returns_file_and_chunk_records(client):
+def test_canonical_project_evidence_endpoint_returns_file_and_chunk_records(
+    client,
+):
     c, uid = client
     pid = _mk_project(uid)
     file_id = uuid.uuid4()
