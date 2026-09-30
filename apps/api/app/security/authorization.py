@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.exceptions import AuthenticationRequired, AppError
+from app.core.exceptions import AppError, AuthenticationRequired
 from app.db.models.project import Project
 from app.db.models.project_file import ProjectFile
 from app.db.models.report import Report
