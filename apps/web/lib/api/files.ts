@@ -141,8 +141,12 @@ export async function deleteProjectFile(
   }
 }
 
-export function projectFileContentUrl(fileId: string): string {
-  return "/api/v1/files/" + fileId + "/content";
+export function projectFileContentUrl(
+  fileId: string,
+  inline = false,
+): string {
+  const suffix = inline ? "?inline=true" : "";
+  return "/api/v1/files/" + fileId + "/content" + suffix;
 }
 
 async function readResponseError(
