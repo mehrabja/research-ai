@@ -39,7 +39,14 @@ export default function LoginPage() {
       login(values.email, values.password),
 
     onSuccess: () => {
-      router.replace("/dashboard");
+      const next = searchParams.get("next");
+      const safeNext =
+        next &&
+        next.startsWith("/") &&
+        !next.startsWith("//")
+          ? next
+          : "/dashboard";
+      router.replace(safeNext as Route);
     },
 
     onError: () => {
