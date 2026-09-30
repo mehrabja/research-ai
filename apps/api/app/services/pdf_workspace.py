@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import FileNotFound
+from app.core.exceptions import AppError, FileNotFound
 from app.db.models.pdf_workspace import PdfAnnotation, PdfWorkspaceState
 from app.db.models.project_file import ProjectFile
 from app.schemas.pdf_workspace import PdfWorkspaceDocumentRead
@@ -143,6 +143,18 @@ def save_pdf_workspace(
     return state
 
 
+def _validate_annotation_payload(
+    *,
+    kind: str,
+    selected_text: str | None,
+    note: str | None,
+) -> None:
+    if kind == "highlight" and not (selected_text and selected_text.strip()):
+        raise AppError("highlight annotations require selected_text")
+    if kind == "note" and not (note and note.strip()):
+        raise AppError("note annotations require note")
+
+
 def create_annotation(
     db: Session,
     *,
@@ -160,6 +172,11 @@ def create_annotation(
         user_id=user_id,
         project_id=project_id,
         file_id=file_id,
+    )
+    _validate_annotation_payload(
+        kind=kind,
+        selected_text=selected_text,
+        note=note,
     )
     annotation = PdfAnnotation(
         project_id=project_id,
@@ -211,9 +228,20 @@ def update_annotation(
         project_id=project_id,
         annotation_id=annotation_id,
     )
+    merged_kind = changes.get("kind", annotation.kind)
+    merged_selected_text = changes.get(
+        "selected_text", annotation.selected_text
+    )
+    merged_note = changes.get("note", annotation.note)
+    if merged_kind is not None:
+        _validate_annotation_payload(
+            kind=merged_kind,
+            selected_text=merged_selected_text,
+            note=merged_note,
+        )
+
     for key, value in changes.items():
-        if value is not None:
-            setattr(annotation, key, value)
+        setattr(annotation, key, value)
     db.commit()
     db.refresh(annotation)
     return annotation
