@@ -53,3 +53,14 @@ class EvidenceRecord(BaseModel):
     provenance: dict[str, Any] = Field(default_factory=dict)
 
     created_at: datetime | None = None
+
+
+class EvidenceListResponse(BaseModel):
+    """Paginated canonical evidence records for a project."""
+    
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[EvidenceRecord] = Field(default_factory=list)
+    total: int
+    limit: int
+    offset: int
