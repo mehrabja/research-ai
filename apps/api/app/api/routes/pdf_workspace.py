@@ -97,7 +97,7 @@ def create_annotation(
         page_number=payload.page_number,
         selected_text=payload.selected_text,
         note=payload.note,
-        rect=payload.rect,
+        rect=payload.rect.model_dump() if payload.rect is not None else None,
     )
     return PdfAnnotationRead.model_validate(annotation)
 
