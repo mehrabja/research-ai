@@ -17,6 +17,7 @@ from app.db.models.research_memory import ResearchMemory
 from app.db.models.retrieval import RetrievalResult, RetrievalRun
 from app.db.models.user import User
 from app.db.session import get_db
+from app.schemas.evidence import EvidenceRecord
 from app.schemas.retrieval_advanced import (
     CoverageRead,
     MemoryListResponse,
@@ -45,8 +46,15 @@ router = APIRouter(prefix="/projects", tags=["advanced-rag"])
 def _result_row_to_read(r: RetrievalResult) -> RetrievedChunkRead:
     return RetrievedChunkRead(
         rank=r.rank,
+        evidence_key=(
+            f"retrieval_chunk:{r.chunk_id}" if r.chunk_id is not None else None
+        ),
         chunk_id=r.chunk_id,
         source_id=r.source_id,
+        project_file_id=(
+            _project_file_id_from_result(r)
+            if r.chunk_id is not None else None
+        ),
         final_score=float(r.final_score),
         vector_score=(
             float(r.vector_score) if r.vector_score is not None else None
@@ -75,6 +83,17 @@ def _result_row_to_read(r: RetrievalResult) -> RetrievedChunkRead:
         graph_distance=r.graph_distance,
         memory_match=r.memory_match,
     )
+
+
+def _project_file_id_from_result(r: RetrievalResult) -> uuid.UUID | None:
+    metadata = r.result_meta or {}
+    raw = metadata.get("project_file_id")
+    if raw is None:
+        return None
+    try:
+        return uuid.UUID(str(raw))
+    except (TypeError, ValueError):
+        return None
 
 
 @router.post(
