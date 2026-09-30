@@ -134,6 +134,7 @@ def test_ownership_isolation(client):
 
 def test_retrieval_result_exposes_canonical_evidence_metadata():
     from types import SimpleNamespace
+
     from app.api.routes.rag import _result_row_to_read
 
     chunk_id = uuid.uuid4()
