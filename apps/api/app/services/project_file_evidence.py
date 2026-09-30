@@ -191,7 +191,7 @@ def list_canonical_project_evidence(
         )
         if file_id is not None:
             file_stmt = file_stmt.where(ProjectFile.id == file_id)
-        rows = list(
+        file_rows = list(
             db.execute(
                 file_stmt.order_by(
                     ProjectFile.created_at.asc(),
@@ -199,7 +199,7 @@ def list_canonical_project_evidence(
                 )
             ).scalars().all()
         )
-        files = [from_project_file(row) for row in rows]
+        files = [from_project_file(row) for row in file_rows]
 
     chunks: list[EvidenceRecord] = []
     if kind in (None, "retrieval_chunk"):
@@ -218,12 +218,12 @@ def list_canonical_project_evidence(
             chunk_stmt = chunk_stmt.where(
                 Source.external_source_id == str(file_id)
             )
-        rows = list(
+        chunk_rows = list(
             db.execute(
                 chunk_stmt.order_by(Chunk.created_at.asc(), Chunk.id.asc())
             ).scalars().all()
         )
-        chunks = [from_chunk(row) for row in rows]
+        chunks = [from_chunk(row) for row in chunk_rows]
 
     merged = sorted(
         files + chunks,
