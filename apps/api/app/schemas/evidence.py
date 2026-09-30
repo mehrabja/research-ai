@@ -17,6 +17,8 @@ EvidenceKind = Literal[
     "claim_evidence",
 ]
 
+CanonicalProjectEvidenceKind = Literal["project_file", "retrieval_chunk"]
+
 
 class EvidenceLocator(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -57,7 +59,7 @@ class EvidenceRecord(BaseModel):
 
 class EvidenceListResponse(BaseModel):
     """Paginated canonical evidence records for a project."""
-    
+
     model_config = ConfigDict(extra="forbid")
 
     items: list[EvidenceRecord] = Field(default_factory=list)
