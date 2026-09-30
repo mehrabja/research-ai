@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -23,6 +23,8 @@ router = APIRouter(prefix="/projects", tags=["research-canvas"])
 )
 def get_research_canvas(
     project_id: uuid.UUID,
+    response: Response,
+    response: Response,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ResearchCanvasRead:
@@ -31,7 +33,9 @@ def get_research_canvas(
         user_id=current_user.id,
         project_id=project_id,
     )
-    return ResearchCanvasRead.model_validate(canvas)
+    result = ResearchCanvasRead.model_validate(canvas)
+    response.headers["X-Canvas-Revision"] = str(result.revision)
+    return result
 
 
 @router.put(
@@ -53,4 +57,6 @@ def save_research_canvas(
         viewport=payload.viewport.model_dump(),
         expected_revision=payload.expected_revision,
     )
-    return ResearchCanvasRead.model_validate(canvas)
+    result = ResearchCanvasRead.model_validate(canvas)
+    response.headers["X-Canvas-Revision"] = str(result.revision)
+    return result
