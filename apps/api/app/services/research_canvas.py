@@ -67,7 +67,6 @@ def get_canvas(
     project_id: uuid.UUID,
 ) -> ResearchCanvas:
     get_project(db, user_id=user_id, project_id=project_id)
-    _validate_canvas_graph(nodes=nodes, edges=edges)
     canvas = db.execute(
         select(ResearchCanvas).where(
             ResearchCanvas.project_id == project_id
@@ -99,6 +98,7 @@ def save_canvas(
     expected_revision: int | None,
 ) -> ResearchCanvas:
     get_project(db, user_id=user_id, project_id=project_id)
+    _validate_canvas_graph(nodes=nodes, edges=edges)
     canvas = db.execute(
         select(ResearchCanvas)
         .where(ResearchCanvas.project_id == project_id)
