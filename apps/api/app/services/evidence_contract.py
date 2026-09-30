@@ -1,6 +1,7 @@
 """Adapters into the canonical evidence contract."""
 from __future__ import annotations
 
+import uuid
 from typing import Any, cast
 
 from app.db.models.citation import ClaimEvidence
