@@ -249,6 +249,7 @@ def test_canonical_project_evidence_endpoint_returns_file_and_chunk_records(
                 status="full_text",
             )
         )
+        db.flush()
         db.add(
             Chunk(
                 id=chunk_id,
