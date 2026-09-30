@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models.project_file import ProjectFile
+from app.db.models.report import Report
 from app.db.models.source import Chunk, Source
 from app.schemas.evidence import EvidenceKind, EvidenceRecord
 from app.services.evidence_contract import from_chunk, from_project_file
@@ -199,11 +200,8 @@ def list_canonical_project_evidence(
 
     chunks: list[EvidenceRecord] = []
     if kind in (None, "retrieval_chunk"):
-        report_ids_stmt = select(
-            __import__("app.db.models.report", fromlist=["Report"]).Report.id
-        ).where(
-            __import__("app.db.models.report", fromlist=["Report"]).Report.project_id
-            == project_id
+        report_ids_stmt = select(Report.id).where(
+            Report.project_id == project_id
         )
         stmt = (
             select(Chunk)
