@@ -11,7 +11,10 @@ from sqlalchemy.orm import Session
 from app.db.models.project_file import ProjectFile
 from app.db.models.report import Report
 from app.db.models.source import Chunk, Source
-from app.schemas.evidence import EvidenceKind, EvidenceRecord
+from app.schemas.evidence import (
+    CanonicalProjectEvidenceKind,
+    EvidenceRecord,
+)
 from app.services.artifact_evidence import sync_ready_project_files_for_report
 from app.services.evidence_contract import from_chunk, from_project_file
 from app.services.projects import get_project
@@ -160,7 +163,7 @@ def list_canonical_project_evidence(
     *,
     user_id: uuid.UUID,
     project_id: uuid.UUID,
-    kind: EvidenceKind | None = None,
+    kind: CanonicalProjectEvidenceKind | None = None,
     file_id: uuid.UUID | None = None,
     limit: int = 100,
     offset: int = 0,
