@@ -185,15 +185,15 @@ def list_canonical_project_evidence(
 
     files: list[EvidenceRecord] = []
     if kind in (None, "project_file"):
-        stmt = select(ProjectFile).where(
+        file_stmt = select(ProjectFile).where(
             ProjectFile.project_id == project_id,
             ProjectFile.deleted_at.is_(None),
         )
         if file_id is not None:
-            stmt = stmt.where(ProjectFile.id == file_id)
+            file_stmt = file_stmt.where(ProjectFile.id == file_id)
         rows = list(
             db.execute(
-                stmt.order_by(
+                file_stmt.order_by(
                     ProjectFile.created_at.asc(),
                     ProjectFile.id.asc(),
                 )
@@ -206,7 +206,7 @@ def list_canonical_project_evidence(
         report_ids_stmt = select(Report.id).where(
             Report.project_id == project_id
         )
-        stmt = (
+        chunk_stmt = (
             select(Chunk)
             .join(Source, Chunk.source_id == Source.id)
             .where(
@@ -215,12 +215,12 @@ def list_canonical_project_evidence(
             )
         )
         if file_id is not None:
-            stmt = stmt.where(
+            chunk_stmt = chunk_stmt.where(
                 Source.external_source_id == str(file_id)
             )
         rows = list(
             db.execute(
-                stmt.order_by(Chunk.created_at.asc(), Chunk.id.asc())
+                chunk_stmt.order_by(Chunk.created_at.asc(), Chunk.id.asc())
             ).scalars().all()
         )
         chunks = [from_chunk(row) for row in rows]
