@@ -3,12 +3,14 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
+from app.core.exceptions import AppError
+
 from app.schemas.pdf_workspace import PdfAnnotationCreate, PdfAnnotationRect
 from app.services.pdf_workspace import _validate_annotation_payload
 
 
 def test_highlight_requires_selected_text() -> None:
-    with pytest.raises(Exception, match="selected_text"):
+    with pytest.raises(AppError, match="selected_text"):
         _validate_annotation_payload(
             kind="highlight",
             selected_text=None,
@@ -17,7 +19,7 @@ def test_highlight_requires_selected_text() -> None:
 
 
 def test_note_requires_note() -> None:
-    with pytest.raises(Exception, match="require note"):
+    with pytest.raises(AppError, match="require note"):
         _validate_annotation_payload(
             kind="note",
             selected_text=None,
