@@ -24,7 +24,6 @@ router = APIRouter(prefix="/projects", tags=["research-canvas"])
 def get_research_canvas(
     project_id: uuid.UUID,
     response: Response,
-    response: Response,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ResearchCanvasRead:
@@ -45,6 +44,7 @@ def get_research_canvas(
 def save_research_canvas(
     project_id: uuid.UUID,
     payload: ResearchCanvasUpdate,
+    response: Response,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ResearchCanvasRead:
