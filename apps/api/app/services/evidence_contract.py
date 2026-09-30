@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 from app.db.models.citation import ClaimEvidence
+from app.db.models.project_file import ProjectFile
 from app.db.models.experiment_result import ExperimentResult
 from app.db.models.metric import Metric
 from app.db.models.section_research import SectionResearchEvidence
@@ -47,6 +48,31 @@ def _record(
         locator=locator or EvidenceLocator(),
         provenance=provenance or {},
         created_at=created_at,
+    )
+
+
+def from_project_file(project_file: ProjectFile) -> EvidenceRecord:
+    """Adapt one project file into the canonical evidence contract."""
+    return _record(
+        kind="project_file",
+        evidence_id=project_file.id,
+        project_file_id=project_file.id,
+        title=project_file.original_filename,
+        text=project_file.extracted_text,
+        provenance={
+            "origin": "project_file",
+            "filename": project_file.original_filename,
+            "normalized_filename": project_file.normalized_filename,
+            "file_kind": project_file.file_kind,
+            "status": project_file.status,
+            "extraction_status": project_file.extraction_status,
+            "sha256": project_file.sha256,
+            "storage_provider": project_file.storage_provider,
+            "extraction_pipeline_version": (
+                project_file.extraction_pipeline_version
+            ),
+        },
+        created_at=project_file.created_at,
     )
 
 
@@ -101,11 +127,21 @@ def from_claim_evidence(evidence: ClaimEvidence) -> EvidenceRecord:
 
 
 def from_chunk(chunk: Chunk) -> EvidenceRecord:
+    project_file_id = None
+    chunk_meta = chunk.chunk_meta or {}
+    raw_project_file_id = chunk_meta.get("project_file_id")
+    if raw_project_file_id:
+        try:
+            project_file_id = uuid.UUID(str(raw_project_file_id))
+        except (TypeError, ValueError):
+            project_file_id = None
+
     return _record(
         kind="retrieval_chunk",
         evidence_id=chunk.id,
         source_id=chunk.source_id,
         chunk_id=chunk.id,
+        project_file_id=project_file_id,
         text=chunk.content,
         locator=EvidenceLocator(
             page_number=chunk.page_number,
