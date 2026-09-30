@@ -17,7 +17,6 @@ from app.db.models.research_memory import ResearchMemory
 from app.db.models.retrieval import RetrievalResult, RetrievalRun
 from app.db.models.user import User
 from app.db.session import get_db
-from app.schemas.evidence import EvidenceRecord
 from app.schemas.retrieval_advanced import (
     CoverageRead,
     MemoryListResponse,
@@ -82,6 +81,8 @@ def _result_row_to_read(r: RetrievalResult) -> RetrievedChunkRead:
         retrieval_reason=list(r.retrieval_reason or []),
         graph_distance=r.graph_distance,
         memory_match=r.memory_match,
+        evidence_key=(r.result_meta or {}).get("evidence_key"),
+        project_file_id=_project_file_id_from_result(r),
     )
 
 
