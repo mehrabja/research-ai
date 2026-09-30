@@ -8,11 +8,11 @@ from app.api.dependencies import get_client_ip, get_current_user
 from app.core.exceptions import OAuthLastAuthMethod
 from app.db.models.oauth_account import OAuthAccount
 from app.db.session import get_db
-from app.services.audit import emit_audit
-from app.services.auth import revoke_all_sessions
 from app.schemas.auth import TokenResponse
 from app.schemas.oauth import OAuthCallbackRequest, OAuthStartResponse
 from app.services import oauth as oauth_service
+from app.services.audit import emit_audit
+from app.services.auth import revoke_all_sessions
 
 router = APIRouter(prefix="/auth/oauth", tags=["oauth"])
 
