@@ -43,8 +43,8 @@ from app.domain.retrieval_advanced import (
 )
 from app.integrations.embeddings.base import EmbeddingProvider
 from app.integrations.generation.base import GenerationProvider
-from app.services.generation_profile import build_generation_provider
 from app.services.evidence_contract import from_chunk
+from app.services.generation_profile import build_generation_provider
 from app.services.projects import get_project
 from app.services.rag import candidates as cand_svc
 from app.services.rag import context as ctx_svc
