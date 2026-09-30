@@ -27,6 +27,8 @@ from app.domain.plan import (
     UNIT_FOR_FEATURE,
 )
 from app.schemas.invitation import (
+    InvitationAcceptRequest,
+    InvitationAcceptResponse,
     InvitationCreate,
     InvitationCreated,
     InvitationListResponse,
@@ -48,6 +50,7 @@ from app.schemas.workspace import (
 )
 from app.services import billing as billing_service
 from app.services import entitlements as entitlements_service
+from app.services.email import EmailDeliveryService
 from app.services import invitations as invitations_service
 from app.services import memberships as memberships_service
 from app.services import usage as usage_service
@@ -183,18 +186,26 @@ def list_members(
     )
     rows = list(
         db.execute(
-            select(WorkspaceMembership).where(
+            select(WorkspaceMembership, User)
+            .join(User, User.id == WorkspaceMembership.user_id)
+            .where(
                 WorkspaceMembership.workspace_id == workspace_id,
                 WorkspaceMembership.status == "active",
             )
-        ).scalars()
+            .order_by(WorkspaceMembership.created_at.asc())
+        ).all()
     )
     items = [
         MemberRead(
-            id=m.id, user_id=m.user_id, role=m.role,
-            status=m.status, created_at=m.created_at,
+            id=membership.id,
+            user_id=membership.user_id,
+            email=user.email,
+            full_name=user.full_name,
+            role=membership.role,
+            status=membership.status,
+            created_at=membership.created_at,
         )
-        for m in rows
+        for membership, user in rows
     ]
     return MemberListResponse(items=items, total=len(items))
 
@@ -249,6 +260,29 @@ def remove_member(
 # ---------------------------------------------------------------------------
 
 @router.post(
+    "/invitations/accept",
+    response_model=InvitationAcceptResponse,
+)
+def accept_invitation(
+    body: InvitationAcceptRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> InvitationAcceptResponse:
+    membership = invitations_service.accept_invitation(
+        db,
+        raw_token=body.token,
+        user_id=current_user.id,
+    )
+    db.commit()
+    return InvitationAcceptResponse(
+        workspace_id=membership.workspace_id,
+        user_id=membership.user_id,
+        role=membership.role,
+        status=membership.status,
+    )
+
+
+@router.post(
     "/{workspace_id}/members/invitations",
     response_model=InvitationCreated,
     status_code=status.HTTP_201_CREATED,
@@ -267,6 +301,27 @@ def create_invitation(
         invited_by_user_id=current_user.id,
         ttl_days=body.ttl_days,
     )
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    invitation_url = (
+        f"{settings.web_app_base_url.rstrip('/')}/invite"
+        f"?token={raw}"
+    )
+    EmailDeliveryService().send(
+        db,
+        user_id=None,
+        to_email=inv.email,
+        template="workspace_invitation",
+        subject=f"Invitation to join {invited_workspace_name := 'your Research AI workspace'}",
+        html=(
+            "<p>You have been invited to join a Research AI workspace.</p>"
+            f"<p>Role: <strong>{inv.role}</strong></p>"
+            f'<p><a href="{invitation_url}">Accept invitation</a></p>'
+        ),
+        idempotency_key=f"workspace-invitation:{inv.id}",
+    )
+
     db.commit()
     db.refresh(inv)
     state = compute_state(
