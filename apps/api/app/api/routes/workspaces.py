@@ -304,6 +304,11 @@ def create_invitation(
     from app.core.config import get_settings
 
     settings = get_settings()
+    workspace, _role = workspaces_service.get_workspace_for_user(
+        db,
+        workspace_id=workspace_id,
+        user_id=current_user.id,
+    )
     invitation_url = (
         f"{settings.web_app_base_url.rstrip('/')}/invite"
         f"?token={raw}"
@@ -313,9 +318,10 @@ def create_invitation(
         user_id=None,
         to_email=inv.email,
         template="workspace_invitation",
-        subject=f"Invitation to join {invited_workspace_name := 'your Research AI workspace'}",
+        subject=f"Invitation to join {workspace.name}",
         html=(
-            "<p>You have been invited to join a Research AI workspace.</p>"
+            f"<p>You have been invited to join "
+            f"<strong>{workspace.name}</strong> in Research AI.</p>"
             f"<p>Role: <strong>{inv.role}</strong></p>"
             f'<p><a href="{invitation_url}">Accept invitation</a></p>'
         ),
