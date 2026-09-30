@@ -130,3 +130,45 @@ def test_ownership_isolation(client):
             )
             db.execute(delete(User).where(User.id == other_uid))
             db.commit()
+
+
+def test_retrieval_result_exposes_canonical_evidence_metadata():
+    from types import SimpleNamespace
+    from app.api.routes.rag import _result_row_to_read
+
+    chunk_id = uuid.uuid4()
+    project_file_id = uuid.uuid4()
+    row = SimpleNamespace(
+        rank=1,
+        chunk_id=chunk_id,
+        source_id=uuid.uuid4(),
+        final_score=0.9,
+        vector_score=None,
+        lexical_score=0.8,
+        graph_score=None,
+        memory_score=None,
+        quality_score=None,
+        diversity_penalty=None,
+        retrieval_stage="candidate",
+        retrieval_reason=["lexical_match"],
+        graph_distance=None,
+        memory_match=None,
+        result_meta={
+            "evidence_key": f"retrieval_chunk:{chunk_id}",
+            "project_file_id": str(project_file_id),
+        },
+    )
+
+    out = _result_row_to_read(row)
+
+    assert out.evidence_key == f"retrieval_chunk:{chunk_id}"
+    assert out.project_file_id == project_file_id
+
+
+def test_canonical_project_evidence_endpoint_empty(client):
+    c, uid = client
+    pid = _mk_project(uid)
+    resp = c.get(f"/api/v1/projects/{pid}/evidence")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body == {"items": [], "total": 0, "limit": 100, "offset": 0}
