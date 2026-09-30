@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { me } from "@/lib/api/auth";
 import { acceptInvitation } from "@/lib/api/team";
+import { isApiError } from "@/lib/api/errors";
 
 export default function InvitePage() {
   const router = useRouter();
@@ -59,7 +60,8 @@ export default function InvitePage() {
 
   const needsLogin =
     session.isError &&
-    !("status" in (session.error ?? {}) && session.error?.status === 401);
+    isApiError(session.error) &&
+    session.error.status === 401;
 
   if (session.isPending) {
     return (
