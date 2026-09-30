@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models.project_file import ProjectFile
 from app.db.models.source import Chunk, Source
+from app.schemas.evidence import EvidenceKind, EvidenceRecord
+from app.services.evidence_contract import from_chunk, from_project_file
 from app.services.artifact_evidence import sync_ready_project_files_for_report
 from app.services.projects import get_project
 from app.services.reports import get_report
@@ -150,3 +152,85 @@ def _list_active_files(
         ).scalars().all()
     )
     return files, total
+
+
+def list_canonical_project_evidence(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    project_id: uuid.UUID,
+    kind: EvidenceKind | None = None,
+    file_id: uuid.UUID | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> tuple[list[EvidenceRecord], int]:
+    """List canonical evidence records visible in a project."""
+    get_project(db, user_id=user_id, project_id=project_id)
+
+    if file_id is not None:
+        file = db.execute(
+            select(ProjectFile).where(
+                ProjectFile.id == file_id,
+                ProjectFile.project_id == project_id,
+                ProjectFile.deleted_at.is_(None),
+            )
+        ).scalar_one_or_none()
+        if file is None:
+            from app.core.exceptions import FileNotFound
+            raise FileNotFound()
+
+    files: list[EvidenceRecord] = []
+    if kind in (None, "project_file"):
+        stmt = select(ProjectFile).where(
+            ProjectFile.project_id == project_id,
+            ProjectFile.deleted_at.is_(None),
+        )
+        if file_id is not None:
+            stmt = stmt.where(ProjectFile.id == file_id)
+        rows = list(
+            db.execute(
+                stmt.order_by(
+                    ProjectFile.created_at.asc(),
+                    ProjectFile.id.asc(),
+                )
+            ).scalars().all()
+        )
+        files = [from_project_file(row) for row in rows]
+
+    chunks: list[EvidenceRecord] = []
+    if kind in (None, "retrieval_chunk"):
+        report_ids_stmt = select(
+            __import__("app.db.models.report", fromlist=["Report"]).Report.id
+        ).where(
+            __import__("app.db.models.report", fromlist=["Report"]).Report.project_id
+            == project_id
+        )
+        stmt = (
+            select(Chunk)
+            .join(Source, Chunk.source_id == Source.id)
+            .where(
+                Source.report_id.in_(report_ids_stmt),
+                Source.source_api == "project_file",
+            )
+        )
+        if file_id is not None:
+            stmt = stmt.where(
+                Source.external_source_id == str(file_id)
+            )
+        rows = list(
+            db.execute(
+                stmt.order_by(Chunk.created_at.asc(), Chunk.id.asc())
+            ).scalars().all()
+        )
+        chunks = [from_chunk(row) for row in rows]
+
+    merged = sorted(
+        files + chunks,
+        key=lambda item: (
+            item.created_at is None,
+            item.created_at,
+            item.evidence_key,
+        ),
+    )
+    total = len(merged)
+    return merged[offset : offset + limit], total
