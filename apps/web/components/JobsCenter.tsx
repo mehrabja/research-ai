@@ -38,7 +38,7 @@ export function JobsCenter() {
   const { user } = useResearchContext();
   const queryClient = useQueryClient();
   const jobsQuery = useQuery({
-    queryKey: ["jobs", "all"],
+    queryKey: ["jobs", user.id, "all"],
     queryFn: () => listJobs({ limit: 100 }),
     enabled: Boolean(user.id),
     refetchOnMount: "always",
