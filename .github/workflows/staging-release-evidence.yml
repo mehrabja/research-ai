@@ -33,7 +33,8 @@ jobs:
           $email = "staging-evidence-${{ github.run_id }}@example.invalid"
           $password = "Evidence-$hex!Aa9"
           $path = Join-Path $env:GITHUB_WORKSPACE 'deploy\staging\runtime\smoke-credentials.json'
-          @{ email = $email; password = $password } | ConvertTo-Json | Set-Content -Path $path -Encoding utf8
+          $json = @{ email = $email; password = $password } | ConvertTo-Json -Compress
+          [System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding($false)))
       - name: Bootstrap evidence account
         shell: powershell
         run: |
