@@ -9,8 +9,8 @@ export const queryKeys = {
     ["team-members", workspaceId] as const,
   invitations: (workspaceId: string | null) =>
     ["workspace-invitations", workspaceId] as const,
-  notifications: (limit: number) =>
-    ["notifications", limit] as const,
+  notifications: (limit: number, workspaceId: string | null = null) =>
+    ["notifications", workspaceId, limit] as const,
   workspaceUsage: (workspaceId: string) =>
     ["workspace-usage", workspaceId] as const,
   billingPlans: ["billing-plans"] as const,
