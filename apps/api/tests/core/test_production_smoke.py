@@ -52,7 +52,7 @@ def test_auth_headers_support_api_key(monkeypatch) -> None:
     }
 
 
-def test_check_expected_providers_accepts_registered_provider() -> None:
+def test_check_expected_providers_accepts_registered_provider(monkeypatch) -> None:
     matrix = {
         "capabilities": [
             {
@@ -63,14 +63,11 @@ def test_check_expected_providers_accepts_registered_provider() -> None:
         ]
     }
 
-    production_smoke.os.environ["SMOKE_EXPECT_PROVIDER"] = "generation=openrouter"
-    try:
-        production_smoke.check_expected_providers(matrix)
-    finally:
-        production_smoke.os.environ.pop("SMOKE_EXPECT_PROVIDER", None)
+    monkeypatch.setenv("SMOKE_EXPECT_PROVIDER", "generation=openrouter")
+    production_smoke.check_expected_providers(matrix)
 
 
-def test_check_expected_providers_rejects_unknown_provider() -> None:
+def test_check_expected_providers_rejects_unknown_provider(monkeypatch) -> None:
     matrix = {
         "capabilities": [
             {
@@ -81,9 +78,6 @@ def test_check_expected_providers_rejects_unknown_provider() -> None:
         ]
     }
 
-    production_smoke.os.environ["SMOKE_EXPECT_PROVIDER"] = "generation=openrouter"
-    try:
-        with pytest.raises(RuntimeError, match="not configured/registered"):
-            production_smoke.check_expected_providers(matrix)
-    finally:
-        production_smoke.os.environ.pop("SMOKE_EXPECT_PROVIDER", None)
+    monkeypatch.setenv("SMOKE_EXPECT_PROVIDER", "generation=openrouter")
+    with pytest.raises(RuntimeError, match="not configured/registered"):
+        production_smoke.check_expected_providers(matrix)
