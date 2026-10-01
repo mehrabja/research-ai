@@ -522,3 +522,31 @@ test("F03 workspace owners can transfer ownership to an active member", async ({
     await inviteContext.close();
   }
 });
+
+
+test("F04 dashboard renders live workspace projects and usage", async ({ page }) => {
+  await createSession(page);
+  const workspaceId = await createWorkspace(
+    page,
+    "F04 Dashboard " + randomUUID(),
+  );
+  const projectName = "F04 Dashboard Project " + randomUUID();
+  await createProject(page, projectName);
+
+  await page.goto("/dashboard?workspaceId=" + workspaceId);
+  await expect(
+    page.getByRole("heading", { name: "Research overview", exact: true }),
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(
+    page.getByText(projectName, { exact: true }),
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(
+    page.getByRole("heading", { name: "Projects", exact: true }),
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(
+    page.getByText("Good morning, Alex.", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Current workspace usage", { exact: true }),
+  ).toBeVisible({ timeout: 10_000 });
+});
