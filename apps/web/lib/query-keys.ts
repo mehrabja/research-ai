@@ -13,4 +13,9 @@ export const queryKeys = {
     ["notifications", limit] as const,
   workspaceUsage: (workspaceId: string) =>
     ["workspace-usage", workspaceId] as const,
+  billingPlans: ["billing-plans"] as const,
+  workspacePlan: (workspaceId: string) =>
+    ["workspace-plan", workspaceId] as const,
+  workspaceSubscription: (workspaceId: string) =>
+    ["workspace-subscription", workspaceId] as const,
 } as const;
