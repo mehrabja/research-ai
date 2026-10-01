@@ -6,6 +6,7 @@ import { listNotifications } from "@/lib/api/notifications";
 import { getWorkspaceUsage } from "@/lib/api/billing";
 import { queryKeys } from "@/lib/query-keys";
 import { useResearchContext } from "@/lib/research-context";
+import { ROUTES } from "@/lib/routes";
 
 function formatBytes(value: number): string {
   if (value < 1024) return value + " B";
@@ -31,12 +32,18 @@ function usageLabel(metric: string): string {
 }
 
 export default function DashboardView() {
-  const { user, workspace, workspaceId, projectsQuery, contextHref } =
-    useResearchContext();
+  const {
+    user,
+    workspace,
+    workspaceId,
+    projectsQuery,
+    workspacesQuery,
+    contextHref,
+  } = useResearchContext();
   const projects = projectsQuery.data ?? [];
 
   const notificationsQuery = useQuery({
-    queryKey: queryKeys.notifications(50),
+    queryKey: queryKeys.notifications(50, workspaceId),
     queryFn: () => listNotifications(workspaceId ?? undefined),
     enabled: Boolean(workspaceId),
     staleTime: 30_000,
@@ -48,6 +55,21 @@ export default function DashboardView() {
     enabled: Boolean(workspaceId),
     staleTime: 30_000,
   });
+
+  if (!workspaceId && workspacesQuery.isSuccess) {
+    return (
+      <section className="card pad">
+        <div className="eyebrow">Dashboard</div>
+        <h1>Select a workspace</h1>
+        <p className="muted">
+          Choose a workspace from the top bar before viewing its dashboard data.
+        </p>
+        <Link className="btn primary" style={{ marginTop: 12 }} href={ROUTES.workspace}>
+          Open workspace
+        </Link>
+      </section>
+    );
+  }
 
   if (
     projectsQuery.isPending ||
@@ -226,7 +248,7 @@ export default function DashboardView() {
                 <div className="row">
                   <div style={{ minWidth: 0 }}>
                     <div className="title">{notification.title}</div>
-                    <div className="meta">{notification.message}</div>
+                    <div className="meta">{notification.body}</div>
                   </div>
                   <span
                     className={"tag " + (notification.read_at ? "" : "warn")}
