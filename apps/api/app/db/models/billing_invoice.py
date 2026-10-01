@@ -12,7 +12,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base, CreatedAtMixin, TimestampMixin, UUIDPKMixin
 
 
-class BillingInvoice(Base, UUIDPKMixin, CreatedAtMixin, TimestampMixin):
+class BillingInvoice(Base, UUIDPKMixin, TimestampMixin):
     __tablename__ = "billing_invoices"
 
     workspace_id: Mapped[uuid.UUID] = mapped_column(
