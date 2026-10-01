@@ -6,6 +6,7 @@ import logging
 
 from fastapi.testclient import TestClient
 
+from app.core.config import get_settings
 from app.core.logging import JsonFormatter, redact
 from app.core.request_context import sanitize_request_id
 from app.main import app
@@ -29,7 +30,10 @@ def test_request_id_and_security_headers_are_present() -> None:
     assert response.headers["Cross-Origin-Resource-Policy"] == "same-origin"
     assert response.headers["X-Permitted-Cross-Domain-Policies"] == "none"
     assert response.headers["Permissions-Policy"] == "camera=(), microphone=(), geolocation=()"
-    assert response.headers["Strict-Transport-Security"] == "max-age=31536000; includeSubDomains"
+    if get_settings().debug:
+        assert "Strict-Transport-Security" not in response.headers
+    else:
+        assert response.headers["Strict-Transport-Security"] == "max-age=31536000; includeSubDomains"
 
 
 def test_invalid_request_id_is_replaced_with_safe_identifier() -> None:
