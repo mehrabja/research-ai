@@ -47,19 +47,20 @@ function Screen({route}:{route:string}){
 
 function useCtx(){const ws=useWorkspace();const projects=useQuery({queryKey:["projects",ws.workspaceId],queryFn:()=>api.projects(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});const projectId=projects.data?.items?.[0]?.id;const reports=useQuery({queryKey:["reports",projectId],queryFn:()=>api.projectReports(projectId!,ws.workspaceId!),enabled:Boolean(projectId&&ws.workspaceId)});const reportId=reports.data?.items?.[0]?.id;return {ws,projects,projectId,reports,reportId};}
 
-function Dashboard(){const {ws,projects}=useCtx();const s=useQuery({queryKey:["dashboard",ws.workspaceId],queryFn:()=>api.dashboard(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});return <><Head route="dashboard" actions={<><Link className="btn" href="/team">Invite teammate</Link><Link className="btn primary" href="/workspace">Open workspace</Link></>}/><div className="grid grid-4"><Metric label="Active projects" value={s.data?.active_projects}/><Metric label="Saved sources" value={s.data?.saved_sources}/><Metric label="Evidence items" value={s.data?.evidence_items}/><Metric label="AI generation units" value={s.data?.ai_generation_units}/></div><Card style={{marginTop:16}}><h3>Projects</h3><Table data={(projects.data?.items??[]) as unknown as Obj[]}/></Card></>}
+function Dashboard(){const {ws,projects}=useCtx();const s=useQuery({queryKey:["dashboard",ws.workspaceId],queryFn:()=>api.dashboard(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});return <><Head route="dashboard" actions={<><Link className="btn" href="/projects">Create project</Link><Link className="btn" href="/team">Invite teammate</Link><Link className="btn primary" href="/workspace">Open workspace</Link></>}/><div className="grid grid-4"><Metric label="Active projects" value={s.data?.active_projects}/><Metric label="Saved sources" value={s.data?.saved_sources}/><Metric label="Evidence items" value={s.data?.evidence_items}/><Metric label="AI generation units" value={s.data?.ai_generation_units}/></div><Card style={{marginTop:16}}><h3>Projects</h3><Table data={(projects.data?.items??[]) as unknown as Obj[]}/>{!projects.isPending&&projects.data?.items.length===0&&<div className="notice" style={{marginTop:12}}>No projects yet. <Link href="/projects" style={{color:"var(--primary)",fontWeight:700}}>Create your first project.</Link></div>}</Card></>}
 function Metric({label,value:v}:{label:string;value:unknown}){return <div className="card metric"><div className="label">{label}</div><div className="value">{value(v)}</div><div className="delta">Backend source of truth</div></div>}
 
 function Research(){
   const {ws,reportId}=useCtx();
   const p=useSearchParams();
   const [q,setQ]=useState(p.get("q")??"");
+  const [submittedQuery,setSubmittedQuery]=useState("");
   const [year,setYear]=useState("");
   const [openAccess,setOpenAccess]=useState(false);
   const search=useQuery({
-    queryKey:["source-discovery",reportId,q,year,openAccess],
-    queryFn:()=>api.searchSources(reportId!,q,year?Number(year):undefined,openAccess),
-    enabled:Boolean(reportId&&q.trim()),
+    queryKey:["source-discovery",reportId,submittedQuery,year,openAccess],
+    queryFn:()=>api.searchSources(reportId!,submittedQuery,year?Number(year):undefined,openAccess),
+    enabled:Boolean(reportId&&submittedQuery),
   });
   const save=useMutation({mutationFn:(item:unknown)=>api.createSource(reportId!,item as SourceCandidate)});
   const global=useQuery({
@@ -67,16 +68,33 @@ function Research(){
     queryFn:()=>api.globalSearch(q,ws.workspaceId!),
     enabled:Boolean(ws.workspaceId&&q.trim()&&!reportId),
   });
+  const canSearch=Boolean(reportId&&q.trim());
+  function runSearch(){
+    if(canSearch)setSubmittedQuery(q.trim());
+  }
   return <><Head route="research"/>
     <div className="grid grid-3">
-      <Card><div className="field"><label>Research query</label><input className="input" value={q} onChange={e=>setQ(e.target.value)} placeholder="topic, DOI, title, author…"/></div></Card>
+      <Card>
+        <div className="field">
+          <label>Research query</label>
+          <input className="input" value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")runSearch()}} placeholder="topic, DOI, title, author…"/>
+        </div>
+        <button className="btn primary" style={{marginTop:12}} disabled={!canSearch||search.isFetching} onClick={runSearch}>{search.isFetching?"Searching…":"Search papers"}</button>
+      </Card>
       <Card><div className="field"><label>Year</label><input className="input" inputMode="numeric" value={year} onChange={e=>setYear(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="2024"/></div></Card>
       <Card><label className="checkbox"><input type="checkbox" checked={openAccess} onChange={e=>setOpenAccess(e.target.checked)}/><span><b>Open access only</b><br/><span className="muted tiny">Applied only where the research provider supports it.</span></span></label></Card>
     </div>
-    <Card style={{marginTop:16}}><div className="row"><div><h3>Discovery results</h3><div className="muted small">{reportId?"Semantic Scholar-backed source discovery for the active report.":"Workspace global search."}</div></div><span className="tag">{search.data?.candidates?.length??global.data?.total??0} results</span></div>
-      {reportId&&<div className="list" style={{marginTop:10}}>{search.data?.candidates?.map((item,index)=><div className="list-item" key={item.external_source_id??index}><div className="row"><div><div className="title">{item.title}</div><div className="meta">{item.year??"Year unknown"} · {item.doi??item.url??"No DOI/URL"}</div></div><button className="btn" disabled={save.isPending} onClick={()=>save.mutate(item)}>Save source</button></div></div>)}{q&&!search.isPending&&(search.data?.candidates?.length??0)===0&&<State title="No provider results" description="The source provider returned no candidate for this query/filter set."/>}</div>}
+    <Card style={{marginTop:16}}>
+      <div className="row"><div><h3>Discovery results</h3><div className="muted small">{reportId?"Semantic Scholar-backed source discovery for the active report.":"Create a project and report first to search papers."}</div></div><span className="tag">{search.data?.candidates?.length??global.data?.total??0} results</span></div>
+      {!reportId&&<div className="notice" style={{marginTop:12}}>No active report. <Link href="/projects" style={{color:"var(--primary)",fontWeight:700}}>Create a project</Link>, then create a report inside it.</div>}
+      {reportId&&!submittedQuery&&<State title="Ready to search" description="Enter a title, topic, DOI or author and press Search papers."/>}
+      {reportId&&submittedQuery&&search.isFetching&&<State title="Searching papers" description={"Searching for “"+submittedQuery+"” using the active report."}/>}
+      {reportId&&submittedQuery&&!search.isFetching&&search.isError&&<State title="Search failed" description="The research provider returned an error. Check the API logs for the provider response." error/>}
+      {reportId&&submittedQuery&&!search.isFetching&&!search.isError&&<div className="list" style={{marginTop:10}}>
+        {search.data?.candidates?.map((item,index)=><div className="list-item" key={item.external_source_id??index}><div className="row"><div><div className="title">{item.title}</div><div className="meta">{item.year??"Year unknown"} · {item.doi??item.url??"No DOI/URL"}</div></div><button className="btn" disabled={save.isPending} onClick={()=>save.mutate(item)}>Save source</button></div></div>)}
+        {(search.data?.candidates?.length??0)===0&&<State title="No papers found" description={"No provider result was returned for “"+submittedQuery+"” with the selected filters."}/>}
+      </div>}
       {!reportId&&q&&<Table data={rows(global.data?.items)}/>}
-      {!q&&<State title="Start with a research query" description="Search the current report's literature or the workspace index."/>}
     </Card>
   </>;
 }
@@ -298,15 +316,19 @@ function Files(){
             disabled={!projectId||uploading}
             onChange={e=>{const f=e.currentTarget.files?.[0];if(f)void upload(f);}}
           />
-          <button
-            type="button"
-            className="btn primary"
-            disabled={!projectId||uploading}
-            onClick={()=>inputRef.current?.click()}
-          >
-            {uploading?"Uploading…":"Choose a file"}
-          </button>
-          <div className="muted tiny" style={{marginTop:8}}>Selecting a file starts the upload immediately.</div>
+          {projectId ? (
+            <button
+              type="button"
+              className="btn primary"
+              disabled={uploading}
+              onClick={()=>inputRef.current?.click()}
+            >
+              {uploading?"Uploading…":"Choose a file"}
+            </button>
+          ) : (
+            <Link className="btn primary" href="/projects">Create a project first</Link>
+          )}
+          <div className="muted tiny" style={{marginTop:8}}>{projectId?"Selecting a file starts the upload immediately.":"File upload is scoped to a project."}</div>
         </div>
         {error&&<div className="notice error" style={{marginTop:10}}>{error}</div>}
       </Card>
