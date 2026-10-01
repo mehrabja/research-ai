@@ -280,6 +280,7 @@ def test_canonical_project_evidence_endpoint_returns_file_and_chunk_records(
                 status="completed",
             )
         )
+        db.flush()
         db.add(
             TechnicalFact(
                 id=fact_id,
