@@ -109,8 +109,6 @@ def config_checks(strict: bool) -> list[Check]:
                         (
                             configured("DETECTION_API_BASE_URL")
                             if detection == "http"
-                            else configured("DETECTION_SAPLING_BASE_URL")
-                            if detection == "sapling"
                             else True
                         )
                     )
@@ -137,30 +135,32 @@ def external_check(name: str) -> Check:
             if not key:
                 return Check(name, False, "missing required configuration")
             base = env("DETECTION_SAPLING_BASE_URL") or "https://api.sapling.ai/api/v1"
-            query = urllib.parse.urlencode({"text": "provider activation smoke test " * 20, "sent_scores": "false"})
             request = urllib.request.Request(
-                base.rstrip("/") + "/aidetect",
-                data=json.dumps({
-                    "text": "provider activation smoke test " * 20,
-                    "sent_scores": False,
-                }).encode("utf-8"),
+                base.rstrip("/") + "/account/status",
                 headers={
                     "Accept": "application/json",
-                    "Content-Type": "application/json",
                     "Authorization": "Bearer " + key,
                 },
-                method="POST",
+                method="GET",
             )
             try:
                 with urllib.request.urlopen(request, timeout=15) as response:
                     payload = json.loads(response.read().decode("utf-8"))
             except urllib.error.HTTPError as exc:
                 return Check(name, False, f"HTTP {exc.code}")
-            return Check(
-                name,
-                response.status == 200 and isinstance(payload, dict) and isinstance(payload.get("score"), (int, float)),
-                "read-only verification",
+            ok = (
+                response.status == 200
+                and isinstance(payload, dict)
+                and payload.get("api_access") is True
             )
+            detail = (
+                "read-only account status"
+                if ok
+                else f"account access unavailable: {payload.get('blocked_reason')}"
+                if isinstance(payload, dict)
+                else "unexpected response"
+            )
+            return Check(name, ok, detail)
 
         if name == "Originality.ai":
             if (env("DETECTION_PROVIDER") or "heuristic") != "originality":
