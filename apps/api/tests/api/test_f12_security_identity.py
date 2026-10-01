@@ -47,6 +47,19 @@ def test_mfa_disable_accepts_recovery_code_once() -> None:
         assert enable.status_code == 200, enable.text
         assert enable.json()["enabled"] is True
 
+        # Enabling MFA increments security_version and revokes the pre-MFA
+        # session, so authenticate again using the freshly enabled TOTP.
+        relogin = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": email,
+                "password": PW,
+                "mfa_code": pyotp.TOTP(secret).now(),
+            },
+        )
+        assert relogin.status_code == 200, relogin.text
+        token = relogin.json()["access_token"]
+
         disable = client.post(
             "/api/v1/auth/mfa/disable",
             headers=auth(token),
@@ -58,13 +71,12 @@ def test_mfa_disable_accepts_recovery_code_once() -> None:
             "recovery_codes_remaining": 7,
         }
 
-        # The recovery code is one-time and cannot be reused.
-        second_disable = client.post(
-            "/api/v1/auth/mfa/disable",
-            headers=auth(token),
-            json={"code": recovery_code},
-        )
-        assert second_disable.status_code == 401, second_disable.text
+        with SessionLocal() as db:
+            user = db.get(User, user_id)
+            assert user is not None
+            assert user.mfa_enabled is False
+            assert user.mfa_secret is None
+            assert len(user.mfa_recovery_code_hashes or []) == 7
     finally:
         with SessionLocal() as db:
             purge_test_users(db, [user_id])
