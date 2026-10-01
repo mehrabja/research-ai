@@ -22,7 +22,7 @@ permissions:
   contents: read
 jobs:
   activation:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, x64]
     environment: ${{ inputs.environment }}
     env:
       GENERATION_PROVIDER: ${{ vars.GENERATION_PROVIDER }}
