@@ -25,6 +25,10 @@ def _new_token() -> str:
     return secrets.token_urlsafe(48)
 
 
+def new_csrf_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
 def create_session(
     db: Session,
     *,
@@ -59,7 +63,8 @@ def rotate_session(
         select(UserSession).where(
             UserSession.refresh_token_hash == _hash_token(raw_refresh_token),
             UserSession.revoked_at.is_(None),
-        ).with_for_update()
+        )
+        .with_for_update()
     ).scalar_one_or_none()
     if session is None:
         raise AuthenticationRequired()
@@ -84,11 +89,13 @@ def revoke_session(
     session_id: uuid.UUID,
 ) -> None:
     session = db.execute(
-        select(UserSession).where(
+        select(UserSession)
+        .where(
             UserSession.id == session_id,
             UserSession.user_id == user_id,
             UserSession.revoked_at.is_(None),
-        ).with_for_update()
+        )
+        .with_for_update()
     ).scalar_one_or_none()
     if session is not None:
         session.revoked_at = datetime.now(UTC)
@@ -101,10 +108,12 @@ def revoke_all_other_sessions(
     except_session_id: uuid.UUID | None = None,
 ) -> int:
     rows = db.execute(
-        select(UserSession).where(
+        select(UserSession)
+        .where(
             UserSession.user_id == user_id,
             UserSession.revoked_at.is_(None),
-        ).with_for_update()
+        )
+        .with_for_update()
     ).scalars().all()
     now = datetime.now(UTC)
     count = 0
@@ -120,10 +129,33 @@ def list_active_sessions(db: Session, *, user_id: uuid.UUID) -> list[UserSession
     now = datetime.now(UTC)
     return list(
         db.execute(
-            select(UserSession).where(
+            select(UserSession)
+            .where(
                 UserSession.user_id == user_id,
                 UserSession.revoked_at.is_(None),
                 UserSession.expires_at > now,
-            ).order_by(UserSession.last_used_at.desc().nullslast())
+            )
+            .order_by(UserSession.last_used_at.desc().nullslast())
         ).scalars().all()
     )
+
+
+def revoke_by_refresh_token(
+    db: Session,
+    *,
+    raw_refresh_token: str,
+) -> bool:
+    if not raw_refresh_token:
+        return False
+    session = db.execute(
+        select(UserSession)
+        .where(
+            UserSession.refresh_token_hash == _hash_token(raw_refresh_token),
+            UserSession.revoked_at.is_(None),
+        )
+        .with_for_update()
+    ).scalar_one_or_none()
+    if session is None:
+        return False
+    session.revoked_at = datetime.now(UTC)
+    return True
