@@ -1,0 +1,17 @@
+name: Staging Backup & Restore Evidence
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup-restore:
+    runs-on: [self-hosted, windows, x64]
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify staging database
+        shell: powershell
+        run: docker compose -p research-ai-staging -f deploy\staging\docker-compose.yml ps db
+      - name: Run live backup/restore verification
+        shell: powershell
+        run: .\scripts\staging_backup_restore.ps1
