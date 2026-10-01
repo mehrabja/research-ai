@@ -7,11 +7,11 @@ from sqlalchemy import delete, select
 
 from app.api.dependencies import get_current_user
 from app.core.config import get_settings
+from app.db.models.experiment_result import ExperimentResult
+from app.db.models.metric import Metric
 from app.db.models.project import Project, ProjectEvent
 from app.db.models.project_file import ProjectFile
 from app.db.models.report import Report
-from app.db.models.experiment_result import ExperimentResult
-from app.db.models.metric import Metric
 from app.db.models.source import Chunk, Source
 from app.db.models.technical_fact import TechnicalFact
 from app.db.models.technical_intelligence import TechnicalIntelligenceRun
