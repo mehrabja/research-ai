@@ -124,3 +124,37 @@ def test_stripe_external_check_is_read_only(monkeypatch) -> None:
 
     assert check.ok is True
     assert check.detail == "read-only verification"
+
+def test_s3_external_check_is_read_only(monkeypatch) -> None:
+    monkeypatch.setenv("FILE_STORAGE_BACKEND", "s3")
+    monkeypatch.setenv("STORAGE_ENDPOINT", "https://example.r2.cloudflarestorage.com")
+    monkeypatch.setenv("STORAGE_ACCESS_KEY_ID", "access")
+    monkeypatch.setenv("STORAGE_SECRET_ACCESS_KEY", "secret")
+    monkeypatch.setenv("STORAGE_BUCKET", "research-ai")
+    monkeypatch.setenv("STORAGE_REGION", "auto")
+
+    class FakeClient:
+        def head_bucket(self, *, Bucket):
+            assert Bucket == "research-ai"
+
+    class FakeBoto3:
+        @staticmethod
+        def client(*args, **kwargs):
+            assert args == ("s3",)
+            assert kwargs["endpoint_url"] == "https://example.r2.cloudflarestorage.com"
+            return FakeClient()
+
+    class FakeConfig:
+        def __init__(self, **kwargs):
+            assert kwargs["signature_version"] == "s3v4"
+
+    import types
+
+    monkeypatch.setitem(sys.modules, "boto3", FakeBoto3)
+    monkeypatch.setitem(sys.modules, "botocore", types.SimpleNamespace(config=types.SimpleNamespace(Config=FakeConfig)))
+    monkeypatch.setitem(sys.modules, "botocore.config", types.SimpleNamespace(Config=FakeConfig))
+
+    check = provider_activation.external_check("S3 object storage")
+
+    assert check.ok is True
+    assert check.detail == "read-only verification"
