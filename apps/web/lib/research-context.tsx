@@ -25,6 +25,7 @@ import {
 } from "@/lib/api/projects";
 import { isApiError } from "@/lib/api/errors";
 import { queryKeys } from "@/lib/query-keys";
+import { ROUTES } from "@/lib/routes";
 import {
   clearSessionUserCache,
   SESSION_EVENT_KEY,
@@ -198,7 +199,7 @@ export function ResearchContextProvider({
       sessionQuery.error.status === 401
     ) {
       clearSessionUserCache(queryClient);
-      router.replace("/login");
+      router.replace(ROUTES.login);
     }
   }, [queryClient, router, sessionQuery.error]);
 
