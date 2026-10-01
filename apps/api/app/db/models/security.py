@@ -1,4 +1,4 @@
-"""Hashed personal API tokens."""
+"""Security state for personal API tokens and TOTP."""
 from __future__ import annotations
 
 import uuid
@@ -8,7 +8,7 @@ from sqlalchemy import DateTime, ForeignKey, Index, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, CreatedAtMixin, TimestampMixin, UUIDPKMixin
+from app.db.base import Base, TimestampMixin, UUIDPKMixin
 
 
 class APIToken(Base, UUIDPKMixin, TimestampMixin):
@@ -41,19 +41,6 @@ class APIToken(Base, UUIDPKMixin, TimestampMixin):
     )
 
 
-"""TOTP two-factor authentication state."""
-from __future__ import annotations
-
-import uuid
-from datetime import datetime
-
-from sqlalchemy import DateTime, ForeignKey, Index, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
-from sqlalchemy.orm import Mapped, mapped_column
-
-from app.db.base import Base, CreatedAtMixin, TimestampMixin, UUIDPKMixin
-
-
 class UserTwoFactor(Base, UUIDPKMixin, TimestampMixin):
     __tablename__ = "user_two_factor"
 
@@ -74,3 +61,4 @@ class UserTwoFactor(Base, UUIDPKMixin, TimestampMixin):
     __table_args__ = (
         Index("ix_user_two_factor_user", "user_id"),
     )
+)
