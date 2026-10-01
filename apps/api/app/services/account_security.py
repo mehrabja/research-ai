@@ -13,6 +13,7 @@ from app.core.exceptions import AccountDeletionOwnershipRequired
 from app.core.security import hash_password
 from app.db.models.api_token import APIToken
 from app.db.models.auth_session import AuthSession
+from app.db.models.audit import AuditEvent
 from app.db.models.invitation import WorkspaceInvitation
 from app.db.models.membership import WorkspaceMembership
 from app.db.models.oauth_account import OAuthAccount
