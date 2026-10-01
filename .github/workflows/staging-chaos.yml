@@ -1,0 +1,17 @@
+name: Staging Chaos & Recovery
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  chaos:
+    runs-on: [self-hosted, windows, x64]
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify staging stack
+        shell: powershell
+        run: docker compose -p research-ai-staging -f deploy\staging\docker-compose.yml ps
+      - name: Run F18 live chaos
+        shell: powershell
+        run: .\scripts\staging_chaos.ps1
