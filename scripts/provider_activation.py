@@ -126,6 +126,21 @@ def config_checks(strict: bool) -> list[Check]:
 
 def external_check(name: str) -> Check:
     try:
+        if name == "Originality.ai":
+            if (env("DETECTION_PROVIDER") or "heuristic") != "originality":
+                return Check(name, True, "skipped; provider not active")
+            key = required("AI_DETECTION_API_KEY")
+            base = env("DETECTION_ORIGINALITY_BASE_URL") or "https://api.originality.ai/api/v3"
+            status, payload = http_json(
+                base.rstrip("/") + "/account/balance",
+                {"Accept": "application/json", "X-OAI-API-KEY": key},
+            )
+            return Check(
+                name,
+                status == 200 and "credits" in payload and "subscriptionCredits" in payload,
+                "read-only verification",
+            )
+
         if name == "OpenRouter":
             if not configured("OPENROUTER_API_KEY"):
                 return Check(name, True, "skipped; no configured key")
@@ -175,7 +190,10 @@ def main() -> int:
 
     checks = config_checks(args.strict)
     if args.external:
-        checks.extend(external_check(name) for name in ("OpenRouter", "Semantic Scholar", "OpenAlex", "Crossref", "NCBI"))
+        checks.extend(
+            external_check(name)
+            for name in ("Originality.ai", "OpenRouter", "Semantic Scholar", "OpenAlex", "Crossref", "NCBI")
+        )
 
     failures = [check for check in checks if not check.ok]
     for check in checks:
