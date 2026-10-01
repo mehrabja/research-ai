@@ -1,6 +1,5 @@
 """Register every model so ``Base.metadata`` is complete for Alembic."""
 
-from app.db.models.audit import AuditEvent  # noqa: F401
 from app.db.models.academic_qa import (
     AcademicQAFinding,
     AcademicQARun,
@@ -8,6 +7,7 @@ from app.db.models.academic_qa import (
 from app.db.models.api_token import APIToken  # noqa: F401
 from app.db.models.auth_session import AuthSession  # noqa: F401
 from app.db.models.auth_token import AuthOneTimeToken  # noqa: F401
+from app.db.models.audit import AuditEvent  # noqa: F401
 
 # M37 — SaaS foundation
 from app.db.models.billing_event import BillingEvent  # noqa: F401
