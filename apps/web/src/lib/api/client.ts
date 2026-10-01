@@ -94,6 +94,8 @@ export const api={
     const form=new FormData();form.append("file",file);
     return request<unknown>("projects/"+p+"/files"+(folderId?"?folder_id="+encodeURIComponent(folderId):""),{method:"POST",body:form});
   },
+  downloadFile:(id:string)=>fetch("/api/backend/files/"+id+"/content",{credentials:"same-origin",cache:"no-store"}),
+  deleteFile:(id:string)=>request<void>("files/"+id,{method:"DELETE"}),
 
   plan:(p:string)=>request<unknown>("projects/"+p+"/research-plan"),
   planVersions:(p:string)=>request<unknown>("projects/"+p+"/research-plan/versions"),
