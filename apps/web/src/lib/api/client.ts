@@ -73,6 +73,7 @@ export const api={
   project:(p:string,w:string)=>request<Project>("projects/"+p+"?workspace_id="+encodeURIComponent(w)),
   createProject:(w:string,b:object)=>request<Project>("projects?workspace_id="+encodeURIComponent(w),{method:"POST",body:JSON.stringify(b)}),
   projectReports:(p:string,w:string)=>request<{items:Array<{id:string;topic:string;status:string;output_language:string;updated_at:string}>;total:number}>("projects/"+p+"/reports?workspace_id="+encodeURIComponent(w)),
+  createReport:(w:string,b:object)=>request<Report>("reports?workspace_id="+encodeURIComponent(w),{method:"POST",body:JSON.stringify(b)}),
   reports:(w:string)=>request<Report[]>("reports?workspace_id="+encodeURIComponent(w)),
   report:(r:string)=>request<Report>("reports/"+r),
 
@@ -98,13 +99,13 @@ export const api={
   deleteFile:(id:string)=>request<void>("files/"+id,{method:"DELETE"}),
 
   plan:(p:string)=>request<unknown>("projects/"+p+"/research-plan"),
-  planVersions:(p:string)=>request<unknown>("projects/"+p+"/research-plan/versions"),
+  planVersions:(p:string)=>request<{items:unknown[];total?:number}>("projects/"+p+"/research-plan/versions"),
   savePlan:(p:string,b:object)=>request<unknown>("projects/"+p+"/research-plan",{method:"PATCH",body:JSON.stringify(b)}),
   validatePlan:(p:string)=>request<unknown>("projects/"+p+"/research-plan/validate"),
 
   manuscript:(r:string)=>request<Manuscript>("reports/"+r+"/manuscript"),
-  manuscriptDraft:(r:string)=>request<unknown>("reports/"+r+"/manuscript/draft"),
-  autosaveManuscript:(r:string,b:object)=>request<unknown>("reports/"+r+"/manuscript/draft/autosave",{method:"PUT",body:JSON.stringify(b)}),
+  manuscriptDraft:(r:string)=>request<{revision:number;base_version_id:string|null;content:unknown}>("reports/"+r+"/manuscript/draft"),
+  autosaveManuscript:(r:string,b:object)=>request<{conflict?:boolean;draft:{revision:number;base_version_id:string|null;content:unknown}}>("reports/"+r+"/manuscript/draft/autosave",{method:"PUT",body:JSON.stringify(b)}),
   saveManuscriptVersion:(r:string,b:object)=>request<unknown>("reports/"+r+"/manuscript/save-version",{method:"POST",body:JSON.stringify(b)}),
 
   generate:(r:string,b:object)=>request<unknown>("reports/"+r+"/generate",{method:"POST",body:JSON.stringify(b)}),
