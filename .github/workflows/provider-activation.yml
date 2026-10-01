@@ -68,9 +68,12 @@ jobs:
       - name: Install activation runner dependency
         run: python -m pip install --disable-pip-version-check "python-dotenv>=1.0.1,<2.0" "boto3>=1.35,<2.0"
       - name: Run provider activation
-        shell: pwsh
+        shell: cmd
+        env:
+          ACTIVATION_STRICT: ${{ inputs.strict }}
+          ACTIVATION_EXTERNAL: ${{ inputs.external }}
         run: |
-          $arguments = @()
-          if ("${{ inputs.strict }}" -eq "true") { $arguments += "--strict" }
-          if ("${{ inputs.external }}" -eq "true") { $arguments += "--external" }
-          python scripts/provider_activation.py @arguments
+          set "ARGS="
+          if /I "%ACTIVATION_STRICT%"=="true" set "ARGS=%ARGS% --strict"
+          if /I "%ACTIVATION_EXTERNAL%"=="true" set "ARGS=%ARGS% --external"
+          python scripts/provider_activation.py %ARGS%
