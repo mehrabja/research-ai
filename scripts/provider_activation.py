@@ -129,7 +129,9 @@ def external_check(name: str) -> Check:
         if name == "Originality.ai":
             if (env("DETECTION_PROVIDER") or "heuristic") != "originality":
                 return Check(name, True, "skipped; provider not active")
-            key = required("AI_DETECTION_API_KEY")
+            key = env("AI_DETECTION_API_KEY")
+            if not key:
+                return Check(name, False, "missing required configuration")
             base = env("DETECTION_ORIGINALITY_BASE_URL") or "https://api.originality.ai/api/v3"
             status, payload = http_json(
                 base.rstrip("/") + "/account/balance",
