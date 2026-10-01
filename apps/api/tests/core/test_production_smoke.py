@@ -112,3 +112,26 @@ def test_verify_originality_requires_key(monkeypatch) -> None:
 
     with pytest.raises(RuntimeError, match="AI_DETECTION_API_KEY"):
         production_smoke.verify_originality()
+
+
+def test_verify_sapling_uses_account_status(monkeypatch) -> None:
+    monkeypatch.setenv("SAPLING_API_KEY", "test-key")
+    monkeypatch.setenv(
+        "DETECTION_SAPLING_BASE_URL",
+        "https://api.sapling.ai/api/v1",
+    )
+    seen: dict[str, object] = {}
+
+    def fake_json_request(url: str, headers=None):
+        seen["url"] = url
+        seen["headers"] = headers
+        return 200, {}, {"api_access": True, "blocked_reason": None}
+
+    monkeypatch.setattr(production_smoke, "json_request", fake_json_request)
+    production_smoke.verify_sapling()
+
+    assert seen["url"] == "https://api.sapling.ai/api/v1/account/status"
+    assert seen["headers"] == {
+        "Accept": "application/json",
+        "Authorization": "Bearer test-key",
+    }
