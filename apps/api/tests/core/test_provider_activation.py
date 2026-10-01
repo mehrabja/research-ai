@@ -160,3 +160,48 @@ def test_s3_external_check_is_read_only(monkeypatch) -> None:
 
     assert check.ok is True
     assert check.detail == "read-only verification"
+
+
+def test_sapling_requires_detection_key(monkeypatch) -> None:
+    monkeypatch.setenv("DETECTION_PROVIDER", "sapling")
+    monkeypatch.delenv("SAPLING_API_KEY", raising=False)
+
+    checks = provider_activation.config_checks(strict=False)
+    detection = next(c for c in checks if c.name == "AI detection provider")
+
+    assert detection.ok is False
+
+
+def test_sapling_passes_with_detection_key(monkeypatch) -> None:
+    monkeypatch.setenv("DETECTION_PROVIDER", "sapling")
+    monkeypatch.setenv("SAPLING_API_KEY", "realistic-test-secret")
+
+    checks = provider_activation.config_checks(strict=False)
+    detection = next(c for c in checks if c.name == "AI detection provider")
+
+    assert detection.ok is True
+    assert detection.detail == "active sapling"
+
+
+def test_sapling_external_check_is_read_only(monkeypatch) -> None:
+    monkeypatch.setenv("DETECTION_PROVIDER", "sapling")
+    monkeypatch.setenv("SAPLING_API_KEY", "test-key")
+
+    class FakeResponse:
+        status = 200
+        def __enter__(self):
+            return self
+        def __exit__(self, exc_type, exc, tb):
+            return False
+        def read(self):
+            return b'{"score":0.12}'
+
+    monkeypatch.setattr(
+        provider_activation.urllib.request,
+        "urlopen",
+        lambda request, timeout=15: FakeResponse(),
+    )
+
+    check = provider_activation.external_check("Sapling")
+    assert check.ok is True
+    assert check.detail == "read-only verification"
