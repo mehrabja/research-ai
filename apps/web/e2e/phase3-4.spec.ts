@@ -350,7 +350,7 @@ test("F03 workspace owners can change and remove a real member", async ({
     await page.goto("/team?workspaceId=" + workspaceId);
     await expect(
       page.getByRole("heading", {
-        name: "F03 Member Management " + /./,
+        name: /F03 Member Management/
       }),
     ).toBeVisible({ timeout: 10_000 });
 
