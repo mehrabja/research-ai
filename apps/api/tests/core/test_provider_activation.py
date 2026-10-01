@@ -68,3 +68,30 @@ def test_unknown_detection_provider_fails_closed(monkeypatch) -> None:
 
     assert detection.ok is False
     assert detection.detail == "unsupported provider"
+
+def test_originality_external_check_reads_account_balance(monkeypatch) -> None:
+    monkeypatch.setenv("DETECTION_PROVIDER", "originality")
+    monkeypatch.setenv("AI_DETECTION_API_KEY", "test-key")
+    monkeypatch.setattr(
+        provider_activation,
+        "http_json",
+        lambda url, headers=None: (
+            200,
+            {"credits": 10, "subscriptionCredits": 20},
+        ),
+    )
+
+    check = provider_activation.external_check("Originality.ai")
+
+    assert check.ok is True
+    assert check.detail == "read-only verification"
+
+
+def test_originality_external_check_skips_when_inactive(monkeypatch) -> None:
+    monkeypatch.setenv("DETECTION_PROVIDER", "heuristic")
+    monkeypatch.delenv("AI_DETECTION_API_KEY", raising=False)
+
+    check = provider_activation.external_check("Originality.ai")
+
+    assert check.ok is True
+    assert check.detail == "skipped; provider not active"
