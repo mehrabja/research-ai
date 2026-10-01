@@ -9,6 +9,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { me } from "@/lib/api/auth";
 import { acceptInvitation } from "@/lib/api/team";
 import { isApiError } from "@/lib/api/errors";
+import { ROUTES } from "@/lib/routes";
 
 function InvitePageContent() {
   const router = useRouter();
@@ -27,7 +28,8 @@ function InvitePageContent() {
       return acceptInvitation(token);
     },
     onSuccess: () => {
-      router.replace("/team");
+      router.replace(ROUTES.team);
+      router.refresh();
     },
   });
 
