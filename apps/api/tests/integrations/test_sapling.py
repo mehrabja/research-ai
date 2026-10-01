@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.core.config import get_settings
 from app.integrations.detection import sapling as module
 from app.integrations.detection.base import (
     DetectionAuthenticationError,
@@ -23,6 +24,7 @@ class FakeResponse:
 def _configure(monkeypatch) -> None:
     monkeypatch.setenv("DETECTION_PROVIDER", "sapling")
     monkeypatch.setenv("SAPLING_API_KEY", "test-sapling-key")
+    get_settings.cache_clear()
 
 
 def test_sapling_maps_score_to_probability(monkeypatch) -> None:
@@ -77,6 +79,7 @@ def test_sapling_maps_auth_failure(monkeypatch) -> None:
 def test_sapling_requires_key(monkeypatch) -> None:
     monkeypatch.setenv("DETECTION_PROVIDER", "sapling")
     monkeypatch.delenv("SAPLING_API_KEY", raising=False)
+    get_settings.cache_clear()
 
     with pytest.raises(DetectionAuthenticationError):
         module.SaplingDetectionProvider().detect(text="x" * 300)
