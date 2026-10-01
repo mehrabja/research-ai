@@ -31,7 +31,7 @@ export default function LandingPage() {
             </p>
             <div className="actions" style={{marginTop:24}}>
               <Link className="btn primary" href="/register">Create free workspace →</Link>
-              <Link className="btn" href="/loading">Preview app loading</Link>
+              <a className="btn" href="#workflow">See workflow</a>
             </div>
             <div className="pillbar" style={{marginTop:18}}>
               <span className="tag">Evidence-first</span>
