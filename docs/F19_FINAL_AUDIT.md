@@ -12,6 +12,7 @@ provider activation/runtime rollout.
 
 - Required CI, smoke, chaos/recovery, provider-activation, backup/restore, and frontend-security
   artifacts are checked by `scripts/final_audit.py`.
+- F17 smoke can optionally verify Originality.ai credentials through the provider's read-only account-balance endpoint when `SMOKE_VERIFY_ORIGINALITY` is enabled.
 - Tracked non-example environment files are rejected.
 - Common private-key and provider credential patterns are scanned with `git grep`.
 - Frontend security audit is invoked as the final sub-check.
@@ -33,8 +34,8 @@ F17 smoke helper regression coverage is implemented in
 
 F20 provider activation regression coverage is implemented in
 `apps/api/tests/core/test_provider_activation.py`, including strict heuristic rejection,
-Originality activation, HTTP detector configuration requirements, and fail-closed handling of
-unknown detector providers.
+Originality activation, HTTP detector configuration requirements, fail-closed handling of
+unknown detector providers, and read-only Originality.ai account verification.
 
 ## Runtime closure
 
