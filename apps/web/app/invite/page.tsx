@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -29,10 +30,10 @@ export default function InvitePage() {
     },
   });
 
-  const loginHref = useMemo(() => {
+  const loginHref = useMemo<Route>(() => {
     if (!token) return "/login";
     const next = `/invite?token=${encodeURIComponent(token)}`;
-    return `/login?next=${encodeURIComponent(next)}`;
+    return `/login?next=${encodeURIComponent(next)}` as Route;
   }, [token]);
 
   if (!token) {
