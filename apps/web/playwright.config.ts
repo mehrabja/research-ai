@@ -26,6 +26,13 @@ const backendServer = {
     APP_ENV: "test",
     RATE_LIMIT_ENABLED: "false",
     BILLING_PROVIDER: "fake",
+    // OAuth start flows only need provider client identifiers/secrets to
+    // construct deterministic authorization URLs. These are test values;
+    // callback exchange still requires the real provider credentials.
+    GOOGLE_OAUTH_CLIENT_ID: "e2e-google-client",
+    GOOGLE_OAUTH_CLIENT_SECRET: "e2e-google-secret",
+    GITHUB_OAUTH_CLIENT_ID: "e2e-github-client",
+    GITHUB_OAUTH_CLIENT_SECRET: "e2e-github-secret",
   },
 };
 
