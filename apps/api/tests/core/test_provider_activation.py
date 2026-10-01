@@ -97,3 +97,30 @@ def test_originality_external_check_skips_when_inactive(monkeypatch) -> None:
 
     assert check.ok is True
     assert check.detail == "skipped; provider not active"
+
+class _FakeStripeResponse:
+    status = 200
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def read(self):
+        return b'{"object":"balance","available":[],"pending":[]}'
+
+
+def test_stripe_external_check_is_read_only(monkeypatch) -> None:
+    monkeypatch.setenv("BILLING_PROVIDER", "stripe")
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "test-key")
+    monkeypatch.setattr(
+        provider_activation.urllib.request,
+        "urlopen",
+        lambda request, timeout=15: _FakeStripeResponse(),
+    )
+
+    check = provider_activation.external_check("Stripe")
+
+    assert check.ok is True
+    assert check.detail == "read-only verification"
