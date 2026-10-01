@@ -38,6 +38,11 @@ New-Item -ItemType Directory -Force -Path $runtime | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $runtime "storage") | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $runtime "backups") | Out-Null
 
+$jwtBytes = New-Object byte[] 48
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($jwtBytes)
+$jwtSecret = [Convert]::ToBase64String($jwtBytes).TrimEnd("=")
+$jwtSecret = $jwtSecret.Replace("+", "-").Replace("/", "_")
+
 $lines = @(
     "APP_ENV=staging",
     "DEBUG=false",
@@ -46,7 +51,7 @@ $lines = @(
     "LOG_LEVEL=INFO",
     "LOG_FORMAT=json",
     "DATABASE_URL=postgresql+psycopg://research_ai:staging-local-only@db:5432/research_ai",
-    "JWT_SECRET_KEY=staging-local-only-replaced-by-runtime",
+    "JWT_SECRET_KEY=$jwtSecret",
     "AUTH_REQUIRE_VERIFIED_EMAIL=false",
     "AUTH_MFA_REQUIRED=false",
     "CORS_ALLOWED_ORIGINS=http://127.0.0.1:$WebPort,http://localhost:$WebPort",
