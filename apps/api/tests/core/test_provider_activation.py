@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from pathlib import Path
 
 
@@ -12,6 +13,7 @@ SCRIPT = ROOT / "scripts" / "provider_activation.py"
 spec = importlib.util.spec_from_file_location("provider_activation", SCRIPT)
 assert spec is not None and spec.loader is not None
 provider_activation = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = provider_activation
 spec.loader.exec_module(provider_activation)
 
 
