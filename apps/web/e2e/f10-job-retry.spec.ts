@@ -46,21 +46,21 @@ test("F10 job center manually retries a cancelled durable job and reuses its ide
   );
   expect(cancelled.status(), await cancelled.text()).toBe(200);
 
-  await page.goto("/jobs");
-  await expect(
-    page.getByRole("heading", { name: "Job center", exact: true }),
-  ).toBeVisible({ timeout: 10_000 });
   const jobsResponse = page.waitForResponse(
     (response) =>
       response.request().method() === "GET" &&
       new URL(response.url()).pathname === "/api/v1/jobs",
   );
-  await page.reload();
+  await page.goto("/jobs");
   const listed = await jobsResponse;
-  expect(listed.status(), await listed.text()).toBe(200);
-  const listedJobs = (await listed.json()) as Array<{ id: string }>;
+  const listedText = await listed.text();
+  expect(listed.status(), listedText).toBe(200);
+  const listedJobs = JSON.parse(listedText) as Array<{ id: string }>;
   expect(listedJobs.some((item) => item.id === job.id)).toBe(true);
 
+  await expect(
+    page.getByRole("heading", { name: "Job center", exact: true }),
+  ).toBeVisible({ timeout: 10_000 });
   const row = page.locator(`tr[data-job-id="${job.id}"]`);
   await expect(row).toHaveCount(1, { timeout: 10_000 });
   await row.getByRole("button", { name: "Retry", exact: true }).click();
