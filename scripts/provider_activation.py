@@ -106,17 +106,21 @@ def config_checks(strict: bool) -> list[Check]:
                 (
                     configured("AI_DETECTION_API_KEY")
                     and (
-                        configured("DETECTION_API_BASE_URL")
-                        if detection == "http"
-                        else True
+                        (
+                            configured("DETECTION_API_BASE_URL")
+                            if detection == "http"
+                            else configured("DETECTION_SAPLING_BASE_URL")
+                            if detection == "sapling"
+                            else True
+                        )
                     )
                 )
-                if detection in ("http", "originality")
+                if detection in ("http", "originality", "sapling")
                 else (detection == "heuristic" and not strict)
             ),
             (
                 f"active {detection}"
-                if detection in ("http", "originality")
+                if detection in ("http", "originality", "sapling")
                 else "non-production baseline" if detection == "heuristic" else "unsupported provider"
             ),
         ),
@@ -126,6 +130,38 @@ def config_checks(strict: bool) -> list[Check]:
 
 def external_check(name: str) -> Check:
     try:
+        if name == "Sapling":
+            if (env("DETECTION_PROVIDER") or "heuristic") != "sapling":
+                return Check(name, True, "skipped; provider not active")
+            key = env("SAPLING_API_KEY")
+            if not key:
+                return Check(name, False, "missing required configuration")
+            base = env("DETECTION_SAPLING_BASE_URL") or "https://api.sapling.ai/api/v1"
+            query = urllib.parse.urlencode({"text": "provider activation smoke test " * 20, "sent_scores": "false"})
+            request = urllib.request.Request(
+                base.rstrip("/") + "/aidetect",
+                data=json.dumps({
+                    "text": "provider activation smoke test " * 20,
+                    "sent_scores": False,
+                }).encode("utf-8"),
+                headers={
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + key,
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=15) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+            except urllib.error.HTTPError as exc:
+                return Check(name, False, f"HTTP {exc.code}")
+            return Check(
+                name,
+                response.status == 200 and isinstance(payload, dict) and isinstance(payload.get("score"), (int, float)),
+                "read-only verification",
+            )
+
         if name == "Originality.ai":
             if (env("DETECTION_PROVIDER") or "heuristic") != "originality":
                 return Check(name, True, "skipped; provider not active")
@@ -251,7 +287,7 @@ def main() -> int:
     if args.external:
         checks.extend(
             external_check(name)
-            for name in ("Originality.ai", "OpenRouter", "Stripe", "Semantic Scholar", "OpenAlex", "Crossref", "NCBI")
+            for name in ("Sapling", "Originality.ai", "OpenRouter", "Stripe", "Semantic Scholar", "OpenAlex", "Crossref", "NCBI")
         )
 
     failures = [check for check in checks if not check.ok]
