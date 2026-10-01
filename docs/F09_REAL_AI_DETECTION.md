@@ -5,31 +5,33 @@
 F09 makes the existing detection abstraction operational with a concrete production detector while
 keeping the application provider-neutral.
 
-The production path is:
+The active staging production path is:
 
-`DetectionProfile` → provider registry → `OriginalityDetectionProvider` → Originality.ai V3 → normalized `DetectionProviderResult`
+`DetectionProfile` → provider registry → `SaplingDetectionProvider` → Sapling AI → normalized `DetectionProviderResult`
+
+Originality.ai V3 remains an implemented optional detector path.
 
 The deterministic heuristic provider remains available for explicit local/test use only.
 
 ## Provider
 
-The current concrete provider is Originality.ai V3 because its documented API provides a
-multilingual model. The vendor's September 21, 2026 documentation lists Persian among the 30
+The current staging concrete provider is Sapling AI. Originality.ai V3 remains available as an optional provider path. The vendor's September 21, 2026 documentation lists Persian among the 30
 languages supported by its Multi Language 2.0.0 model.
 
 The adapter uses REST/JSON directly rather than a vendor SDK.
 
 ## Activation
 
-Set these values in the ignored monorepo `.env`:
+Current staging configuration:
 
 ```dotenv
-DETECTION_PROVIDER=originality
-DETECTION_ORIGINALITY_BASE_URL=https://api.originality.ai/api/v3
-DETECTION_ORIGINALITY_MODEL=multilang
-AI_DETECTION_API_KEY=<secret>
-DETECTION_ORIGINALITY_STORE_SCAN=false
+DETECTION_PROVIDER=sapling
+DETECTION_SAPLING_BASE_URL=https://api.sapling.ai/api/v1
+DETECTION_SAPLING_MODEL=20260820
+SAPLING_API_KEY=<secret>
 ```
+
+Originality.ai can be selected explicitly when its credentials are provisioned.
 
 The browser never receives `AI_DETECTION_API_KEY`.
 
