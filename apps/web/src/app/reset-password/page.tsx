@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 import {useSearchParams} from "next/navigation";
-import {useEffect,useState} from "react";
+import {Suspense,useEffect,useState} from "react";
 
-export const dynamic="force-dynamic";
-
-export default function ResetPasswordPage(){
+function ResetPasswordForm(){
   const params=useSearchParams();
   const [token,setToken]=useState("");
   const [password,setPassword]=useState("");
@@ -34,4 +32,8 @@ export default function ResetPasswordPage(){
     <section className="auth-side"><Link className="brand" href="/"><span className="brand-mark">R</span><span>Research AI</span></Link><div className="eyebrow" style={{marginTop:70}}>Password security</div><h1>Choose a new account password.</h1><p>Reset tokens are single-use, time-limited and stored only as hashes.</p></section>
     <section className="auth-main"><div className="auth-card"><h2>Reset password</h2>{error&&<div className="notice error" style={{marginTop:14}}>{error}</div>}{done?<><div className="notice success" style={{marginTop:14}}>Password reset completed.</div><Link className="btn primary" href="/login" style={{marginTop:14,display:"inline-block"}}>Return to login</Link></>:<form className="auth-form" onSubmit={submit}><div className="field"><label>Reset token</label><input className="input" value={token} onChange={e=>setToken(e.target.value)} required/></div><div className="field"><label>New password</label><input className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)} minLength={15} required/></div><div className="field"><label>Confirm password</label><input className="input" type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} minLength={15} required/></div><button className="btn primary" disabled={busy||!token}>{busy?"Resetting…":"Reset password"}</button></form>}</div></section>
   </div>;
+}
+
+export default function ResetPasswordPage(){
+  return <Suspense fallback={<div className="auth-page"><section className="auth-main"><div className="auth-card"><h2>Reset password</h2></div></section></div>}><ResetPasswordForm/></Suspense>;
 }
