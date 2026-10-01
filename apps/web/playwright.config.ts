@@ -25,6 +25,7 @@ const backendServer = {
     ...process.env,
     APP_ENV: "test",
     RATE_LIMIT_ENABLED: "false",
+    BILLING_PROVIDER: "fake",
   },
 };
 
