@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 
 import jwt
-from fastapi import APIRouter, Cookie, Depends, Header, Request, Response, status
+from fastapi import APIRouter, Depends, Header, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -270,21 +270,21 @@ def confirm_password_reset(
 
 @router.post("/refresh", response_model=TokenResponse)
 def refresh(
+    request: Request,
     response: Response,
-    refresh_token: str | None = Cookie(
-        default=None,
-        alias=REFRESH_COOKIE_NAME,
-    ),
-    csrf_cookie: str | None = Cookie(
-        default=None,
-        alias=CSRF_COOKIE_NAME,
-    ),
     csrf_header: str | None = Header(
         default=None,
         alias="X-CSRF-Token",
     ),
     db: Session = Depends(get_db),
 ) -> TokenResponse:
+    settings = get_settings()
+    refresh_token = request.cookies.get(
+        settings.auth_refresh_cookie_name or REFRESH_COOKIE_NAME
+    )
+    csrf_cookie = request.cookies.get(
+        settings.auth_csrf_cookie_name or CSRF_COOKIE_NAME
+    )
     _require_csrf(csrf_cookie, csrf_header)
     session, new_refresh_token = rotate_session(
         db,
@@ -319,21 +319,21 @@ def refresh(
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(
+    request: Request,
     response: Response,
-    refresh_token: str | None = Cookie(
-        default=None,
-        alias=REFRESH_COOKIE_NAME,
-    ),
-    csrf_cookie: str | None = Cookie(
-        default=None,
-        alias=CSRF_COOKIE_NAME,
-    ),
     csrf_header: str | None = Header(
         default=None,
         alias="X-CSRF-Token",
     ),
     db: Session = Depends(get_db),
 ) -> None:
+    settings = get_settings()
+    refresh_token = request.cookies.get(
+        settings.auth_refresh_cookie_name or REFRESH_COOKIE_NAME
+    )
+    csrf_cookie = request.cookies.get(
+        settings.auth_csrf_cookie_name or CSRF_COOKIE_NAME
+    )
     _require_csrf(csrf_cookie, csrf_header)
     revoke_by_refresh_token(
         db,
