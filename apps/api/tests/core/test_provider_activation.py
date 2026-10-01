@@ -194,7 +194,7 @@ def test_sapling_external_check_is_read_only(monkeypatch) -> None:
         def __exit__(self, exc_type, exc, tb):
             return False
         def read(self):
-            return b'{"score":0.12}'
+            return b'{"api_access":true,"blocked_reason":null}'
 
     monkeypatch.setattr(
         provider_activation.urllib.request,
@@ -204,4 +204,4 @@ def test_sapling_external_check_is_read_only(monkeypatch) -> None:
 
     check = provider_activation.external_check("Sapling")
     assert check.ok is True
-    assert check.detail == "read-only verification"
+    assert check.detail == "read-only account status"
