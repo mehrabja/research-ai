@@ -80,3 +80,34 @@ def test_check_expected_providers_rejects_unknown_provider(monkeypatch) -> None:
     monkeypatch.setenv("SMOKE_EXPECT_PROVIDER", "generation=openrouter")
     with pytest.raises(RuntimeError, match="not configured/registered"):
         production_smoke.check_expected_providers(matrix)
+
+def test_verify_originality_uses_balance_endpoint(monkeypatch) -> None:
+    monkeypatch.setenv("AI_DETECTION_API_KEY", "test-key")
+    monkeypatch.setenv(
+        "DETECTION_ORIGINALITY_BASE_URL",
+        "https://api.originality.ai/api/v3",
+    )
+    seen: dict[str, object] = {}
+
+    def fake_json_request(url: str, headers=None):
+        seen["url"] = url
+        seen["headers"] = headers
+        return 200, {}, {"credits": 10, "subscriptionCredits": 20}
+
+    monkeypatch.setattr(production_smoke, "json_request", fake_json_request)
+    production_smoke.verify_originality()
+
+    assert seen["url"] == (
+        "https://api.originality.ai/api/v3/account/balance"
+    )
+    assert seen["headers"] == {
+        "Accept": "application/json",
+        "X-OAI-API-KEY": "test-key",
+    }
+
+
+def test_verify_originality_requires_key(monkeypatch) -> None:
+    monkeypatch.delenv("AI_DETECTION_API_KEY", raising=False)
+
+    with pytest.raises(RuntimeError, match="AI_DETECTION_API_KEY"):
+        production_smoke.verify_originality()
