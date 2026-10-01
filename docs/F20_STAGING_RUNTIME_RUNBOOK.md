@@ -127,9 +127,13 @@ allowance. Actual detection requests use `POST /api/v1/aidetect`.
 
 ## 8. Execute F17 production smoke
 
-After activation passes, run:
+For the real zero-cost staging path, run:
 
-**Actions → Production Smoke → Run workflow**
+**Actions → Staging Deploy & Smoke → Run workflow**
+
+This workflow deploys the staging stack on the self-hosted Windows runner, creates an ephemeral smoke account, and runs the authenticated F17 checks.
+
+The generic Production Smoke workflow remains available for an already deployed environment.
 
 Select:
 
@@ -171,7 +175,20 @@ Production smoke: PASS
 
 and include the configured provider matrix and request-correlation IDs.
 
-## 9. Evidence required before production
+## 9. Execute F18 and backup/restore
+
+With staging running, run:
+
+```text
+Staging Chaos & Recovery
+Staging Backup & Restore Evidence
+```
+
+Both workflows execute on the self-hosted runner and record live recovery/backup verification in their logs.
+
+For one combined release gate, run `Staging Release Evidence`. It deploys the candidate, runs F17, F18, backup/restore, and the repository final audit.
+
+## 10. Evidence required before production
 
 Keep the following as release evidence:
 
@@ -184,7 +201,7 @@ Keep the following as release evidence:
 Only after staging evidence is clean should the same provider/secret contract be applied to
 the production Environment.
 
-## 10. CLI alternative
+## 11. CLI alternative
 
 When GitHub CLI is installed and authenticated:
 
