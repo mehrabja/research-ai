@@ -20,7 +20,7 @@ provider activation/runtime rollout.
 
 ## Current evidence
 
-Local acceptance already recorded on this branch includes:
+The repository-level acceptance evidence includes:
 
 - backend full test suite: PASS
 - Ruff: PASS
@@ -34,8 +34,8 @@ F17 smoke helper regression coverage is implemented in
 
 F20 provider activation regression coverage is implemented in
 `apps/api/tests/core/test_provider_activation.py`, including strict heuristic rejection,
-Originality activation, HTTP detector configuration requirements, fail-closed handling of
-unknown detector providers, and read-only Originality.ai account verification.
+Sapling activation, HTTP detector configuration requirements, fail-closed handling of
+unknown detector providers, and read-only external verification.
 
 ## Runtime closure
 
