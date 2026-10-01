@@ -120,7 +120,7 @@ export default function InvitePage() {
               ? accept.error.message
               : "Invitation accepted. Redirecting to your team…"}
           </p>
-        )}
+        ) : null}
 
         <button
           className="btn primary"
