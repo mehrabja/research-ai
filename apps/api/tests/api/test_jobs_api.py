@@ -420,4 +420,4 @@ def test_manual_retry_completed_job_is_rejected(
         f"/api/v1/jobs/{job_id}/retry",
         headers=_auth(token),
     )
-    assert retry.status_code == 400
+    assert retry.status_code == 409
