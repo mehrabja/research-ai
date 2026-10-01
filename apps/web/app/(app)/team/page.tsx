@@ -3,15 +3,23 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  changeMemberRole,
   createInvitation,
   listInvitations,
   listMembers,
+  removeMember,
   revokeInvitation,
+  type MemberRole,
   type WorkspaceInvitation,
 } from "@/lib/api/team";
-import { useResearchContext } from "@/lib/research-context";
-import { canManageMembers as canManageWorkspaceMembers } from "@/lib/permissions";
+import {
+  canChangeMemberRole,
+  canManageMembers as canManageWorkspaceMembers,
+  canRemoveMember,
+  roleOptionsForMember,
+} from "@/lib/permissions";
 import { queryKeys } from "@/lib/query-keys";
+import { useResearchContext } from "@/lib/research-context";
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -53,8 +61,11 @@ export default function TeamPage() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"admin" | "member" | "viewer">("member");
+  const [role, setRole] = useState<MemberRole>("member");
   const [createdLink, setCreatedLink] = useState("");
+  const [removeConfirmUserId, setRemoveConfirmUserId] = useState<string | null>(
+    null,
+  );
 
   const membersQuery = useQuery({
     queryKey: queryKeys.teamMembers(workspaceId),
@@ -86,6 +97,41 @@ export default function TeamPage() {
     },
   });
 
+  const changeRole = useMutation({
+    mutationFn: (input: { userId: string; role: MemberRole }) => {
+      if (!workspaceId) throw new Error("No workspace is selected.");
+      return changeMemberRole(workspaceId, input.userId, input.role);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.teamMembers(workspaceId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.workspaces,
+        }),
+      ]);
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: (userId: string) => {
+      if (!workspaceId) throw new Error("No workspace is selected.");
+      return removeMember(workspaceId, userId);
+    },
+    onSuccess: async () => {
+      setRemoveConfirmUserId(null);
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.teamMembers(workspaceId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.workspaces,
+        }),
+      ]);
+    },
+  });
+
   const revoke = useMutation({
     mutationFn: (invitation: WorkspaceInvitation) => {
       if (!workspaceId) throw new Error("No workspace is selected.");
@@ -106,8 +152,8 @@ export default function TeamPage() {
     [invitationsQuery.data],
   );
 
-  const canManageMembers =
-    canManageWorkspaceMembers(workspaceRole);
+  const canManageMembers = canManageWorkspaceMembers(workspaceRole);
+  const roleOptions = roleOptionsForMember(workspaceRole);
 
   if (workspacesQuery.isPending || !workspaceId) {
     return (
@@ -210,11 +256,7 @@ export default function TeamPage() {
                 id="invite-role"
                 className="input"
                 value={role}
-                onChange={(event) =>
-                  setRole(
-                    event.target.value as "admin" | "member" | "viewer",
-                  )
-                }
+                onChange={(event) => setRole(event.target.value as MemberRole)}
                 disabled={create.isPending}
               >
                 <option value="member">Member</option>
@@ -242,10 +284,7 @@ export default function TeamPage() {
           )}
 
           {createdLink && (
-            <div
-              className="quote-card"
-              style={{ marginTop: 14 }}
-            >
+            <div className="quote-card" style={{ marginTop: 14 }}>
               <div className="strong small">Invitation created</div>
               <p className="muted small" style={{ marginTop: 5 }}>
                 Email delivery is optional in this environment. Share this
@@ -288,15 +327,27 @@ export default function TeamPage() {
               <th>Role</th>
               <th>Status</th>
               <th>Joined</th>
+              {canManageMembers && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {members.map((member) => {
-              const display = member.full_name?.trim() || member.email || member.user_id;
+              const display =
+                member.full_name?.trim() || member.email || member.user_id;
+              const canChangeRole = canChangeMemberRole(
+                workspaceRole,
+                member.role,
+              );
+              const canRemove = canRemoveMember(workspaceRole, member.role);
+              const showActions = canChangeRole || canRemove;
+
               return (
                 <tr key={member.id}>
                   <td>
-                    <div className="row" style={{ justifyContent: "flex-start" }}>
+                    <div
+                      className="row"
+                      style={{ justifyContent: "flex-start" }}
+                    >
                       <div className="avatar">{initials(display)}</div>
                       <div>
                         <div className="strong">{display}</div>
@@ -306,26 +357,109 @@ export default function TeamPage() {
                       </div>
                     </div>
                   </td>
-                  <td style={{ textTransform: "capitalize" }}>{member.role}</td>
+                  <td style={{ textTransform: "capitalize" }}>
+                    {canChangeRole ? (
+                      <select
+                        className="input"
+                        style={{ minWidth: 120 }}
+                        aria-label={`Change role for ${display}`}
+                        value={member.role}
+                        disabled={changeRole.isPending}
+                        onChange={(event) =>
+                          changeRole.mutate({
+                            userId: member.user_id,
+                            role: event.target.value as MemberRole,
+                          })
+                        }
+                      >
+                        {roleOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      member.role
+                    )}
+                  </td>
                   <td>
-                    <span className={"tag " + (member.status === "active" ? "success" : "")}>
+                    <span
+                      className={
+                        "tag " + (member.status === "active" ? "success" : "")
+                      }
+                    >
                       {member.status}
                     </span>
                   </td>
                   <td>{formatDate(member.created_at)}</td>
+                  {canManageMembers && (
+                    <td>
+                      {showActions ? (
+                        <div className="actions">
+                          {canRemove &&
+                            (removeConfirmUserId === member.user_id ? (
+                              <>
+                                <button
+                                  className="btn ghost"
+                                  type="button"
+                                  disabled={remove.isPending}
+                                  onClick={() => setRemoveConfirmUserId(null)}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  className="btn"
+                                  type="button"
+                                  disabled={remove.isPending}
+                                  onClick={() =>
+                                    remove.mutate(member.user_id)
+                                  }
+                                >
+                                  {remove.isPending
+                                    ? "Removing…"
+                                    : "Confirm removal"}
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                className="btn ghost"
+                                type="button"
+                                disabled={remove.isPending}
+                                aria-label={`Remove ${display}`}
+                                onClick={() =>
+                                  setRemoveConfirmUserId(member.user_id)
+                                }
+                              >
+                                Remove
+                              </button>
+                            ))}
+                        </div>
+                      ) : (
+                        <span className="muted small">—</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}
             {!loading && members.length === 0 && (
               <tr>
-                <td colSpan={4}>
-                  <div className="empty">No members are available for this workspace.</div>
+                <td colSpan={canManageMembers ? 5 : 4}>
+                  <div className="empty">
+                    No members are available for this workspace.
+                  </div>
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </section>
+
+      {(changeRole.error || remove.error) && (
+        <p className="muted" role="alert" style={{ marginTop: 10 }}>
+          {changeRole.error?.message ?? remove.error?.message}
+        </p>
+      )}
 
       <section className="card pad" style={{ marginTop: 16 }}>
         <div className="row">
