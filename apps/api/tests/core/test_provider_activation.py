@@ -47,3 +47,24 @@ def test_strict_mode_rejects_heuristic_detection(monkeypatch) -> None:
 
     assert detection.ok is False
     assert detection.detail == "non-production baseline"
+
+def test_http_detection_requires_base_url(monkeypatch) -> None:
+    monkeypatch.setenv("DETECTION_PROVIDER", "http")
+    monkeypatch.setenv("AI_DETECTION_API_KEY", "realistic-test-secret")
+    monkeypatch.delenv("DETECTION_API_BASE_URL", raising=False)
+
+    checks = provider_activation.config_checks(strict=False)
+    detection = next(c for c in checks if c.name == "AI detection provider")
+
+    assert detection.ok is False
+
+
+def test_unknown_detection_provider_fails_closed(monkeypatch) -> None:
+    monkeypatch.setenv("DETECTION_PROVIDER", "unknown-provider")
+    monkeypatch.delenv("AI_DETECTION_API_KEY", raising=False)
+
+    checks = provider_activation.config_checks(strict=False)
+    detection = next(c for c in checks if c.name == "AI detection provider")
+
+    assert detection.ok is False
+    assert detection.detail == "unsupported provider"
