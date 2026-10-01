@@ -46,7 +46,7 @@ def register_user(
     try:
         db.add(user)
         db.flush()
-        owner_name = (workspace_name or "").strip() or f"{email.split("@", 1)[0]}'s workspace"
+        owner_name = (workspace_name or "").strip() or f"{email.split('@', 1)[0]}'s workspace"
         create_workspace(
             db,
             name=owner_name,
