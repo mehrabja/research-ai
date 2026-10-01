@@ -146,8 +146,9 @@ jobs:
         shell: powershell
         working-directory: apps/api
         run: |
-          $log = Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log'
-          $process = Start-Process -FilePath $env:CI_PYTHON -ArgumentList '-m','uvicorn','app.main:app','--host','127.0.0.1','--port','8000' -WorkingDirectory $PWD -RedirectStandardOutput $log -RedirectStandardError $log -PassThru
+          $stdout = Join-Path $env:GITHUB_WORKSPACE 'api-e2e.stdout.log'
+          $stderr = Join-Path $env:GITHUB_WORKSPACE 'api-e2e.stderr.log'
+          $process = Start-Process -FilePath $env:CI_PYTHON -ArgumentList '-m','uvicorn','app.main:app','--host','127.0.0.1','--port','8000' -WorkingDirectory $PWD -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
           Set-Content -Path (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.pid') -Value $process.Id
           for ($i = 0; $i -lt 60; $i++) {
             try {
@@ -156,7 +157,8 @@ jobs:
             } catch {}
             Start-Sleep -Seconds 1
           }
-          Get-Content $log
+          Get-Content $stdout -ErrorAction SilentlyContinue
+          Get-Content $stderr -ErrorAction SilentlyContinue
           throw 'FastAPI did not become ready.'
       - run: npm ci
       - run: npx playwright install chromium
@@ -176,7 +178,9 @@ jobs:
         if: failure()
         shell: powershell
         working-directory: .
-        run: Get-Content (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log') -ErrorAction SilentlyContinue
+        run: |
+          Get-Content (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.stdout.log') -ErrorAction SilentlyContinue
+          Get-Content (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.stderr.log') -ErrorAction SilentlyContinue
       - name: Cleanup PostgreSQL
         if: always()
         shell: powershell
