@@ -171,6 +171,7 @@ class Settings(BaseSettings):
     github_oauth_client_secret: str = Field(default="", repr=False)
     github_oauth_redirect_uri: str = ""
     ai_detection_api_key: str = Field(default="", repr=False)
+    sapling_api_key: str = Field(default="", repr=False)
     sentry_dsn: str = ""
     turnstile_secret_key: str = Field(default="", repr=False)
     turnstile_site_key: str = ""
@@ -379,6 +380,8 @@ class Settings(BaseSettings):
     detection_originality_base_url: str = "https://api.originality.ai/api/v3"
     detection_originality_model: str = "multilang"
     detection_originality_store_scan: bool = False
+    detection_sapling_base_url: str = "https://api.sapling.ai/api/v1"
+    detection_sapling_model: str = "20260820"
     detection_timeout_seconds: float = 20.0
     detection_max_input_chars: int = 100_000
     detection_max_retries: int = Field(default=2, ge=0, le=10)
