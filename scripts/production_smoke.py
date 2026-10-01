@@ -149,6 +149,22 @@ def external_get(
     print(f"PASS external {label}")
 
 
+def verify_originality() -> None:
+    key = required("AI_DETECTION_API_KEY")
+    base = os.getenv(
+        "DETECTION_ORIGINALITY_BASE_URL",
+        "https://api.originality.ai/api/v3",
+    ).rstrip("/")
+    status, _, payload = json_request(
+        base + "/account/balance",
+        {"Accept": "application/json", "X-OAI-API-KEY": key},
+    )
+    expect(status, 200, "Originality.ai account balance")
+    if not all(key in payload for key in ("credits", "subscriptionCredits")):
+        raise RuntimeError("Originality.ai account balance returned an unexpected payload.")
+    print("PASS external Originality.ai")
+
+
 def verify_openrouter() -> None:
     key = required("OPENROUTER_API_KEY")
     base = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
@@ -223,6 +239,7 @@ def main() -> int:
         core_smoke(base_url, auth_headers())
 
         checks = {
+            "SMOKE_VERIFY_ORIGINALITY": verify_originality,
             "SMOKE_VERIFY_OPENROUTER": verify_openrouter,
             "SMOKE_VERIFY_SEMANTIC_SCHOLAR": verify_semantic_scholar,
             "SMOKE_VERIFY_OPENALEX": verify_openalex,
