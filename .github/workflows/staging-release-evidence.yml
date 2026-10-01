@@ -17,7 +17,7 @@ jobs:
       CROSSREF_MAILTO: ${{ vars.CROSSREF_MAILTO }}
       UNPAYWALL_EMAIL: ${{ vars.UNPAYWALL_EMAIL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Deploy staging candidate
         shell: powershell
         run: .\scripts\staging_deploy.ps1
