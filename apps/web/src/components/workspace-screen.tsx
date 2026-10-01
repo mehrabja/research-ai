@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {useSearchParams} from "next/navigation";
 import {AppShell,useWorkspace} from "./app-shell";
@@ -40,7 +40,7 @@ export function WorkspaceScreen({route}:{route:string}){return <Screen route={ro
 
 function Screen({route}:{route:string}){
  switch(route){
- case "dashboard":return <Dashboard/>;case "research":return <Research/>;case "notifications":return <Notifications/>;case "jobs":return <Jobs/>;case "team":return <Team/>;case "settings":return <Settings/>;case "usage-billing":return <Billing/>;case "knowledge":return <Knowledge/>;case "files":return <Files/>;case "plan":return <Plan/>;case "manuscript":return <Manuscript/>;case "generate":return <Generate/>;case "humanize":return <Humanize/>;case "translate":return <Translate/>;case "collaboration":return <Collaboration/>;
+ case "dashboard":return <Dashboard/>;case "workspace":return <Workspace/>;case "research":return <Research/>;case "sources":return <Sources/>;case "literature":return <Literature/>;case "evidence":return <Evidence/>;case "notifications":return <Notifications/>;case "jobs":return <Jobs/>;case "team":return <Team/>;case "settings":return <Settings/>;case "usage-billing":return <Billing/>;case "knowledge":return <Knowledge/>;case "files":return <Files/>;case "plan":return <Plan/>;case "manuscript":return <Manuscript/>;case "generate":return <Generate/>;case "humanize":return <Humanize/>;case "translate":return <Translate/>;case "collaboration":return <Collaboration/>;
  default:return <Generic route={route}/>;
  }
 }
@@ -141,7 +141,39 @@ function Sources(){
 function Literature(){
   const {projectId}=useCtx();
   const q=useQuery({queryKey:["literature",projectId],queryFn:()=>api.literature(projectId!),enabled:Boolean(projectId)});
-  return <><Head route="literature"/><div className="grid grid-2"><Card><h3>Literature payload</h3><pre className="code" style={{whiteSpace:"pre-wrap",fontSize:11}}>{JSON.stringify(q.data??{},null,2)}</pre></Card><Card><h3>Pipeline</h3><div className="timeline"><div className="step"><div className="dot"/><b>Discovery</b><div className="meta">Provider search, pagination and deduplication.</div></div><div className="step"><div className="dot"/><b>Analysis</b><div className="meta">Clusters, themes and gaps.</div></div><div className="step"><div className="dot"/><b>Screening</b><div className="meta">Human screening overrides are persisted.</div></div></div></Card></div></>;
+  const data=row(q.data);
+  const clusters=rows(data.clusters??data.clustered_papers);
+  const themes=rows(data.themes);
+  const gaps=rows(data.gaps);
+  return <><Head route="literature"/>
+    <div className="grid grid-4">
+      <Metric label="Clusters" value={clusters.length}/>
+      <Metric label="Themes" value={themes.length}/>
+      <Metric label="Gaps" value={gaps.length}/>
+      <Metric label="Analysis status" value={value(data.status,"Pending")}/>
+    </div>
+    <div className="grid grid-2" style={{marginTop:16}}>
+      <Card>
+        <h3>Analysis output</h3>
+        {q.isPending&&<State title="Loading literature intelligence" description="The workspace is waiting for the literature analysis response."/>}
+        {!q.isPending&&q.isError&&<State title="API request failed" description="The literature intelligence endpoint returned an error." error/>}
+        {!q.isPending&&!q.isError&&clusters.length===0&&themes.length===0&&gaps.length===0&&<State title="No literature analysis yet" description="Run literature analysis after adding sources to the active project."/>}
+        {!q.isPending&&!q.isError&&(clusters.length>0||themes.length>0||gaps.length>0)&&<div className="list">
+          {clusters.length>0&&<div className="list-item"><div className="title">Clusters</div><div className="meta">{clusters.length} cluster records are available.</div></div>}
+          {themes.length>0&&<div className="list-item"><div className="title">Themes</div><div className="meta">{themes.length} theme records are available.</div></div>}
+          {gaps.length>0&&<div className="list-item"><div className="title">Research gaps</div><div className="meta">{gaps.length} gap records are available.</div></div>}
+        </div>}
+      </Card>
+      <Card>
+        <h3>Pipeline</h3>
+        <div className="timeline">
+          <div className="step"><div className="dot"/><div><b>Discovery</b><div className="meta">Provider search, pagination and deduplication.</div></div></div>
+          <div className="step"><div className="dot"/><div><b>Analysis</b><div className="meta">Clusters, themes and gaps.</div></div></div>
+          <div className="step"><div className="dot"/><div><b>Screening</b><div className="meta">Human screening overrides are persisted.</div></div></div>
+        </div>
+      </Card>
+    </div>
+  </>;
 }
 
 function Evidence(){
@@ -162,6 +194,7 @@ function Files(){
   const q=useQuery({queryKey:["files",projectId],queryFn:()=>api.files(projectId!),enabled:Boolean(projectId),refetchInterval:5000});
   const folders=useQuery({queryKey:["folders",projectId],queryFn:()=>api.folders(projectId!),enabled:Boolean(projectId)});
   const qc=useQueryClient();
+  const inputRef=useRef<HTMLInputElement>(null);
   const [folderId,setFolderId]=useState("");
   const [uploading,setUploading]=useState(false);
   const [busyId,setBusyId]=useState("");
@@ -178,19 +211,24 @@ function Files(){
       setError(e instanceof Error?e.message:"Upload failed.");
     }finally{
       setUploading(false);
+      if(inputRef.current)inputRef.current.value="";
     }
+  }
+
+  async function fetchFileBlob(id:string){
+    const response=await api.downloadFile(id);
+    if(!response.ok){
+      const body=await response.text().catch(()=> "");
+      throw new Error(body||"File request failed.");
+    }
+    return response.blob();
   }
 
   async function download(id:string,name:string){
     setBusyId(id);
     setError("");
     try{
-      const response=await api.downloadFile(id);
-      if(!response.ok){
-        const body=await response.text().catch(()=> "");
-        throw new Error(body||"Download failed.");
-      }
-      const blob=await response.blob();
+      const blob=await fetchFileBlob(id);
       const url=URL.createObjectURL(blob);
       const link=document.createElement("a");
       link.href=url;
@@ -198,9 +236,30 @@ function Files(){
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(url);
+      window.setTimeout(()=>URL.revokeObjectURL(url),1000);
     }catch(e){
       setError(e instanceof Error?e.message:"Download failed.");
+    }finally{
+      setBusyId("");
+    }
+  }
+
+  async function openFile(id:string){
+    setBusyId(id);
+    setError("");
+    const popup=window.open("about:blank","_blank");
+    try{
+      const blob=await fetchFileBlob(id);
+      const url=URL.createObjectURL(blob);
+      if(popup){
+        popup.location.href=url;
+        window.setTimeout(()=>URL.revokeObjectURL(url),60_000);
+      }else{
+        window.location.href=url;
+      }
+    }catch(e){
+      popup?.close();
+      setError(e instanceof Error?e.message:"Open failed.");
     }finally{
       setBusyId("");
     }
@@ -231,10 +290,24 @@ function Files(){
           <option value="">Project root</option>
           {rows(folders.data).map(f=><option key={value(f.id)} value={value(f.id)}>{value(f.name)}</option>)}
         </select>
-        <label className="dropzone" style={{display:"grid",placeItems:"center",minHeight:140,marginTop:12}}>
-          <input hidden type="file" disabled={!projectId||uploading} onChange={e=>{const f=e.target.files?.[0];if(f)void upload(f)}}/>
-          <div><div className="strong">{uploading?"Uploading…":"Choose a file"}</div><div className="muted tiny">Backend validates size, MIME and authorization.</div></div>
-        </label>
+        <div className="dropzone" style={{display:"grid",placeItems:"center",minHeight:140,marginTop:12}}>
+          <input
+            ref={inputRef}
+            hidden
+            type="file"
+            disabled={!projectId||uploading}
+            onChange={e=>{const f=e.currentTarget.files?.[0];if(f)void upload(f);}}
+          />
+          <button
+            type="button"
+            className="btn primary"
+            disabled={!projectId||uploading}
+            onClick={()=>inputRef.current?.click()}
+          >
+            {uploading?"Uploading…":"Choose a file"}
+          </button>
+          <div className="muted tiny" style={{marginTop:8}}>Selecting a file starts the upload immediately.</div>
+        </div>
         {error&&<div className="notice error" style={{marginTop:10}}>{error}</div>}
       </Card>
       <Card><h3>Intelligence</h3><p className="muted small">Extraction, indexing, classification, code analysis and data profiling run as durable jobs.</p></Card>
