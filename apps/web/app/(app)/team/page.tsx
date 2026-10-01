@@ -93,7 +93,7 @@ export default function TeamPage() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ["workspace-invitations", workspaceId],
+        queryKey: queryKeys.invitations(workspaceId),
       });
     },
   });
