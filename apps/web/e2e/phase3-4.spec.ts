@@ -254,10 +254,16 @@ test("F03 workspace invitations create and accept a real membership", async ({
       }),
     ).toBeVisible({ timeout: 10_000 });
 
+    const acceptResponse = invitePage.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.url().includes("/api/v1/workspaces/invitations/accept"),
+    );
     await invitePage
       .getByRole("button", { name: "Accept invitation" })
       .click();
-    await expect(invitePage).toHaveURL(/\/team$/);
+    expect((await acceptResponse).status()).toBe(200);
+    await expect(invitePage).toHaveURL(/\/team$/, { timeout: 10_000 });
 
     const membersResponse = await page.request.get(
       "/api/v1/workspaces/" + workspaceId + "/members",
