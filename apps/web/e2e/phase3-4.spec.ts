@@ -185,7 +185,9 @@ test("F04 Files UI moves an uploaded project file between persistent folders", a
     exact: true,
   });
   await expect(moveSelector).toBeVisible({ timeout: 10_000 });
-  await expect(moveSelector.locator("option", { hasText: "review-material" })).toHaveCount(1);
+  await expect(
+    moveSelector.locator("option", { hasText: "review-material" }),
+  ).toHaveCount(1);
 
   const moveResponse = page.waitForResponse(
     (response) =>
@@ -293,6 +295,126 @@ test("F03 workspace invitations create and accept a real membership", async ({
           member.role === "member",
       ),
     ).toBe(true);
+  } finally {
+    await inviteContext.close();
+  }
+});
+
+test("F03 workspace owners can change and remove a real member", async ({
+  page,
+  browser,
+}) => {
+  await createSession(page);
+  const workspaceId = await createWorkspace(
+    page,
+    "F03 Member Management " + randomUUID(),
+  );
+  await upgradeWorkspaceToPro(page, workspaceId);
+
+  const inviteContext = await browser.newContext();
+  const invitePage = await inviteContext.newPage();
+  const invitedEmail = "e2e-member-" + randomUUID() + "@example.com";
+
+  try {
+    const register = await invitePage.request.post(
+      "/api/v1/auth/register",
+      { data: { email: invitedEmail, password } },
+    );
+    expect(register.status(), await register.text()).toBe(201);
+
+    const invitationResponse = await page.request.post(
+      "/api/v1/workspaces/" + workspaceId + "/members/invitations",
+      {
+        data: {
+          email: invitedEmail,
+          role: "member",
+        },
+      },
+    );
+    expect(invitationResponse.status(), await invitationResponse.text()).toBe(201);
+
+    const invitation = (await invitationResponse.json()) as { token: string };
+    const login = await invitePage.request.post("/api/v1/auth/login", {
+      data: { email: invitedEmail, password },
+    });
+    expect(login.status(), await login.text()).toBe(200);
+
+    await invitePage.goto(
+      "/invite?token=" + encodeURIComponent(invitation.token),
+    );
+    await invitePage
+      .getByRole("button", { name: "Accept invitation" })
+      .click();
+    await expect(invitePage).toHaveURL(/\/team$/, { timeout: 10_000 });
+
+    await page.goto("/team?workspaceId=" + workspaceId);
+    await expect(
+      page.getByRole("heading", {
+        name: "F03 Member Management " + /./,
+      }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    const roleSelector = page.getByLabel("Change role for " + invitedEmail, {
+      exact: true,
+    });
+    await expect(roleSelector).toBeVisible({ timeout: 10_000 });
+
+    const roleResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes(
+          "/api/v1/workspaces/" + workspaceId + "/members/",
+        ),
+    );
+    await roleSelector.selectOption("viewer");
+    expect((await roleResponse).status()).toBe(200);
+
+    const changedMembersResponse = await page.request.get(
+      "/api/v1/workspaces/" + workspaceId + "/members",
+    );
+    expect(
+      changedMembersResponse.status(),
+      await changedMembersResponse.text(),
+    ).toBe(200);
+    const changedMembers = (await changedMembersResponse.json()) as {
+      items: Array<{ email: string | null; role: string }>;
+    };
+    expect(
+      changedMembers.items.some(
+        (member) =>
+          member.email === invitedEmail &&
+          member.role === "viewer",
+      ),
+    ).toBe(true);
+
+    await page.getByRole("button", { name: "Remove " + invitedEmail }).click();
+    await expect(
+      page.getByRole("button", { name: "Confirm removal" }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    const removeResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "DELETE" &&
+        response.url().includes(
+          "/api/v1/workspaces/" + workspaceId + "/members/",
+        ),
+    );
+    await page.getByRole("button", { name: "Confirm removal" }).click();
+    expect((await removeResponse).status()).toBe(204);
+
+    const removedMembersResponse = await page.request.get(
+      "/api/v1/workspaces/" + workspaceId + "/members",
+    );
+    expect(
+      removedMembersResponse.status(),
+      await removedMembersResponse.text(),
+    ).toBe(200);
+    const removedMembers = (await removedMembersResponse.json()) as {
+      items: Array<{ email: string | null }>;
+    };
+    expect(
+      removedMembers.items.some((member) => member.email === invitedEmail),
+    ).toBe(false);
   } finally {
     await inviteContext.close();
   }
