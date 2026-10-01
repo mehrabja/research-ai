@@ -4,12 +4,10 @@ from __future__ import annotations
 import uuid
 
 import pyotp
-
+from app.db.models.user import User
+from app.db.session import SessionLocal
 from tests._m37_api_helpers import PW, auth, client
 from tests._m37_cleanup import purge_test_users
-from app.db.session import SessionLocal
-from sqlalchemy import delete
-from app.db.models.user import User
 
 
 def test_mfa_disable_accepts_recovery_code_once() -> None:
