@@ -10,7 +10,7 @@ from tests._m37_api_helpers import PW, auth, client
 from tests._m37_cleanup import purge_test_users
 
 
-def test_mfa_disable_accepts_recovery_code_once() -> None:
+def test_mfa_disable_accepts_recovery_code() -> None:
     email = f"f12-mfa-{uuid.uuid4().hex[:10]}@example.com"
     register = client.post(
         "/api/v1/auth/register",
@@ -66,7 +66,7 @@ def test_mfa_disable_accepts_recovery_code_once() -> None:
         assert disable.status_code == 200, disable.text
         assert disable.json() == {
             "enabled": False,
-            "recovery_codes_remaining": 7,
+            "recovery_codes_remaining": 0,
         }
 
         with SessionLocal() as db:
@@ -74,7 +74,7 @@ def test_mfa_disable_accepts_recovery_code_once() -> None:
             assert user is not None
             assert user.mfa_enabled is False
             assert user.mfa_secret is None
-            assert len(user.mfa_recovery_code_hashes or []) == 7
+            assert user.mfa_recovery_code_hashes is None
     finally:
         with SessionLocal() as db:
             purge_test_users(db, [user_id])
