@@ -538,7 +538,7 @@ test("F04 dashboard renders live workspace projects and usage", async ({ page })
     page.getByRole("heading", { name: "Research overview", exact: true }),
   ).toBeVisible({ timeout: 10_000 });
   await expect(
-    page.getByText(projectName, { exact: true }),
+    page.getByRole("article").getByText(projectName, { exact: true }),
   ).toBeVisible({ timeout: 10_000 });
   await expect(
     page.getByRole("heading", { name: "Projects", exact: true }),
