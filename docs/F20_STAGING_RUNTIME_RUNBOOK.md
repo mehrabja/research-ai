@@ -129,7 +129,7 @@ The gate now verifies:
 
 - configured generation / embedding / translation routing
 - Semantic Scholar credentials
-- S3 configuration
+- S3 configuration plus read-only bucket access verification via `HeadBucket`
 - transactional email configuration
 - Stripe configuration
 - Originality.ai activation
