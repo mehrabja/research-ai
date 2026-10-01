@@ -1,5 +1,6 @@
 import {NextResponse} from "next/server";
 import {cookies} from "next/headers";
+import {getBackendApiUrl} from "@/lib/server/backend-url";
 
 const ACCESS_COOKIE="research_ai_access_token";
 const REFRESH_COOKIE="research_ai_refresh";
@@ -7,7 +8,7 @@ const CSRF_COOKIE="research_ai_csrf";
 
 async function proxy(req:Request,ctx:{params:Promise<{path:string[]}>}){
   const {path}=await ctx.params;
-  const base=process.env.BACKEND_API_URL??"http://localhost:8000";
+  const base=getBackendApiUrl();
   const incoming=new URL(req.url);
   const target=base.replace(/\/$/,"")+"/api/v1/"+path.join("/")+incoming.search;
   const jar=await cookies();
