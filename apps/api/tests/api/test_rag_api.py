@@ -1,6 +1,6 @@
 import uuid
 from collections.abc import Iterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -386,7 +386,7 @@ def test_canonical_project_evidence_endpoint_returns_file_and_chunk_records(
             project_file = db.get(ProjectFile, file_id)
             assert project_file is not None
             project_file.status = "deleted"
-            project_file.deleted_at = datetime.now(timezone.utc)
+            project_file.deleted_at = datetime.now(UTC)
             db.commit()
 
         hidden = c.get(f"/api/v1/projects/{pid}/evidence")
