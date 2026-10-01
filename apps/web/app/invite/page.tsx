@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import type { Route } from "next";
 import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -9,7 +10,7 @@ import { me } from "@/lib/api/auth";
 import { acceptInvitation } from "@/lib/api/team";
 import { isApiError } from "@/lib/api/errors";
 
-export default function InvitePage() {
+function InvitePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() ?? "";
