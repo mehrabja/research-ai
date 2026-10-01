@@ -17,6 +17,8 @@ def get_current_detection_profile() -> DetectionProfile:
         model = s.detection_api_model
     elif provider == "originality" and s.detection_originality_model.strip():
         model = s.detection_originality_model
+    elif provider == "sapling" and s.detection_sapling_model.strip():
+        model = s.detection_sapling_model
     else:
         model = s.detection_model
     return DetectionProfile(
