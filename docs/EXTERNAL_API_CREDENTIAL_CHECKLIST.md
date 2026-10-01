@@ -5,6 +5,19 @@ Branch: feature/m14-humanization
 
 This file answers: what external APIs/services are actually needed for production.
 
+## Current zero-cost staging contract
+
+Staging currently provisions:
+
+- OpenRouter for generation, embeddings, and translation.
+- OpenAlex for source discovery.
+- Sapling for AI detection.
+- Resend for transactional email.
+- Local filesystem storage.
+- Billing disabled (`BILLING_PROVIDER=none`).
+
+Semantic Scholar, MinIO/S3 storage, and Stripe billing are intentionally deferred from this zero-cost staging contract.
+
 ## 1. OpenRouter — first priority
 
 Use OpenRouter as the server-side gateway for LLM generation.
