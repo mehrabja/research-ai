@@ -180,17 +180,18 @@ def list_canonical_project_evidence(
     """List canonical evidence records visible in a project."""
     get_project(db, user_id=user_id, project_id=project_id)
 
-    if file_id is not None:
-        file = db.execute(
-            select(ProjectFile).where(
-                ProjectFile.id == file_id,
+    active_file_ids = list(
+        db.execute(
+            select(ProjectFile.id).where(
                 ProjectFile.project_id == project_id,
                 ProjectFile.deleted_at.is_(None),
             )
-        ).scalar_one_or_none()
-        if file is None:
-            from app.core.exceptions import FileNotFound
-            raise FileNotFound()
+        ).scalars().all()
+    )
+
+    if file_id is not None and file_id not in active_file_ids:
+        from app.core.exceptions import FileNotFound
+        raise FileNotFound()
 
     files: list[EvidenceRecord] = []
     if kind in (None, "project_file"):
@@ -223,10 +224,10 @@ def list_canonical_project_evidence(
                 Source.source_api == "project_file",
             )
         )
-        if file_id is not None:
-            chunk_stmt = chunk_stmt.where(
-                Source.external_source_id == str(file_id)
-            )
+        chunk_file_ids = [file_id] if file_id is not None else active_file_ids
+        chunk_stmt = chunk_stmt.where(
+            Source.external_source_id.in_([str(fid) for fid in chunk_file_ids])
+        )
         chunk_rows = list(
             db.execute(
                 chunk_stmt.order_by(Chunk.created_at.asc(), Chunk.id.asc())
@@ -237,7 +238,8 @@ def list_canonical_project_evidence(
     technical_facts: list[EvidenceRecord] = []
     if kind in (None, "m29_technical_fact"):
         fact_stmt = select(TechnicalFact).where(
-            TechnicalFact.project_id == project_id
+            TechnicalFact.project_id == project_id,
+            TechnicalFact.project_file_id.in_(active_file_ids),
         )
         if file_id is not None:
             fact_stmt = fact_stmt.where(TechnicalFact.project_file_id == file_id)
@@ -254,7 +256,8 @@ def list_canonical_project_evidence(
     experiment_results: list[EvidenceRecord] = []
     if kind in (None, "m29_experiment_result"):
         result_stmt = select(ExperimentResult).where(
-            ExperimentResult.project_id == project_id
+            ExperimentResult.project_id == project_id,
+            ExperimentResult.project_file_id.in_(active_file_ids),
         )
         if file_id is not None:
             result_stmt = result_stmt.where(
@@ -283,6 +286,7 @@ def list_canonical_project_evidence(
             .where(
                 Metric.project_id == project_id,
                 ExperimentResult.project_id == project_id,
+                ExperimentResult.project_file_id.in_(active_file_ids),
             )
         )
         if file_id is not None:
