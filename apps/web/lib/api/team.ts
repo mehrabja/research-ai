@@ -25,6 +25,8 @@ export type CreatedInvitation = {
   token: string;
 };
 
+export type MemberRole = "admin" | "member" | "viewer";
+
 async function readError(response: Response, fallback: string): Promise<string> {
   try {
     const payload = (await response.json()) as {
@@ -78,7 +80,7 @@ export async function listInvitations(
 export async function createInvitation(
   workspaceId: string,
   email: string,
-  role: "admin" | "member" | "viewer",
+  role: MemberRole,
 ): Promise<CreatedInvitation> {
   const response = await fetch(
     `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/members/invitations`,
@@ -98,6 +100,47 @@ export async function createInvitation(
     );
   }
   return (await response.json()) as CreatedInvitation;
+}
+
+export async function changeMemberRole(
+  workspaceId: string,
+  userId: string,
+  role: MemberRole,
+): Promise<void> {
+  const response = await fetch(
+    `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/members/${encodeURIComponent(userId)}`,
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ role }),
+    },
+  );
+  if (!response.ok) {
+    throw new Error(
+      await readError(response, "Unable to change this member's role."),
+    );
+  }
+}
+
+export async function removeMember(
+  workspaceId: string,
+  userId: string,
+): Promise<void> {
+  const response = await fetch(
+    `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/members/${encodeURIComponent(userId)}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    },
+  );
+  if (!response.ok) {
+    throw new Error(await readError(response, "Unable to remove this member."));
+  }
 }
 
 export async function revokeInvitation(
@@ -146,4 +189,3 @@ export async function acceptInvitation(token: string): Promise<{
     status: string;
   };
 }
-
