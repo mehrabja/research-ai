@@ -35,3 +35,14 @@ def test_originality_passes_with_detection_key(monkeypatch) -> None:
 
     assert detection.ok is True
     assert detection.detail == "active originality"
+
+
+def test_strict_mode_rejects_heuristic_detection(monkeypatch) -> None:
+    monkeypatch.setenv("DETECTION_PROVIDER", "heuristic")
+    monkeypatch.delenv("AI_DETECTION_API_KEY", raising=False)
+
+    checks = provider_activation.config_checks(strict=True)
+    detection = next(c for c in checks if c.name == "AI detection provider")
+
+    assert detection.ok is False
+    assert detection.detail == "non-production baseline"
