@@ -81,6 +81,7 @@ def test_check_expected_providers_rejects_unknown_provider(monkeypatch) -> None:
     with pytest.raises(RuntimeError, match="not configured/registered"):
         production_smoke.check_expected_providers(matrix)
 
+
 def test_verify_originality_uses_balance_endpoint(monkeypatch) -> None:
     monkeypatch.setenv("AI_DETECTION_API_KEY", "test-key")
     monkeypatch.setenv(
