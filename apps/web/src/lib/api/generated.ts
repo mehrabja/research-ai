@@ -1,4 +1,4 @@
-/* Focused OpenAPI type surface for the M38 UI. Regenerate from FastAPI /openapi.json with npm run generate:api. */
+/* Focused OpenAPI type surface for the current M39 UI. Regenerate from FastAPI /openapi.json with npm run generate:api. */
 export type UUID=string;export type DateTime=string;export type User={id:UUID;email:string};export type Workspace={id:UUID;name:string;slug:string;status:string;role?:string;owner_user_id?:UUID};
 export type Project={workspace_id:UUID;id:UUID;name:string;description:string|null;domain:string|null;research_objective:string|null;scope:string|null;constraints:string|null;status:string;report_count:number;created_at:DateTime;updated_at:DateTime};
 export type ProjectList={items:Project[];total:number;limit:number;offset:number};export type Report={id:UUID;topic:string;domain:string|null;status:string;tone:string|null;length:string|null;structure_template:string|null;output_language:string;audience_level:string|null;project_id:UUID|null;created_at:DateTime;updated_at:DateTime};
