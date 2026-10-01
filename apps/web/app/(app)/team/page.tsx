@@ -8,6 +8,7 @@ import {
   listInvitations,
   listMembers,
   removeMember,
+  transferOwnership,
   revokeInvitation,
   type MemberRole,
   type WorkspaceInvitation,
@@ -63,9 +64,7 @@ export default function TeamPage() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<MemberRole>("member");
   const [createdLink, setCreatedLink] = useState("");
-  const [removeConfirmUserId, setRemoveConfirmUserId] = useState<string | null>(
-    null,
-  );
+  const [removeConfirmUserId, setRemoveConfirmUserId] = useState<string | null>(\n    null,\n  );\n  const [transferConfirmUserId, setTransferConfirmUserId] = useState<string | null>(\n    null,\n  );
 
   const membersQuery = useQuery({
     queryKey: queryKeys.teamMembers(workspaceId),
@@ -121,6 +120,24 @@ export default function TeamPage() {
     },
     onSuccess: async () => {
       setRemoveConfirmUserId(null);
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.teamMembers(workspaceId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.workspaces,
+        }),
+      ]);
+    },
+  });
+
+  const transfer = useMutation({
+    mutationFn: (targetUserId: string) => {
+      if (!workspaceId) throw new Error("No workspace is selected.");
+      return transferOwnership(workspaceId, targetUserId);
+    },
+    onSuccess: async () => {
+      setTransferConfirmUserId(null);
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: queryKeys.teamMembers(workspaceId),
@@ -459,6 +476,91 @@ export default function TeamPage() {
         <p className="muted" role="alert" style={{ marginTop: 10 }}>
           {changeRole.error?.message ?? remove.error?.message}
         </p>
+      )}
+
+
+      {workspaceRole === "owner" && (
+        <section className="card pad" style={{ marginTop: 16 }}>
+          <div>
+            <h2>Transfer ownership</h2>
+            <p className="muted small" style={{ marginTop: 4 }}>
+              Ownership transfers the workspace to another active member. You
+              become an admin after the transfer.
+            </p>
+          </div>
+
+          {members.filter(
+            (member) => member.user_id !== user.id && member.role !== "owner",
+          ).length === 0 ? (
+            <div className="empty" style={{ marginTop: 12 }}>
+              Add another active member before transferring ownership.
+            </div>
+          ) : (
+            <div className="grid grid-3" style={{ marginTop: 14 }}>
+              <div className="field">
+                <label htmlFor="transfer-owner">New owner</label>
+                <select
+                  id="transfer-owner"
+                  className="input"
+                  value={transferConfirmUserId ?? ""}
+                  disabled={transfer.isPending}
+                  onChange={(event) =>
+                    setTransferConfirmUserId(event.target.value || null)
+                  }
+                >
+                  <option value="">Select a member</option>
+                  {members
+                    .filter(
+                      (member) =>
+                        member.user_id !== user.id && member.role !== "owner",
+                    )
+                    .map((member) => {
+                      const display =
+                        member.full_name?.trim() ||
+                        member.email ||
+                        member.user_id;
+                      return (
+                        <option key={member.user_id} value={member.user_id}>
+                          {display}
+                        </option>
+                      );
+                    })}
+                </select>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "end" }}>
+                {transferConfirmUserId ? (
+                  <div className="actions">
+                    <button
+                      className="btn ghost"
+                      type="button"
+                      disabled={transfer.isPending}
+                      onClick={() => setTransferConfirmUserId(null)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="btn"
+                      type="button"
+                      disabled={transfer.isPending}
+                      onClick={() => transfer.mutate(transferConfirmUserId)}
+                    >
+                      {transfer.isPending
+                        ? "Transferring…"
+                        : "Confirm transfer"}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )}
+
+          {transfer.error && (
+            <p className="muted" role="alert" style={{ marginTop: 10 }}>
+              {transfer.error.message}
+            </p>
+          )}
+        </section>
       )}
 
       <section className="card pad" style={{ marginTop: 16 }}>
