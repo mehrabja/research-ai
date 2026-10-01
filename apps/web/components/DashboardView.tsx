@@ -115,7 +115,7 @@ export default function DashboardView() {
   const notifications = notificationsQuery.data?.items ?? [];
   const unread = notificationsQuery.data?.unread ?? 0;
   const visibleProjects = projects.slice(0, 3);
-  const displayName = user.full_name?.trim() || user.email;
+  const displayName = user.email;
 
   return (
     <>
