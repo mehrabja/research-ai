@@ -62,7 +62,7 @@ jobs:
       AI_DETECTION_API_KEY: ${{ secrets.AI_DETECTION_API_KEY }}
       SAPLING_API_KEY: ${{ secrets.SAPLING_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Verify runner Python
         run: python --version
       - name: Install activation runner dependency
