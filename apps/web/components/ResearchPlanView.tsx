@@ -14,7 +14,7 @@ import {
 } from "@/lib/api/researchPlan";
 
 export default function ResearchPlanView() {
-  const [objective, setObjective] = useState("");
+  const [objectiveDraft, setObjectiveDraft] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const {
@@ -35,9 +35,7 @@ export default function ResearchPlanView() {
 
   const plan: ResearchPlan | undefined = versions.data?.[0];
   const planObjective =
-    objective !== ""
-      ? objective
-      : plan?.research_objective_snapshot ?? "";
+    objectiveDraft ?? plan?.research_objective_snapshot ?? "";
 
   const coverage = useQuery({
     queryKey: ["research-plan-coverage", activeProjectId, plan?.version],
@@ -62,7 +60,7 @@ export default function ResearchPlanView() {
         planningMode: plan?.planning_mode ?? null,
       }),
     onSuccess: async () => {
-      setObjective("");
+      setObjectiveDraft(null);
       await queryClient.invalidateQueries({
         queryKey: ["research-plan-versions", activeProjectId],
       });
@@ -76,7 +74,7 @@ export default function ResearchPlanView() {
     mutationFn: (targetVersion: number) =>
       restoreResearchPlanVersion(activeProjectId!, targetVersion),
     onSuccess: async () => {
-      setObjective("");
+      setObjectiveDraft(null);
       await queryClient.invalidateQueries({
         queryKey: ["research-plan-versions", activeProjectId],
       });
@@ -209,7 +207,7 @@ export default function ResearchPlanView() {
                 className="input textarea"
                 style={{ marginTop: 10 }}
                 value={planObjective}
-                onChange={(event) => setObjective(event.target.value)}
+                onChange={(event) => setObjectiveDraft(event.target.value)}
               />
               <div className="actions" style={{ marginTop: 12 }}>
                 <button

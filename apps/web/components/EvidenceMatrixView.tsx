@@ -1,9 +1,6 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { listProjectReports, listProjects } from "@/lib/api/projects";
-import { listWorkspaces } from "@/lib/api/workspaces";
 import {
   getEvidenceMatrix,
   type EvidenceRow,
@@ -13,44 +10,22 @@ import {
   syncProjectFileEvidence,
   type ProjectFileEvidence,
 } from "@/lib/api/project-file-evidence";
+import { useResearchContext } from "@/lib/research-context";
 
 export default function EvidenceMatrixView() {
-  const [workspaceId, setWorkspaceId] = useState<string>();
-  const [projectId, setProjectId] = useState<string>();
-  const [reportId, setReportId] = useState<string>();
   const queryClient = useQueryClient();
-
-  const workspaces = useQuery({
-    queryKey: ["workspaces"],
-    queryFn: listWorkspaces,
-    staleTime: 30_000,
-  });
-
-  const activeWorkspaceId = workspaceId ?? workspaces.data?.[0]?.id;
-
-  const projects = useQuery({
-    queryKey: ["projects", activeWorkspaceId],
-    queryFn: () => {
-      if (!activeWorkspaceId) throw new Error("No workspace is selected.");
-      return listProjects(activeWorkspaceId);
-    },
-    enabled: Boolean(activeWorkspaceId),
-    staleTime: 15_000,
-  });
-
-  const activeProjectId = projectId ?? projects.data?.[0]?.id;
-
-  const reports = useQuery({
-    queryKey: ["project-reports", activeProjectId],
-    queryFn: () => {
-      if (!activeProjectId) throw new Error("No project is selected.");
-      return listProjectReports(activeProjectId);
-    },
-    enabled: Boolean(activeProjectId),
-    staleTime: 15_000,
-  });
-
-  const activeReportId = reportId ?? reports.data?.[0]?.id;
+  const {
+    workspaceId: activeWorkspaceId,
+    projectId: activeProjectId,
+    reportId: activeReportId,
+    workspacesQuery,
+    projectsQuery,
+    reportsQuery,
+    error: contextError,
+    setWorkspace,
+    setProject,
+    setReport,
+  } = useResearchContext();
 
   const fileEvidence = useQuery({
     queryKey: ["project-file-evidence", activeProjectId],
@@ -65,7 +40,7 @@ export default function EvidenceMatrixView() {
   const sync = useMutation({
     mutationFn: () => {
       if (!activeProjectId) throw new Error("No project is selected.");
-      return syncProjectFileEvidence(activeProjectId, activeReportId);
+      return syncProjectFileEvidence(activeProjectId, activeReportId ?? undefined);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
@@ -90,9 +65,7 @@ export default function EvidenceMatrixView() {
   });
 
   const errors = [
-    workspaces.error,
-    projects.error,
-    reports.error,
+    contextError,
     matrix.error,
     fileEvidence.error,
     sync.error,
@@ -110,9 +83,9 @@ export default function EvidenceMatrixView() {
           type="button"
           style={{ marginTop: 14 }}
           onClick={() => {
-            void workspaces.refetch();
-            void projects.refetch();
-            void reports.refetch();
+            void workspacesQuery.refetch();
+            void projectsQuery.refetch();
+            void reportsQuery.refetch();
             void matrix.refetch();
           }}
         >
@@ -128,7 +101,11 @@ export default function EvidenceMatrixView() {
     0,
   );
   const unsupportedCount = rows.filter(
-    (row) => row.claim.status !== "supported",
+    (row) =>
+      row.claim.status === "unsupported" ||
+      (row.evidence ?? []).some(
+        (item) => item.support_level === "contradicts",
+      ),
   ).length;
 
   return (
@@ -151,13 +128,9 @@ export default function EvidenceMatrixView() {
               id="evidence-workspace"
               className="input"
               value={activeWorkspaceId ?? ""}
-              onChange={(event) => {
-                setWorkspaceId(event.target.value);
-                setProjectId(undefined);
-                setReportId(undefined);
-              }}
+              onChange={(event) => setWorkspace(event.target.value)}
             >
-              {(workspaces.data ?? []).map((workspace) => (
+              {(workspacesQuery.data ?? []).map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
                   {workspace.name}
                 </option>
@@ -171,10 +144,10 @@ export default function EvidenceMatrixView() {
               id="evidence-project"
               className="input"
               value={activeProjectId ?? ""}
-              onChange={(event) => setProjectId(event.target.value)}
-              disabled={projects.isPending}
+              onChange={(event) => setProject(event.target.value)}
+              disabled={projectsQuery.isPending}
             >
-              {(projects.data ?? []).map((project) => (
+              {(projectsQuery.data ?? []).map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
                 </option>
@@ -188,10 +161,10 @@ export default function EvidenceMatrixView() {
               id="evidence-report"
               className="input"
               value={activeReportId ?? ""}
-              onChange={(event) => setReportId(event.target.value)}
-              disabled={reports.isPending}
+              onChange={(event) => setReport(event.target.value)}
+              disabled={reportsQuery.isPending}
             >
-              {(reports.data ?? []).map((report) => (
+              {(reportsQuery.data ?? []).map((report) => (
                 <option key={report.id} value={report.id}>
                   {report.topic.slice(0, 60)}
                 </option>

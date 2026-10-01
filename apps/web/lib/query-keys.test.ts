@@ -48,4 +48,42 @@ describe("query key factories", () => {
       "workspace-a",
     ]);
   });
+
+  it("scopes sources, files and intelligence to their resource", () => {
+    expect(queryKeys.sources("report-a")).toEqual(["sources", "report-a"]);
+    expect(queryKeys.projectFolders("project-a")).toEqual([
+      "project-folders",
+      "project-a",
+    ]);
+    expect(queryKeys.projectFiles("project-a", "folder-a")).toEqual([
+      "project-files",
+      "project-a",
+      "folder-a",
+    ]);
+    expect(queryKeys.projectFileEvidence("project-a")).toEqual([
+      "project-file-evidence",
+      "project-a",
+    ]);
+    expect(queryKeys.fileMeta("file-a")).toEqual(["file-meta", "file-a"]);
+    expect(queryKeys.fileCodeAnalysis("file-a")).toEqual([
+      "file-code-analysis",
+      "file-a",
+    ]);
+    expect(queryKeys.fileCodeSymbols("file-a")).toEqual([
+      "file-code-symbols",
+      "file-a",
+    ]);
+    expect(queryKeys.fileCodeDependencies("file-a")).toEqual([
+      "file-code-dependencies",
+      "file-a",
+    ]);
+    expect(queryKeys.fileDataProfile("file-a")).toEqual([
+      "file-data-profile",
+      "file-a",
+    ]);
+    expect(queryKeys.fileDataColumns("file-a")).toEqual([
+      "file-data-columns",
+      "file-a",
+    ]);
+  });
 });

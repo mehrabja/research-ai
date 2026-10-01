@@ -470,6 +470,7 @@ test("F03 workspace owners can transfer ownership to an active member", async ({
 
     const invitedUserResponse = await invitePage.request.get(
       "/api/v1/auth/me",
+      { maxRetries: 3 },
     );
     expect(
       invitedUserResponse.status(),

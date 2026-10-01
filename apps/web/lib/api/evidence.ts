@@ -6,8 +6,8 @@ export type EvidenceRow = components["schemas"]["EvidenceMatrixRow"];
 
 export async function getEvidenceMatrix(
   reportId: string,
-): Promise<EvidenceMatrix> {
-  const { data, error } = await api.GET(
+): Promise<EvidenceMatrix | null> {
+  const { data, error, response } = await api.GET(
     "/api/v1/reports/{report_id}/evidence/matrix",
     {
       params: {
@@ -16,11 +16,12 @@ export async function getEvidenceMatrix(
     },
   );
 
-  if (error || !data) {
+  if (error) {
+    if (response.status === 404) return null;
     throw new Error(getApiErrorMessage(error));
   }
 
-  return data;
+  return data ?? null;
 }
 
 function getApiErrorMessage(error: unknown): string {
