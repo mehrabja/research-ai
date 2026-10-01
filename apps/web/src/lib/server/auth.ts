@@ -1,5 +1,6 @@
 import {cookies} from "next/headers";
 import {NextResponse} from "next/server";
+import {getBackendApiUrl} from "./backend-url";
 
 const ACCESS_COOKIE="research_ai_access_token";
 const REFRESH_COOKIE="research_ai_refresh";
@@ -10,7 +11,7 @@ export type User={id:string;email:string;full_name?:string|null};
 export async function getServerUser():Promise<User|null>{
   const token=(await cookies()).get(ACCESS_COOKIE)?.value;
   if(!token)return null;
-  const base=process.env.BACKEND_API_URL??"http://localhost:8000";
+  const base=getBackendApiUrl();
   const res=await fetch(base+"/api/v1/auth/me",{
     headers:{authorization:"Bearer "+token},
     cache:"no-store",
