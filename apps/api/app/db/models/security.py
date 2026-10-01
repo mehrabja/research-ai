@@ -54,7 +54,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base, CreatedAtMixin, TimestampMixin, UUIDPKMixin
 
 
-class UserTwoFactor(Base, UUIDPKMixin, CreatedAtMixin, TimestampMixin):
+class UserTwoFactor(Base, UUIDPKMixin, TimestampMixin):
     __tablename__ = "user_two_factor"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
