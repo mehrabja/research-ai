@@ -137,3 +137,21 @@ function InvitePageContent() {
     </main>
   );
 }
+
+
+export default function InvitePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="shell-gate">
+          <section className="card pad shell-gate-card" aria-busy="true">
+            <div className="eyebrow">Research AI</div>
+            <h1>Checking your invitation…</h1>
+          </section>
+        </main>
+      }
+    >
+      <InvitePageContent />
+    </Suspense>
+  );
+}
