@@ -10,7 +10,7 @@ import {
   type WorkspaceInvitation,
 } from "@/lib/api/team";
 import { useResearchContext } from "@/lib/research-context";
-import { canManageMembers } from "@/lib/permissions";
+import { canManageMembers as canManageWorkspaceMembers } from "@/lib/permissions";
 import { queryKeys } from "@/lib/query-keys";
 
 function initials(name: string): string {
@@ -81,7 +81,7 @@ export default function TeamPage() {
       setCreatedLink(link);
       setEmail("");
       await queryClient.invalidateQueries({
-        queryKey: ["workspace-invitations", workspaceId],
+        queryKey: queryKeys.invitations(workspaceId),
       });
     },
   });
@@ -107,7 +107,7 @@ export default function TeamPage() {
   );
 
   const canManageMembers =
-    canManageMembers(workspaceRole);
+    canManageWorkspaceMembers(workspaceRole);
 
   if (workspacesQuery.isPending || !workspaceId) {
     return (
