@@ -32,5 +32,14 @@ describe("query key factories", () => {
       "workspace-usage",
       "workspace-a",
     ]);
+    expect(queryKeys.billingPlans).toEqual(["billing-plans"]);
+    expect(queryKeys.workspacePlan("workspace-a")).toEqual([
+      "workspace-plan",
+      "workspace-a",
+    ]);
+    expect(queryKeys.workspaceSubscription("workspace-a")).toEqual([
+      "workspace-subscription",
+      "workspace-a",
+    ]);
   });
 });
