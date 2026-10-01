@@ -5,8 +5,8 @@ import uuid
 
 import jwt
 from fastapi import APIRouter, Depends, Header, Request, Response, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.responses import RedirectResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_client_ip, get_current_user
