@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base, CreatedAtMixin, TimestampMixin, UUIDPKMixin
 
 
-class APIToken(Base, UUIDPKMixin, CreatedAtMixin, TimestampMixin):
+class APIToken(Base, UUIDPKMixin, TimestampMixin):
     __tablename__ = "api_tokens"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
