@@ -8,9 +8,14 @@ import pytest
 
 from app.core.security import create_access_token, decode_access_token
 from app.integrations.documents import fetcher
-from app.security.api_scopes import normalize_scopes, required_scope_for_request, scope_allows
+from app.security.api_scopes import (
+    normalize_scopes,
+    required_scope_for_request,
+    scope_allows,
+)
 from app.security.file_security import ArchiveUnsafeError, validate_upload_bytes
 from app.security.trust_boundary import looks_like_prompt_injection, wrap_untrusted_text
+
 
 def test_scope_normalization_and_matching() -> None:
     assert normalize_scopes([" read:* ", "write:projects"]) == ("read:*", "write:projects")
