@@ -419,3 +419,106 @@ test("F03 workspace owners can change and remove a real member", async ({
     await inviteContext.close();
   }
 });
+
+
+test("F03 workspace owners can transfer ownership to an active member", async ({
+  page,
+  browser,
+}) => {
+  const ownerEmail = await createSession(page);
+  const workspaceId = await createWorkspace(
+    page,
+    "F03 Ownership Transfer " + randomUUID(),
+  );
+  await upgradeWorkspaceToPro(page, workspaceId);
+
+  const inviteContext = await browser.newContext();
+  const invitePage = await inviteContext.newPage();
+  const invitedEmail = "e2e-owner-" + randomUUID() + "@example.com";
+
+  try {
+    const register = await invitePage.request.post(
+      "/api/v1/auth/register",
+      { data: { email: invitedEmail, password } },
+    );
+    expect(register.status(), await register.text()).toBe(201);
+
+    const invitationResponse = await page.request.post(
+      "/api/v1/workspaces/" + workspaceId + "/members/invitations",
+      {
+        data: {
+          email: invitedEmail,
+          role: "member",
+        },
+      },
+    );
+    expect(invitationResponse.status(), await invitationResponse.text()).toBe(201);
+
+    const invitation = (await invitationResponse.json()) as { token: string };
+    const login = await invitePage.request.post("/api/v1/auth/login", {
+      data: { email: invitedEmail, password },
+    });
+    expect(login.status(), await login.text()).toBe(200);
+
+    await invitePage.goto(
+      "/invite?token=" + encodeURIComponent(invitation.token),
+    );
+    await invitePage
+      .getByRole("button", { name: "Accept invitation" })
+      .click();
+    await expect(invitePage).toHaveURL(/\/team$/, { timeout: 10_000 });
+
+    const invitedUserResponse = await invitePage.request.get(
+      "/api/v1/auth/me",
+    );
+    expect(
+      invitedUserResponse.status(),
+      await invitedUserResponse.text(),
+    ).toBe(200);
+    const invitedUser = (await invitedUserResponse.json()) as { id: string };
+
+    await page.goto("/team?workspaceId=" + workspaceId);
+    await expect(
+      page.getByLabel("New owner", { exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    await page
+      .getByLabel("New owner", { exact: true })
+      .selectOption({ label: invitedEmail });
+    await expect(
+      page.getByRole("button", { name: "Confirm transfer" }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    const transferResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.url().includes(
+          "/api/v1/workspaces/" + workspaceId + "/transfer-ownership",
+        ),
+    );
+    await page.getByRole("button", { name: "Confirm transfer" }).click();
+    expect((await transferResponse).status()).toBe(200);
+
+    await expect(page.getByLabel("New owner", { exact: true })).toHaveCount(0);
+
+    const membersResponse = await page.request.get(
+      "/api/v1/workspaces/" + workspaceId + "/members",
+    );
+    expect(membersResponse.status(), await membersResponse.text()).toBe(200);
+    const members = (await membersResponse.json()) as {
+      items: Array<{ user_id: string; email: string | null; role: string }>;
+    };
+
+    expect(
+      members.items.find((member) => member.email === ownerEmail)?.role,
+    ).toBe("admin");
+    expect(
+      members.items.find((member) => member.email === invitedEmail)?.role,
+    ).toBe("owner");
+    expect(
+      members.items.find((member) => member.user_id === invitedUser.id)?.role,
+    ).toBe("owner");
+  } finally {
+    await inviteContext.close();
+  }
+});
