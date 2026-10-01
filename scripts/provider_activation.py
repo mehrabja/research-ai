@@ -150,6 +150,37 @@ def external_check(name: str) -> Check:
             status, payload = http_json(base.rstrip("/") + "/models", {"Accept": "application/json", "Authorization": f"Bearer {env('OPENROUTER_API_KEY')}"})
             return Check(name, status == 200 and bool(payload.get("data")), "read-only verification")
 
+        if name == "S3 object storage":
+            if (env("FILE_STORAGE_BACKEND") or "local") != "s3":
+                return Check(name, True, "skipped; provider not active")
+            required_names = (
+                "STORAGE_ENDPOINT",
+                "STORAGE_ACCESS_KEY_ID",
+                "STORAGE_SECRET_ACCESS_KEY",
+                "STORAGE_BUCKET",
+            )
+            if not all(configured(item) for item in required_names):
+                return Check(name, False, "missing required configuration")
+            try:
+                import boto3
+                from botocore.config import Config
+
+                client = boto3.client(
+                    "s3",
+                    endpoint_url=env("STORAGE_ENDPOINT").rstrip("/"),
+                    aws_access_key_id=env("STORAGE_ACCESS_KEY_ID"),
+                    aws_secret_access_key=env("STORAGE_SECRET_ACCESS_KEY"),
+                    region_name=env("STORAGE_REGION") or "auto",
+                    config=Config(
+                        signature_version="s3v4",
+                        s3={"addressing_style": "path"},
+                    ),
+                )
+                client.head_bucket(Bucket=env("STORAGE_BUCKET"))
+                return Check(name, True, "read-only verification")
+            except Exception as exc:
+                return Check(name, False, type(exc).__name__)
+
         if name == "Stripe":
             if (env("BILLING_PROVIDER") or "none") != "stripe":
                 return Check(name, True, "skipped; provider not active")
