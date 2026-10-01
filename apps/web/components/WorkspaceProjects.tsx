@@ -38,7 +38,7 @@ export default function WorkspaceProjects() {
     onSuccess: async () => {
       setProjectName("");
       setDescription("");
-      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projects(activeWorkspaceId) });
     },
   });
 
