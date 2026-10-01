@@ -12,7 +12,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base, CreatedAtMixin, TimestampMixin, UUIDPKMixin
 
 
-class ManuscriptDraft(Base, UUIDPKMixin, CreatedAtMixin, TimestampMixin):
+class ManuscriptDraft(Base, UUIDPKMixin, TimestampMixin):
     __tablename__ = "manuscript_drafts"
 
     report_id: Mapped[uuid.UUID] = mapped_column(
