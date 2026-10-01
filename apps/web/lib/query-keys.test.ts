@@ -26,6 +26,12 @@ describe("query key factories", () => {
   it("keeps notification and usage keys parameterized", () => {
     expect(queryKeys.notifications(10)).toEqual([
       "notifications",
+      null,
+      10,
+    ]);
+    expect(queryKeys.notifications(10, "workspace-a")).toEqual([
+      "notifications",
+      "workspace-a",
       10,
     ]);
     expect(queryKeys.workspaceUsage("workspace-a")).toEqual([
