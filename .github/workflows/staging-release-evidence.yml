@@ -18,6 +18,9 @@ jobs:
       UNPAYWALL_EMAIL: ${{ vars.UNPAYWALL_EMAIL }}
     steps:
       - uses: actions/checkout@v4
+      - name: Deploy staging candidate
+        shell: powershell
+        run: .\scripts\staging_deploy.ps1
       - name: Run repository final audit
         shell: powershell
         run: python scripts\final_audit.py
