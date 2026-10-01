@@ -17,7 +17,13 @@ EvidenceKind = Literal[
     "claim_evidence",
 ]
 
-CanonicalProjectEvidenceKind = Literal["project_file", "retrieval_chunk"]
+CanonicalProjectEvidenceKind = Literal[
+    "project_file",
+    "retrieval_chunk",
+    "m29_technical_fact",
+    "m29_experiment_result",
+    "m29_metric",
+]
 
 
 class EvidenceLocator(BaseModel):
