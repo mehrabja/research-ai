@@ -50,11 +50,11 @@ from app.schemas.workspace import (
 )
 from app.services import billing as billing_service
 from app.services import entitlements as entitlements_service
-from app.services.email import EmailDeliveryService
 from app.services import invitations as invitations_service
 from app.services import memberships as memberships_service
 from app.services import usage as usage_service
 from app.services import workspaces as workspaces_service
+from app.services.email import EmailDeliveryService
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
