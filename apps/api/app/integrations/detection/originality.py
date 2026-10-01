@@ -203,6 +203,14 @@ def _parse_retry_after(value: str | None) -> float | None:
 
 
 def _as_probability(value: object, *, field_name: str) -> float:
+    if isinstance(value, bool):
+        raise DetectionInvalidResponseError(
+            f"Originality.ai field {field_name!r} is not numeric"
+        )
+    if not isinstance(value, (int, float, str)):
+        raise DetectionInvalidResponseError(
+            f"Originality.ai field {field_name!r} is not numeric"
+        )
     try:
         probability = float(value)
     except (TypeError, ValueError) as exc:
