@@ -127,7 +127,7 @@ def test_stripe_external_check_is_read_only(monkeypatch) -> None:
 
 def test_s3_external_check_is_read_only(monkeypatch) -> None:
     monkeypatch.setenv("FILE_STORAGE_BACKEND", "s3")
-    monkeypatch.setenv("STORAGE_ENDPOINT", "https://example.r2.cloudflarestorage.com")
+    monkeypatch.setenv("STORAGE_ENDPOINT", "https://r2.test.invalid")
     monkeypatch.setenv("STORAGE_ACCESS_KEY_ID", "access")
     monkeypatch.setenv("STORAGE_SECRET_ACCESS_KEY", "secret")
     monkeypatch.setenv("STORAGE_BUCKET", "research-ai")
