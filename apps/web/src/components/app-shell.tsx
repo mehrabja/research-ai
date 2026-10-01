@@ -86,7 +86,8 @@ export function AppShell({userEmail,children}:{userEmail:string;children:React.R
               aria-label="Workspace"
               value={ws.workspaceId??""}
               onChange={e=>ws.setSelected(e.target.value)}
-              style={{maxWidth:24,border:0,background:"transparent"}}
+              className="workspace-select"
+
             >
               {ws.workspaces.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
