@@ -37,7 +37,7 @@ Baseline commit: 106ca1fd2b5b1b86e4e9521ffa9c33f3d8ddfa91
 | G-30 | Migration graph has static multi-head condition | P0 | explicit merge revision 0042 joins legacy report branch into the production chain | F16 | Implemented |
 | G-31 | Root product/developer docs absent | P1 | root README and Makefile now document setup and verification commands | F16/F19 | Implemented |
 | G-32 | Real OpenRouter provider adapter not activated | P0 | OpenRouter generation/embedding/translation adapters registered in provider registry | F20 | Implemented |
-| G-33 | Production AI detection provider missing | P1 | configurable external HTTP detection adapter registered alongside heuristic fallback | F09/F20 | Implemented |
+| G-33 | Production AI detection provider missing | P1 | concrete Originality.ai V3 adapter registered behind the detection provider abstraction; heuristic remains explicit local/test provider | F09/F20 | Implemented (code; runtime credential pending) |
 | G-34 | Frontend integration hardening incomplete | P1 | session-scoped query cache reset, typed status-aware API errors/retry, provider matrix UI, durable Job Center polling/retry/cancel, and BFF tenant-isolation acceptance | F14 | Implemented |
 
 ## Unified legacy Phase 12-14 status

@@ -13,13 +13,14 @@ from app.providers.registry import ProviderCapability, ProviderContext, resolve_
 def get_current_detection_profile() -> DetectionProfile:
     s = get_settings()
     provider = s.detection_provider.strip().lower()
-    model = (
-        s.detection_api_model
-        if provider == "http" and s.detection_api_model.strip()
-        else s.detection_model
-    )
+    if provider == "http" and s.detection_api_model.strip():
+        model = s.detection_api_model
+    elif provider == "originality" and s.detection_originality_model.strip():
+        model = s.detection_originality_model
+    else:
+        model = s.detection_model
     return DetectionProfile(
-        provider=s.detection_provider,
+        provider=provider,
         model=model,
         profile_version=s.detection_profile_version,
         minimum_text_chars=s.detection_minimum_text_chars,

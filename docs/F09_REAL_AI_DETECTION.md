@@ -2,95 +2,85 @@
 
 ## Scope
 
-F09 makes the existing detection abstraction operational for a real external AI-detection service without coupling the application to a single vendor SDK.
+F09 makes the existing detection abstraction operational with a concrete production detector while
+keeping the application provider-neutral.
 
 The production path is:
 
-`DetectionProfile` → provider registry → `HTTPDetectionProvider` → external detector → normalized `DetectionProviderResult`
+`DetectionProfile` → provider registry → `OriginalityDetectionProvider` → Originality.ai V3 → normalized `DetectionProviderResult`
 
-The deterministic heuristic provider remains available for tests and as an explicit fallback.
+The deterministic heuristic provider remains available for explicit local/test use only.
+
+## Provider
+
+The current concrete provider is Originality.ai V3 because its documented API provides a
+multilingual model. The vendor's September 21, 2026 documentation lists Persian among the 30
+languages supported by its Multi Language 2.0.0 model.
+
+The adapter uses REST/JSON directly rather than a vendor SDK.
 
 ## Activation
 
 Set these values in the ignored monorepo `.env`:
 
 ```dotenv
-DETECTION_PROVIDER=http
-DETECTION_API_BASE_URL=https://<provider-endpoint>
-DETECTION_API_MODEL=<provider-model>
+DETECTION_PROVIDER=originality
+DETECTION_ORIGINALITY_BASE_URL=https://api.originality.ai/api/v3
+DETECTION_ORIGINALITY_MODEL=multilang
 AI_DETECTION_API_KEY=<secret>
+DETECTION_ORIGINALITY_STORE_SCAN=false
 ```
 
-The provider endpoint contract is intentionally narrow:
+The browser never receives `AI_DETECTION_API_KEY`.
 
-### Request
+## Request and response normalization
 
-```json
-{"text":"..."}
-```
+The adapter sends a text-only V3 scan with AI detection enabled and unrelated checks disabled.
+It normalizes the response's AI confidence into the existing `DetectionProviderResult`
+probability and retains the vendor model/classification, credit usage, scan ID and sanitized
+block-level numeric status fields.
 
-### Successful response
+The block text itself is not persisted in `detection_meta`, avoiding a second stored copy of
+the manuscript content.
 
-```json
-{
-  "probability": 0.0,
-  "label": "provider-label",
-  "model": "provider-model",
-  "details": {}
-}
-```
+## Reliability and errors
 
-`probability` is optional but, when present, must be within `[0, 1]`.
+Typed provider failures cover:
 
-## Reliability
+- HTTP 429 → retryable rate limit
+- HTTP 5xx → retryable provider unavailable
+- transport/timeouts → retryable
+- HTTP 401/403 → authentication failure
+- HTTP 402 → non-retryable quota/credit exhaustion
+- HTTP 400/422 → invalid request
+- HTTP 413 → input-too-large
+- malformed JSON/schema → invalid provider response
 
-The adapter now supports bounded exponential retry with jitter for:
+Retries use bounded exponential backoff with jitter and honor a numeric `Retry-After` header when
+the provider supplies one.
 
-- HTTP 408
-- HTTP 429
-- HTTP 5xx
-- transport failures
-- request timeouts
+## Usage and idempotency
 
-Authentication failures and malformed requests/responses are not retried.
+A successful provider call remains one authoritative workspace usage event. When the vendor returns
+a scan ID it is persisted as `provider_request_id`. The existing detection identity and usage
+idempotency key prevent duplicate metering for the same detection attempt.
 
-Retry configuration:
+## Production rule
 
-```dotenv
-DETECTION_MAX_RETRIES=2
-DETECTION_RETRY_BASE_SECONDS=1.0
-DETECTION_RETRY_MAX_SECONDS=30.0
-DETECTION_RETRY_JITTER_FRACTION=0.25
-```
-
-## Fail-closed configuration
-
-When `DETECTION_PROVIDER=http`, application configuration requires a non-empty `DETECTION_API_BASE_URL`.
-
-The API key remains optional at the generic adapter layer so authenticated and internally trusted endpoints can both be represented. Production vendor activation should provide a server-side secret.
-
-## Product semantics
-
-The detection service continues to persist:
-
-- provider and model
-- detection profile ID
-- input hash and character count
-- normalized probability/label
-- provider details
-- authoritative workspace usage
-
-The browser never receives the detector API key.
+Production configuration rejects the heuristic provider. The real provider credential remains an
+F20 secret-management/runtime concern, so F09 is code-complete but live vendor activation is still
+pending staging credentials.
 
 ## Verification
 
-Dedicated provider tests cover:
+Dedicated adapter/config/registry tests cover:
 
-- successful response normalization
-- authorization header propagation
-- retry on rate limiting
-- non-retryable authentication failures
+- success response normalization
+- API key propagation
+- model selection
+- Retry-After/rate-limit retry
+- authentication failure without retry
+- quota exhaustion without retry
 - malformed response rejection
 - input-size enforcement
-
-F09 still requires a real vendor credential and a provider-specific staging smoke test before claiming external-service activation.
+- provider registration

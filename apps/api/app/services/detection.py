@@ -32,6 +32,7 @@ from app.integrations.detection.base import (
     DetectionInvalidRequestError,
     DetectionInvalidResponseError,
     DetectionProvider,
+    DetectionQuotaExceededError,
 )
 from app.services import report_status as report_status_service
 from app.services.detection_profile import (
@@ -52,6 +53,7 @@ _PERMANENT_ERRORS: tuple[type[BaseException], ...] = (
     DetectionInputTooLargeError,
     DetectionInvalidRequestError,
     DetectionInvalidResponseError,
+    DetectionQuotaExceededError,
 )
 
 
@@ -78,6 +80,8 @@ def _error_code_for(exc: BaseException) -> str:
         return "invalid_payload"
     if isinstance(exc, DetectionInvalidResponseError):
         return "invalid_provider_response"
+    if isinstance(exc, DetectionQuotaExceededError):
+        return "quota_exceeded"
     return "permanent_detection_error"
 
 
@@ -480,6 +484,11 @@ def _persist_success_atomic(
                     model=provider_result.model,
                     metric="ai_generation_units",
                     units=1,
+                    provider_request_id=(
+                        str(provider_result.details.get("scan_id"))
+                        if provider_result.details.get("scan_id") is not None
+                        else None
+                    ),
                     metadata={"report_id": str(report_id), "input_chars": input_chars},
                 ),
                 idempotency_key=f"detection:{attempt_id}:provider_call",
