@@ -35,6 +35,18 @@ async function createProject(page: Page, name: string): Promise<string> {
   return (await response.json()).id as string;
 }
 
+async function upgradeWorkspaceToPro(
+  page: Page,
+  workspaceId: string,
+): Promise<void> {
+  const response = await page.request.post(
+    "/api/v1/billing/workspaces/" + workspaceId + "/plan",
+    { data: { plan_code: "pro" } },
+  );
+  expect(response.status(), await response.text()).toBe(200);
+}
+
+
 test("F03 notification preferences persist through the authenticated UI", async ({
   page,
 }) => {
@@ -206,6 +218,7 @@ test("F03 workspace invitations create and accept a real membership", async ({
     page,
     "F03 Invitations " + randomUUID(),
   );
+  await upgradeWorkspaceToPro(page, workspaceId);
 
   const inviteContext = await browser.newContext();
   const invitePage = await inviteContext.newPage();
