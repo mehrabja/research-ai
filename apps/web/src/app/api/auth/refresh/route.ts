@@ -1,9 +1,10 @@
 import {NextResponse} from "next/server";
 import {cookies} from "next/headers";
 import {setAccessCookie,copySetCookies,CSRF_COOKIE,REFRESH_COOKIE} from "@/lib/server/auth";
+import {getBackendApiUrl} from "@/lib/server/backend-url";
 
 export async function POST(){
-  const base=process.env.BACKEND_API_URL??"http://localhost:8000";
+  const base=getBackendApiUrl();
   const jar=await cookies();
   const refreshToken=jar.get(REFRESH_COOKIE)?.value;
   const csrf=jar.get(CSRF_COOKIE)?.value;
