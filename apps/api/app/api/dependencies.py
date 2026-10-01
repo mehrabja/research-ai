@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import AuthenticationRequired
 from app.core.security import decode_access_token
-from app.db.models.security import APIToken
 from app.db.models.user import User
 from app.services.api_tokens import authenticate_token
 from app.db.session import get_db
