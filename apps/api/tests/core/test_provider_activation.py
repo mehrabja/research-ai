@@ -48,6 +48,7 @@ def test_strict_mode_rejects_heuristic_detection(monkeypatch) -> None:
     assert detection.ok is False
     assert detection.detail == "non-production baseline"
 
+
 def test_http_detection_requires_base_url(monkeypatch) -> None:
     monkeypatch.setenv("DETECTION_PROVIDER", "http")
     monkeypatch.setenv("AI_DETECTION_API_KEY", "realistic-test-secret")
@@ -68,6 +69,7 @@ def test_unknown_detection_provider_fails_closed(monkeypatch) -> None:
 
     assert detection.ok is False
     assert detection.detail == "unsupported provider"
+
 
 def test_originality_external_check_reads_account_balance(monkeypatch) -> None:
     monkeypatch.setenv("DETECTION_PROVIDER", "originality")
