@@ -104,14 +104,16 @@ def config_checks(strict: bool) -> list[Check]:
             "AI detection provider",
             (
                 (
-                    configured("AI_DETECTION_API_KEY")
-                    and (
-                        (
-                            configured("DETECTION_API_BASE_URL")
-                            if detection == "http"
-                            else True
-                        )
+                    (
+                        configured("AI_DETECTION_API_KEY")
+                        and configured("DETECTION_API_BASE_URL")
                     )
+                    if detection == "http"
+                    else configured("AI_DETECTION_API_KEY")
+                    if detection == "originality"
+                    else configured("SAPLING_API_KEY")
+                    if detection == "sapling"
+                    else False
                 )
                 if detection in ("http", "originality", "sapling")
                 else (detection == "heuristic" and not strict)
