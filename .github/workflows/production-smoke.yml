@@ -49,7 +49,7 @@ jobs:
       UNPAYWALL_EMAIL: ${{ vars.UNPAYWALL_EMAIL }}
       UNPAYWALL_SMOKE_DOI: ${{ vars.UNPAYWALL_SMOKE_DOI }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Run production smoke
         shell: powershell
         run: python scripts\production_smoke.py
