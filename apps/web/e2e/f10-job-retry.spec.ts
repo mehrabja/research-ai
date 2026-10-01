@@ -46,17 +46,26 @@ test("F10 job center manually retries a cancelled durable job and reuses its ide
   );
   expect(cancelled.status(), await cancelled.text()).toBe(200);
 
-  const retried = await page.request.post(
-    "/api/v1/jobs/" + job.id + "/retry",
+  await page.goto("/jobs");
+  const row = page.locator("tr").filter({ hasText: "test_noop" });
+  await expect(row).toHaveCount(1);
+  await row.getByRole("button", { name: "Retry", exact: true }).click();
+
+  await expect(
+    row.getByRole("button", { name: "Cancel", exact: true }),
+  ).toBeVisible({ timeout: 10_000 });
+
+  const retried = await page.request.get(
+    "/api/v1/jobs/" + job.id,
   );
   expect(retried.status(), await retried.text()).toBe(200);
-
   const retriedBody = (await retried.json()) as typeof job;
   expect(retriedBody.id).toBe(job.id);
   expect(retriedBody.status).toBe("queued");
   expect(retriedBody.attempt_count).toBe(0);
   expect(retriedBody.max_attempts).toBe(job.max_attempts);
 
+  // A client/network retry of the same action is safe while the job is queued.
   const retriedAgain = await page.request.post(
     "/api/v1/jobs/" + job.id + "/retry",
   );
@@ -64,8 +73,6 @@ test("F10 job center manually retries a cancelled durable job and reuses its ide
   const retriedAgainBody = (await retriedAgain.json()) as typeof job;
   expect(retriedAgainBody.id).toBe(job.id);
   expect(retriedAgainBody.status).toBe("queued");
-
-  await page.goto("/jobs");
   await expect(
     page.getByRole("heading", { name: "Job center", exact: true }),
   ).toBeVisible();
