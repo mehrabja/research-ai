@@ -61,4 +61,3 @@ class UserTwoFactor(Base, UUIDPKMixin, TimestampMixin):
     __table_args__ = (
         Index("ix_user_two_factor_user", "user_id"),
     )
-)
