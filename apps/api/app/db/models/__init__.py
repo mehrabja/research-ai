@@ -88,6 +88,7 @@ from app.db.models.ops import (
     UsageLog,
 )
 from app.db.models.notifications import Notification, NotificationPreference
+from app.db.models.oauth import AuthIdentity, OAuthState
 from app.db.models.orchestration import (
     ResearchOrchestrationNode,
     ResearchOrchestrationRun,
@@ -273,6 +274,8 @@ __all__ = [
     "AIOperation",
     "Notification",
     "NotificationPreference",
+    "OAuthState",
+    "AuthIdentity",
     "EmailVerificationToken",
     "PasswordResetToken",
 ]
