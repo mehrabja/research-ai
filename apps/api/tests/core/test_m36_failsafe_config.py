@@ -73,6 +73,8 @@ def test_production_accepts_valid_config() -> None:
             jwt_secret_key="x" * 64,
             cors_allowed_origins="https://example.com",
             file_malware_scan_mode="required",
+            detection_provider="originality",
+            ai_detection_api_key="test-detection-key",
         )
     )
     assert s.app_env == "production"
