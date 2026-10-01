@@ -10,6 +10,8 @@ import {
   type WorkspaceInvitation,
 } from "@/lib/api/team";
 import { useResearchContext } from "@/lib/research-context";
+import { canManageMembers } from "@/lib/permissions";
+import { queryKeys } from "@/lib/query-keys";
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -55,14 +57,14 @@ export default function TeamPage() {
   const [createdLink, setCreatedLink] = useState("");
 
   const membersQuery = useQuery({
-    queryKey: ["team-members", workspaceId],
+    queryKey: queryKeys.teamMembers(workspaceId),
     queryFn: () => listMembers(workspaceId!),
     enabled: Boolean(workspaceId),
     staleTime: 10_000,
   });
 
   const invitationsQuery = useQuery({
-    queryKey: ["workspace-invitations", workspaceId],
+    queryKey: queryKeys.invitations(workspaceId),
     queryFn: () => listInvitations(workspaceId!),
     enabled: Boolean(workspaceId),
     staleTime: 10_000,
@@ -105,7 +107,7 @@ export default function TeamPage() {
   );
 
   const canManageMembers =
-    workspaceRole === "owner" || workspaceRole === "admin";
+    canManageMembers(workspaceRole);
 
   if (workspacesQuery.isPending || !workspaceId) {
     return (
