@@ -79,7 +79,8 @@ $lines = @(
     "WEB_APP_BASE_URL=http://127.0.0.1:$WebPort",
     "BILLING_PROVIDER=none"
 )
-Set-Content -Path $envFile -Value ($lines -join [Environment]::NewLine) -Encoding utf8
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($envFile, ($lines -join [Environment]::NewLine), $utf8NoBom)
 
 $env:STAGING_API_PORT = [string]$ApiPort
 $env:STAGING_WEB_PORT = [string]$WebPort
