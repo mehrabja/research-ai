@@ -204,5 +204,7 @@ test("settings token revoke handles a 204 response without surfacing a JSON erro
   await expect(section.getByText("Copy this token now")).toBeVisible();
   await section.getByRole("button", { name: "Revoke" }).click();
 
-  await expect(section.getByText(/API token revoked\./)).toBeVisible();
+  await expect(
+    page.getByRole("status").getByText("API token revoked.", { exact: true }),
+  ).toBeVisible();
 });
