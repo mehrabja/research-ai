@@ -300,7 +300,8 @@ def retry_job(
 
     Manual retry starts a fresh execution budget while preserving the
     original payload and idempotency key. The same job record remains
-    the audit boundary.
+    the audit boundary. Repeating the action while the job is already
+    queued/retrying is a no-op.
     """
     now = datetime.now(UTC)
     stmt = select(Job).where(Job.id == job_id).with_for_update()
@@ -310,6 +311,11 @@ def retry_job(
     if job is None:
         db.rollback()
         raise JobNotFoundError()
+    # Repeated retry requests are safe no-ops once the job has already been
+    # requeued. This makes the action idempotent under client retries.
+    if job.status in ("queued", "retrying"):
+        db.rollback()
+        return job
     if job.status not in ("failed", "cancelled"):
         db.rollback()
         raise InvalidJobStateError(
