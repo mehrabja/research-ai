@@ -32,7 +32,7 @@ function row(v:unknown):Obj{ return v&&typeof v==="object"&&!Array.isArray(v)?v 
 function rows(v:unknown):Obj[]{ return Array.isArray(v)?v.filter(x=>x&&typeof x==="object") as Obj[]:[]; }
 function value(v:unknown,fallback="—"):string{ return typeof v==="string"&&v.trim()?v:fallback; }
 function Head({route,actions}:{route:string;actions?:React.ReactNode}){const m=META[route]??{eyebrow:"Research AI",title:"Page",description:""};return <div className="page-head"><div><div className="eyebrow">{m.eyebrow}</div><h1>{m.title}</h1><p>{m.description}</p></div>{actions&&<div className="actions">{actions}</div>}</div>}
-function Card({children}:{children:React.ReactNode}){return <section className="card pad">{children}</section>}
+function Card({children,style,id}:{children:React.ReactNode;style?:React.CSSProperties;id?:string}){return <section className="card pad" style={style} id={id}>{children}</section>}
 function State({title,description,error=false}:{title:string;description:string;error?:boolean}){return <div className={"state"+(error?" error":"")}><h3>{title}</h3><p>{description}</p></div>}
 function Table({data}:{data:Obj[]}){return <div className="table-wrap"><table className="table"><thead><tr><th>Record</th><th>Status</th><th>Identifier</th></tr></thead><tbody>{data.slice(0,30).map((x,i)=><tr key={i}><td>{value(x.title??x.name??x.claim??x.type,"Record")}</td><td>{value(x.status??x.state)}</td><td className="mono">{value(x.id)}</td></tr>)}</tbody></table></div>}
 
