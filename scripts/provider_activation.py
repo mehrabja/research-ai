@@ -100,7 +100,25 @@ def config_checks(strict: bool) -> list[Check]:
         Check("S3 object storage", storage != "s3" or all(configured(name) for name in ("STORAGE_ENDPOINT", "STORAGE_ACCESS_KEY_ID", "STORAGE_SECRET_ACCESS_KEY", "STORAGE_BUCKET")), "active" if storage == "s3" else "local backend"),
         Check("Resend email", email != "resend" or (configured("RESEND_API_KEY") and configured("EMAIL_FROM")), "active" if email == "resend" else "not active"),
         Check("Stripe billing", billing != "stripe" or (configured("STRIPE_SECRET_KEY") and configured("STRIPE_WEBHOOK_SECRET") and configured("STRIPE_PRICE_IDS")), "active" if billing == "stripe" else "not active"),
-        Check("HTTP AI detection", detection != "http" or (configured("DETECTION_API_BASE_URL") and configured("AI_DETECTION_API_KEY")), "active" if detection == "http" else "heuristic baseline"),
+        Check(
+            "AI detection provider",
+            (
+                detection not in ("http", "originality")
+                or (
+                    configured("AI_DETECTION_API_KEY")
+                    and (
+                        configured("DETECTION_API_BASE_URL")
+                        if detection == "http"
+                        else True
+                    )
+                )
+            ),
+            (
+                f"active {detection}"
+                if detection in ("http", "originality")
+                else "non-production baseline"
+            ),
+        ),
     ]
     return checks
 
