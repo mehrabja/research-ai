@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import Iterator
+from datetime import datetime, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -380,6 +381,22 @@ def test_canonical_project_evidence_endpoint_returns_file_and_chunk_records(
         assert len(filtered_body["items"]) == 1
         assert filtered_body["items"][0]["kind"] == "m29_metric"
         assert filtered_body["items"][0]["project_file_id"] == str(file_id)
+
+        with SessionLocal() as db:
+            project_file = db.get(ProjectFile, file_id)
+            assert project_file is not None
+            project_file.status = "deleted"
+            project_file.deleted_at = datetime.now(timezone.utc)
+            db.commit()
+
+        hidden = c.get(f"/api/v1/projects/{pid}/evidence")
+        assert hidden.status_code == 200
+        assert hidden.json() == {
+            "items": [],
+            "total": 0,
+            "limit": 100,
+            "offset": 0,
+        }
     finally:
         with SessionLocal() as db:
             db.execute(delete(Metric).where(Metric.id == metric_id))
