@@ -11,6 +11,8 @@ import {
 import { apiErrorFromResponse } from "@/lib/api/errors";
 import { logout } from "@/lib/api/auth";
 import { clearSessionUserCache } from "@/lib/session-cache";
+import { queryKeys } from "@/lib/query-keys";
+import { ROUTES } from "@/lib/routes";
 import { useResearchContext } from "@/lib/research-context";
 import { ResearchContextSwitcher } from "./ResearchContextSwitcher";
 import { CommandPalette } from "@/components/CommandPalette";
@@ -124,7 +126,7 @@ export function Topbar({
     useResearchContext();
 
   const notificationsQuery = useQuery({
-    queryKey: ["notifications", 10],
+    queryKey: queryKeys.notifications(10),
     queryFn: readNotifications,
     refetchInterval: 30_000,
   });
@@ -259,7 +261,7 @@ export function Topbar({
 
           <Link
             className="btn ghost"
-            href={contextHref("/jobs")}
+            href={contextHref(ROUTES.jobs)}
             aria-label="Open job center"
             title="Job center"
           >
@@ -413,7 +415,7 @@ export function Topbar({
           </div>
 
           <Link
-            href={contextHref("/settings")}
+            href={contextHref(ROUTES.settings)}
             className="user-chip"
             title={user.email}
           >
