@@ -28,6 +28,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { ROUTES } from "@/lib/routes";
 import {
   clearSessionUserCache,
+  getKnownSessionUserId,
   SESSION_EVENT_KEY,
   syncSessionUser,
 } from "@/lib/session-cache";
@@ -185,6 +186,12 @@ export function ResearchContextProvider({
     retry: false,
   });
   const refetchSession = sessionQuery.refetch;
+  const sessionUserId = sessionQuery.data
+    ? String(sessionQuery.data.id)
+    : null;
+  const sessionCacheReady =
+    sessionUserId === null ||
+    getKnownSessionUserId() === sessionUserId;
 
   useEffect(() => {
     if (sessionQuery.data) {
@@ -513,6 +520,20 @@ export function ResearchContextProvider({
           <h1>Loading your research workspace…</h1>
           <p className="muted">
             Verifying your session and preparing your research context.
+          </p>
+        </section>
+      </main>
+    );
+  }
+
+  if (sessionQuery.data && !sessionCacheReady) {
+    return (
+      <main className="main shell-gate" aria-busy="true">
+        <section className="card pad shell-gate-card">
+          <div className="eyebrow">Research AI</div>
+          <h1>Securing your research context…</h1>
+          <p className="muted">
+            Refreshing workspace data for the authenticated account.
           </p>
         </section>
       </main>
