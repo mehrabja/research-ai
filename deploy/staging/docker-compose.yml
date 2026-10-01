@@ -21,8 +21,8 @@ services:
 
   api:
     build:
-      context: ../..
-      dockerfile: apps/api/Dockerfile
+      context: ../../apps/api
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - ./runtime/staging.env
@@ -59,8 +59,8 @@ services:
 
   web:
     build:
-      context: ../..
-      dockerfile: apps/web/Dockerfile
+      context: ../../apps/web
+      dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       NODE_ENV: production
