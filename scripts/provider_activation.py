@@ -103,8 +103,7 @@ def config_checks(strict: bool) -> list[Check]:
         Check(
             "AI detection provider",
             (
-                detection not in ("http", "originality")
-                or (
+                (
                     configured("AI_DETECTION_API_KEY")
                     and (
                         configured("DETECTION_API_BASE_URL")
@@ -112,11 +111,13 @@ def config_checks(strict: bool) -> list[Check]:
                         else True
                     )
                 )
+                if detection in ("http", "originality")
+                else (detection == "heuristic" and not strict)
             ),
             (
                 f"active {detection}"
                 if detection in ("http", "originality")
-                else "non-production baseline"
+                else "non-production baseline" if detection == "heuristic" else "unsupported provider"
             ),
         ),
     ]
