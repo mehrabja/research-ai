@@ -21,97 +21,86 @@ Create or verify these GitHub Environments:
 The manual workflows in this branch target the selected Environment, so Environment-scoped
 secrets/variables are used automatically.
 
-## 2. Provider routing variables
+## 2. Current zero-cost staging provider routing
 
-For the first real operational environment, set these Environment variables:
+Set these Environment variables:
 
 ```text
 GENERATION_PROVIDER=openrouter
 EMBEDDING_PROVIDER=openrouter
 TRANSLATION_PROVIDER=openrouter
-SOURCE_DISCOVERY_PROVIDER=semantic_scholar
-FILE_STORAGE_BACKEND=s3
+SOURCE_DISCOVERY_PROVIDER=openalex
+FILE_STORAGE_BACKEND=local
 EMAIL_PROVIDER=resend
-BILLING_PROVIDER=stripe
-DETECTION_PROVIDER=originality
+BILLING_PROVIDER=none
+DETECTION_PROVIDER=sapling
 
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-DETECTION_ORIGINALITY_BASE_URL=https://api.originality.ai/api/v3
-STORAGE_REGION=auto
-STORAGE_PATH_STYLE=true
-STRIPE_API_BASE_URL=https://api.stripe.com/v1
-DETECTION_API_BASE_URL=
+DETECTION_SAPLING_BASE_URL=https://api.sapling.ai/api/v1
 ```
 
-Set `OPENROUTER_BASE_URL`, `DETECTION_ORIGINALITY_BASE_URL`, and `STRIPE_API_BASE_URL`
-only as needed when using the documented defaults.
+OpenRouter is the paid generation/embedding/translation provider already funded by the
+project owner. Sapling is used for AI detection through its free trial quota during staging.
 
-## 3. Required secrets
+The local storage backend is temporary. It will be moved to MinIO on the future Linux server.
+Stripe remains disabled until a public staging URL exists for the webhook.
 
-Store the following as Environment secrets, not variables:
+## 3. Current staging secrets
+
+Store these as Environment secrets:
 
 ```text
 OPENROUTER_API_KEY
-SEMANTIC_SCHOLAR_API_KEY
-AI_DETECTION_API_KEY
-
-STORAGE_ACCESS_KEY_ID
-STORAGE_SECRET_ACCESS_KEY
-
+OPENALEX_API_KEY
+NCBI_API_KEY
+SAPLING_API_KEY
 RESEND_API_KEY
-
 STRIPE_SECRET_KEY
-STRIPE_WEBHOOK_SECRET
 ```
 
-For OpenAI-backed embedding/translation/generation instead of OpenRouter, provide the
-corresponding:
+Semantic Scholar can be added later when approval arrives.
+
+Do not add storage credentials while `FILE_STORAGE_BACKEND=local`.
+
+## 4. Current non-secret variables
 
 ```text
-GENERATION_OPENAI_API_KEY
-EMBEDDING_OPENAI_API_KEY
-```
-
-Only configure those when the corresponding provider routing variable is `openai`.
-
-## 4. Required non-secret variables
-
-```text
-STORAGE_ENDPOINT
-STORAGE_BUCKET
-
 EMAIL_FROM
-
-STRIPE_PRICE_IDS
 CROSSREF_MAILTO
 UNPAYWALL_EMAIL
 ```
 
-For Stripe, `STRIPE_PRICE_IDS` uses the application's existing format:
+Stripe Price IDs can remain configured in the Environment, but they are not used while
+`BILLING_PROVIDER=none`.
+
+## 5. Deferred production prerequisites
+
+These are intentionally deferred:
 
 ```text
-plan_code=price_xxx;another_plan=price_yyy
+SEMANTIC_SCHOLAR_API_KEY
+STRIPE_WEBHOOK_SECRET
+STORAGE_ACCESS_KEY_ID
+STORAGE_SECRET_ACCESS_KEY
 ```
 
-`CROSSREF_MAILTO` and `UNPAYWALL_EMAIL` should be real operational contact addresses.
+Originality.ai is also not active in the zero-cost staging configuration.
 
-## 5. Deployment security settings
+## 6. Deployment security settings
 
 The deployed API should also have:
 
 ```text
 APP_ENV=staging
 DEBUG=false
-FILE_MALWARE_SCAN_MODE=required
 AUTH_REQUIRE_VERIFIED_EMAIL=true
 ```
 
-Use the real staging web/API origins for `CORS_ALLOWED_ORIGINS`; do not use a wildcard in a
-production environment.
+Use the real staging web/API origins for `CORS_ALLOWED_ORIGINS`.
 
 Use a strong random `JWT_SECRET_KEY` stored in the deployment secret manager.
 
-## 6. Execute F20 activation
+## 7. Execute F20 activation
 
 From GitHub Actions:
 
@@ -125,23 +114,18 @@ strict: true
 external: true
 ```
 
-The gate now verifies:
+The gate verifies:
 
 - configured generation / embedding / translation routing
-- Semantic Scholar credentials
-- S3 configuration plus read-only bucket access verification via `HeadBucket`
+- OpenAlex configuration and external connectivity
+- Sapling account status through the non-billable `/api/v1/account/status` endpoint
 - transactional email configuration
-- Stripe configuration
-- Originality.ai activation
-- Originality.ai account balance via the read-only `/api/v3/account/balance` endpoint
-- read-only Stripe balance verification
-- optional discovery-provider checks
+- optional NCBI/Crossref checks
 
-Originality.ai documents the V3 account-balance endpoint as `GET /api/v3/account/balance`
-authenticated with `X-OAI-API-KEY`; it returns the available `credits` and
-`subscriptionCredits`. The Stripe balance endpoint is `GET /v1/balance` and is read-only.
+The Sapling account-status endpoint does not consume the detector's billable/trial character
+allowance. Actual detection requests use `POST /api/v1/aidetect`.
 
-## 7. Execute F17 production smoke
+## 8. Execute F17 production smoke
 
 After activation passes, run:
 
@@ -156,14 +140,14 @@ environment: staging
 Set these Environment variables:
 
 ```text
-PRODUCTION_SMOKE_EXPECT_PROVIDER=generation=openrouter;embedding=openrouter;translation=openrouter;detection=originality;source_discovery=semantic_scholar
+PRODUCTION_SMOKE_EXPECT_PROVIDER=generation=openrouter;embedding=openrouter;translation=openrouter;detection=sapling;source_discovery=openalex
 
-PRODUCTION_SMOKE_VERIFY_ORIGINALITY=true
+PRODUCTION_SMOKE_VERIFY_SAPLING=true
 PRODUCTION_SMOKE_VERIFY_OPENROUTER=true
-PRODUCTION_SMOKE_VERIFY_SEMANTIC_SCHOLAR=true
+PRODUCTION_SMOKE_VERIFY_OPENALEX=true
 ```
 
-Set these Environment secrets:
+Set these Environment secrets once a public staging deployment exists:
 
 ```text
 PRODUCTION_SMOKE_BASE_URL
@@ -176,31 +160,16 @@ A scoped API key can be used instead of the access token:
 PRODUCTION_SMOKE_API_KEY
 ```
 
-Do not configure both unless there is a specific reason; the smoke helper prefers the
-access token.
+Do not configure both unless there is a specific reason; the smoke helper prefers the access
+token.
 
-The smoke must report:
+The smoke should report:
 
 ```text
 Production smoke: PASS
 ```
 
-and should include the configured provider matrix and request-correlation IDs.
-
-## 8. Optional providers
-
-Enable only when the corresponding product feature is actually deployed:
-
-```text
-OPENALEX_API_KEY
-NCBI_API_KEY
-GOOGLE_OAUTH_CLIENT_ID
-GOOGLE_OAUTH_CLIENT_SECRET
-GITHUB_OAUTH_CLIENT_ID
-GITHUB_OAUTH_CLIENT_SECRET
-SENTRY_DSN
-TURNSTILE_SECRET_KEY
-```
+and include the configured provider matrix and request-correlation IDs.
 
 ## 9. Evidence required before production
 
