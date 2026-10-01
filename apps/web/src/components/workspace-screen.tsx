@@ -135,7 +135,30 @@ function Team(){
   </>;
 }
 
-function Billing(){const {ws}=useCtx();const u=useQuery({queryKey:["usage",ws.workspaceId],queryFn:()=>api.usage(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});const p=useQuery({queryKey:["plan",ws.workspaceId],queryFn:()=>api.planSubscription(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});const i=useQuery({queryKey:["invoices",ws.workspaceId],queryFn:()=>api.billingInvoices(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});const [code,setCode]=useState("pro");const checkout=useMutation({mutationFn:()=>api.billingCheckout(ws.workspaceId!,code)});return <><Head route="usage-billing"/><div className="grid grid-4"><Metric label="Plan" value={row(p.data).code??row(p.data).name}/><Metric label="AI units" value={row(u.data).ai_generation_units}/><Metric label="Storage bytes" value={row(u.data).storage_bytes}/><Metric label="Invoices" value={rows(i.data).length}/></div><div className="grid grid-2" style={{marginTop:16}}><Card><h3>Checkout</h3><select className="input" value={code} onChange={e=>setCode(e.target.value)}><option value="pro">Pro</option><option value="team">Team</option></select><button className="btn primary" style={{marginTop:12}} onClick={()=>checkout.mutate()} disabled={!ws.workspaceId||checkout.isPending}>Open checkout</button></Card><Card><h3>Invoices</h3><pre className="code" style={{whiteSpace:"pre-wrap",fontSize:11}}>{JSON.stringify(i.data??[],null,2)}</pre></Card></div></>}
+function Billing(){
+  const {ws}=useCtx();
+  const u=useQuery({queryKey:["usage",ws.workspaceId],queryFn:()=>api.usage(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});
+  const p=useQuery({queryKey:["plan",ws.workspaceId],queryFn:()=>api.planSubscription(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});
+  const i=useQuery({queryKey:["invoices",ws.workspaceId],queryFn:()=>api.billingInvoices(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});
+  const [code,setCode]=useState("pro");
+  const checkout=useMutation({mutationFn:()=>api.billingCheckout(ws.workspaceId!,code)});
+  const usageItems=Array.isArray(u.data?.items)?u.data.items:[];
+  const usageFor=(metric:string)=>usageItems.find(x=>x.metric===metric);
+  const ai=usageFor("ai_generation_units");
+  const storage=usageFor("storage_bytes");
+  const reports=usageFor("reports.monthly");
+  return <><Head route="usage-billing"/><div className="grid grid-4">
+    <Metric label="Plan" value={row(p.data).plan_code??row(p.data).code??row(p.data).name}/>
+    <Metric label="AI units" value={ai?String(ai.current)+(ai.limit==null?"":" / "+ai.limit):"0"}/>
+    <Metric label="Storage" value={storage?String(storage.current)+" "+storage.unit:"0 bytes"}/>
+    <Metric label="Reports this period" value={reports?String(reports.current)+(reports.limit==null?"":" / "+reports.limit):"0"}/>
+  </div>
+  <div className="grid grid-2" style={{marginTop:16}}>
+    <Card><h3>Checkout</h3><select className="input" value={code} onChange={e=>setCode(e.target.value)}><option value="pro">Pro</option><option value="team">Team</option></select><button className="btn primary" style={{marginTop:12}} onClick={()=>checkout.mutate()} disabled={!ws.workspaceId||checkout.isPending}>Open checkout</button>{checkout.error&&<div className="notice error" style={{marginTop:10}}>{checkout.error.message}</div>}</Card>
+    <Card><h3>Invoices</h3><pre className="code" style={{whiteSpace:"pre-wrap",fontSize:11}}>{JSON.stringify(i.data??{items:[],total:0},null,2)}</pre></Card>
+  </div></>;
+}
+
 function Settings(){const sessions=useQuery({queryKey:["sessions"],queryFn:api.sessions});const tokens=useQuery({queryKey:["tokens"],queryFn:api.apiTokens});const tf=useQuery({queryKey:["2fa"],queryFn:api.twoFactor});return <><Head route="settings"/><div className="grid grid-2"><Card id="security"><h3>Two-factor</h3><div className="tag">{Boolean(row(tf.data).enabled)?"Enabled":"Not enabled"}</div></Card><Card><h3>Sessions</h3><Table data={rows(sessions.data)}/></Card><Card><h3>API tokens</h3><Table data={rows(tokens.data)}/></Card><Card id="notifications"><h3>Notification settings</h3><p className="muted small">Notification preferences and unread state are served by the backend notification API.</p></Card></div></>}
 
 
