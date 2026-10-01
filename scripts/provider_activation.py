@@ -150,6 +150,32 @@ def external_check(name: str) -> Check:
             status, payload = http_json(base.rstrip("/") + "/models", {"Accept": "application/json", "Authorization": f"Bearer {env('OPENROUTER_API_KEY')}"})
             return Check(name, status == 200 and bool(payload.get("data")), "read-only verification")
 
+        if name == "Stripe":
+            if (env("BILLING_PROVIDER") or "none") != "stripe":
+                return Check(name, True, "skipped; provider not active")
+            key = env("STRIPE_SECRET_KEY")
+            if not key:
+                return Check(name, False, "missing required configuration")
+            base = env("STRIPE_API_BASE_URL") or "https://api.stripe.com/v1"
+            request = urllib.request.Request(
+                base.rstrip("/") + "/balance",
+                headers={
+                    "Accept": "application/json",
+                    "Authorization": "Bearer " + key,
+                },
+                method="GET",
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=15) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+            except urllib.error.HTTPError as exc:
+                return Check(name, False, f"HTTP {exc.code}")
+            return Check(
+                name,
+                response.status == 200 and isinstance(payload, dict) and payload.get("object") == "balance",
+                "read-only verification",
+            )
+
         if name == "Semantic Scholar":
             if not configured("SEMANTIC_SCHOLAR_API_KEY"):
                 return Check(name, True, "skipped; no configured key")
@@ -194,7 +220,7 @@ def main() -> int:
     if args.external:
         checks.extend(
             external_check(name)
-            for name in ("Originality.ai", "OpenRouter", "Semantic Scholar", "OpenAlex", "Crossref", "NCBI")
+            for name in ("Originality.ai", "OpenRouter", "Stripe", "Semantic Scholar", "OpenAlex", "Crossref", "NCBI")
         )
 
     failures = [check for check in checks if not check.ok]
