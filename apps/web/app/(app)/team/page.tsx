@@ -64,7 +64,12 @@ export default function TeamPage() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<MemberRole>("member");
   const [createdLink, setCreatedLink] = useState("");
-  const [removeConfirmUserId, setRemoveConfirmUserId] = useState<string | null>(\n    null,\n  );\n  const [transferConfirmUserId, setTransferConfirmUserId] = useState<string | null>(\n    null,\n  );
+  const [removeConfirmUserId, setRemoveConfirmUserId] = useState<string | null>(
+    null,
+  );
+  const [transferConfirmUserId, setTransferConfirmUserId] = useState<string | null>(
+    null,
+  );
 
   const membersQuery = useQuery({
     queryKey: queryKeys.teamMembers(workspaceId),
