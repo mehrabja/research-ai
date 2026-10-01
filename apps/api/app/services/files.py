@@ -49,10 +49,10 @@ from app.domain.file import (
     storage_key_for,
 )
 from app.domain.project import EDITABLE_PROJECT_STATUSES
+from app.security.file_security import validate_upload_bytes
 from app.services import entitlements as entitlements_service
 from app.services import jobs as jobs_service
 from app.services.file_storage import get_storage_provider
-from app.security.file_security import validate_upload_bytes
 
 logger = logging.getLogger(__name__)
 
