@@ -32,9 +32,13 @@ type NotificationResponse = {
   total: number;
 };
 
-async function readNotifications(): Promise<NotificationResponse> {
+async function readNotifications(
+  workspaceId?: string,
+): Promise<NotificationResponse> {
+  const params = new URLSearchParams({ limit: "10" });
+  if (workspaceId) params.set("workspace_id", workspaceId);
   const response = await fetch(
-    "/api/v1/notifications?limit=10",
+    "/api/v1/notifications?" + params.toString(),
     {
       credentials: "include",
       headers: { Accept: "application/json" },
@@ -70,9 +74,12 @@ async function markRead(id: string): Promise<void> {
   }
 }
 
-async function markAllRead(): Promise<void> {
+async function markAllRead(workspaceId?: string): Promise<void> {
+  const params = workspaceId
+    ? "?workspace_id=" + encodeURIComponent(workspaceId)
+    : "";
   const response = await fetch(
-    "/api/v1/notifications/read-all",
+    "/api/v1/notifications/read-all" + params,
     {
       method: "POST",
       credentials: "include",
@@ -122,12 +129,12 @@ export function Topbar({
     useRef<HTMLDivElement | null>(null);
   const queryClient = useQueryClient();
   const router = useRouter();
-  const { user, project, contextHref } =
+  const { user, project, workspaceId, contextHref } =
     useResearchContext();
 
   const notificationsQuery = useQuery({
-    queryKey: queryKeys.notifications(10),
-    queryFn: readNotifications,
+    queryKey: queryKeys.notifications(10, workspaceId),
+    queryFn: () => readNotifications(workspaceId ?? undefined),
     refetchInterval: 30_000,
   });
 
@@ -194,7 +201,7 @@ export function Topbar({
     mutationFn: markRead,
     onSuccess: () =>
       void queryClient.invalidateQueries({
-        queryKey: ["notifications"],
+        queryKey: queryKeys.notifications(10, workspaceId),
       }),
   });
 
@@ -323,7 +330,7 @@ export function Topbar({
                         markAllReadMutation.isPending
                       }
                       onClick={() =>
-                        markAllReadMutation.mutate()
+                        markAllReadMutation.mutate(workspaceId ?? undefined)
                       }
                     >
                       {markAllReadMutation.isPending
