@@ -13,6 +13,14 @@ describe("query key factories", () => {
       "project-reports",
       "project-a",
     ]);
+    expect(queryKeys.teamMembers("workspace-a")).toEqual([
+      "team-members",
+      "workspace-a",
+    ]);
+    expect(queryKeys.invitations("workspace-a")).toEqual([
+      "workspace-invitations",
+      "workspace-a",
+    ]);
   });
 
   it("keeps notification and usage keys parameterized", () => {
