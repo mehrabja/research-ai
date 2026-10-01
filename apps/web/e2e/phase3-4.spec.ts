@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 
 const password = "Secret123456789";
 
-async function createSession(page: Page): Promise<void> {
+async function createSession(page: Page): Promise<string> {
   const email = "e2e-phase34-" + randomUUID() + "@example.com";
 
   const register = await page.request.post("/api/v1/auth/register", {
@@ -15,6 +15,7 @@ async function createSession(page: Page): Promise<void> {
     data: { email, password },
   });
   expect(login.status(), await login.text()).toBe(200);
+  return email;
 }
 
 async function createWorkspace(page: Page, name: string): Promise<string> {
@@ -193,4 +194,87 @@ test("F04 Files UI moves an uploaded project file between persistent folders", a
     items: Array<{ id: string }>;
   };
   expect(movedPayload.items.some((item) => item.id === file.id)).toBe(true);
+});
+
+
+test("F03 workspace invitations create and accept a real membership", async ({
+  page,
+  browser,
+}) => {
+  await createSession(page);
+  const workspaceId = await createWorkspace(
+    page,
+    "F03 Invitations " + randomUUID(),
+  );
+
+  const inviteContext = await browser.newContext();
+  const invitePage = await inviteContext.newPage();
+  const invitedEmail = "e2e-invited-" + randomUUID() + "@example.com";
+
+  try {
+    const register = await invitePage.request.post(
+      "/api/v1/auth/register",
+      { data: { email: invitedEmail, password } },
+    );
+    expect(register.status(), await register.text()).toBe(201);
+
+    const invitationResponse = await page.request.post(
+      "/api/v1/workspaces/" +
+        workspaceId +
+        "/members/invitations",
+      {
+        data: {
+          email: invitedEmail,
+          role: "member",
+        },
+      },
+    );
+    expect(
+      invitationResponse.status(),
+      await invitationResponse.text(),
+    ).toBe(201);
+
+    const invitation = (await invitationResponse.json()) as {
+      token: string;
+    };
+    expect(invitation.token).toBeTruthy();
+
+    const login = await invitePage.request.post(
+      "/api/v1/auth/login",
+      { data: { email: invitedEmail, password } },
+    );
+    expect(login.status(), await login.text()).toBe(200);
+
+    await invitePage.goto(
+      "/invite?token=" + encodeURIComponent(invitation.token),
+    );
+    await expect(
+      invitePage.getByRole("heading", {
+        name: "Join a Research AI workspace",
+      }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    await invitePage
+      .getByRole("button", { name: "Accept invitation" })
+      .click();
+    await expect(invitePage).toHaveURL(/\/team$/);
+
+    const membersResponse = await page.request.get(
+      "/api/v1/workspaces/" + workspaceId + "/members",
+    );
+    expect(membersResponse.status(), await membersResponse.text()).toBe(200);
+
+    const members = (await membersResponse.json()) as {
+      items: Array<{ email: string | null; role: string }>;
+    };
+    expect(
+      members.items.some(
+        (member) =>
+          member.email === invitedEmail &&
+          member.role === "member",
+      ),
+    ).toBe(true);
+  } finally {
+    await inviteContext.close();
+  }
 });
