@@ -1,7 +1,7 @@
 # Research-AI — Operational Feature & External API Roadmap
 
-Date: 2026-09-29
-Branch: phase123-integration
+Date: 2026-10-01
+Branch: phase14-15-completion
 
 ## Purpose
 
@@ -83,9 +83,9 @@ It starts after F01 provider architecture and feeds F02/F04/F05/F09/F11/F15/F17.
 - Browser never receives the secret key.
 
 **Real AI detection**
-- Select one production provider after multilingual coverage, contract, cost, and data-retention review.
-- Keep the provider behind the detection abstraction.
-- Heuristic detection remains a deterministic baseline/testing fallback, not a production-equivalent detector.
+- Production provider selected: Originality.ai V3 with the `multilang` model.
+- Keep the provider behind the detection abstraction and require `AI_DETECTION_API_KEY` in production.
+- Heuristic detection remains a deterministic local/test fallback, not a production-equivalent detector.
 
 ### F20-B — Research discovery
 
@@ -167,7 +167,7 @@ These remain provider-neutral behind configuration.
 | Semantic Scholar | Academic discovery | `SEMANTIC_SCHOLAR_API_KEY` |
 | Object storage | Production file persistence | R2 or S3 credentials |
 | Transactional email | Verification/reset/invitations | Provider key + verified sender/domain |
-| AI detector | Real detection workflow | Provider key (provider TBD) |
+| AI detector | Real detection workflow | Originality.ai V3 API key (`AI_DETECTION_API_KEY`) |
 | Billing | Paid SaaS lifecycle | Provider secret + webhook secret + catalog IDs |
 
 ### Needed when those features are enabled
