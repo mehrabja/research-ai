@@ -7,27 +7,32 @@ on:
 
 jobs:
   backup:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, x64]
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+      - name: Verify Docker
+        shell: powershell
+        run: docker version
       - name: Backup database
+        shell: powershell
         env:
-          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
         run: |
-          chmod +x scripts/backup_postgres.sh
-          BACKUP_DIR=./backups bash scripts/backup_postgres.sh
-      - name: Upload backup artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: research-ai-postgres-backup-${{ github.run_id }}
-          path: backups/*.dump
-          retention-days: 14
+          if ([string]::IsNullOrWhiteSpace($env:BACKUP_DATABASE_URL)) { throw 'BACKUP_DATABASE_URL is required.' }
+          $dir = Join-Path $env:GITHUB_WORKSPACE 'backups'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+          $file = "/backup/research-ai-$stamp.dump"
+          $mount = "$dir:/backup"
+          $env:BACKUP_FILE = $file
+          docker run --rm -e DATABASE_URL="$env:BACKUP_DATABASE_URL" -e BACKUP_FILE="$file" -v "$mount" postgres:16-alpine sh -c 'pg_dump "$DATABASE_URL" -Fc -f "$BACKUP_FILE"'
+          if ($LASTEXITCODE -ne 0) { throw 'pg_dump failed.' }
+      - name: Verify backup artifact
+        shell: powershell
+        run: |
+          $latest = Get-ChildItem backups -Filter '*.dump' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $latest) { throw 'Backup file was not created.' }
+          docker run --rm -v "$($latest.DirectoryName):/backup" postgres:16-alpine pg_restore --list "/backup/$($latest.Name)" | Select-Object -First 5
+          Write-Host "Backup PASS: $($latest.FullName)"
