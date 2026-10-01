@@ -63,12 +63,14 @@ jobs:
       SAPLING_API_KEY: ${{ secrets.SAPLING_API_KEY }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: "3.11"}
+      - name: Verify runner Python
+        run: python --version
       - name: Install activation runner dependency
         run: python -m pip install --disable-pip-version-check "python-dotenv>=1.0.1,<2.0" "boto3>=1.35,<2.0"
-      - run: |
-          args=""
-          if [[ "${{ inputs.strict }}" == "true" ]]; then args="$args --strict"; fi
-          if [[ "${{ inputs.external }}" == "true" ]]; then args="$args --external"; fi
-          python scripts/provider_activation.py $args
+      - name: Run provider activation
+        shell: pwsh
+        run: |
+          $arguments = @()
+          if ("${{ inputs.strict }}" -eq "true") { $arguments += "--strict" }
+          if ("${{ inputs.external }}" -eq "true") { $arguments += "--external" }
+          python scripts/provider_activation.py @arguments
