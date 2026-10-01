@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-
 ROOT = Path(__file__).resolve().parents[4]
 SCRIPT = ROOT / "scripts" / "production_smoke.py"
 
