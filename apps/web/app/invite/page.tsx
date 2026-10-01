@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { me } from "@/lib/api/auth";
@@ -12,7 +12,6 @@ export default function InvitePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() ?? "";
-  const [message, setMessage] = useState("");
 
   const session = useQuery({
     queryKey: ["invite-session"],
@@ -26,7 +25,6 @@ export default function InvitePage() {
       return acceptInvitation(token);
     },
     onSuccess: () => {
-      setMessage("Invitation accepted. Redirecting to your team…");
       router.replace("/team");
     },
   });
@@ -35,10 +33,6 @@ export default function InvitePage() {
     if (!token) return "/login";
     const next = `/invite?token=${encodeURIComponent(token)}`;
     return `/login?next=${encodeURIComponent(next)}`;
-  }, [token]);
-
-  useEffect(() => {
-    setMessage("");
   }, [token]);
 
   if (!token) {
@@ -120,11 +114,11 @@ export default function InvitePage() {
           Signed in as <strong>{session.data?.email}</strong>.
         </p>
 
-        {(accept.error || message) && (
+        {accept.error || accept.isSuccess ? (
           <p className="muted" role={accept.error ? "alert" : "status"} style={{ marginTop: 12 }}>
             {accept.error instanceof Error
               ? accept.error.message
-              : message}
+              : "Invitation accepted. Redirecting to your team…"}
           </p>
         )}
 
