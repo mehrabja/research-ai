@@ -26,7 +26,7 @@ jobs:
       LOG_FORMAT: text
       RATE_LIMIT_ENABLED: "false"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Bootstrap Windows CI toolchain
         shell: powershell
         working-directory: .
@@ -76,7 +76,7 @@ jobs:
       run:
         working-directory: apps/web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Bootstrap Windows CI toolchain
         shell: powershell
         working-directory: .
@@ -101,7 +101,7 @@ jobs:
     runs-on: [self-hosted, windows, x64]
     needs: quality
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Verify Docker
         shell: powershell
         run: docker version
@@ -131,7 +131,7 @@ jobs:
       GITHUB_OAUTH_CLIENT_SECRET: ci-github-client-secret
       GITHUB_OAUTH_REDIRECT_URI: http://127.0.0.1:3000/oauth/github/callback
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Bootstrap Windows CI toolchain
         shell: powershell
         working-directory: .
@@ -200,7 +200,7 @@ jobs:
     runs-on: [self-hosted, windows, x64]
     needs: [quality, web, e2e, docker]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Bootstrap Windows CI toolchain
         shell: powershell
         working-directory: .
