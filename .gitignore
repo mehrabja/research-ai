@@ -48,3 +48,5 @@ pnpm-debug.log*
 openapi.local.json
 _frontend_import/
 _incoming/
+# --- Local staging runtime secrets/artifacts -------------------------
+deploy/staging/runtime/
