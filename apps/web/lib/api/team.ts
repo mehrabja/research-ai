@@ -27,6 +27,16 @@ export type CreatedInvitation = {
 
 export type MemberRole = "admin" | "member" | "viewer";
 
+export type WorkspaceTransferResult = {
+  id: string;
+  name: string;
+  slug: string;
+  owner_user_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
 async function readError(response: Response, fallback: string): Promise<string> {
   try {
     const payload = (await response.json()) as {
@@ -141,6 +151,30 @@ export async function removeMember(
   if (!response.ok) {
     throw new Error(await readError(response, "Unable to remove this member."));
   }
+}
+
+export async function transferOwnership(
+  workspaceId: string,
+  targetUserId: string,
+): Promise<WorkspaceTransferResult> {
+  const response = await fetch(
+    `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/transfer-ownership`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ target_user_id: targetUserId }),
+    },
+  );
+  if (!response.ok) {
+    throw new Error(
+      await readError(response, "Unable to transfer workspace ownership."),
+    );
+  }
+  return (await response.json()) as WorkspaceTransferResult;
 }
 
 export async function revokeInvitation(
