@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { copySetCookies, setAccessCookie } from "@/lib/server/auth";
+import { getBackendApiUrl } from "@/lib/server/backend-url";
 
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(15),
-  full_name: z.string().max(255).optional(),
+  full_name: z.string().max(200).optional(),
+  workspace_name: z.string().min(1).max(120).optional(),
 });
 
 export async function POST(req: Request) {
@@ -16,7 +18,7 @@ export async function POST(req: Request) {
       { status: 422 },
     );
   }
-  const base = process.env.BACKEND_API_URL ?? "http://localhost:8000";
+  const base = getBackendApiUrl();
   const backend = await fetch(base + "/api/v1/auth/register", {
     method: "POST",
     headers: { "content-type": "application/json" },
