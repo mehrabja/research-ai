@@ -17,9 +17,9 @@ from app.core.exceptions import (
     AuthenticationRequired,
 )
 from app.db.models.billing_invoice import BillingInvoice
-from app.db.session import get_db
 from app.db.models.plan import Plan
 from app.db.models.subscription import Subscription
+from app.db.session import get_db
 from app.db.models.user import User
 from app.schemas.billing import (
     CheckoutRequest,
@@ -74,7 +74,7 @@ def create_checkout_route(
 def list_invoices_route(
     workspace_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(__import__("app.db.session", fromlist=["get_db"]).get_db),
+    db: Session = Depends(get_db),
 ) -> InvoiceListResponse:
     memberships_service.require_active_membership(
         db,
