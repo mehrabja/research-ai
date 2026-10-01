@@ -48,6 +48,7 @@ jobs:
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
       STRIPE_PRICE_IDS: ${{ vars.STRIPE_PRICE_IDS }}
       DETECTION_API_BASE_URL: ${{ vars.DETECTION_API_BASE_URL }}
+      DETECTION_ORIGINALITY_BASE_URL: ${{ vars.DETECTION_ORIGINALITY_BASE_URL }}
       AI_DETECTION_API_KEY: ${{ secrets.AI_DETECTION_API_KEY }}
     steps:
       - uses: actions/checkout@v4
