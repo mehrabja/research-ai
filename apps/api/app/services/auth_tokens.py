@@ -19,11 +19,14 @@ from app.db.models.auth_tokens import (
 from app.db.models.user import User
 from app.services.session import revoke_all_other_sessions
 
+
 def _hash(raw_token: str) -> str:
     return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
 
+
 def _token() -> str:
     return secrets.token_urlsafe(48)
+
 
 def issue_email_verification_token(
     db: Session,
@@ -53,6 +56,7 @@ def issue_email_verification_token(
     db.flush()
     return raw
 
+
 def verify_email(
     db: Session,
     *,
@@ -76,6 +80,7 @@ def verify_email(
     user.email_verified_at = now
     db.commit()
     return user
+
 
 def issue_password_reset_token(
     db: Session,
@@ -104,6 +109,7 @@ def issue_password_reset_token(
     )
     db.flush()
     return raw
+
 
 def reset_password(
     db: Session,
