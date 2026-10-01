@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { Route } from "next";
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +14,7 @@ import {
 } from "@/lib/validation/auth";
 import { login } from "@/lib/api/auth";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -286,5 +287,23 @@ export default function LoginPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="shell-gate">
+          <section className="card pad shell-gate-card" aria-busy="true">
+            <div className="eyebrow">Research AI</div>
+            <h1>Loading sign-in…</h1>
+          </section>
+        </main>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }
