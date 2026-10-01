@@ -149,6 +149,24 @@ def external_get(
     print(f"PASS external {label}")
 
 
+def verify_sapling() -> None:
+    key = required("SAPLING_API_KEY")
+    base = os.getenv(
+        "DETECTION_SAPLING_BASE_URL",
+        "https://api.sapling.ai/api/v1",
+    ).rstrip("/")
+    status, _, payload = json_request(
+        base + "/account/status",
+        {"Accept": "application/json", "Authorization": "Bearer " + key},
+    )
+    expect(status, 200, "Sapling account status")
+    if payload.get("api_access") is not True:
+        raise RuntimeError(
+            "Sapling API access is unavailable: "
+            + str(payload.get("blocked_reason") or payload.get("message"))
+        )
+    print("PASS external Sapling")
+
 def verify_originality() -> None:
     key = required("AI_DETECTION_API_KEY")
     base = os.getenv(
@@ -239,6 +257,7 @@ def main() -> int:
         core_smoke(base_url, auth_headers())
 
         checks = {
+            "SMOKE_VERIFY_SAPLING": verify_sapling,
             "SMOKE_VERIFY_ORIGINALITY": verify_originality,
             "SMOKE_VERIFY_OPENROUTER": verify_openrouter,
             "SMOKE_VERIFY_SEMANTIC_SCHOLAR": verify_semantic_scholar,
