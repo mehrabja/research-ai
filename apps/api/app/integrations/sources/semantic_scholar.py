@@ -57,39 +57,74 @@ class SemanticScholarProvider:
         year: int | None = None,
         open_access_only: bool = False,
     ) -> list[SourceCandidate]:
-        params: dict[str, str] = {
-            "query": query,
-            "limit": str(limit),
-            "fields": _FIELDS,
-        }
-        if year is not None:
-            params["year"] = str(year)
+        """Search until the requested number of usable candidates is collected.
 
-        url = (
-            f"{self._base_url}/paper/search?"
-            f"{urllib.parse.urlencode(params)}"
-        )
+        Semantic Scholar supports paginated search with offsets and up to
+        1000 results per request. Open-access filtering is applied after the
+        provider response, so additional pages are fetched when needed.
+        """
+        if limit < 1:
+            return []
 
-        payload = self._request_json(url)
-
-        data = payload.get("data")
-        if data is None:
-            data = []
-        if not isinstance(data, list):
-            raise SourceProviderInvalidResponseError(
-                "expected 'data' to be a list"
-            )
-
+        page_size = min(limit, 1000)
+        offset = 0
         candidates: list[SourceCandidate] = []
-        for paper in data:
-            if not isinstance(paper, dict):
-                continue
-            if open_access_only and not paper.get("openAccessPdf"):
-                continue
-            candidate = self._to_candidate(paper)
-            if candidate is not None:
+        seen_ids: set[str] = set()
+
+        while len(candidates) < limit:
+            params: dict[str, str] = {
+                "query": query,
+                "limit": str(page_size),
+                "offset": str(offset),
+                "fields": _FIELDS,
+            }
+            if year is not None:
+                params["year"] = str(year)
+
+            url = (
+                f"{self._base_url}/paper/search?"
+                f"{urllib.parse.urlencode(params)}"
+            )
+            payload = self._request_json(url)
+
+            data = payload.get("data")
+            if data is None:
+                data = []
+            if not isinstance(data, list):
+                raise SourceProviderInvalidResponseError(
+                    "expected 'data' to be a list"
+                )
+            if not data:
+                break
+
+            for paper in data:
+                if not isinstance(paper, dict):
+                    continue
+                if open_access_only and not paper.get("openAccessPdf"):
+                    continue
+                candidate = self._to_candidate(paper)
+                if candidate is None:
+                    continue
+                if candidate.external_source_id in seen_ids:
+                    continue
+                seen_ids.add(candidate.external_source_id)
                 candidates.append(candidate)
-        return candidates
+                if len(candidates) >= limit:
+                    break
+
+            total = payload.get("total")
+            next_offset = payload.get("next")
+            if isinstance(next_offset, int) and next_offset > offset:
+                offset = next_offset
+            else:
+                offset += len(data)
+
+            if isinstance(total, int) and offset >= total:
+                break
+            if len(data) < page_size:
+                break
+
+        return candidates[:limit]
 
     def _request_json(self, url: str) -> dict:
         for attempt in range(self._max_retries + 1):
