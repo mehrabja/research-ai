@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {use,useEffect,useMemo,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {useRouter,useSearchParams} from "next/navigation";
+import {useRouter} from "next/navigation";
 import {api} from "@/lib/api/client";
 import {useWorkspace} from "@/components/app-shell";
 
@@ -18,8 +18,6 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
   const {projectId}=use(params);
   const {workspaceId}=useWorkspace();
   const router=useRouter();
-  const searchParams=useSearchParams();
-  const setup=searchParams.get("setup");
   const qc=useQueryClient();
 
   const project=useQuery({
@@ -213,7 +211,6 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
             <h2 className="font-semibold">{reportReady?"Create another report":"Create the first report"}</h2>
             <p className="muted text-sm mt-1">Reports are inside this project. Create one before starting report-scoped discovery and source work.</p>
           </div>
-          {setup==="report"&&<span className="tag primary">Next step</span>}
         </div>
         <div className="mt-4 grid md:grid-cols-[1fr_180px_auto] gap-2">
           <input className="input" aria-label="Report topic" placeholder="Report topic" value={topic} onChange={e=>setTopic(e.target.value)}/>
