@@ -201,6 +201,80 @@ def test_api_key_omitted_when_empty(
     assert calls[0].get_header("X-api-key") is None  # type: ignore[attr-defined]
 
 
+def test_search_paginates_to_requested_count(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+    payloads = iter([
+        {
+            "total": 4,
+            "next": 2,
+            "data": [
+                {"paperId": "P1", "title": "T1"},
+                {"paperId": "P2", "title": "T2"},
+            ],
+        },
+        {
+            "total": 4,
+            "next": None,
+            "data": [
+                {"paperId": "P3", "title": "T3"},
+                {"paperId": "P4", "title": "T4"},
+            ],
+        },
+    ])
+
+    def _handler(req: object, timeout: float) -> _Resp:
+        calls.append(req.full_url)  # type: ignore[attr-defined]
+        return _Resp(json.dumps(next(payloads)).encode())
+
+    _install(monkeypatch, _handler)
+    out = _provider().search(query="x", limit=3)
+    assert [c.external_source_id for c in out] == ["P1", "P2", "P3"]
+    assert "offset=0" in calls[0]
+    assert "offset=2" in calls[1]
+
+
+def test_open_access_filter_fetches_additional_pages(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payloads = iter([
+        {
+            "total": 4,
+            "next": 2,
+            "data": [
+                {"paperId": "P1", "title": "T1"},
+                {"paperId": "P2", "title": "T2"},
+            ],
+        },
+        {
+            "total": 4,
+            "next": None,
+            "data": [
+                {
+                    "paperId": "P3",
+                    "title": "T3",
+                    "openAccessPdf": {"url": "https://x/p3"},
+                },
+                {
+                    "paperId": "P4",
+                    "title": "T4",
+                    "openAccessPdf": {"url": "https://x/p4"},
+                },
+            ],
+        },
+    ])
+
+    def _handler(req: object, timeout: float) -> _Resp:
+        return _Resp(json.dumps(next(payloads)).encode())
+
+    _install(monkeypatch, _handler)
+    out = _provider().search(
+        query="x", limit=2, open_access_only=True
+    )
+    assert [c.external_source_id for c in out] == ["P3", "P4"]
+
+
 # ---------------------------------------------------------------------------
 # HTTP classification
 # ---------------------------------------------------------------------------
