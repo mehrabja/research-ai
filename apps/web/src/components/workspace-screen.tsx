@@ -211,7 +211,39 @@ function Workspace(){
 function Sources(){
   const {reportId}=useCtx();
   const q=useQuery({queryKey:["sources",reportId],queryFn:()=>api.sources(reportId!),enabled:Boolean(reportId)});
-  return <><Head route="sources" actions={<Link className="btn primary" href="/research">Discover sources</Link>}/><Card><Table data={rows(q.data?.items)}/>{!reportId&&<State title="No active report" description="Create a project report before managing the source library."/>}{reportId&&!q.isPending&&rows(q.data?.items).length===0&&<State title="Source library is empty" description="Use Research discovery to find and save provider-backed candidates."/>}</Card></>;
+  const qc=useQueryClient();
+  const [processingId,setProcessingId]=useState("");
+  const [error,setError]=useState("");
+  const process=useMutation({
+    mutationFn:(id:string)=>api.extractSource(reportId!,id),
+    onMutate:id=>{setProcessingId(id);setError("");},
+    onSuccess:async()=>{await qc.invalidateQueries({queryKey:["sources",reportId]});},
+    onError:e=>setError(e instanceof Error?e.message:"Source processing failed."),
+    onSettled:()=>setProcessingId(""),
+  });
+  return <><Head route="sources" actions={<Link className="btn primary" href="/research">Discover sources</Link>}/>
+    {!reportId&&<Card><State title="No active report" description="Create a project report before managing the source library."/></Card>}
+    {reportId&&<Card>
+      <div className="row"><div><h3>Source library</h3><div className="muted small">Saved research sources. Process a source to fetch full text and create retrieval chunks.</div></div><span className="tag">{q.data?.items.length??0} sources</span></div>
+      {error&&<div className="notice error" style={{marginTop:12}}>{error}</div>}
+      {(q.data?.items??[]).length===0&&!q.isPending&&<State title="Source library is empty" description="Use Research discovery to find and save provider-backed candidates."/>}
+      {(q.data?.items??[]).length>0&&<div className="table-wrap" style={{marginTop:12}}>
+        <table className="table"><thead><tr><th>Source</th><th>Year</th><th>Status</th><th>Links</th><th>Actions</th></tr></thead>
+          <tbody>{q.data?.items.map(source=>{
+            const busy=processingId===source.id;
+            const doi=source.doi?("https://doi.org/"+source.doi.replace(/^doi:\s*/i,"")):null;
+            return <tr key={source.id}>
+              <td><div className="strong" style={{whiteSpace:"normal",overflowWrap:"anywhere",maxWidth:430}}>{source.title}</div><div className="meta">{(source.authors??[]).slice(0,3).join(", ")||"Authors unavailable"}</div></td>
+              <td>{source.year??"—"}</td>
+              <td>{source.status}</td>
+              <td><div className="actions">{source.url&&<a className="btn" href={source.url} target="_blank" rel="noreferrer">Article ↗</a>}{doi&&<a className="btn" href={doi} target="_blank" rel="noreferrer">DOI ↗</a>}</div></td>
+              <td><button className="btn" disabled={busy} onClick={()=>process.mutate(source.id)}>{busy?"Processing…":source.status==="full_text"||source.status==="structured_full_text"?"Re-process":"Process source"}</button></td>
+            </tr>;
+          })}</tbody>
+        </table>
+      </div>}
+    </Card>}
+  </>;
 }
 
 function Literature(){
