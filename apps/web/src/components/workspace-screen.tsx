@@ -45,7 +45,7 @@ function Screen({route}:{route:string}){
  }
 }
 
-function useCtx(){const ws=useWorkspace();const projects=useQuery({queryKey:["projects",ws.workspaceId],queryFn:()=>api.projects(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});const projectId=projects.data?.items?.[0]?.id;const reports=useQuery({queryKey:["reports",projectId],queryFn:()=>api.projectReports(projectId!,ws.workspaceId!),enabled:Boolean(projectId&&ws.workspaceId)});const reportId=reports.data?.items?.[0]?.id;return {ws,projects,projectId,reports,reportId};}
+function useCtx(){const ws=useWorkspace();const params=useSearchParams();const requestedProjectId=params.get("projectId");const requestedReportId=params.get("reportId");const projects=useQuery({queryKey:["projects",ws.workspaceId],queryFn:()=>api.projects(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});const projectId=useMemo(()=>requestedProjectId&&projects.data?.items.some(p=>p.id===requestedProjectId)?requestedProjectId:projects.data?.items?.[0]?.id,[projects.data,requestedProjectId]);const reports=useQuery({queryKey:["reports",projectId],queryFn:()=>api.projectReports(projectId!,ws.workspaceId!),enabled:Boolean(projectId&&ws.workspaceId)});const reportId=useMemo(()=>requestedReportId&&reports.data?.items.some(r=>r.id===requestedReportId)?requestedReportId:reports.data?.items?.[0]?.id,[reports.data,requestedReportId]);return {ws,projects,projectId,reports,reportId};}
 
 function Dashboard(){const {ws,projects}=useCtx();const s=useQuery({queryKey:["dashboard",ws.workspaceId],queryFn:()=>api.dashboard(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});return <><Head route="dashboard" actions={<><Link className="btn" href="/projects">Create project</Link><Link className="btn" href="/team">Invite teammate</Link><Link className="btn primary" href="/workspace">Open workspace</Link></>}/><div className="grid grid-4"><Metric label="Active projects" value={s.data?.active_projects}/><Metric label="Saved sources" value={s.data?.saved_sources}/><Metric label="Evidence items" value={s.data?.evidence_items}/><Metric label="AI generation units" value={s.data?.ai_generation_units}/></div><Card style={{marginTop:16}}><h3>Projects</h3><Table data={(projects.data?.items??[]) as unknown as Obj[]}/>{!projects.isPending&&projects.data?.items.length===0&&<div className="notice" style={{marginTop:12}}>No projects yet. <Link href="/projects" style={{color:"var(--primary)",fontWeight:700}}>Create your first project.</Link></div>}</Card></>}
 function Metric({label,value:v}:{label:string;value:unknown}){return <div className="card metric"><div className="label">{label}</div><div className="value">{value(v)}</div><div className="delta">Backend source of truth</div></div>}
@@ -209,7 +209,7 @@ function Workspace(){
 }
 
 function Sources(){
-  const {reportId}=useCtx();
+  const {reportId,projectId}=useCtx();
   const q=useQuery({queryKey:["sources",reportId],queryFn:()=>api.sources(reportId!),enabled:Boolean(reportId)});
   const qc=useQueryClient();
   const [processingId,setProcessingId]=useState("");
@@ -221,7 +221,7 @@ function Sources(){
     onError:e=>setError(e instanceof Error?e.message:"Source processing failed."),
     onSettled:()=>setProcessingId(""),
   });
-  return <><Head route="sources" actions={<Link className="btn primary" href="/research">Discover sources</Link>}/>
+  return <><Head route="sources" actions={<Link className="btn primary" href={reportId?"/research?projectId="+encodeURIComponent(projectId??"")+"&reportId="+encodeURIComponent(reportId):"/research"}>Discover sources</Link>}/>
     {!reportId&&<Card><State title="No active report" description="Create a project report before managing the source library."/></Card>}
     {reportId&&<Card>
       <div className="row"><div><h3>Source library</h3><div className="muted small">Saved research sources. Process a source to fetch full text and create retrieval chunks.</div></div><span className="tag">{q.data?.items.length??0} sources</span></div>
