@@ -10,7 +10,9 @@ function csrfCookie():string|undefined{
 
 async function rawRequest<T>(path:string,init?:RequestInit):Promise<Response>{
   const headers=new Headers(init?.headers);
-  if(init?.body&&!headers.has("content-type"))headers.set("content-type","application/json");
+  if(init?.body&&!headers.has("content-type")&&!(typeof FormData!=="undefined"&&init.body instanceof FormData)){
+    headers.set("content-type","application/json");
+  }
   const csrf=csrfCookie();
   if(csrf&&!headers.has("X-CSRF-Token")&&init?.method&&init.method!=="GET"&&init.method!=="HEAD"){
     headers.set("X-CSRF-Token",csrf);
@@ -78,10 +80,14 @@ export const api={
   report:(r:string)=>request<Report>("reports/"+r),
 
   sources:(r:string)=>request<{items:Source[]}>("reports/"+r+"/sources"),
-  searchSources:(r:string,q:string,year?:number,openAccess=false)=>request<{query:string;limit:number;candidates:SourceCandidate[]}>("reports/"+r+"/sources/search?q="+encodeURIComponent(q)+"&limit=8"+(year?"&year="+year:"")+(openAccess?"&open_access=true":"")),
+  searchSources:(r:string,q:string,limit=25,year?:number,openAccess=false)=>request<{query:string;limit:number;candidates:SourceCandidate[]}>("reports/"+r+"/sources/search?q="+encodeURIComponent(q)+"&limit="+Math.max(1,Math.min(1000,Math.floor(limit)))+(year?"&year="+year:"")+(openAccess?"&open_access=true":"")),
   createSource:(r:string,c:SourceCandidate)=>request<Source>("reports/"+r+"/sources",{method:"POST",body:JSON.stringify(c)}),
 
   literature:(p:string)=>request<unknown>("projects/"+p+"/literature"),
+  literatureAnalyze:(p:string,force=false)=>request<unknown>("projects/"+p+"/literature/analyze",{method:"POST",body:JSON.stringify({force})}),
+  literatureClusters:(p:string)=>request<{items:unknown[];total:number}>("projects/"+p+"/literature/clusters"),
+  literatureGaps:(p:string)=>request<{items:unknown[];total:number}>("projects/"+p+"/literature/gaps"),
+  literatureRuns:(p:string)=>request<{items:unknown[];total:number}>("projects/"+p+"/literature/runs"),
   knowledgeGraph:(p:string)=>request<unknown>("projects/"+p+"/knowledge-graph"),
   knowledgeGraphExport:(p:string,format:"json"|"csv")=>request<unknown>("projects/"+p+"/knowledge-graph/export?format="+format),
 
