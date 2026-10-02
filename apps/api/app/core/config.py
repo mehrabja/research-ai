@@ -711,8 +711,8 @@ class Settings(BaseSettings):
         default=15.0, ge=1.0, le=120.0
     )
     semantic_scholar_max_retries: int = Field(default=3, ge=0, le=10)
-    source_search_limit_default: int = Field(default=10, ge=1, le=100)
-    source_search_limit_max: int = Field(default=50, ge=1, le=100)
+    source_search_limit_default: int = Field(default=25, ge=1, le=1000)
+    source_search_limit_max: int = Field(default=1000, ge=1, le=1000)
 
     # ==================================================================
     # M36 helper properties
