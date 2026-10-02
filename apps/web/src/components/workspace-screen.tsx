@@ -56,45 +56,80 @@ function Research(){
   const [q,setQ]=useState(p.get("q")??"");
   const [submittedQuery,setSubmittedQuery]=useState("");
   const [year,setYear]=useState("");
+  const [count,setCount]=useState(25);
   const [openAccess,setOpenAccess]=useState(false);
+  const [savingIds,setSavingIds]=useState<string[]>([]);
+  const [savedIds,setSavedIds]=useState<string[]>([]);
+  const sources=useQuery({queryKey:["sources",reportId],queryFn:()=>api.sources(reportId!),enabled:Boolean(reportId)});
   const search=useQuery({
-    queryKey:["source-discovery",reportId,submittedQuery,year,openAccess],
-    queryFn:()=>api.searchSources(reportId!,submittedQuery,year?Number(year):undefined,openAccess),
+    queryKey:["source-discovery",reportId,submittedQuery,count,year,openAccess],
+    queryFn:()=>api.searchSources(reportId!,submittedQuery,count,year?Number(year):undefined,openAccess),
     enabled:Boolean(reportId&&submittedQuery),
   });
-  const save=useMutation({mutationFn:(item:unknown)=>api.createSource(reportId!,item as SourceCandidate)});
+  const save=useMutation({
+    mutationFn:(item:SourceCandidate)=>api.createSource(reportId!,item),
+    onMutate:item=>setSavingIds(ids=>ids.includes(item.external_source_id)?ids:[...ids,item.external_source_id]),
+    onSuccess:(data,item)=>{setSavedIds(ids=>ids.includes(item.external_source_id)?ids:[...ids,item.external_source_id]);},
+    onError:e=>setError(e instanceof Error?e.message:"Save source failed."),
+    onSettled:(_,__,item)=>setSavingIds(ids=>ids.filter(id=>id!==item.external_source_id)),
+  });
+  const [error,setError]=useState("");
+  useEffect(()=>{
+    const ids=(sources.data?.items??[]).map(item=>item.external_source_id).filter((id):id is string=>Boolean(id));
+    if(ids.length)setSavedIds(ids);
+  },[sources.data]);
   const global=useQuery({
     queryKey:["global-search",ws.workspaceId,q],
     queryFn:()=>api.globalSearch(q,ws.workspaceId!),
     enabled:Boolean(ws.workspaceId&&q.trim()&&!reportId),
   });
-  const canSearch=Boolean(reportId&&q.trim());
+  const canSearch=Boolean(reportId&&q.trim()&&count>=1&&count<=1000);
   function runSearch(){
     if(canSearch)setSubmittedQuery(q.trim());
+  }
+  function doiHref(doi:string){
+    return doi.startsWith("http://")||doi.startsWith("https://")?doi:"https://doi.org/"+doi.replace(/^doi:\s*/i,"");
   }
   return <><Head route="research"/>
     <div className="grid grid-3">
       <Card>
-        <div className="field">
-          <label>Research query</label>
-          <input className="input" value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")runSearch()}} placeholder="topic, DOI, title, author…"/>
-        </div>
+        <div className="field"><label>Research query</label><input className="input" value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")runSearch()}} placeholder="topic, DOI, title, author…"/></div>
+        <div className="field" style={{marginTop:12}}><label>Number of papers</label><input className="input" type="number" min={1} max={1000} step={1} value={count} onChange={e=>setCount(Math.max(1,Math.min(1000,Number(e.target.value)||1)))}/></div>
         <button className="btn primary" style={{marginTop:12}} disabled={!canSearch||search.isFetching} onClick={runSearch}>{search.isFetching?"Searching…":"Search papers"}</button>
       </Card>
       <Card><div className="field"><label>Year</label><input className="input" inputMode="numeric" value={year} onChange={e=>setYear(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="2024"/></div></Card>
-      <Card><label className="checkbox"><input type="checkbox" checked={openAccess} onChange={e=>setOpenAccess(e.target.checked)}/><span><b>Open access only</b><br/><span className="muted tiny">Applied only where the research provider supports it.</span></span></label></Card>
+      <Card><label className="checkbox"><input type="checkbox" checked={openAccess} onChange={e=>setOpenAccess(e.target.checked)}/><span><b>Open access only</b><br/><span className="muted tiny">Additional provider pages are fetched when needed to fill the requested count.</span></span></label></Card>
     </div>
     <Card style={{marginTop:16}}>
       <div className="row"><div><h3>Discovery results</h3><div className="muted small">{reportId?"Semantic Scholar-backed source discovery for the active report.":"Create a project and report first to search papers."}</div></div><span className="tag">{search.data?.candidates?.length??global.data?.total??0} results</span></div>
       {!reportId&&<div className="notice" style={{marginTop:12}}>No active report. <Link href="/projects" style={{color:"var(--primary)",fontWeight:700}}>Create a project</Link>, then create a report inside it.</div>}
       {reportId&&!submittedQuery&&<State title="Ready to search" description="Enter a title, topic, DOI or author and press Search papers."/>}
-      {reportId&&submittedQuery&&search.isFetching&&<State title="Searching papers" description={"Searching for “"+submittedQuery+"” using the active report."}/>}
-      {reportId&&submittedQuery&&!search.isFetching&&search.isError&&<State title="Search failed" description="The research provider returned an error. Check the API logs for the provider response." error/>}
+      {reportId&&submittedQuery&&search.isFetching&&<State title="Searching papers" description={"Searching for “"+submittedQuery+"” and collecting up to "+count+" results."}/>}
+      {reportId&&submittedQuery&&!search.isFetching&&search.isError&&<State title="Search failed" description={search.error instanceof Error?search.error.message:"The research provider returned an error."} error/>}
       {reportId&&submittedQuery&&!search.isFetching&&!search.isError&&<div className="list" style={{marginTop:10}}>
-        {search.data?.candidates?.map((item,index)=><div className="list-item" key={item.external_source_id??index}><div className="row"><div><div className="title">{item.title}</div><div className="meta">{item.year??"Year unknown"} · {item.doi??item.url??"No DOI/URL"}</div></div><button className="btn" disabled={save.isPending} onClick={()=>save.mutate(item)}>Save source</button></div></div>)}
+        {search.data?.candidates?.map((item,index)=>{
+          const key=item.external_source_id??String(index);
+          const saved=savedIds.includes(item.external_source_id);
+          const saving=savingIds.includes(item.external_source_id);
+          return <div className="list-item" key={key}>
+            <div className="row" style={{alignItems:"flex-start"}}>
+              <div style={{minWidth:0,flex:1}}>
+                <div className="title" style={{overflowWrap:"anywhere"}}>{item.title}</div>
+                <div className="meta" style={{overflowWrap:"anywhere"}}>{item.year??"Year unknown"} · {(item.authors??[]).slice(0,3).join(", ")||"Authors unavailable"} · {item.citation_count??0} citations</div>
+                {item.abstract&&<div className="muted small" style={{marginTop:6,lineHeight:1.55}}>{item.abstract}</div>}
+                <div className="actions" style={{marginTop:8}}>
+                  {item.url&&<a className="btn" href={item.url} target="_blank" rel="noreferrer">Open article ↗</a>}
+                  {item.doi&&<a className="btn" href={doiHref(item.doi)} target="_blank" rel="noreferrer">DOI ↗</a>}
+                </div>
+              </div>
+              <button className={"btn"+(saved?" primary":"")} disabled={saved||saving||save.isPending} onClick={()=>save.mutate(item)}>{saving?"Saving…":saved?"Saved ✓":"Save source"}</button>
+            </div>
+          </div>;
+        })}
         {(search.data?.candidates?.length??0)===0&&<State title="No papers found" description={"No provider result was returned for “"+submittedQuery+"” with the selected filters."}/>}
       </div>}
       {!reportId&&q&&<Table data={rows(global.data?.items)}/>}
+      {error&&<div className="notice error" style={{marginTop:12}}>{error}</div>}
     </Card>
   </>;
 }
@@ -182,37 +217,46 @@ function Sources(){
 function Literature(){
   const {projectId}=useCtx();
   const q=useQuery({queryKey:["literature",projectId],queryFn:()=>api.literature(projectId!),enabled:Boolean(projectId)});
+  const clusters=useQuery({queryKey:["literature-clusters",projectId],queryFn:()=>api.literatureClusters(projectId!),enabled:Boolean(projectId)});
+  const gaps=useQuery({queryKey:["literature-gaps",projectId],queryFn:()=>api.literatureGaps(projectId!),enabled:Boolean(projectId)});
+  const runs=useQuery({queryKey:["literature-runs",projectId],queryFn:()=>api.literatureRuns(projectId!),enabled:Boolean(projectId)});
+  const qc=useQueryClient();
+  const analyze=useMutation({
+    mutationFn:()=>api.literatureAnalyze(projectId!,true),
+    onSuccess:async()=>{await Promise.all([
+      qc.invalidateQueries({queryKey:["literature",projectId]}),
+      qc.invalidateQueries({queryKey:["literature-clusters",projectId]}),
+      qc.invalidateQueries({queryKey:["literature-gaps",projectId]}),
+      qc.invalidateQueries({queryKey:["literature-runs",projectId]}),
+    ])},
+  });
   const data=row(q.data);
-  const clusters=rows(data.clusters??data.clustered_papers);
-  const themes=rows(data.themes);
-  const gaps=rows(data.gaps);
-  return <><Head route="literature"/>
-    <div className="grid grid-4">
-      <Metric label="Clusters" value={clusters.length}/>
-      <Metric label="Themes" value={themes.length}/>
-      <Metric label="Gaps" value={gaps.length}/>
-      <Metric label="Analysis status" value={value(data.status,"Pending")}/>
-    </div>
+  const items=rows(data.items);
+  const clusterItems=clusters.data?.items??[];
+  const gapItems=gaps.data?.items??[];
+  return <><Head route="literature" actions={<button className="btn primary" disabled={!projectId||analyze.isPending} onClick={()=>analyze.mutate()}>{analyze.isPending?"Analyzing…":"Analyze literature"}</button>}/>
+    {!projectId&&<Card><State title="No active project" description="Create a project before running literature intelligence."/></Card>}
+    {projectId&&<div className="grid grid-4">
+      <Metric label="Literature items" value={q.isPending?"…":items.length}/>
+      <Metric label="Clusters" value={clusters.isPending?"…":clusterItems.length}/>
+      <Metric label="Themes" value={clusterItems.reduce((n,x)=>n+(Array.isArray((x as Obj).themes)?((x as Obj).themes as unknown[]).length:0),0)}/>
+      <Metric label="Gaps" value={gaps.isPending?"…":gapItems.length}/>
+    </div>}
+    {analyze.isError&&<div className="notice error" style={{marginTop:16}}>{analyze.error instanceof Error?analyze.error.message:"Literature analysis failed."}</div>}
     <div className="grid grid-2" style={{marginTop:16}}>
       <Card>
-        <h3>Analysis output</h3>
-        {q.isPending&&<State title="Loading literature intelligence" description="The workspace is waiting for the literature analysis response."/>}
-        {!q.isPending&&q.isError&&<State title="API request failed" description="The literature intelligence endpoint returned an error." error/>}
-        {!q.isPending&&!q.isError&&clusters.length===0&&themes.length===0&&gaps.length===0&&<State title="No literature analysis yet" description="Run literature analysis after adding sources to the active project."/>}
-        {!q.isPending&&!q.isError&&(clusters.length>0||themes.length>0||gaps.length>0)&&<div className="list">
-          {clusters.length>0&&<div className="list-item"><div className="title">Clusters</div><div className="meta">{clusters.length} cluster records are available.</div></div>}
-          {themes.length>0&&<div className="list-item"><div className="title">Themes</div><div className="meta">{themes.length} theme records are available.</div></div>}
-          {gaps.length>0&&<div className="list-item"><div className="title">Research gaps</div><div className="meta">{gaps.length} gap records are available.</div></div>}
-        </div>}
+        <div className="row"><h3>Literature corpus</h3><span className="tag">{items.length} items</span></div>
+        {items.length===0&&!q.isPending&&<State title="No literature items yet" description="Save sources first, then run Analyze literature."/>}
+        {items.length>0&&<Table data={items}/>}
       </Card>
       <Card>
-        <h3>Pipeline</h3>
-        <div className="timeline">
-          <div className="step"><div className="dot"/><div><b>Discovery</b><div className="meta">Provider search, pagination and deduplication.</div></div></div>
-          <div className="step"><div className="dot"/><div><b>Analysis</b><div className="meta">Clusters, themes and gaps.</div></div></div>
-          <div className="step"><div className="dot"/><div><b>Screening</b><div className="meta">Human screening overrides are persisted.</div></div></div>
-        </div>
+        <div className="row"><h3>Analysis runs</h3><span className="tag">{runs.data?.total??0}</span></div>
+        {runs.data?.items?.length ? <Table data={rows(runs.data.items)}/> : <State title="No analysis runs" description="Run Analyze literature to build clusters, themes and gaps."/>}
       </Card>
+    </div>
+    <div className="grid grid-2" style={{marginTop:16}}>
+      <Card><h3>Clusters & themes</h3>{clusterItems.length===0&&!clusters.isPending?<State title="No clusters yet" description="Run literature analysis after adding sources."/>:<Table data={rows(clusterItems)}/>}</Card>
+      <Card><h3>Research gaps</h3>{gapItems.length===0&&!gaps.isPending?<State title="No gaps yet" description="Run literature analysis to detect gaps from the current corpus."/>:<Table data={rows(gapItems)}/>}</Card>
     </div>
   </>;
 }
