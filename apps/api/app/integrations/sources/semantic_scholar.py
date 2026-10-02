@@ -116,11 +116,13 @@ class SemanticScholarProvider:
             next_offset = payload.get("next")
             if isinstance(next_offset, int) and next_offset > offset:
                 offset = next_offset
-            else:
-                offset += len(data)
+                continue
 
-            if isinstance(total, int) and offset >= total:
-                break
+            offset += len(data)
+            if isinstance(total, int):
+                if offset >= total:
+                    break
+                continue
             if len(data) < page_size:
                 break
 
