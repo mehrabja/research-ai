@@ -74,6 +74,7 @@ export const api={
   projects:(w:string)=>request<ProjectList>("projects?workspace_id="+encodeURIComponent(w)),
   project:(p:string,w:string)=>request<Project>("projects/"+p+"?workspace_id="+encodeURIComponent(w)),
   createProject:(w:string,b:object)=>request<Project>("projects?workspace_id="+encodeURIComponent(w),{method:"POST",body:JSON.stringify(b)}),
+  updateProject:(p:string,w:string,b:object)=>request<Project>("projects/"+p+"?workspace_id="+encodeURIComponent(w),{method:"PATCH",body:JSON.stringify(b)}),
   projectReports:(p:string,w:string)=>request<{items:Array<{id:string;topic:string;status:string;output_language:string;updated_at:string}>;total:number}>("projects/"+p+"/reports?workspace_id="+encodeURIComponent(w)),
   createReport:(w:string,b:object)=>request<Report>("reports?workspace_id="+encodeURIComponent(w),{method:"POST",body:JSON.stringify(b)}),
   reports:(w:string)=>request<Report[]>("reports?workspace_id="+encodeURIComponent(w)),
