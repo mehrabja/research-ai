@@ -201,11 +201,65 @@ function Workspace(){
   const {ws,projects}=useCtx();
   const [name,setName]=useState("");
   const qc=useQueryClient();
-  const create=useMutation({mutationFn:()=>api.createWorkspace(name),onSuccess:()=>{setName("");void qc.invalidateQueries({queryKey:["workspaces"]})}});
-  return <><Head route="workspace"/><div className="grid grid-2">
-    <Card><h3>Workspace context</h3><div className="list" style={{marginTop:10}}>{ws.workspaces.map(w=><div className="list-item" key={w.id}><div className="row"><div><div className="title">{w.name}</div><div className="meta">{w.slug} · {w.status}</div></div><span className="tag">{w.role}</span></div></div>)}</div></Card>
-    <Card><h3>Create workspace</h3><p className="muted small">Owner membership and subscription setup are handled transactionally by the backend.</p><div className="row" style={{marginTop:14}}><input className="input" value={name} onChange={e=>setName(e.target.value)} placeholder="Workspace name"/><button className="btn primary" disabled={!name.trim()||create.isPending} onClick={()=>create.mutate()}>{create.isPending?"Creating…":"Create"}</button></div>{create.isError&&<div className="notice error" style={{marginTop:10}}>Workspace creation failed.</div>}</Card>
-  </div><Card style={{marginTop:16}}><h3>Projects</h3><Table data={rows(projects.data?.items)}/></Card></>;
+  const create=useMutation({
+    mutationFn:()=>api.createWorkspace(name.trim()),
+    onSuccess:async workspace=>{
+      setName("");
+      ws.setSelected(workspace.id);
+      await qc.invalidateQueries({queryKey:["workspaces"]});
+    },
+  });
+  const current=ws.workspaces.find(w=>w.id===ws.workspaceId);
+  return <><Head route="workspace" actions={<Link className="btn primary" href="/projects">Create project →</Link>}/>
+    <div className="grid grid-2">
+      <Card>
+        <h3>Current workspace</h3>
+        {current ? (
+          <>
+            <div className="title" style={{marginTop:10,fontSize:15}}>{current.name}</div>
+            <div className="meta">{current.slug} · {current.status} · Role: {current.role}</div>
+            <div className="notice" style={{marginTop:14}}>
+              <b>Workspace is the tenant boundary.</b>
+              <div className="muted tiny" style={{marginTop:4}}>Membership, access, usage and billing belong here. Research work belongs in projects.</div>
+            </div>
+          </>
+        ) : <State title="No workspace selected" description="Select a workspace from the sidebar to continue."/>}
+      </Card>
+      <Card>
+        <h3>Create workspace</h3>
+        <p className="muted small">Create a separate tenant boundary for another team or research environment. Your existing projects stay in their current workspace.</p>
+        <div className="row" style={{marginTop:14}}>
+          <input className="input" aria-label="Workspace name" value={name} onChange={e=>setName(e.target.value)} placeholder="Workspace name"/>
+          <button className="btn primary" disabled={!name.trim()||create.isPending} onClick={()=>create.mutate()}>{create.isPending?"Creating…":"Create workspace"}</button>
+        </div>
+        {create.isError&&<div className="notice error" style={{marginTop:10}}>{create.error instanceof Error?create.error.message:"Workspace creation failed."}</div>}
+      </Card>
+    </div>
+
+    <Card style={{marginTop:16}}>
+      <div className="row">
+        <div><h3>Workspaces</h3><div className="muted tiny">Use the sidebar selector to switch the active workspace.</div></div>
+        <span className="tag">{ws.workspaces.length} total</span>
+      </div>
+      <div className="list" style={{marginTop:8}}>
+        {ws.workspaces.map(w=><div className="list-item" key={w.id}>
+          <div className="row">
+            <div style={{minWidth:0}}><div className="title" style={{overflowWrap:"anywhere"}}>{w.name}</div><div className="meta">{w.slug} · {w.status} · {w.role}</div></div>
+            {w.id===ws.workspaceId?<span className="tag primary">Selected</span>:<button className="btn" onClick={()=>ws.setSelected(w.id)}>Use workspace</button>}
+          </div>
+        </div>)}
+      </div>
+    </Card>
+
+    <Card style={{marginTop:16}}>
+      <div className="row">
+        <div><h3>Projects in this workspace</h3><div className="muted tiny">Projects hold the research effort; reports and sources are scoped underneath a project.</div></div>
+        <Link className="btn" href="/projects">Open projects</Link>
+      </div>
+      <div style={{marginTop:10}}><Table data={rows(projects.data?.items)}/></div>
+      {!projects.isPending&&!(projects.data?.items?.length)&&<div className="notice" style={{marginTop:12}}>No projects yet. <Link href="/projects" style={{color:"var(--primary)",fontWeight:700}}>Create the first project.</Link></div>}
+    </Card>
+  </>;
 }
 
 function Sources(){
