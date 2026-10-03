@@ -21,6 +21,7 @@ from app.db.models.plan import Plan
 from app.db.models.subscription import Subscription
 from app.db.session import get_db
 from app.db.models.user import User
+from app.schemas.subscription import SubscriptionRead
 from app.schemas.billing import (
     ChangePlanRequest,
     CheckoutRequest,
