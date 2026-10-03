@@ -412,22 +412,60 @@ function Files(){
   const inputRef=useRef<HTMLInputElement>(null);
   const [folderId,setFolderId]=useState("");
   const [uploading,setUploading]=useState(false);
+  const [uploadProgress,setUploadProgress]=useState(0);
+  const [uploadName,setUploadName]=useState("");
   const [busyId,setBusyId]=useState("");
   const [error,setError]=useState("");
+  const [uploadNotice,setUploadNotice]=useState("");
+  const [retryFile,setRetryFile]=useState<File|null>(null);
+  const [retryFolderId,setRetryFolderId]=useState<string|undefined>(undefined);
+  const uploadAbortRef=useRef<AbortController|null>(null);
 
-  async function upload(file:File){
+  async function upload(file:File,selectedFolderId=folderId){
     if(!projectId)return;
+    if(file.size===0){
+      setError("The selected file is empty. Choose a non-empty research file.");
+      setRetryFile(null);
+      return;
+    }
+
     setError("");
+    setUploadNotice("");
+    setRetryFile(null);
+    setRetryFolderId(undefined);
+    setUploadName(file.name);
+    setUploadProgress(0);
     setUploading(true);
+
+    const controller=new AbortController();
+    uploadAbortRef.current=controller;
+
     try{
-      await api.uploadFile(projectId,file,folderId||undefined);
+      await api.uploadFile(projectId,file,{
+        folderId:selectedFolderId||undefined,
+        signal:controller.signal,
+        onProgress:progress=>setUploadProgress(progress.percent),
+      });
+      setUploadProgress(100);
+      setUploadNotice("Uploaded \\"+file.name+"\\". Processing continues in the background.");
       await qc.invalidateQueries({queryKey:["files",projectId]});
     }catch(e){
-      setError(e instanceof Error?e.message:"Upload failed.");
+      if(e instanceof Error&&e.name==="UploadCancelledError"){
+        setUploadNotice("Upload of \\"+file.name+"\\" was cancelled.");
+      }else{
+        setError(e instanceof Error?e.message:"Upload failed. Retry the file.");
+        setRetryFile(file);
+        setRetryFolderId(selectedFolderId||undefined);
+      }
     }finally{
       setUploading(false);
+      uploadAbortRef.current=null;
       if(inputRef.current)inputRef.current.value="";
     }
+  }
+
+  function cancelUpload(){
+    uploadAbortRef.current?.abort();
   }
 
   async function fetchFileBlob(id:string){
@@ -514,18 +552,30 @@ function Files(){
             onChange={e=>{const f=e.currentTarget.files?.[0];if(f)void upload(f);}}
           />
           {projectId ? (
-            <button
-              type="button"
-              className="btn primary"
-              disabled={uploading}
-              onClick={()=>inputRef.current?.click()}
-            >
-              {uploading?"Uploading…":"Choose a file"}
-            </button>
+            uploading ? (
+              <button type="button" className="btn" onClick={cancelUpload}>Cancel upload</button>
+            ) : (
+              <button
+                type="button"
+                className="btn primary"
+                onClick={()=>inputRef.current?.click()}
+              >
+                Choose a file
+              </button>
+            )
           ) : (
             <Link className="btn primary" href="/projects">Create a project first</Link>
           )}
-          <div className="muted tiny" style={{marginTop:8}}>{projectId?"Selecting a file starts the upload immediately.":"File upload is scoped to a project."}</div>
+          {uploading&&<div style={{width:"100%",maxWidth:360,marginTop:12}}>
+            <div className="row tiny"><span style={{overflowWrap:"anywhere"}}>{uploadName}</span><span>{Math.round(uploadProgress)}%</span></div>
+            <progress max={100} value={uploadProgress} style={{width:"100%",marginTop:6}}/>
+          </div>}
+          {uploadNotice&&<div className="notice success" style={{marginTop:10}}>{uploadNotice}</div>}
+          {error&&<div className="notice error" style={{marginTop:10}}>
+            <span>{error}</span>
+            {retryFile&&<button className="btn" style={{marginLeft:8}} onClick={()=>void upload(retryFile,retryFolderId)}>Retry</button>}
+          </div>}
+          <div className="muted tiny" style={{marginTop:8}}>{projectId?"PDF, DOCX, TXT, CSV, XLSX and other provider-supported research files are accepted; server validation is authoritative.":"File upload is scoped to a project."}</div>
         </div>
         {error&&<div className="notice error" style={{marginTop:10}}>{error}</div>}
       </Card>
@@ -545,7 +595,8 @@ function Files(){
                 <td>{value(f.status)}</td>
                 <td>{typeof f.size_bytes==="number"?bytes(f.size_bytes):"—"}</td>
                 <td><div className="actions">
-                  <button className="btn" disabled={busy} onClick={()=>void download(id,name)}>{busy?"Working…":"Download"}</button>
+                  <button className="btn" disabled={busy} onClick={()=>void openFile(id)}>{busy?"Working…":"Open"}</button>
+                  <button className="btn" disabled={busy} onClick={()=>void download(id,name)}>Download</button>
                   <button className="btn" disabled={busy} onClick={()=>void remove(id)}>Delete</button>
                 </div></td>
               </tr>;
