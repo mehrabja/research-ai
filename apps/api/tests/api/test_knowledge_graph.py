@@ -125,6 +125,22 @@ def test_get_graph_404_when_missing(client):
     assert resp.status_code == 404
 
 
+def test_list_nodes(client):
+    c, uid = client
+    pid = _mk_project(uid)
+    c.post(
+        f"/api/v1/projects/{pid}/knowledge-graph/generate",
+        json={"async": False},
+    )
+    resp = c.get(
+        f"/api/v1/projects/{pid}/knowledge-graph/nodes?node_type=project"
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] >= 1
+    assert body["items"][0]["node_type"] == "project"
+
+
 def test_get_summary(client):
     c, uid = client
     pid = _mk_project(uid)

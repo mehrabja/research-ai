@@ -110,3 +110,11 @@ class KnowledgeGraphQueryResponse(BaseModel):
     max_nodes: int
     nodes: list[dict[str, Any]] = Field(default_factory=list)
     edges: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class KnowledgeGraphNodeListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[KnowledgeGraphNodeRead]
+    total: int
+    limit: int
+    offset: int

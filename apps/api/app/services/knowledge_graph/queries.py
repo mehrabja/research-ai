@@ -81,6 +81,50 @@ def get_graph_summary(db: Session, *, project_id: uuid.UUID) -> dict:
     }
 
 
+def list_nodes(
+    db: Session,
+    *,
+    project_id: uuid.UUID,
+    search: str | None = None,
+    node_type: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> tuple[list[KnowledgeGraphNode], int]:
+    gv = get_active_version(db, project_id=project_id)
+    stmt = select(KnowledgeGraphNode).where(
+        KnowledgeGraphNode.graph_version_id == gv.id,
+        KnowledgeGraphNode.project_id == project_id,
+    )
+    if node_type:
+        if node_type not in set(KNOWLEDGE_GRAPH_NODE_TYPES):
+            raise KnowledgeGraphInvalid("unknown node type: " + node_type)
+        stmt = stmt.where(KnowledgeGraphNode.node_type == node_type)
+    if search and search.strip():
+        pattern = "%" + search.strip() + "%"
+        stmt = stmt.where(
+            or_(
+                KnowledgeGraphNode.node_key.ilike(pattern),
+                KnowledgeGraphNode.label.ilike(pattern),
+            )
+        )
+    total = int(
+        db.execute(select(text("count(*)")).select_from(stmt.subquery())).scalar_one()
+    )
+    rows = (
+        db.execute(
+            stmt.order_by(
+                KnowledgeGraphNode.node_type.asc(),
+                KnowledgeGraphNode.node_key.asc(),
+            )
+            .limit(min(limit, 200))
+            .offset(offset)
+        )
+        .scalars()
+        .all()
+    )
+    return list(rows), total
+
+
 def get_node(
     db: Session, *, project_id: uuid.UUID, node_id: uuid.UUID
 ) -> KnowledgeGraphNode:

@@ -16,6 +16,7 @@ from app.schemas.knowledge_graph import (
     KnowledgeGraphGenerateRequest,
     KnowledgeGraphNeighborRead,
     KnowledgeGraphNodeRead,
+    KnowledgeGraphNodeListResponse,
     KnowledgeGraphQueryRequest,
     KnowledgeGraphQueryResponse,
     KnowledgeGraphRead,
@@ -117,6 +118,36 @@ def get_summary(
     get_project(db, user_id=current_user.id, project_id=project_id)
     return KnowledgeGraphSummaryRead.model_validate(
         queries_svc.get_graph_summary(db, project_id=project_id)
+    )
+
+
+@router.get(
+    "/{project_id}/knowledge-graph/nodes",
+    response_model=KnowledgeGraphNodeListResponse,
+)
+def list_nodes(
+    project_id: uuid.UUID,
+    search: str | None = Query(default=None, max_length=200),
+    node_type: str | None = Query(default=None, max_length=64),
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> KnowledgeGraphNodeListResponse:
+    get_project(db, user_id=current_user.id, project_id=project_id)
+    rows, total = queries_svc.list_nodes(
+        db,
+        project_id=project_id,
+        search=search,
+        node_type=node_type,
+        limit=limit,
+        offset=offset,
+    )
+    return KnowledgeGraphNodeListResponse(
+        items=[KnowledgeGraphNodeRead.model_validate(row) for row in rows],
+        total=total,
+        limit=limit,
+        offset=offset,
     )
 
 
