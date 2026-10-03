@@ -45,13 +45,55 @@ function Screen({route}:{route:string}){
  }
 }
 
-function useCtx(){const ws=useWorkspace();const params=useSearchParams();const requestedProjectId=params.get("projectId");const requestedReportId=params.get("reportId");const projects=useQuery({queryKey:["projects",ws.workspaceId],queryFn:()=>api.projects(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});const projectId=useMemo(()=>requestedProjectId&&projects.data?.items.some(p=>p.id===requestedProjectId)?requestedProjectId:projects.data?.items?.[0]?.id,[projects.data,requestedProjectId]);const reports=useQuery({queryKey:["reports",projectId],queryFn:()=>api.projectReports(projectId!,ws.workspaceId!),enabled:Boolean(projectId&&ws.workspaceId)});const reportId=useMemo(()=>requestedReportId&&reports.data?.items.some(r=>r.id===requestedReportId)?requestedReportId:reports.data?.items?.[0]?.id,[reports.data,requestedReportId]);return {ws,projects,projectId,reports,reportId};}
+function useCtx(){const ws=useWorkspace();const params=useSearchParams();const requestedProjectId=params.get("projectId");const requestedReportId=params.get("reportId");const projects=useQuery({queryKey:["projects",ws.workspaceId],queryFn:()=>api.projects(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});const projectId=useMemo(()=>requestedProjectId&&projects.data?.items.some(p=>p.id===requestedProjectId)?requestedProjectId:projects.data?.items?.[0]?.id,[projects.data,requestedProjectId]);const reports=useQuery({queryKey:["reports",projectId],queryFn:()=>api.projectReports(projectId!,ws.workspaceId!),enabled:Boolean(projectId&&ws.workspaceId)});const reportId=useMemo(()=>requestedReportId&&reports.data?.items.some(r=>r.id===requestedReportId)?requestedReportId:reports.data?.items?.[0]?.id,[reports.data,requestedReportId]);const activeProject=useMemo(()=>projects.data?.items.find(p=>p.id===projectId),[projects.data,projectId]);const activeReport=useMemo(()=>reports.data?.items.find(r=>r.id===reportId),[reports.data,reportId]);return {ws,projects,projectId,reports,reportId,activeProject,activeReport};}
+
+function WorkflowContext({route,projectId,reportId,projects,reports}:{route:string;projectId:string|undefined;reportId:string|undefined;projects:returnType<typeof useCtx>["projects"];reports:returnType<typeof useCtx>["reports"]}){
+  const router=useRouter();
+  const params=useSearchParams();
+  const projectItems=projects.data?.items??[];
+  const reportItems=reports.data?.items??[];
+  function navigate(nextProjectId:string,nextReportId?:string){
+    const next=new URLSearchParams(params.toString());
+    next.set("projectId",nextProjectId);
+    if(nextReportId)next.set("reportId",nextReportId);
+    else next.delete("reportId");
+    router.push("/"+route+"?"+next.toString());
+  }
+  return <Card style={{marginTop:16}}>
+    <div className="row" style={{alignItems:"flex-start"}}>
+      <div style={{minWidth:0}}>
+        <div className="kicker">Active research context</div>
+        <div className="strong" style={{marginTop:3}}>Project → Report</div>
+        <div className="muted tiny" style={{marginTop:3}}>Every discovery and source action below is scoped to the selected report.</div>
+      </div>
+      <Link className="btn" href={projectId?"/projects/"+projectId:"/projects"}>Project setup</Link>
+    </div>
+    <div className="grid grid-2" style={{marginTop:12}}>
+      <div className="field">
+        <label>Project</label>
+        <select className="input" value={projectId??""} onChange={e=>navigate(e.target.value)} disabled={!projectItems.length}>
+          {!projectItems.length&&<option value="">No projects</option>}
+          {projectItems.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+      </div>
+      <div className="field">
+        <label>Report</label>
+        <select className="input" value={reportId??""} onChange={e=>navigate(projectId!,e.target.value)} disabled={!projectId||reports.isPending||!reportItems.length}>
+          {!reportItems.length&&<option value="">No report</option>}
+          {reportItems.map(r=><option key={r.id} value={r.id}>{r.topic}</option>)}
+        </select>
+      </div>
+    </div>
+    {!projectId&&<div className="notice" style={{marginTop:12}}>Create a project first, then create its first report to start the Research → Sources workflow.</div>}
+    {projectId&&!reportId&&!reports.isPending&&<div className="notice" style={{marginTop:12}}>This project has no report yet. Open Project setup and create the first report.</div>}
+  </Card>;
+}
 
 function Dashboard(){const {ws,projects}=useCtx();const s=useQuery({queryKey:["dashboard",ws.workspaceId],queryFn:()=>api.dashboard(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});const items=projects.data?.items??[];return <><Head route="dashboard" actions={<><Link className="btn primary" href="/projects">Create project</Link><Link className="btn" href="/team">Invite teammate</Link><Link className="btn" href="/workspace">Workspace overview</Link></>}/><div className="grid grid-4"><Metric label="Active projects" value={s.data?.active_projects}/><Metric label="Saved sources" value={s.data?.saved_sources}/><Metric label="Evidence items" value={s.data?.evidence_items}/><Metric label="AI generation units" value={s.data?.ai_generation_units}/></div><Card style={{marginTop:16}}><div className="row"><div><h3>Projects</h3><div className="muted tiny">Projects are the starting point for research work in this workspace.</div></div>{items.length>0&&<Link className="btn" href="/projects">View all projects</Link>}</div>{projects.isPending?<State title="Loading projects" description="Reading projects from the selected workspace."/>:items.length===0?<State title="Start your first research project" description="Create a project to define the research context, then create a report and continue into Research discovery."><Link className="btn primary" href="/projects">Create project →</Link></State>:<Table data={items as unknown as Obj[]}/>}</Card></>}
 function Metric({label,value:v}:{label:string;value:unknown}){return <div className="card metric"><div className="label">{label}</div><div className="value">{value(v)}</div><div className="delta">Backend source of truth</div></div>}
 
 function Research(){
-  const {ws,reportId}=useCtx();
+  const {ws,reportId,projectId,projects,reports}=useCtx();
   const p=useSearchParams();
   const [q,setQ]=useState(p.get("q")??"");
   const [submittedQuery,setSubmittedQuery]=useState("");
@@ -91,6 +133,7 @@ function Research(){
     return doi.startsWith("http://")||doi.startsWith("https://")?doi:"https://doi.org/"+doi.replace(/^doi:\s*/i,"");
   }
   return <><Head route="research"/>
+    <WorkflowContext route="research" projectId={projectId} reportId={reportId} projects={projects} reports={reports}/>
     <div className="grid grid-3">
       <Card>
         <div className="field"><label>Research query</label><input className="input" value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")runSearch()}} placeholder="topic, DOI, title, author…"/></div>
@@ -263,7 +306,7 @@ function Workspace(){
 }
 
 function Sources(){
-  const {reportId,projectId}=useCtx();
+  const {reportId,projectId,projects,reports}=useCtx();
   const q=useQuery({queryKey:["sources",reportId],queryFn:()=>api.sources(reportId!),enabled:Boolean(reportId)});
   const qc=useQueryClient();
   const [processingId,setProcessingId]=useState("");
@@ -276,6 +319,7 @@ function Sources(){
     onSettled:()=>setProcessingId(""),
   });
   return <><Head route="sources" actions={<Link className="btn primary" href={reportId?"/research?projectId="+encodeURIComponent(projectId??"")+"&reportId="+encodeURIComponent(reportId):"/research"}>Discover sources</Link>}/>
+    <WorkflowContext route="sources" projectId={projectId} reportId={reportId} projects={projects} reports={reports}/>
     {!reportId&&<Card><State title="No active report" description="Create a project report before managing the source library."/></Card>}
     {reportId&&<Card>
       <div className="row"><div><h3>Source library</h3><div className="muted small">Saved research sources. Process a source to fetch full text and create retrieval chunks.</div></div><span className="tag">{q.data?.items.length??0} sources</span></div>
