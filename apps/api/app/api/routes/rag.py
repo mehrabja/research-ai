@@ -13,7 +13,6 @@ from app.core.exceptions import (
     RetrievalAdvancedConfigurationInvalid,
     RetrievalAdvancedNotFound,
 )
-from app.db.models.project import Project
 from app.db.models.report import Report
 from app.db.models.research_memory import ResearchMemory
 from app.db.models.source import Chunk, Source
@@ -30,6 +29,7 @@ from app.schemas.retrieval_advanced import (
     RetrieveResponse,
     RAGReadinessResponse,
 )
+from app.domain.embeddings import build_embedding_profile_id
 from app.services.embedding_profile import (
     build_embedding_provider,
     get_current_embedding_profile,
