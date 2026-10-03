@@ -41,6 +41,22 @@ export type UploadOptions={
   onProgress?:(progress:UploadProgress)=>void;
 };
 
+function isProjectFile(value:unknown):value is ProjectFile{
+  if(!isRecord(value))return false;
+  return typeof value.id==="string"
+    && typeof value.project_id==="string"
+    && (typeof value.folder_id==="string"||value.folder_id===null)
+    && typeof value.original_filename==="string"
+    && typeof value.normalized_filename==="string"
+    && (typeof value.client_mime_type==="string"||value.client_mime_type===null)
+    && (typeof value.detected_mime_type==="string"||value.detected_mime_type===null)
+    && typeof value.size_bytes==="number"
+    && typeof value.status==="string"
+    && typeof value.file_kind==="string"
+    && typeof value.created_at==="string"
+    && typeof value.updated_at==="string";
+}
+
 function csrfCookie():string|undefined{
   if(typeof document==="undefined")return undefined;
   const prefix="research_ai_csrf=";
@@ -195,13 +211,13 @@ export const api={
         if(status>=200&&status<300){
           try{
             const parsed:unknown=xhr.responseText?JSON.parse(xhr.responseText):null;
-            if(!isRecord(parsed)||typeof parsed.id!=="string"||typeof parsed.project_id!=="string"||typeof parsed.original_filename!=="string"){
+            if(!isProjectFile(parsed)){
               fail(new ApiRequestError("Upload completed but the file response did not match the API contract.",status,{requestId}));
               return;
             }
             settled=true;cleanup();
             options.onProgress?.({loaded:file.size,total:file.size,percent:100});
-            resolve(parsed as ProjectFile);
+            resolve(parsed);
           }catch{
             fail(new ApiRequestError("Upload completed but the server response could not be read.",status,{requestId}));
           }
@@ -223,7 +239,6 @@ export const api={
         }));
       });
       xhr.addEventListener("error",()=>fail(new ApiRequestError("Network error while uploading. Check your connection and retry.",0)));
-      xhr.addEventListener("timeout",()=>fail(new ApiRequestError("Upload timed out. Retry the upload.",408)));
       xhr.addEventListener("abort",()=>fail(new UploadCancelledError()));
 
       const form=new FormData();
