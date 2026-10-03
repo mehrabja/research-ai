@@ -1,5 +1,17 @@
 import{describe,expect,it,vi}from"vitest";import{api}from"@/lib/api/client";
 describe("upload transport",()=>{
+  it("uses typed subscription and invoice endpoints",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch").mockResolvedValue(
+      new Response(JSON.stringify({id:"s1",workspace_id:"w1",plan_id:"p1",plan_code:"pro",status:"active",current_period_start:null,current_period_end:null,provider:"fake",cancel_at_period_end:false,created_at:"2026-10-04T00:00:00Z"}),{status:200,headers:{"content-type":"application/json"}})
+    );
+    const sub=await api.subscription("w1");
+    expect(sub.status).toBe("active");
+    spy.mockResolvedValueOnce(new Response(JSON.stringify({items:[],total:0}),{status:200,headers:{"content-type":"application/json"}}));
+    const invoices=await api.billingInvoices("w1");
+    expect(invoices.total).toBe(0);
+    spy.mockRestore();
+  });
+
   it("reports upload progress without setting a JSON content type",async()=>{
     const original=globalThis.XMLHttpRequest;
     const progress:number[]=[];

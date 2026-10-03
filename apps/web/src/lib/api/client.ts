@@ -1,4 +1,4 @@
-import type {Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,Source,SourceCandidate,Usage,User,Workspace} from "./generated";
+import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,Source,SourceCandidate,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
 
@@ -279,13 +279,13 @@ export const api={
   sessions:()=>request<unknown[]>("auth/sessions"),
   revokeSession:(id:string)=>request<void>("auth/sessions/"+id,{method:"DELETE"}),
   revokeOtherSessions:()=>request<void>("auth/sessions/revoke-others",{method:"POST"}),
-  apiTokens:()=>request<unknown[]>("auth/api-tokens"),
-  createApiToken:(body:object)=>request<unknown>("auth/api-tokens",{method:"POST",body:JSON.stringify(body)}),
+  apiTokens:()=>request<APIToken[]>("auth/api-tokens"),
+  createApiToken:(body:object)=>request<APITokenCreateResponse>("auth/api-tokens",{method:"POST",body:JSON.stringify(body)}),
   revokeApiToken:(id:string)=>request<void>("auth/api-tokens/"+id,{method:"DELETE"}),
-  twoFactor:()=>request<unknown>("auth/2fa"),
-  beginTwoFactor:()=>request<unknown>("auth/2fa/enroll",{method:"POST"}),
-  confirmTwoFactor:(code:string)=>request<unknown>("auth/2fa/confirm",{method:"POST",body:JSON.stringify({code})}),
-  disableTwoFactor:(code:string)=>request<unknown>("auth/2fa/disable",{method:"POST",body:JSON.stringify({code})}),
+  twoFactor:()=>request<{enabled:boolean}>("auth/2fa"),
+  beginTwoFactor:()=>request<TwoFactorEnrollment>("auth/2fa/enroll",{method:"POST"}),
+  confirmTwoFactor:(code:string)=>request<{enabled:boolean}>("auth/2fa/confirm",{method:"POST",body:JSON.stringify({code})}),
+  disableTwoFactor:(code:string)=>request<{enabled:boolean}>("auth/2fa/disable",{method:"POST",body:JSON.stringify({code})}),
   members:(w:string)=>request<{items:Member[];total:number}>("workspaces/"+w+"/members"),
   manuscriptComments:(r:string,v:string)=>request<{items:unknown[];total:number}>("reports/"+r+"/manuscript-versions/"+v+"/comments"),
   addManuscriptComment:(r:string,v:string,body:object)=>request<unknown>("reports/"+r+"/manuscript-versions/"+v+"/comments",{method:"POST",body:JSON.stringify(body)}),
@@ -301,8 +301,9 @@ export const api={
   transferOwnership:(w:string,u:string)=>request<Workspace>("workspaces/"+w+"/transfer-ownership",{method:"POST",body:JSON.stringify({target_user_id:u})}),
 
   usage:(w:string)=>request<Usage>("workspaces/"+w+"/usage"),
+  subscription:(w:string)=>request<Subscription>("workspaces/"+w+"/subscription"),
   planSubscription:(w:string)=>request<Plan>("workspaces/"+w+"/plan"),
-  billingInvoices:(w:string)=>request<unknown[]>("workspaces/"+w+"/billing/invoices"),
+  billingInvoices:(w:string)=>request<{items:BillingInvoice[];total:number}>("workspaces/"+w+"/billing/invoices"),
   billingCheckout:(w:string,planCode:string)=>request<{provider:string;checkout_session_id:string;checkout_url:string}>("workspaces/"+w+"/billing/checkout",{method:"POST",body:JSON.stringify({plan_code:planCode})}),
 
   citations:(r:string)=>request<Citation>("reports/"+r+"/citations/current"),

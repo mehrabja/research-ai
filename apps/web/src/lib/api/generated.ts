@@ -21,3 +21,9 @@ export type KnowledgeGraphNode={id:UUID;graph_version_id:UUID;project_id:UUID;no
 export type KnowledgeGraphSummary={graph_version_id:UUID;version:number;status:string;node_count:number;edge_count:number;node_type_counts:Record<string,number>;relation_type_counts:Record<string,number>;context_hash:string;graph_version:string};
 export type KnowledgeGraphNeighbor={edge_id:UUID;relation_type:string;provenance_type:string;provenance_ref:string|null;confidence:number|null;weight:number;direction:string;neighbor:{id:UUID;node_type:string;node_key:string;entity_id:UUID;label:string|null}};
 export type KnowledgeGraphNodeList={items:KnowledgeGraphNode[];total:number;limit:number;offset:number};
+
+export type Subscription={id:UUID;workspace_id:UUID;plan_id:UUID;plan_code:string;status:string;current_period_start:DateTime|null;current_period_end:DateTime|null;provider:string;cancel_at_period_end:boolean;created_at:DateTime};
+export type BillingInvoice={id:UUID|null;provider:string;provider_invoice_id:string;status:string;currency:string|null;amount_due:number|null;amount_paid:number|null;hosted_invoice_url:string|null;invoice_pdf_url:string|null;provider_created_at:DateTime|null};
+export type APIToken={id:UUID;name:string;token_prefix:string;scopes:string[];expires_at:DateTime|null;revoked_at:DateTime|null;last_used_at:DateTime|null;created_at:DateTime};
+export type APITokenCreateResponse={token:string;item:APIToken};
+export type TwoFactorEnrollment={enabled:boolean;secret:string;provisioning_uri:string;recovery_codes:string[]};
