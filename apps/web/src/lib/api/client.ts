@@ -1,4 +1,4 @@
-import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
+import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
 
@@ -267,10 +267,11 @@ export const api={
   updateFile:(id:string,b:object)=>request<ProjectFile>("files/"+id,{method:"PATCH",body:JSON.stringify(b)}),
   deleteFile:(id:string)=>request<void>("files/"+id,{method:"DELETE"}),
 
-  plan:(p:string)=>request<unknown>("projects/"+p+"/research-plan"),
-  planVersions:(p:string)=>request<{items:unknown[];total?:number}>("projects/"+p+"/research-plan/versions"),
-  savePlan:(p:string,b:object)=>request<unknown>("projects/"+p+"/research-plan",{method:"PATCH",body:JSON.stringify(b)}),
-  validatePlan:(p:string)=>request<unknown>("projects/"+p+"/research-plan/validate"),
+  plan:(p:string)=>request<ResearchPlan>("projects/"+p+"/research-plan"),
+  planVersions:(p:string)=>request<{items:ResearchPlan[];total:number;limit:number;offset:number}>("projects/"+p+"/research-plan/versions"),
+  savePlan:(p:string,b:object)=>request<ResearchPlan>("projects/"+p+"/research-plan",{method:"PATCH",body:JSON.stringify(b)}),
+  validatePlan:(p:string)=>request<ResearchPlanValidation>("projects/"+p+"/research-plan/validate"),
+  planCoverage:(p:string)=>request<ResearchPlanCoverage>("projects/"+p+"/research-plan/coverage"),
 
   manuscript:(r:string)=>request<Manuscript>("reports/"+r+"/manuscript"),
   manuscriptDraft:(r:string)=>request<{revision:number;base_version_id:string|null;content:unknown}>("reports/"+r+"/manuscript/draft"),
