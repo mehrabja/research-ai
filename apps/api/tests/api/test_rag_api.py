@@ -147,12 +147,12 @@ def test_ownership_isolation(client):
 def test_lexical_mode_does_not_construct_embedding_provider(client, monkeypatch):
     c, uid = client
     pid = _mk_project(uid)
-    from app.services import embedding_profile
+    from app.api.routes import rag as rag_route
 
     def fail(_profile=None):
         raise AssertionError("embedding provider must not be built for lexical retrieval")
 
-    monkeypatch.setattr(embedding_profile, "build_embedding_provider", fail)
+    monkeypatch.setattr(rag_route, "build_embedding_provider", fail)
     resp = c.post(
         f"/api/v1/projects/{pid}/rag/retrieve",
         json={"query": "x", "mode": "lexical", "async": False},
