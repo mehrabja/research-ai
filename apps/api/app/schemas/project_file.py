@@ -45,6 +45,7 @@ class ProjectFileListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
     id: uuid.UUID
+    folder_id: uuid.UUID | None
     original_filename: str
     file_kind: FileKindLiteral
     size_bytes: int

@@ -124,6 +124,7 @@ def test_list_files(cleanup_users):
     data = r.json()
     assert data["total"] == 2
     assert len(data["items"]) == 2
+    assert "folder_id" in data["items"][0]
 
 
 def test_download_content(cleanup_users):
