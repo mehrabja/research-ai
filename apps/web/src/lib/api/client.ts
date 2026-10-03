@@ -172,7 +172,12 @@ export const api={
   knowledgeGraphSummary:(p:string)=>request<KnowledgeGraphSummary>("projects/"+p+"/knowledge-graph/summary"),
   knowledgeGraphNodes:(p:string,search="",nodeType="",limit=100,offset=0)=>request<KnowledgeGraphNodeList>("projects/"+p+"/knowledge-graph/nodes?limit="+limit+"&offset="+offset+(search?"&search="+encodeURIComponent(search):"")+(nodeType?"&node_type="+encodeURIComponent(nodeType):"")),
   knowledgeGraphNeighbors:(p:string,nodeId:string)=>request<KnowledgeGraphNeighbor[]>("projects/"+p+"/knowledge-graph/nodes/"+nodeId+"/neighbors?limit=50"),
-  knowledgeGraphExport:(p:string,format:"json"|"csv")=>request<unknown>("projects/"+p+"/knowledge-graph/export?format="+format),
+  knowledgeGraphQuery:(p:string,b:{start_node_id:string;max_depth?:number;max_nodes?:number;relation_types?:string[]})=>request<import("./generated").KnowledgeGraphQueryResponse>("projects/"+p+"/knowledge-graph/query",{method:"POST",body:JSON.stringify(b)}),
+  knowledgeGraphExport:async(p:string,format:"json"|"csv"):Promise<Blob>=>{
+    const response=await fetch("/api/backend/projects/"+p+"/knowledge-graph/export?format="+format,{credentials:"same-origin",cache:"no-store"});
+    if(!response.ok)throw new Error("Knowledge graph export failed ("+response.status+").");
+    return response.blob();
+  },
   ragReadiness:(p:string)=>request<import("./generated").RAGReadiness>("projects/"+p+"/rag/readiness"),
   ragRetrieve:(p:string,b:object)=>request<RAGResponse>("projects/"+p+"/rag/retrieve",{method:"POST",body:JSON.stringify(b)}),
 

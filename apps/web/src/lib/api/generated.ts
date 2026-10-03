@@ -49,3 +49,5 @@ export type ResearchPlanCoverage={coverage_score:number;coverage_state:string;pe
 export type ResearchPlanValidation={validation_status:string;validation_errors:string[];completeness_score:number|null};
 
 export type Job={id:UUID;job_type:string;status:string;priority:number;report_id:UUID|null;attempt_count:number;max_attempts:number;available_at:DateTime;created_at:DateTime;updated_at:DateTime;started_at:DateTime|null;completed_at:DateTime|null;failed_at:DateTime|null;last_error_code:string|null;last_error_message:string|null};
+
+export type KnowledgeGraphQueryResponse={graph_version_id:UUID;start_node_id:UUID;max_depth:number;max_nodes:number;nodes:Array<Record<string,unknown>>;edges:Array<Record<string,unknown>>};
