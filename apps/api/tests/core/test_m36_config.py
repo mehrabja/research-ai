@@ -83,6 +83,37 @@ def test_rejects_invalid_rate_limit() -> None:
         Settings(**_base(rate_limit_global_per_minute=0))
 
 
+def test_s3_storage_is_allowed_outside_production() -> None:
+    s = Settings(
+        **_base(
+            file_storage_backend="s3",
+            file_storage_s3_bucket="research",
+            file_storage_s3_region="eu-central-1",
+            file_storage_s3_access_key_id="access",
+            file_storage_s3_secret_access_key="secret",
+        )
+    )
+    assert s.file_storage_backend == "s3"
+
+
+def test_production_requires_s3_credentials() -> None:
+    with pytest.raises(ValidationError, match="S3 storage"):
+        Settings(
+            **_base(
+                app_env="production",
+                jwt_secret_key="x" * 64,
+                two_factor_encryption_key="x" * 64,
+                auth_cookie_secure=True,
+                auth_require_email_verification=True,
+                email_provider="smtp",
+                smtp_host="smtp.example.com",
+                smtp_sender="noreply@example.com",
+                frontend_base_url="https://app.example.com",
+                file_storage_backend="s3",
+            )
+        )
+
+
 def test_settings_repr_hides_secrets() -> None:
     s = Settings(**_base())
     r = repr(s)
