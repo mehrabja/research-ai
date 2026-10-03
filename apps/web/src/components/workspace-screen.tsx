@@ -656,7 +656,6 @@ function Files(){
           </div>}
           <div className="muted tiny" style={{marginTop:8}}>{projectId?"PDF, DOCX, TXT, CSV, XLSX and other provider-supported research files are accepted; server validation is authoritative.":"File upload is scoped to a project."}</div>
         </div>
-        {error&&<div className="notice error" style={{marginTop:10}}>{error}</div>}
       </Card>
       <Card><h3>Intelligence</h3><p className="muted small">Extraction, indexing, classification, code analysis and data profiling run as durable jobs.</p></Card>
     </div>
@@ -667,11 +666,11 @@ function Files(){
           <tbody>
             {files.map(f=>{
               const id=value(f.id);
-              const name=value(f.original_filename,f.normalized_filename as string);
+              const name=value(f.original_filename,"Unnamed file");
               const busy=busyId===id;
               return <tr key={id}>
                 <td><div className="strong">{name}</div><div className="meta">{value(f.file_kind)}</div></td>
-                <td>{value(f.status)}</td>
+                <td><div>{value(f.status)}</div><div className="meta">{value(f.extraction_status)}</div></td>
                 <td>{typeof f.size_bytes==="number"?bytes(f.size_bytes):"—"}</td>
                 <td><div className="actions">
                   <select className="input" aria-label={"Move "+name} value={f.folder_id??""} disabled={busy} onChange={async e=>{try{setBusyId(id);await api.updateFile(id,{folder_id:e.target.value||null});await qc.invalidateQueries({queryKey:["files",projectId]});}catch(err){setError(err instanceof Error?err.message:"File move failed.");}finally{setBusyId("");}}}><option value="">Root</option>{(folders.data??[]).map(folder=><option key={folder.id} value={folder.id}>{folder.name}</option>)}</select>
