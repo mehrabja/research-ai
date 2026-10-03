@@ -301,6 +301,7 @@ export const api={
   manuscriptComments:(r:string,v:string)=>request<{items:unknown[];total:number}>("reports/"+r+"/manuscript-versions/"+v+"/comments"),
   addManuscriptComment:(r:string,v:string,body:object)=>request<unknown>("reports/"+r+"/manuscript-versions/"+v+"/comments",{method:"POST",body:JSON.stringify(body)}),
   resolveComment:(r:string,id:string)=>request<unknown>("reports/"+r+"/comments/"+id+"/resolve",{method:"POST"}),
+  reopenComment:(r:string,id:string)=>request<unknown>("reports/"+r+"/comments/"+id+"/reopen",{method:"POST"}),
   reviewTasks:(r:string,v:string)=>request<{items:unknown[];total:number}>("reports/"+r+"/manuscript-versions/"+v+"/reviews"),
   createReviewTask:(r:string,v:string,body:object)=>request<unknown>("reports/"+r+"/manuscript-versions/"+v+"/reviews",{method:"POST"}),
   updateReviewTask:(r:string,id:string,body:object)=>request<unknown>("reports/"+r+"/reviews/"+id,{method:"PATCH",body:JSON.stringify(body)}),
