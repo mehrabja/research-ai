@@ -159,3 +159,19 @@ def test_lexical_mode_does_not_construct_embedding_provider(client, monkeypatch)
     )
     assert resp.status_code != 500
     assert "must not be built" not in resp.text
+
+
+def test_lexical_only_provider_contract(client):
+    from app.domain.embeddings import EmbeddingProfile
+    from app.services.rag.context import LexicalOnlyEmbeddingProvider
+
+    profile = EmbeddingProfile(
+        provider="openai",
+        model="text-embedding-3-small",
+        dimensions=1536,
+        distance_metric="cosine",
+        profile_version="m9.1",
+    )
+    provider = LexicalOnlyEmbeddingProvider(profile)
+    assert provider.provider_name == "lexical-only"
+    assert provider.dimensions == 1536
