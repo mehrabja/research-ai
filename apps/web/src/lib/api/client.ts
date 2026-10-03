@@ -1,6 +1,45 @@
-import type {Citation,Invitation,LiteratureCluster,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,QA,RAGResponse,Report,Source,SourceCandidate,Usage,User,Workspace} from "./generated";
+import type {Citation,Invitation,LiteratureCluster,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,Source,SourceCandidate,Usage,User,Workspace} from "./generated";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
+
+function isRecord(value:unknown):value is Record<string,unknown>{
+  return typeof value==="object"&&value!==null&&!Array.isArray(value);
+}
+
+function stringValue(value:unknown):string|undefined{
+  return typeof value==="string"&&value.trim()?value:undefined;
+}
+
+export class ApiRequestError extends Error{
+  readonly status:number;
+  readonly code?:string;
+  readonly requestId?:string;
+  readonly retryAfter?:number;
+
+  constructor(message:string,status:number,opts?:{code?:string;requestId?:string;retryAfter?:number}){
+    super(message);
+    this.name="ApiRequestError";
+    this.status=status;
+    this.code=opts?.code;
+    this.requestId=opts?.requestId;
+    this.retryAfter=opts?.retryAfter;
+  }
+}
+
+export class UploadCancelledError extends Error{
+  constructor(){
+    super("Upload cancelled.");
+    this.name="UploadCancelledError";
+  }
+}
+
+export type UploadProgress={loaded:number;total:number;percent:number};
+
+export type UploadOptions={
+  folderId?:string;
+  signal?:AbortSignal;
+  onProgress?:(progress:UploadProgress)=>void;
+};
 
 function csrfCookie():string|undefined{
   if(typeof document==="undefined")return undefined;
@@ -24,10 +63,25 @@ async function rawRequest<T>(path:string,init?:RequestInit):Promise<Response>{
   });
 }
 
-async function parseError(res:Response):Promise<Error>{
-  const body=await res.json().catch(()=>null) as ApiErrorBody|null;
-  const raw=body?.detail??body?.message??body?.error??("Request failed ("+res.status+")");
-  return new Error(typeof raw==="string"?raw:JSON.stringify(raw));
+async function parseError(res:Response):Promise<ApiRequestError>{
+  const body:unknown=await res.json().catch(()=>null);
+  let message="Request failed ("+res.status+").";
+  let code:string|undefined;
+  let requestId=res.headers.get("X-Request-ID")??undefined;
+  let retryAfterRaw=res.headers.get("Retry-After");
+  let retryAfter=retryAfterRaw?Number(retryAfterRaw):undefined;
+
+  if(isRecord(body)){
+    const nested=isRecord(body.error)?body.error:undefined;
+    const candidate=stringValue(nested?.message)??stringValue(body.message)??stringValue(body.detail);
+    if(candidate)message=candidate;
+    code=stringValue(nested?.code)??stringValue(body.code);
+    requestId=stringValue(nested?.request_id)??requestId;
+    const nestedRetry=nested?.retry_after;
+    if(typeof nestedRetry==="number"&&Number.isFinite(nestedRetry))retryAfter=nestedRetry;
+  }
+
+  return new ApiRequestError(message,res.status,{code,requestId,retryAfter:Number.isFinite(retryAfter??NaN)?retryAfter:undefined});
 }
 
 async function request<T>(path:string,init?:RequestInit,retry=true):Promise<T>{
@@ -99,9 +153,83 @@ export const api={
   folders:(p:string)=>request<unknown[]>("projects/"+p+"/file-folders"),
   createFolder:(p:string,b:object)=>request<unknown>("projects/"+p+"/file-folders",{method:"POST",body:JSON.stringify(b)}),
   files:(p:string)=>request<ProjectFileList>("projects/"+p+"/files"),
-  uploadFile:(p:string,file:File,folderId?:string)=>{
-    const form=new FormData();form.append("file",file);
-    return request<unknown>("projects/"+p+"/files"+(folderId?"?folder_id="+encodeURIComponent(folderId):""),{method:"POST",body:form});
+  uploadFile:(p:string,file:File,folderIdOrOptions?:string|UploadOptions,maybeOptions?:UploadOptions):Promise<ProjectFile>=>{
+    const options:UploadOptions=typeof folderIdOrOptions==="string"
+      ? {...(maybeOptions??{}),folderId:folderIdOrOptions}
+      : (folderIdOrOptions??{});
+    const query=options.folderId?"?folder_id="+encodeURIComponent(options.folderId):"";
+    const path="/api/backend/projects/"+encodeURIComponent(p)+"/files"+query;
+
+    return new Promise<ProjectFile>((resolve,reject)=>{
+      if(options.signal?.aborted){reject(new UploadCancelledError());return;}
+
+      const xhr=new XMLHttpRequest();
+      let settled=false;
+
+      const abort=()=>{if(!settled)xhr.abort();};
+      const handleProgress=()=>{
+        const total=xhr.upload.total;
+        if(total>0)options.onProgress?.({loaded:xhr.upload.loaded,total,percent:Math.min(100,(xhr.upload.loaded/total)*100)});
+      };
+      const cleanup=()=>{
+        options.signal?.removeEventListener("abort",abort);
+        xhr.upload.removeEventListener("progress",handleProgress);
+      };
+      const fail=(error:Error)=>{
+        if(settled)return;
+        settled=true;cleanup();reject(error);
+      };
+
+      xhr.open("POST",path,true);
+      xhr.withCredentials=true;
+      xhr.setRequestHeader("Accept","application/json");
+      const csrf=csrfCookie();
+      if(csrf)xhr.setRequestHeader("X-CSRF-Token",csrf);
+      xhr.upload.addEventListener("progress",handleProgress);
+      options.signal?.addEventListener("abort",abort,{once:true});
+
+      xhr.addEventListener("load",async()=>{
+        if(settled)return;
+        const status=xhr.status;
+        const requestId=xhr.getResponseHeader("X-Request-ID")??undefined;
+        if(status>=200&&status<300){
+          try{
+            const parsed:unknown=xhr.responseText?JSON.parse(xhr.responseText):null;
+            if(!isRecord(parsed)||typeof parsed.id!=="string"||typeof parsed.project_id!=="string"||typeof parsed.original_filename!=="string"){
+              fail(new ApiRequestError("Upload completed but the file response did not match the API contract.",status,{requestId}));
+              return;
+            }
+            settled=true;cleanup();
+            options.onProgress?.({loaded:file.size,total:file.size,percent:100});
+            resolve(parsed as ProjectFile);
+          }catch{
+            fail(new ApiRequestError("Upload completed but the server response could not be read.",status,{requestId}));
+          }
+          return;
+        }
+
+        let body:unknown=null;
+        if(xhr.responseText){
+          try{body=JSON.parse(xhr.responseText) as unknown;}catch{body=null;}
+        }
+        const nested=isRecord(body)&&isRecord(body.error)?body.error:undefined;
+        const message=(isRecord(body)?stringValue(nested?.message)??stringValue(body.message)??stringValue(body.detail):undefined)??("Upload failed ("+status+").");
+        const retryAfterHeader=xhr.getResponseHeader("Retry-After");
+        const retryAfter=retryAfterHeader?Number(retryAfterHeader):undefined;
+        fail(new ApiRequestError(message,status,{
+          code:stringValue(nested?.code)??(isRecord(body)?stringValue(body.code):undefined),
+          requestId:stringValue(nested?.request_id)??requestId,
+          retryAfter:Number.isFinite(retryAfter??NaN)?retryAfter:undefined,
+        }));
+      });
+      xhr.addEventListener("error",()=>fail(new ApiRequestError("Network error while uploading. Check your connection and retry.",0)));
+      xhr.addEventListener("timeout",()=>fail(new ApiRequestError("Upload timed out. Retry the upload.",408)));
+      xhr.addEventListener("abort",()=>fail(new UploadCancelledError()));
+
+      const form=new FormData();
+      form.append("file",file);
+      xhr.send(form);
+    });
   },
   downloadFile:(id:string)=>fetch("/api/backend/files/"+id+"/content",{credentials:"same-origin",cache:"no-store"}),
   deleteFile:(id:string)=>request<void>("files/"+id,{method:"DELETE"}),
