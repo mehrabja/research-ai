@@ -5,7 +5,7 @@ import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {useSearchParams} from "next/navigation";
 import {AppShell,useWorkspace} from "./app-shell";
 import {api} from "@/lib/api/client";
-import type {FileFolder,SourceCandidate,TwoFactorEnrollment} from "@/lib/api/generated";
+import type {FileFolder,RAGResponse,SourceCandidate,TwoFactorEnrollment} from "@/lib/api/generated";
 
 type Obj=Record<string,unknown>;
 const META:Record<string,{eyebrow:string;title:string;description:string}>={
@@ -16,6 +16,7 @@ const META:Record<string,{eyebrow:string;title:string;description:string}>={
   literature:{eyebrow:"Synthesis",title:"Literature intelligence",description:"Analysis, clusters, themes, screening and gaps."},
   evidence:{eyebrow:"Evidence",title:"Evidence matrix",description:"Claims, support, conflict, confidence and provenance."},
   knowledge:{eyebrow:"Knowledge",title:"Knowledge graph",description:"Concepts and relationships with JSON/CSV export."},
+  rag:{eyebrow:"Retrieval",title:"Research retrieval",description:"Lexical, semantic and hybrid retrieval over research-ready sources."},
   files:{eyebrow:"Files & intelligence",title:"Project files",description:"Files, folders and intelligence lifecycle."},
   plan:{eyebrow:"Planning",title:"Research plan",description:"Versioned objectives, evidence requirements and dependencies."},
   manuscript:{eyebrow:"Writing",title:"Manuscript",description:"Versioned manuscript content and autosave state."},
@@ -40,7 +41,7 @@ export function WorkspaceScreen({route}:{route:string}){return <Screen route={ro
 
 function Screen({route}:{route:string}){
  switch(route){
- case "dashboard":return <Dashboard/>;case "workspace":return <Workspace/>;case "research":return <Research/>;case "sources":return <Sources/>;case "literature":return <Literature/>;case "evidence":return <Evidence/>;case "notifications":return <Notifications/>;case "jobs":return <Jobs/>;case "team":return <Team/>;case "settings":return <Settings/>;case "usage-billing":return <Billing/>;case "knowledge":return <Knowledge/>;case "files":return <Files/>;case "plan":return <Plan/>;case "manuscript":return <Manuscript/>;case "generate":return <Generate/>;case "humanize":return <Humanize/>;case "translate":return <Translate/>;case "collaboration":return <Collaboration/>;
+ case "dashboard":return <Dashboard/>;case "rag":return <RAG/>;case "workspace":return <Workspace/>;case "research":return <Research/>;case "sources":return <Sources/>;case "literature":return <Literature/>;case "evidence":return <Evidence/>;case "notifications":return <Notifications/>;case "jobs":return <Jobs/>;case "team":return <Team/>;case "settings":return <Settings/>;case "usage-billing":return <Billing/>;case "knowledge":return <Knowledge/>;case "files":return <Files/>;case "plan":return <Plan/>;case "manuscript":return <Manuscript/>;case "generate":return <Generate/>;case "humanize":return <Humanize/>;case "translate":return <Translate/>;case "collaboration":return <Collaboration/>;
  default:return <Generic route={route}/>;
  }
 }
@@ -436,6 +437,36 @@ function Evidence(){
   </>;
 }
 
+function RAG(){
+  const {projectId,reportId,projects,reports}=useCtx();
+  const readiness=useQuery({queryKey:["rag-readiness",projectId],queryFn:()=>api.ragReadiness(projectId!),enabled:Boolean(projectId),refetchInterval:5000});
+  const [query,setQuery]=useState("");
+  const [mode,setMode]=useState<"lexical"|"semantic"|"hybrid">("hybrid");
+  const [maxResults,setMaxResults]=useState(10);
+  const [result,setResult]=useState<RAGResponse|null>(null);
+  const retrieve=useMutation({mutationFn:()=>api.ragRetrieve(projectId!,{query:query.trim(),mode,max_results:maxResults,report_id:reportId??undefined,async:false}),onSuccess:setResult});
+  function setSelectedMode(next:string){if(next==="lexical"||next==="semantic"||next==="hybrid")setMode(next);}
+  return <><Head route="rag"/>
+    <WorkflowContext route="rag" projectId={projectId} reportId={reportId} projects={projects} reports={reports}/>
+    {!projectId&&<Card><State title="No active project" description="Create a project before running retrieval."/></Card>}
+    {projectId&&readiness.isError&&<Card><State title="Retrieval readiness unavailable" description={readiness.error instanceof Error?readiness.error.message:"The retrieval readiness service could not be reached."} error/></Card>}
+    {projectId&&readiness.data&&<Card><div className="row"><div><h3>Retrieval readiness</h3><div className="muted small">Processed sources support lexical retrieval. Semantic and hybrid retrieval require current-profile embeddings.</div></div><span className="tag">{readiness.data.status}</span></div>
+      <div className="grid grid-4" style={{marginTop:12}}><Metric label="Saved" value={readiness.data.saved_sources}/><Metric label="Processed" value={readiness.data.processed_sources}/><Metric label="Embedded" value={readiness.data.embedded_sources}/><Metric label="Semantic-ready" value={readiness.data.semantic_ready_sources}/></div>
+      {readiness.data.reason&&<div className="notice" style={{marginTop:12}}>{readiness.data.reason}</div>}
+    </Card>}
+    {projectId&&<Card style={{marginTop:16}}><div className="grid grid-3">
+      <div className="field"><label>Retrieval query</label><input className="input" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Ask about the research corpus…"/></div>
+      <div className="field"><label>Mode</label><select className="input" value={mode} onChange={e=>setSelectedMode(e.target.value)}><option value="lexical">Lexical</option><option value="semantic">Semantic</option><option value="hybrid">Hybrid</option></select></div>
+      <div className="field"><label>Maximum results</label><input className="input" type="number" min={1} max={200} value={maxResults} onChange={e=>setMaxResults(Math.max(1,Math.min(200,Number(e.target.value)||1)))}/></div>
+    </div>
+    <button className="btn primary" style={{marginTop:12}} disabled={!query.trim()||retrieve.isPending} onClick={()=>retrieve.mutate()}>{retrieve.isPending?"Retrieving…":"Run retrieval"}</button>
+    {retrieve.isError&&<div className="notice error" style={{marginTop:12}}>{retrieve.error instanceof Error?retrieve.error.message:"Retrieval failed. Check the readiness state and retry."}</div>}
+    {result?.status==="queued"&&<div className="notice" style={{marginTop:12}}>Retrieval queued. Job <span className="mono">{result.job_id}</span> is processing.</div>}
+    {result&&result.status!=="queued"&&result.results.length===0&&<State title="No retrieval results" description="No source-backed chunks matched this query and mode. Process more sources or switch retrieval mode."/>}
+    {result&&result.results.length>0&&<div className="table-wrap" style={{marginTop:12}}><table className="table"><thead><tr><th>Rank</th><th>Source</th><th>Score</th><th>Stage</th><th>Reason</th></tr></thead><tbody>{result.results.map(item=><tr key={item.rank}><td>{item.rank}</td><td className="mono">{item.source_id??"Unavailable"}</td><td>{item.final_score.toFixed(3)}</td><td>{item.retrieval_stage}</td><td style={{overflowWrap:"anywhere"}}>{item.retrieval_reason.join(", ")||"Ranked by retrieval score."}</td></tr>)}</tbody></table></div>}
+    </Card>}
+  </>;
+}
 function Knowledge(){
   const {projectId}=useCtx();
   const summary=useQuery({queryKey:["kg-summary",projectId],queryFn:()=>api.knowledgeGraphSummary(projectId!),enabled:Boolean(projectId)});

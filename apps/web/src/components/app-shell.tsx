@@ -11,6 +11,7 @@ const nav=[
   ["/workspace","◈","Workspace"],
   ["/projects","▦","Projects"],
   ["/research","⌕","Research discovery"],
+  ["/rag","⌁","RAG retrieval"],
   ["/sources","◎","Sources"],
   ["/literature","▤","Literature"],
   ["/evidence","◇","Evidence"],

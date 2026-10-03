@@ -173,6 +173,8 @@ export const api={
   knowledgeGraphNodes:(p:string,search="",nodeType="",limit=100,offset=0)=>request<KnowledgeGraphNodeList>("projects/"+p+"/knowledge-graph/nodes?limit="+limit+"&offset="+offset+(search?"&search="+encodeURIComponent(search):"")+(nodeType?"&node_type="+encodeURIComponent(nodeType):"")),
   knowledgeGraphNeighbors:(p:string,nodeId:string)=>request<KnowledgeGraphNeighbor[]>("projects/"+p+"/knowledge-graph/nodes/"+nodeId+"/neighbors?limit=50"),
   knowledgeGraphExport:(p:string,format:"json"|"csv")=>request<unknown>("projects/"+p+"/knowledge-graph/export?format="+format),
+  ragReadiness:(p:string)=>request<import("./generated").RAGReadiness>("projects/"+p+"/rag/readiness"),
+  ragRetrieve:(p:string,b:object)=>request<RAGResponse>("projects/"+p+"/rag/retrieve",{method:"POST",body:JSON.stringify(b)}),
 
   evidenceMatrix:(r:string)=>request<EvidenceMatrixItem[]>("reports/"+r+"/evidence-matrix"),
   createEvidenceClaim:(r:string,b:object)=>request<EvidenceClaim>("reports/"+r+"/evidence/claims",{method:"POST",body:JSON.stringify(b)}),
