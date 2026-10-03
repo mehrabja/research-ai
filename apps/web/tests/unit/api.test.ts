@@ -12,6 +12,20 @@ describe("source intelligence transport",()=>{
   });
 });
 
+describe("manuscript prose transport",()=>{
+  it("uses the persisted prose, generate, and validation contracts",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({run:{id:"run1",project_id:"p1",report_id:"r1",manuscript_id:"m1",base_manuscript_version_id:"v1",output_manuscript_version_id:null,research_plan_id:null,section_research_run_id:null,technical_intelligence_run_id:null,citation_run_id:null,context_hash:"h",prose_version:"m28.5.1",prompt_version:"p1",generation_mode:"deterministic",provider:null,model:null,status:"completed",section_count:1,paragraph_count:1,sentence_count:1,word_count:5,warnings:null,errors:null,error_message:null,duration_ms:10,started_at:null,completed_at:null,created_at:"2026-10-04T00:00:00Z"},sections:[{id:"s1",run_id:"run1",project_id:"p1",report_id:"r1",manuscript_version_id:"v1",manuscript_section_id:"ms1",section_key:"introduction",section_type:"introduction",display_order:0,title:"Introduction",status:"completed",text:"Draft text.",char_start:0,char_end:11,word_count:2,paragraph_count:1,sentence_count:1,section_context_hash:"h",provenance:null,warnings:null,error_message:null,created_at:"2026-10-04T00:00:00Z"}]}),{status:200}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({status:"completed",job_id:null,run_id:"run1",context_hash:"h",section_count:1,word_count:2}),{status:200}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({validation_status:"valid",validation_errors:[],warnings:[]}),{status:200}));
+    expect((await api.manuscriptProseCurrent("r1")).sections[0].section_key).toBe("introduction");
+    expect((await api.manuscriptProseGenerate("r1",{base_manuscript_version_id:"v1",async:false,force:true})).status).toBe("completed");
+    expect((await api.manuscriptProseValidate("r1")).validation_status).toBe("valid");
+    expect(spy).toHaveBeenCalledTimes(3);
+    spy.mockRestore();
+  });
+});
+
 describe("upload transport",()=>{
   it("uses typed subscription and invoice endpoints",async()=>{
     const spy=vi.spyOn(globalThis,"fetch").mockResolvedValue(
