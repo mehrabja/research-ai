@@ -108,3 +108,14 @@ class MemoryListResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     items: list[MemoryRead] = Field(default_factory=list)
     total: int = 0
+
+class RAGReadinessResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    project_id: uuid.UUID
+    status: str
+    saved_sources: int
+    processed_sources: int
+    embedded_sources: int
+    lexical_ready_sources: int
+    semantic_ready_sources: int
+    reason: str | None = None

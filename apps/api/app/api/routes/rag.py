@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, Query, Response
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -13,7 +13,10 @@ from app.core.exceptions import (
     RetrievalAdvancedConfigurationInvalid,
     RetrievalAdvancedNotFound,
 )
+from app.db.models.project import Project
+from app.db.models.report import Report
 from app.db.models.research_memory import ResearchMemory
+from app.db.models.source import Chunk, Source
 from app.db.models.retrieval import RetrievalResult, RetrievalRun
 from app.db.models.user import User
 from app.db.session import get_db
@@ -25,6 +28,7 @@ from app.schemas.retrieval_advanced import (
     RetrievedChunkRead,
     RetrieveRequest,
     RetrieveResponse,
+    RAGReadinessResponse,
 )
 from app.services.embedding_profile import (
     build_embedding_provider,
@@ -74,6 +78,82 @@ def _result_row_to_read(r: RetrievalResult) -> RetrievedChunkRead:
         retrieval_reason=list(r.retrieval_reason or []),
         graph_distance=r.graph_distance,
         memory_match=r.memory_match,
+    )
+
+
+@router.get(
+    "/{project_id}/rag/readiness",
+    response_model=RAGReadinessResponse,
+)
+def readiness(
+    project_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> RAGReadinessResponse:
+    get_project(db, user_id=current_user.id, project_id=project_id)
+    settings = get_settings()
+    if not settings.rag_enabled:
+        return RAGReadinessResponse(
+            project_id=project_id,
+            status="disabled",
+            saved_sources=0,
+            processed_sources=0,
+            embedded_sources=0,
+            lexical_ready_sources=0,
+            semantic_ready_sources=0,
+            reason="RAG is disabled by configuration.",
+        )
+
+    profile = get_current_embedding_profile()
+    profile_id = build_embedding_profile_id(profile)
+    report_ids = select(Report.id).where(Report.project_id == project_id)
+
+    saved_sources = int(db.execute(
+        select(func.count(func.distinct(Source.id)))
+        .where(Source.report_id.in_(report_ids))
+    ).scalar_one())
+
+    processed_sources = int(db.execute(
+        select(func.count(func.distinct(Source.id)))
+        .join(Chunk, Chunk.source_id == Source.id)
+        .where(Source.report_id.in_(report_ids))
+    ).scalar_one())
+
+    embedded_sources = int(db.execute(
+        select(func.count(func.distinct(Source.id)))
+        .join(Chunk, Chunk.source_id == Source.id)
+        .where(
+            Source.report_id.in_(report_ids),
+            Chunk.embedding.is_not(None),
+            Chunk.embedding_status == "completed",
+            Chunk.embedding_model_version == profile_id,
+            Chunk.embedding_provider == profile.provider,
+            Chunk.embedding_dimensions == profile.dimensions,
+        )
+    ).scalar_one())
+
+    if embedded_sources > 0:
+        status = "ready"
+        reason = None
+    elif processed_sources > 0:
+        status = "partial"
+        reason = "Lexical retrieval is available. Semantic and hybrid retrieval require current-profile embeddings."
+    elif saved_sources > 0:
+        status = "unavailable"
+        reason = "No research-ready sources. Process a saved source first."
+    else:
+        status = "unavailable"
+        reason = "No saved sources. Save or upload a research source first."
+
+    return RAGReadinessResponse(
+        project_id=project_id,
+        status=status,
+        saved_sources=saved_sources,
+        processed_sources=processed_sources,
+        embedded_sources=embedded_sources,
+        lexical_ready_sources=processed_sources,
+        semantic_ready_sources=embedded_sources,
+        reason=reason,
     )
 
 

@@ -92,6 +92,18 @@ def _mk_project(uid):
         return p.id
 
 
+def test_readiness_reports_missing_sources(client):
+    c, uid = client
+    pid = _mk_project(uid)
+    resp = c.get(f"/api/v1/projects/{pid}/rag/readiness")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "unavailable"
+    assert body["saved_sources"] == 0
+    assert body["processed_sources"] == 0
+    assert body["semantic_ready_sources"] == 0
+
+
 def test_memory_endpoint_empty(client):
     c, uid = client
     pid = _mk_project(uid)
