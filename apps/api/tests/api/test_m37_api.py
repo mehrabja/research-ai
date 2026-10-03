@@ -184,3 +184,17 @@ def test_plan_and_subscription_endpoints(cleanup_users):
     r = client.get(f"/api/v1/workspaces/{wid}/subscription", headers=_auth(token))
     assert r.status_code == 200
     assert r.json()["status"] == "active"
+
+
+def test_member_list_includes_email(cleanup_users):
+    uid, token = _reg(cleanup_users)
+    r = client.post(
+        "/api/v1/workspaces",
+        headers=_auth(token),
+        json={"name": "Members"},
+    )
+    wid = r.json()["id"]
+    r = client.get(f"/api/v1/workspaces/{wid}/members", headers=_auth(token))
+    assert r.status_code == 200
+    assert r.json()["items"][0]["email"]
+    assert r.json()["items"][0]["user_id"] == str(uid)

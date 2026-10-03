@@ -146,7 +146,9 @@ def list_members(
     )
     rows = list(
         db.execute(
-            select(WorkspaceMembership).where(
+            select(WorkspaceMembership, User.email)
+            .join(User, User.id == WorkspaceMembership.user_id)
+            .where(
                 WorkspaceMembership.workspace_id == workspace_id,
                 WorkspaceMembership.status == "active",
             )
@@ -154,10 +156,10 @@ def list_members(
     )
     items = [
         MemberRead(
-            id=m.id, user_id=m.user_id, role=m.role,
+            id=m.id, user_id=m.user_id, email=email, role=m.role,
             status=m.status, created_at=m.created_at,
         )
-        for m in rows
+        for m, email in rows
     ]
     return MemberListResponse(items=items, total=len(items))
 
@@ -182,8 +184,9 @@ def change_role(
     )
     db.commit()
     db.refresh(m)
+    email = db.execute(select(User.email).where(User.id == m.user_id)).scalar_one()
     return MemberRead(
-        id=m.id, user_id=m.user_id, role=m.role,
+        id=m.id, user_id=m.user_id, email=email, role=m.role,
         status=m.status, created_at=m.created_at,
     )
 

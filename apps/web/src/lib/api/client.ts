@@ -1,4 +1,4 @@
-import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
+import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,Job,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
 
@@ -282,11 +282,11 @@ export const api={
   humanize:(r:string,b:object)=>request<unknown>("reports/"+r+"/humanization/enqueue",{method:"POST",body:JSON.stringify(b)}),
   translate:(r:string,b:object)=>request<unknown>("reports/"+r+"/translation/enqueue",{method:"POST",body:JSON.stringify(b)}),
 
-  jobs:(w?:string)=>request<unknown[]>("jobs"+(w?"?workspace_id="+encodeURIComponent(w):"")),
-  enqueueJob:(jobType:string,payload:object,reportId?:string)=>request<unknown>("jobs",{method:"POST",body:JSON.stringify({job_type:jobType,payload,report_id:reportId})}),
+  jobs:(w?:string)=>request<Job[]>("jobs"+(w?"?workspace_id="+encodeURIComponent(w):"")),
+  enqueueJob:(jobType:string,payload:object,reportId?:string)=>request<Job>("jobs",{method:"POST",body:JSON.stringify({job_type:jobType,payload,report_id:reportId})}),
 
-  retryJob:(id:string)=>request<unknown>("jobs/"+id+"/retry",{method:"POST"}),
-  cancelJob:(id:string)=>request<void>("jobs/"+id+"/cancel",{method:"POST"}),
+  retryJob:(id:string)=>request<Job>("jobs/"+id+"/retry",{method:"POST"}),
+  cancelJob:(id:string)=>request<{job:Job}>("jobs/"+id+"/cancel",{method:"POST"}),
 
   sessions:()=>request<unknown[]>("auth/sessions"),
   revokeSession:(id:string)=>request<void>("auth/sessions/"+id,{method:"DELETE"}),

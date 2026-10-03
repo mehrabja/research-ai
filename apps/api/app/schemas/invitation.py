@@ -38,6 +38,7 @@ class InvitationListResponse(BaseModel):
 class MemberRead(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
+    email: str
     role: str
     status: str
     created_at: datetime
