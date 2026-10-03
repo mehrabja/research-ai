@@ -12,6 +12,10 @@ class CheckoutRequest(BaseModel):
     plan_code: str = Field(..., min_length=1, max_length=64)
 
 
+class ChangePlanRequest(BaseModel):
+    plan_code: str = Field(..., min_length=1, max_length=64)
+
+
 class CheckoutResponse(BaseModel):
     provider: str
     checkout_session_id: str

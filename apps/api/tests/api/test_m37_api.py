@@ -198,3 +198,68 @@ def test_member_list_includes_email(cleanup_users):
     assert r.status_code == 200
     assert r.json()["items"][0]["email"]
     assert r.json()["items"][0]["user_id"] == str(uid)
+
+
+def test_billing_owner_can_change_cancel_and_resume(cleanup_users):
+    uid, token = _reg(cleanup_users)
+    r = client.post(
+        "/api/v1/workspaces",
+        headers=_auth(token),
+        json={"name": "Billing Mutations"},
+    )
+    wid = r.json()["id"]
+
+    changed = client.post(
+        f"/api/v1/workspaces/{wid}/billing/change-plan",
+        headers=_auth(token),
+        json={"plan_code": "pro"},
+    )
+    assert changed.status_code == 200, changed.text
+    assert changed.json()["plan_code"] == "pro"
+
+    cancelled = client.post(
+        f"/api/v1/workspaces/{wid}/billing/cancel",
+        headers=_auth(token),
+    )
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json()["cancel_at_period_end"] is True
+
+    resumed = client.post(
+        f"/api/v1/workspaces/{wid}/billing/resume",
+        headers=_auth(token),
+    )
+    assert resumed.status_code == 200, resumed.text
+    assert resumed.json()["cancel_at_period_end"] is False
+
+
+def test_billing_mutations_require_owner(cleanup_users):
+    owner_id, owner_token = _reg(cleanup_users)
+    member_id, member_token = _reg(cleanup_users)
+    r = client.post(
+        "/api/v1/workspaces",
+        headers=_auth(owner_token),
+        json={"name": "Billing Roles"},
+    )
+    wid = r.json()["id"]
+    with SessionLocal() as db:
+        from app.services import memberships as memberships_service
+        memberships_service.add_or_reactivate_member(
+            db,
+            workspace_id=uuid.UUID(wid),
+            user_id=member_id,
+            role="member",
+        )
+        db.commit()
+
+    r = client.post(
+        f"/api/v1/workspaces/{wid}/billing/cancel",
+        headers=_auth(member_token),
+    )
+    assert r.status_code == 403
+
+    r = client.post(
+        f"/api/v1/workspaces/{wid}/billing/change-plan",
+        headers=_auth(member_token),
+        json={"plan_code": "pro"},
+    )
+    assert r.status_code == 403

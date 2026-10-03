@@ -22,6 +22,7 @@ from app.db.models.subscription import Subscription
 from app.db.session import get_db
 from app.db.models.user import User
 from app.schemas.billing import (
+    ChangePlanRequest,
     CheckoutRequest,
     CheckoutResponse,
     InvoiceListResponse,
@@ -65,6 +66,109 @@ def create_checkout_route(
     if not result["checkout_session_id"] or not result["checkout_url"]:
         raise AppError("billing provider returned an incomplete checkout session")
     return CheckoutResponse(**result)
+
+
+
+
+@router.post(
+    "/workspaces/{workspace_id}/billing/change-plan",
+    response_model=SubscriptionRead,
+)
+def change_plan_route(
+    workspace_id: uuid.UUID,
+    body: ChangePlanRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SubscriptionRead:
+    plan = db.execute(
+        select(Plan).where(Plan.code == body.plan_code, Plan.status == "active")
+    ).scalar_one_or_none()
+    if plan is None:
+        raise billing_service.PlanNotFound()
+    sub = billing_service.change_plan(
+        db,
+        workspace_id=workspace_id,
+        actor_user_id=current_user.id,
+        new_plan_id=plan.id,
+    )
+    db.commit()
+    db.refresh(sub)
+    return SubscriptionRead(
+        id=sub.id,
+        workspace_id=sub.workspace_id,
+        plan_id=sub.plan_id,
+        plan_code=plan.code,
+        status=sub.status,
+        current_period_start=sub.current_period_start,
+        current_period_end=sub.current_period_end,
+        provider=sub.provider,
+        cancel_at_period_end=sub.cancel_at_period_end,
+        created_at=sub.created_at,
+    )
+
+
+@router.post(
+    "/workspaces/{workspace_id}/billing/cancel",
+    response_model=SubscriptionRead,
+)
+def cancel_subscription_route(
+    workspace_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SubscriptionRead:
+    sub = billing_service.cancel_subscription(
+        db,
+        workspace_id=workspace_id,
+        actor_user_id=current_user.id,
+        provider=None,
+    )
+    db.commit()
+    db.refresh(sub)
+    plan = db.get(Plan, sub.plan_id)
+    return SubscriptionRead(
+        id=sub.id,
+        workspace_id=sub.workspace_id,
+        plan_id=sub.plan_id,
+        plan_code=plan.code if plan else "",
+        status=sub.status,
+        current_period_start=sub.current_period_start,
+        current_period_end=sub.current_period_end,
+        provider=sub.provider,
+        cancel_at_period_end=sub.cancel_at_period_end,
+        created_at=sub.created_at,
+    )
+
+
+@router.post(
+    "/workspaces/{workspace_id}/billing/resume",
+    response_model=SubscriptionRead,
+)
+def resume_subscription_route(
+    workspace_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SubscriptionRead:
+    sub = billing_service.resume_subscription(
+        db,
+        workspace_id=workspace_id,
+        actor_user_id=current_user.id,
+        provider=None,
+    )
+    db.commit()
+    db.refresh(sub)
+    plan = db.get(Plan, sub.plan_id)
+    return SubscriptionRead(
+        id=sub.id,
+        workspace_id=sub.workspace_id,
+        plan_id=sub.plan_id,
+        plan_code=plan.code if plan else "",
+        status=sub.status,
+        current_period_start=sub.current_period_start,
+        current_period_end=sub.current_period_end,
+        provider=sub.provider,
+        cancel_at_period_end=sub.cancel_at_period_end,
+        created_at=sub.created_at,
+    )
 
 
 @router.get(

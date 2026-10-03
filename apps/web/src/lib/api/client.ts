@@ -317,6 +317,9 @@ export const api={
   planSubscription:(w:string)=>request<Plan>("workspaces/"+w+"/plan"),
   billingInvoices:(w:string)=>request<{items:BillingInvoice[];total:number}>("workspaces/"+w+"/billing/invoices"),
   billingCheckout:(w:string,planCode:string)=>request<{provider:string;checkout_session_id:string;checkout_url:string}>("workspaces/"+w+"/billing/checkout",{method:"POST",body:JSON.stringify({plan_code:planCode})}),
+  billingChangePlan:(w:string,planCode:string)=>request<Subscription>("workspaces/"+w+"/billing/change-plan",{method:"POST",body:JSON.stringify({plan_code:planCode})}),
+  billingCancel:(w:string)=>request<Subscription>("workspaces/"+w+"/billing/cancel",{method:"POST"}),
+  billingResume:(w:string)=>request<Subscription>("workspaces/"+w+"/billing/resume",{method:"POST"}),
 
   citations:(r:string)=>request<Citation>("reports/"+r+"/citations/current"),
   qa:(r:string)=>request<QA>("reports/"+r+"/academic-qa/current"),
