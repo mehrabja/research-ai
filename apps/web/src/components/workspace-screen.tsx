@@ -5,7 +5,7 @@ import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {useSearchParams} from "next/navigation";
 import {AppShell,useWorkspace} from "./app-shell";
 import {api} from "@/lib/api/client";
-import type {FileFolder,SourceCandidate} from "@/lib/api/generated";
+import type {FileFolder,SourceCandidate,TwoFactorEnrollment} from "@/lib/api/generated";
 
 type Obj=Record<string,unknown>;
 const META:Record<string,{eyebrow:string;title:string;description:string}>={
@@ -279,9 +279,6 @@ function Settings(){
     </div>
   </>;
 }
-function Settings(){const sessions=useQuery({queryKey:["sessions"],queryFn:api.sessions});const tokens=useQuery({queryKey:["tokens"],queryFn:api.apiTokens});const tf=useQuery({queryKey:["2fa"],queryFn:api.twoFactor});return <><Head route="settings"/><div className="grid grid-2"><Card id="security"><h3>Two-factor</h3><div className="tag">{Boolean(row(tf.data).enabled)?"Enabled":"Not enabled"}</div></Card><Card><h3>Sessions</h3><Table data={rows(sessions.data)}/></Card><Card><h3>API tokens</h3><Table data={rows(tokens.data)}/></Card><Card id="notifications"><h3>Notification settings</h3><p className="muted small">Notification preferences and unread state are served by the backend notification API.</p></Card></div></>}
-
-
 function Workspace(){
   const {ws,projects}=useCtx();
   const [name,setName]=useState("");

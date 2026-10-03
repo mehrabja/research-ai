@@ -48,13 +48,20 @@ function isProjectFile(value:unknown):value is ProjectFile{
     && (typeof value.folder_id==="string"||value.folder_id===null)
     && typeof value.original_filename==="string"
     && typeof value.normalized_filename==="string"
+    && (typeof value.extension==="string"||value.extension===null)
+    && typeof value.storage_provider==="string"
+    && typeof value.sha256==="string"
     && (typeof value.client_mime_type==="string"||value.client_mime_type===null)
     && (typeof value.detected_mime_type==="string"||value.detected_mime_type===null)
     && typeof value.size_bytes==="number"
     && typeof value.status==="string"
+    && typeof value.extraction_status==="string"
+    && (typeof value.extraction_error==="string"||value.extraction_error===null)
+    && (typeof value.extraction_pipeline_version==="string"||value.extraction_pipeline_version===null)
     && typeof value.file_kind==="string"
     && typeof value.created_at==="string"
-    && typeof value.updated_at==="string";
+    && typeof value.updated_at==="string"
+    && (typeof value.deleted_at==="string"||value.deleted_at===null);
 }
 
 function csrfCookie():string|undefined{
