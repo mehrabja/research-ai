@@ -133,6 +133,47 @@ def test_usage_endpoint(cleanup_users):
     assert isinstance(body["items"], list)
 
 
+def test_usage_includes_active_file_storage(cleanup_users):
+    _uid, token = _reg(cleanup_users)
+    r = client.post("/api/v1/workspaces", headers=_auth(token), json={"name": "Storage"})
+    wid = r.json()["id"]
+    project = client.post(
+        "/api/v1/projects",
+        headers=_auth(token),
+        json={"workspace_id": wid, "name": "P"},
+    )
+    assert project.status_code == 201, project.text
+    pid = project.json()["id"]
+    upload = client.post(
+        f"/api/v1/projects/{pid}/files",
+        headers=_auth(token),
+        files={"file": ("paper.txt", b"12345", "text/plain")},
+    )
+    assert upload.status_code == 201, upload.text
+
+    usage = client.get(f"/api/v1/workspaces/{wid}/usage", headers=_auth(token))
+    assert usage.status_code == 200
+    storage = next(
+        item for item in usage.json()["items"] if item["metric"] == "storage.bytes"
+    )
+    assert storage["current"] == 5
+    assert storage["unit"] == "bytes"
+
+    client.delete(
+        f"/api/v1/files/{upload.json()['id']}",
+        headers=_auth(token),
+    )
+    usage_after_delete = client.get(
+        f"/api/v1/workspaces/{wid}/usage", headers=_auth(token)
+    )
+    storage_after_delete = next(
+        item
+        for item in usage_after_delete.json()["items"]
+        if item["metric"] == "storage.bytes"
+    )
+    assert storage_after_delete["current"] == 0
+
+
 def test_plan_and_subscription_endpoints(cleanup_users):
     _uid, token = _reg(cleanup_users)
     r = client.post("/api/v1/workspaces", headers=_auth(token), json={"name": "P"})

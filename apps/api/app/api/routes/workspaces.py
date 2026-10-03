@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -13,6 +13,8 @@ from app.core.exceptions import InvitationNotFound
 from app.db.models.invitation import WorkspaceInvitation
 from app.db.models.membership import WorkspaceMembership
 from app.db.models.plan import Plan, PlanEntitlement
+from app.db.models.project import Project
+from app.db.models.project_file import ProjectFile
 from app.db.models.user import User
 from app.db.session import get_db
 from app.domain.invitation import compute_state
@@ -355,8 +357,16 @@ def _current_usage_for_feature(
             db, workspace_id=workspace_id
         )
     if feature == FEATURE_STORAGE_BYTES:
-        # Storage aggregation is not wired in M37.
-        return 0
+        total = db.execute(
+            select(func.coalesce(func.sum(ProjectFile.size_bytes), 0))
+            .select_from(ProjectFile)
+            .join(Project, Project.id == ProjectFile.project_id)
+            .where(
+                Project.workspace_id == workspace_id,
+                ProjectFile.deleted_at.is_(None),
+            )
+        ).scalar_one()
+        return int(total or 0)
     if feature == FEATURE_REPORTS_MONTHLY:
         return usage_service.get_period_usage(
             db,
