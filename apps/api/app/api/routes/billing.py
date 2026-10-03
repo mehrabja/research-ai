@@ -117,11 +117,18 @@ def cancel_subscription_route(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SubscriptionRead:
+    live = billing_service.require_live_subscription(db, workspace_id=workspace_id)
+    provider = None
+    if live.provider == "stripe" and live.provider_subscription_id:
+        configured = build_billing_provider()
+        if configured.provider_name != live.provider:
+            raise AppError("billing provider configuration does not match the subscription")
+        provider = configured
     sub = billing_service.cancel_subscription(
         db,
         workspace_id=workspace_id,
         actor_user_id=current_user.id,
-        provider=None,
+        provider=provider,
     )
     db.commit()
     db.refresh(sub)
@@ -149,11 +156,18 @@ def resume_subscription_route(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SubscriptionRead:
+    live = billing_service.require_live_subscription(db, workspace_id=workspace_id)
+    provider = None
+    if live.provider == "stripe" and live.provider_subscription_id:
+        configured = build_billing_provider()
+        if configured.provider_name != live.provider:
+            raise AppError("billing provider configuration does not match the subscription")
+        provider = configured
     sub = billing_service.resume_subscription(
         db,
         workspace_id=workspace_id,
         actor_user_id=current_user.id,
-        provider=None,
+        provider=provider,
     )
     db.commit()
     db.refresh(sub)
