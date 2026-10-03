@@ -117,6 +117,17 @@ function Research(){
     onSettled:(_,__,item)=>setSavingIds(ids=>ids.filter(id=>id!==item.external_source_id)),
   });
   const [error,setError]=useState("");
+  const bulkSave=useMutation({
+    mutationFn:async(items:SourceCandidate[])=>{
+      const pending=items.filter(item=>!savedIds.includes(item.external_source_id));
+      return Promise.all(pending.map(item=>api.createSource(reportId!,item)));
+    },
+    onSuccess:async results=>{
+      setSavedIds(ids=>Array.from(new Set([...ids,...results.map(item=>item.external_source_id)])));
+      await qc.invalidateQueries({queryKey:["sources",reportId]});
+    },
+    onError:e=>setError(e instanceof Error?e.message:"Bulk source save failed. Retry the operation."),
+  });
   useEffect(()=>{
     const ids=(sources.data?.items??[]).map(item=>item.external_source_id).filter((id):id is string=>Boolean(id));
     if(ids.length)setSavedIds(ids);
@@ -145,7 +156,7 @@ function Research(){
       <Card><label className="checkbox"><input type="checkbox" checked={openAccess} onChange={e=>setOpenAccess(e.target.checked)}/><span><b>Open access only</b><br/><span className="muted tiny">Additional provider pages are fetched when needed to fill the requested count.</span></span></label></Card>
     </div>
     <Card style={{marginTop:16}}>
-      <div className="row"><div><h3>Discovery results</h3><div className="muted small">{reportId?"Semantic Scholar-backed source discovery for the active report.":"Create a project and report first to search papers."}</div></div><span className="tag">{search.data?.candidates?.length??global.data?.total??0} results</span></div>
+      <div className="row"><div><h3>Discovery results</h3><div className="muted small">{reportId?"Semantic Scholar-backed source discovery for the active report.":"Create a project and report first to search papers."}</div></div><div className="actions"><span className="tag">{search.data?.candidates?.length??global.data?.total??0} results</span>{reportId&&submittedQuery&&(search.data?.candidates?.some(item=>!savedIds.includes(item.external_source_id))??false)&&<button className="btn" disabled={bulkSave.isPending} onClick={()=>bulkSave.mutate(search.data?.candidates??[])}>{bulkSave.isPending?"Saving…":"Save all results"}</button>}</div></div>
       {!reportId&&<div className="notice" style={{marginTop:12}}>No active report. <Link href="/projects" style={{color:"var(--primary)",fontWeight:700}}>Create a project</Link>, then create a report inside it.</div>}
       {reportId&&!submittedQuery&&<State title="Ready to search" description="Enter a title, topic, DOI or author and press Search papers."/>}
       {reportId&&submittedQuery&&search.isFetching&&<State title="Searching papers" description={"Searching for “"+submittedQuery+"” and collecting up to "+count+" results."}/>}
