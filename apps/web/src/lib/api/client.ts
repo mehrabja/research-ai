@@ -1,4 +1,4 @@
-import type {Citation,Invitation,LiteratureCluster,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,Source,SourceCandidate,Usage,User,Workspace} from "./generated";
+import type {Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,Source,SourceCandidate,Usage,User,Workspace} from "./generated";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
 
@@ -160,14 +160,20 @@ export const api={
   literatureClusters:(p:string)=>request<{items:LiteratureCluster[];total:number}>("projects/"+p+"/literature/clusters"),
   literatureGaps:(p:string)=>request<{items:unknown[];total:number}>("projects/"+p+"/literature/gaps"),
   literatureRuns:(p:string)=>request<{items:unknown[];total:number}>("projects/"+p+"/literature/runs"),
-  knowledgeGraph:(p:string)=>request<unknown>("projects/"+p+"/knowledge-graph"),
+  knowledgeGraph:(p:string)=>request<{id:string;project_id:string;version:number;status:string;graph_version:string;context_hash:string;source_literature_run_id:string|null;research_plan_id:string|null;node_count:number;edge_count:number;graph_meta:Record<string,unknown>|null;created_by:string|null;created_at:string;updated_at:string}>("projects/"+p+"/knowledge-graph"),
+  knowledgeGraphSummary:(p:string)=>request<KnowledgeGraphSummary>("projects/"+p+"/knowledge-graph/summary"),
+  knowledgeGraphNodes:(p:string,search="",nodeType="",limit=100,offset=0)=>request<KnowledgeGraphNodeList>("projects/"+p+"/knowledge-graph/nodes?limit="+limit+"&offset="+offset+(search?"&search="+encodeURIComponent(search):"")+(nodeType?"&node_type="+encodeURIComponent(nodeType):"")),
+  knowledgeGraphNeighbors:(p:string,nodeId:string)=>request<KnowledgeGraphNeighbor[]>("projects/"+p+"/knowledge-graph/nodes/"+nodeId+"/neighbors?limit=50"),
   knowledgeGraphExport:(p:string,format:"json"|"csv")=>request<unknown>("projects/"+p+"/knowledge-graph/export?format="+format),
 
-  evidenceMatrix:(r:string)=>request<unknown[]>("reports/"+r+"/evidence-matrix"),
-  createEvidenceClaim:(r:string,b:object)=>request<unknown>("reports/"+r+"/evidence/claims",{method:"POST",body:JSON.stringify(b)}),
+  evidenceMatrix:(r:string)=>request<EvidenceMatrixItem[]>("reports/"+r+"/evidence-matrix"),
+  createEvidenceClaim:(r:string,b:object)=>request<EvidenceClaim>("reports/"+r+"/evidence/claims",{method:"POST",body:JSON.stringify(b)}),
+  linkEvidence:(r:string,claimId:string,b:object)=>request<EvidenceLink>("reports/"+r+"/evidence/claims/"+claimId+"/links",{method:"POST",body:JSON.stringify(b)}),
 
-  folders:(p:string)=>request<unknown[]>("projects/"+p+"/file-folders"),
-  createFolder:(p:string,b:object)=>request<unknown>("projects/"+p+"/file-folders",{method:"POST",body:JSON.stringify(b)}),
+  folders:(p:string)=>request<FileFolder[]>("projects/"+p+"/file-folders"),
+  createFolder:(p:string,b:object)=>request<FileFolder>("projects/"+p+"/file-folders",{method:"POST",body:JSON.stringify(b)}),
+  updateFolder:(p:string,id:string,b:object)=>request<FileFolder>("projects/"+p+"/file-folders/"+id,{method:"PATCH",body:JSON.stringify(b)}),
+  deleteFolder:(p:string,id:string)=>request<void>("projects/"+p+"/file-folders/"+id,{method:"DELETE"}),
   files:(p:string)=>request<ProjectFileList>("projects/"+p+"/files"),
   uploadFile:(p:string,file:File,folderIdOrOptions?:string|UploadOptions,maybeOptions?:UploadOptions):Promise<ProjectFile>=>{
     const options:UploadOptions=typeof folderIdOrOptions==="string"
@@ -247,6 +253,7 @@ export const api={
     });
   },
   downloadFile:(id:string)=>fetch("/api/backend/files/"+id+"/content",{credentials:"same-origin",cache:"no-store"}),
+  updateFile:(id:string,b:object)=>request<ProjectFile>("files/"+id,{method:"PATCH",body:JSON.stringify(b)}),
   deleteFile:(id:string)=>request<void>("files/"+id,{method:"DELETE"}),
 
   plan:(p:string)=>request<unknown>("projects/"+p+"/research-plan"),

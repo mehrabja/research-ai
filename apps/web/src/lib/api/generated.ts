@@ -12,3 +12,12 @@ export type ProjectFile={id:UUID;project_id:UUID;folder_id:UUID|null;original_fi
 export type ProjectFileList={items:ProjectFile[];total:number;limit:number;offset:number};
 
 export type LiteratureCluster={id:UUID;project_id:UUID;name:string;summary:string|null;cluster_method:string;cluster_version:string;source_count:number;themes:string[]|null;keywords:string[]|null;disagreements:Array<Record<string,unknown>>|null;limitations:string[]|null;representative_source_ids:string[]|null;evidence_strength:number|null;status:string;created_at:DateTime;updated_at:DateTime};
+
+export type FileFolder={id:UUID;project_id:UUID;parent_id:UUID|null;name:string;created_by:UUID;created_at:DateTime};
+export type EvidenceClaim={id:UUID;citation_run_id:UUID;manuscript_version_id:UUID;manuscript_section_id:UUID|null;claim_hash:string;claim_text:string;claim_type:string;location:Record<string,unknown>|null;claim_meta:Record<string,unknown>|null;status:string;created_at:DateTime};
+export type EvidenceLink={id:UUID;claim_id:UUID;evidence_type:string;evidence_id:UUID;source_id:UUID|null;support_level:string;relevance_score:number;provenance:Record<string,unknown>;created_at:DateTime};
+export type EvidenceMatrixItem={claim:EvidenceClaim;evidence:EvidenceLink[]};
+export type KnowledgeGraphNode={id:UUID;graph_version_id:UUID;project_id:UUID;node_type:string;node_key:string;entity_id:UUID;label:string|null;created_at:DateTime;updated_at:DateTime};
+export type KnowledgeGraphSummary={graph_version_id:UUID;version:number;status:string;node_count:number;edge_count:number;node_type_counts:Record<string,number>;relation_type_counts:Record<string,number>;context_hash:string;graph_version:string};
+export type KnowledgeGraphNeighbor={edge_id:UUID;relation_type:string;provenance_type:string;provenance_ref:string|null;confidence:number|null;weight:number;direction:string;neighbor:{id:UUID;node_type:string;node_key:string;entity_id:UUID;label:string|null}};
+export type KnowledgeGraphNodeList={items:KnowledgeGraphNode[];total:number;limit:number;offset:number};

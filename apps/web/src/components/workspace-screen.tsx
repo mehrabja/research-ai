@@ -5,7 +5,7 @@ import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {useSearchParams} from "next/navigation";
 import {AppShell,useWorkspace} from "./app-shell";
 import {api} from "@/lib/api/client";
-import type {SourceCandidate} from "@/lib/api/generated";
+import type {FileFolder,SourceCandidate} from "@/lib/api/generated";
 
 type Obj=Record<string,unknown>;
 const META:Record<string,{eyebrow:string;title:string;description:string}>={
@@ -394,14 +394,52 @@ function Literature(){
 function Evidence(){
   const {reportId}=useCtx();
   const q=useQuery({queryKey:["evidence",reportId],queryFn:()=>api.evidenceMatrix(reportId!),enabled:Boolean(reportId)});
-  return <><Head route="evidence" actions={<Link className="btn" href="/generate">Use in generation</Link>}/><Card><div className="table-wrap"><table className="table"><thead><tr><th>Claim</th><th>Relation</th><th>Confidence</th><th>Source</th></tr></thead><tbody>{rows(q.data).map((x,i)=><tr key={i}><td>{value(x.claim??x.text)}</td><td>{value(x.support??x.relation)}</td><td>{value(x.confidence?.toString())}</td><td className="mono">{value(x.source_id)}</td></tr>)}</tbody></table></div>{!reportId&&<State title="No active report" description="Evidence is scoped to a report."/>}{reportId&&!q.isPending&&rows(q.data).length===0&&<State title="No claims yet" description="Claims and evidence will appear after retrieval/evidence processing."/>}</Card></>;
+  return <><Head route="evidence" actions={<Link className="btn" href={reportId?"/generate?reportId="+reportId:"/generate"}>Use in generation</Link>}/>
+    <Card>
+      {!reportId&&<State title="No active report" description="Evidence is scoped to a report."/>}
+      {reportId&&q.isError&&<State title="Evidence unavailable" description={q.error instanceof Error?q.error.message:"The evidence service returned an error."} error/>}
+      {reportId&&q.isPending&&<State title="Loading evidence" description="Reading claim-to-source support from the selected report."/>}
+      {reportId&&!q.isPending&&!q.isError&&(q.data?.length??0)===0&&<State title="No evidence claims yet" description="Claims and their supporting or conflicting sources will appear after evidence processing."/>}
+      {q.data&&q.data.length>0&&<div className="list">{q.data.map(item=><div className="list-item" key={item.claim.id}>
+        <div className="title" style={{overflowWrap:"anywhere"}}>{item.claim.claim_text}</div>
+        <div className="meta">{item.claim.claim_type} · {item.claim.status} · {new Date(item.claim.created_at).toLocaleString()}</div>
+        <div className="list" style={{marginTop:10}}>{item.evidence.length===0?<div className="muted tiny">No linked evidence yet.</div>:item.evidence.map(link=><div className="notice" key={link.id}>
+          <div className="row"><b>{link.support_level}</b><span className="tag">{Math.round(link.relevance_score*100)}% relevance</span></div>
+          <div className="muted tiny" style={{marginTop:4}}>{link.source_id?"Source "+link.source_id:"Evidence "+link.evidence_id}</div>
+          {Object.keys(link.provenance).length>0&&<div className="muted tiny" style={{marginTop:4}}>Provenance recorded</div>}
+        </div>)}</div>
+      </div>)}</div>}
+    </Card>
+  </>;
 }
 
 function Knowledge(){
   const {projectId}=useCtx();
-  const q=useQuery({queryKey:["kg",projectId],queryFn:()=>api.knowledgeGraph(projectId!),enabled:Boolean(projectId)});
+  const summary=useQuery({queryKey:["kg-summary",projectId],queryFn:()=>api.knowledgeGraphSummary(projectId!),enabled:Boolean(projectId)});
+  const [search,setSearch]=useState("");
+  const [nodeType,setNodeType]=useState("");
+  const nodes=useQuery({queryKey:["kg-nodes",projectId,search,nodeType],queryFn:()=>api.knowledgeGraphNodes(projectId!,search,nodeType,100,0),enabled:Boolean(projectId)});
+  const [selectedId,setSelectedId]=useState("");
+  const neighbors=useQuery({queryKey:["kg-neighbors",projectId,selectedId],queryFn:()=>api.knowledgeGraphNeighbors(projectId!,selectedId),enabled:Boolean(projectId&&selectedId)});
   const ex=useMutation({mutationFn:(f:"json"|"csv")=>api.knowledgeGraphExport(projectId!,f)});
-  return <><Head route="knowledge" actions={<><button className="btn" disabled={!projectId||ex.isPending} onClick={()=>ex.mutate("json")}>Export JSON</button><button className="btn" disabled={!projectId||ex.isPending} onClick={()=>ex.mutate("csv")}>Export CSV</button></>}/><div className="grid grid-2"><Card><div className="graph">{rows((q.data as Obj|null)?.nodes).slice(0,18).map((n,i)=><div key={i} className={"node"+(i===0?" main":"")} style={{left:(8+(i*17)%82)+"%",top:(12+(i*23)%76)+"%"}}>{value(n.label??n.name)}</div>)}</div></Card><Card><pre className="code" style={{whiteSpace:"pre-wrap",fontSize:11}}>{JSON.stringify(q.data??{},null,2)}</pre></Card></div></>;
+  const nodeTypes=Object.keys(summary.data?.node_type_counts??{});
+  return <><Head route="knowledge" actions={<><button className="btn" disabled={!projectId||ex.isPending} onClick={()=>ex.mutate("json")}>Export JSON</button><button className="btn" disabled={!projectId||ex.isPending} onClick={()=>ex.mutate("csv")}>Export CSV</button></>}/>
+    {!projectId&&<Card><State title="No active project" description="Create a project before inspecting the knowledge graph."/></Card>}
+    {projectId&&summary.isError&&<Card><State title="Knowledge graph unavailable" description={summary.error instanceof Error?summary.error.message:"No ready knowledge graph is available. Generate the graph after literature and planning inputs are ready."} error/></Card>}
+    {projectId&&summary.data&&<><div className="grid grid-4"><Metric label="Nodes" value={summary.data.node_count}/><Metric label="Edges" value={summary.data.edge_count}/><Metric label="Node types" value={nodeTypes.length}/><Metric label="Version" value={summary.data.version}/></div>
+      <Card style={{marginTop:16}}><div className="grid grid-2"><div className="field"><label>Search nodes</label><input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="label or node key"/></div><div className="field"><label>Node type</label><select className="input" value={nodeType} onChange={e=>setNodeType(e.target.value)}><option value="">All types</option>{nodeTypes.map(t=><option key={t} value={t}>{t} ({summary.data.node_type_counts[t]})</option>)}</select></div></div>
+        {nodes.isPending?<State title="Loading nodes" description="Reading the active graph version."/>:nodes.isError?<State title="Nodes unavailable" description={nodes.error instanceof Error?nodes.error.message:"The node list could not be loaded."} error/>:nodes.data?.items.length===0?<State title="No nodes match" description="Try a broader search or another node type."/>:<div className="table-wrap" style={{marginTop:12}}><table className="table"><thead><tr><th>Type</th><th>Label</th><th>Entity</th></tr></thead><tbody>{nodes.data?.items.map(node=><tr key={node.id} onClick={()=>setSelectedId(node.id)} style={{cursor:"pointer"}}><td>{node.node_type}</td><td style={{overflowWrap:"anywhere"}}>{node.label||node.node_key}</td><td className="mono">{node.entity_id}</td></tr>)}</tbody></table></div>}
+      </Card>
+      <Card style={{marginTop:16}}>{!selectedId?<State title="Select a node" description="Choose a row above to inspect connected relationships."/>:neighbors.isPending?<State title="Loading neighbors" description="Reading graph relationships."/>:neighbors.isError?<State title="Neighbor lookup failed" description={neighbors.error instanceof Error?neighbors.error.message:"The selected node relationships could not be loaded."} error/>:neighbors.data?.length===0?<State title="No neighbors" description="This node has no connected relationships."/>:<div><h3>Neighbors</h3><div className="list" style={{marginTop:10}}>{neighbors.data.map(n=><div className="list-item" key={n.edge_id}><div className="row"><div><div className="title">{n.neighbor.label||n.neighbor.node_key}</div><div className="meta">{n.direction} · {n.relation_type} · {n.provenance_type}</div></div><span className="tag">{n.confidence===null?"Confidence unavailable":Math.round(n.confidence*100)+"%"}</span></div></div>)}</div></div>}</Card>
+    </>}</>
+  </>;
+}
+function FolderTools({projectId,folders,onChanged}:{projectId:string|undefined;folders:FileFolder[];onChanged:()=>void}){
+  const [name,setName]=useState("");const [error,setError]=useState("");const [busyId,setBusyId]=useState("");
+  const create=useMutation({mutationFn:()=>api.createFolder(projectId!,{name}),onSuccess:()=>{setName("");setError("");onChanged();},onError:e=>setError(e instanceof Error?e.message:"Folder creation failed.")});
+  async function rename(id:string,current:string){const next=window.prompt("Folder name",current)?.trim();if(!next||next===current)return;setBusyId(id);setError("");try{await api.updateFolder(projectId!,id,{name:next});onChanged();}catch(e){setError(e instanceof Error?e.message:"Folder rename failed.");}finally{setBusyId("");}}
+  async function remove(id:string,current:string){if(!window.confirm("Delete empty folder \\""+current+"\\"?"))return;setBusyId(id);setError("");try{await api.deleteFolder(projectId!,id);onChanged();}catch(e){setError(e instanceof Error?e.message:"Folder deletion failed.");}finally{setBusyId("");}}
+  return <div><div className="row" style={{marginTop:10}}><input className="input" value={name} onChange={e=>setName(e.target.value)} placeholder="New folder name"/><button className="btn" disabled={!projectId||!name.trim()||create.isPending} onClick={()=>create.mutate()}>{create.isPending?"Creating…":"Create"}</button></div>{error&&<div className="notice error" style={{marginTop:8}}>{error}</div>}<div className="list" style={{marginTop:10}}>{folders.map(folder=><div className="list-item" key={folder.id}><div className="row"><span style={{overflowWrap:"anywhere"}}>{folder.name}</span><span className="actions"><button className="btn" disabled={busyId===folder.id} onClick={()=>void rename(folder.id,folder.name)}>Rename</button><button className="btn" disabled={busyId===folder.id} onClick={()=>void remove(folder.id,folder.name)}>Delete</button></span></div></div>)}</div></div>;
 }
 
 function Files(){
@@ -537,7 +575,7 @@ function Files(){
 
   return <><Head route="files"/>
     <div className="grid grid-3">
-      <Card><h3>Folders</h3><div className="list">{rows(folders.data).map(f=><div className="list-item" key={value(f.id)}>{value(f.name)}</div>)}</div></Card>
+      <Card><div className="row"><h3>Folders</h3><span className="tag">{folders.data?.length??0}</span></div><FolderTools projectId={projectId} folders={folders.data??[]} onChanged={()=>void qc.invalidateQueries({queryKey:["folders",projectId]})}/></Card>
       <Card><h3>Upload</h3>
         <select className="input" value={folderId} onChange={e=>setFolderId(e.target.value)}>
           <option value="">Project root</option>
@@ -595,6 +633,7 @@ function Files(){
                 <td>{value(f.status)}</td>
                 <td>{typeof f.size_bytes==="number"?bytes(f.size_bytes):"—"}</td>
                 <td><div className="actions">
+                  <select className="input" aria-label={"Move "+name} value={f.folder_id??""} disabled={busy} onChange={async e=>{try{setBusyId(id);await api.updateFile(id,{folder_id:e.target.value||null});await qc.invalidateQueries({queryKey:["files",projectId]});}catch(err){setError(err instanceof Error?err.message:"File move failed.");}finally{setBusyId("");}}}><option value="">Root</option>{(folders.data??[]).map(folder=><option key={folder.id} value={folder.id}>{folder.name}</option>)}</select>
                   <button className="btn" disabled={busy} onClick={()=>void openFile(id)}>{busy?"Working…":"Open"}</button>
                   <button className="btn" disabled={busy} onClick={()=>void download(id,name)}>Download</button>
                   <button className="btn" disabled={busy} onClick={()=>void remove(id)}>Delete</button>
