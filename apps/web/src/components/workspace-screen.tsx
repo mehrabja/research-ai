@@ -47,7 +47,7 @@ function Screen({route}:{route:string}){
 
 function useCtx(){const ws=useWorkspace();const params=useSearchParams();const requestedProjectId=params.get("projectId");const requestedReportId=params.get("reportId");const projects=useQuery({queryKey:["projects",ws.workspaceId],queryFn:()=>api.projects(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});const projectId=useMemo(()=>requestedProjectId&&projects.data?.items.some(p=>p.id===requestedProjectId)?requestedProjectId:projects.data?.items?.[0]?.id,[projects.data,requestedProjectId]);const reports=useQuery({queryKey:["reports",projectId],queryFn:()=>api.projectReports(projectId!,ws.workspaceId!),enabled:Boolean(projectId&&ws.workspaceId)});const reportId=useMemo(()=>requestedReportId&&reports.data?.items.some(r=>r.id===requestedReportId)?requestedReportId:reports.data?.items?.[0]?.id,[reports.data,requestedReportId]);const activeProject=useMemo(()=>projects.data?.items.find(p=>p.id===projectId),[projects.data,projectId]);const activeReport=useMemo(()=>reports.data?.items.find(r=>r.id===reportId),[reports.data,reportId]);return {ws,projects,projectId,reports,reportId,activeProject,activeReport};}
 
-function WorkflowContext({route,projectId,reportId,projects,reports}:{route:string;projectId:string|undefined;reportId:string|undefined;projects:returnType<typeof useCtx>["projects"];reports:returnType<typeof useCtx>["reports"]}){
+function WorkflowContext({route,projectId,reportId,projects,reports}:{route:string;projectId:string|undefined;reportId:string|undefined;projects:ReturnType<typeof useCtx>["projects"];reports:ReturnType<typeof useCtx>["reports"]}){
   const router=useRouter();
   const params=useSearchParams();
   const projectItems=projects.data?.items??[];
