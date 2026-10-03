@@ -390,46 +390,30 @@ function Literature(){
   const gaps=useQuery({queryKey:["literature-gaps",projectId],queryFn:()=>api.literatureGaps(projectId!),enabled:Boolean(projectId)});
   const runs=useQuery({queryKey:["literature-runs",projectId],queryFn:()=>api.literatureRuns(projectId!),enabled:Boolean(projectId)});
   const qc=useQueryClient();
-  const analyze=useMutation({
-    mutationFn:()=>api.literatureAnalyze(projectId!,true),
-    onSuccess:async()=>{await Promise.all([
-      qc.invalidateQueries({queryKey:["literature",projectId]}),
-      qc.invalidateQueries({queryKey:["literature-clusters",projectId]}),
-      qc.invalidateQueries({queryKey:["literature-gaps",projectId]}),
-      qc.invalidateQueries({queryKey:["literature-runs",projectId]}),
-    ])},
-  });
-  const data=row(q.data);
-  const items=rows(data.items);
-  const clusterItems=clusters.data?.items??[];
-  const gapItems=gaps.data?.items??[];
+  const [analysisNotice,setAnalysisNotice]=useState("");
+  const analyze=useMutation({mutationFn:()=>api.literatureAnalyze(projectId!,true),onSuccess:async result=>{setAnalysisNotice(result.status==="queued"?"Analysis queued.":"Analysis completed.");await Promise.all([qc.invalidateQueries({queryKey:["literature",projectId]}),qc.invalidateQueries({queryKey:["literature-clusters",projectId]}),qc.invalidateQueries({queryKey:["literature-gaps",projectId]}),qc.invalidateQueries({queryKey:["literature-runs",projectId]})])}});
+  const screening=useMutation({mutationFn:(x:{id:string;status:"discovered"|"candidate"|"included"|"excluded"|"uncertain"})=>api.updateLiteratureItem(projectId!,x.id,{screening_status:x.status}),onSuccess:()=>qc.invalidateQueries({queryKey:["literature",projectId]})});
+  const items=q.data?.items??[];const clusterItems=clusters.data?.items??[];const gapItems=gaps.data?.items??[];
+  const themes=clusterItems.reduce((count,item)=>count+(item.themes?.length??0),0);
   return <><Head route="literature" actions={<button className="btn primary" disabled={!projectId||analyze.isPending} onClick={()=>analyze.mutate()}>{analyze.isPending?"Analyzing…":"Analyze literature"}</button>}/>
     {!projectId&&<Card><State title="No active project" description="Create a project before running literature intelligence."/></Card>}
-    {projectId&&<div className="grid grid-4">
-      <Metric label="Literature items" value={q.isPending?"…":items.length}/>
-      <Metric label="Clusters" value={clusters.isPending?"…":clusterItems.length}/>
-      <Metric label="Themes" value={clusterItems.reduce((n,x)=>n+(Array.isArray((x as Obj).themes)?((x as Obj).themes as unknown[]).length:0),0)}/>
-      <Metric label="Gaps" value={gaps.isPending?"…":gapItems.length}/>
-    </div>}
-    {analyze.isError&&<div className="notice error" style={{marginTop:16}}>{analyze.error instanceof Error?analyze.error.message:"Literature analysis failed."}</div>}
+    {projectId&&<div className="grid grid-4"><Metric label="Literature items" value={q.isPending?"…":items.length}/><Metric label="Clusters" value={clusters.isPending?"…":clusterItems.length}/><Metric label="Themes" value={themes}/><Metric label="Gaps" value={gaps.isPending?"…":gapItems.length}/></div>}
+    {analysisNotice&&<div className="notice" style={{marginTop:16}}>{analysisNotice}</div>}
+    {analyze.isError&&<div className="notice error" style={{marginTop:16}}>{analyze.error instanceof Error?analyze.error.message:"Literature analysis failed. Retry the analysis run."}</div>}
     <div className="grid grid-2" style={{marginTop:16}}>
-      <Card>
-        <div className="row"><h3>Literature corpus</h3><span className="tag">{items.length} items</span></div>
-        {items.length===0&&!q.isPending&&<State title="No literature items yet" description="Save sources first, then run Analyze literature."/>}
-        {items.length>0&&<Table data={items}/>}
+      <Card><div className="row"><div><h3>Literature corpus</h3><div className="muted small">Screen papers and inspect structured analysis state.</div></div><span className="tag">{items.length}</span></div>
+        {q.isError?<State title="Literature unavailable" description={q.error instanceof Error?q.error.message:"The literature corpus could not be loaded."} error/>:q.isPending?<State title="Loading literature" description="Reading the project literature corpus."/>:items.length===0?<State title="No literature items yet" description="Save sources first, then run Analyze literature."/>:<div className="table-wrap" style={{marginTop:10}}><table className="table"><thead><tr><th>Source</th><th>Relevance</th><th>Screening</th><th>Analysis</th></tr></thead><tbody>{items.map(item=><tr key={item.id}><td style={{overflowWrap:"anywhere"}}>{item.source_id}</td><td>{item.relevance_score===null?"Unavailable":Math.round(item.relevance_score*100)+"%"}</td><td><select className="input" value={item.screening_status} disabled={screening.isPending} onChange={e=>{const status=e.target.value;if(status==="discovered"||status==="candidate"||status==="included"||status==="excluded"||status==="uncertain")screening.mutate({id:item.id,status});}}><option value="discovered">Discovered</option><option value="candidate">Candidate</option><option value="included">Included</option><option value="excluded">Excluded</option><option value="uncertain">Uncertain</option></select></td><td>{item.analysis_status}</td></tr>)}</tbody></table></div>}
       </Card>
-      <Card>
-        <div className="row"><h3>Analysis runs</h3><span className="tag">{runs.data?.total??0}</span></div>
-        {runs.data?.items?.length ? <Table data={rows(runs.data.items)}/> : <State title="No analysis runs" description="Run Analyze literature to build clusters, themes and gaps."/>}
+      <Card><div className="row"><div><h3>Analysis runs</h3><div className="muted small">Persistent runs provide history and failure state.</div></div><span className="tag">{runs.data?.total??0}</span></div>
+        {runs.isError?<State title="Run history unavailable" description={runs.error instanceof Error?runs.error.message:"Analysis run history could not be loaded."} error/>:runs.data?.items.length===0&&!runs.isPending?<State title="No analysis runs" description="Run Analyze literature to build clusters, themes and gaps."/>:runs.data?.items.map(run=><div className="list-item" key={run.id}><div className="row"><div><div className="title">{run.status}</div><div className="meta">{run.source_count} sources · {run.cluster_count} clusters · {run.gap_count} gaps · {new Date(run.created_at).toLocaleString()}</div></div>{run.error_message&&<span className="tag">{run.error_message}</span>}</div></div>)}
       </Card>
     </div>
     <div className="grid grid-2" style={{marginTop:16}}>
-      <Card><h3>Clusters & themes</h3>{clusterItems.length===0&&!clusters.isPending?<State title="No clusters yet" description="Run literature analysis after adding sources."/>:<Table data={rows(clusterItems)}/>}</Card>
-      <Card><h3>Research gaps</h3>{gapItems.length===0&&!gaps.isPending?<State title="No gaps yet" description="Run literature analysis to detect gaps from the current corpus."/>:<Table data={rows(gapItems)}/>}</Card>
+      <Card><h3>Clusters & themes</h3>{clusterItems.length===0&&!clusters.isPending?<State title="No clusters yet" description="Run literature analysis after adding sources."/>:<div className="list">{clusterItems.map(c=><div className="list-item" key={c.id}><div className="title">{c.name}</div><div className="meta">{c.source_count} sources · {(c.themes??[]).join(", ")||"No themes extracted"}</div><div className="muted tiny" style={{marginTop:4}}>{c.summary??"No cluster summary."}</div></div>)}</div>}</Card>
+      <Card><h3>Research gaps</h3>{gapItems.length===0&&!gaps.isPending?<State title="No gaps yet" description="Run literature analysis to detect gaps from the current corpus."/>:<div className="list">{gapItems.map(g=><div className="list-item" key={g.id}><div className="row"><div className="title" style={{overflowWrap:"anywhere"}}>{g.title}</div><span className="tag">{Math.round(g.confidence*100)}%</span></div><div className="muted small" style={{marginTop:4}}>{g.description}</div></div>)}</div>}</Card>
     </div>
   </>;
 }
-
 function Evidence(){
   const {reportId}=useCtx();
   const q=useQuery({queryKey:["evidence",reportId],queryFn:()=>api.evidenceMatrix(reportId!),enabled:Boolean(reportId)});

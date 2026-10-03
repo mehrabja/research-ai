@@ -1,4 +1,4 @@
-import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,Source,SourceCandidate,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
+import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,Source,SourceCandidate,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
 
@@ -162,11 +162,12 @@ export const api={
   createSource:(r:string,c:SourceCandidate)=>request<Source>("reports/"+r+"/sources",{method:"POST",body:JSON.stringify(c)}),
   extractSource:(r:string,id:string)=>request<unknown>("reports/"+r+"/sources/"+id+"/extract",{method:"POST"}),
 
-  literature:(p:string)=>request<unknown>("projects/"+p+"/literature"),
-  literatureAnalyze:(p:string,force=false)=>request<unknown>("projects/"+p+"/literature/analyze",{method:"POST",body:JSON.stringify({force})}),
+  literature:(p:string)=>request<{items:LiteratureItem[];total:number;limit:number;offset:number}>("projects/"+p+"/literature"),
+  literatureAnalyze:(p:string,force=false)=>request<{status:string;job_id:string|null;run:LiteratureRun|null}>("projects/"+p+"/literature/analyze",{method:"POST",body:JSON.stringify({force})}),
   literatureClusters:(p:string)=>request<{items:LiteratureCluster[];total:number}>("projects/"+p+"/literature/clusters"),
-  literatureGaps:(p:string)=>request<{items:unknown[];total:number}>("projects/"+p+"/literature/gaps"),
-  literatureRuns:(p:string)=>request<{items:unknown[];total:number}>("projects/"+p+"/literature/runs"),
+  literatureGaps:(p:string)=>request<{items:LiteratureGap[];total:number}>("projects/"+p+"/literature/gaps"),
+  literatureRuns:(p:string)=>request<{items:LiteratureRun[];total:number;limit:number;offset:number}>("projects/"+p+"/literature/runs"),
+  updateLiteratureItem:(p:string,id:string,b:{screening_status:"discovered"|"candidate"|"included"|"excluded"|"uncertain";reason?:string|null})=>request<LiteratureItem>("projects/"+p+"/literature/"+id,{method:"PATCH",body:JSON.stringify(b)}),
   knowledgeGraph:(p:string)=>request<{id:string;project_id:string;version:number;status:string;graph_version:string;context_hash:string;source_literature_run_id:string|null;research_plan_id:string|null;node_count:number;edge_count:number;graph_meta:Record<string,unknown>|null;created_by:string|null;created_at:string;updated_at:string}>("projects/"+p+"/knowledge-graph"),
   knowledgeGraphSummary:(p:string)=>request<KnowledgeGraphSummary>("projects/"+p+"/knowledge-graph/summary"),
   knowledgeGraphNodes:(p:string,search="",nodeType="",limit=100,offset=0)=>request<KnowledgeGraphNodeList>("projects/"+p+"/knowledge-graph/nodes?limit="+limit+"&offset="+offset+(search?"&search="+encodeURIComponent(search):"")+(nodeType?"&node_type="+encodeURIComponent(nodeType):"")),
