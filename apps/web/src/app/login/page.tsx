@@ -70,7 +70,7 @@ export default function LoginPage(){
             <span className="muted small">Secure session via HttpOnly refresh cookie</span>
             <Link className="muted small" href="/forgot-password">Forgot password?</Link>
           </div>
-          <div className="field"><label>2FA code <span className="muted tiny">when enabled</span></label><input className="input" inputMode="numeric" maxLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/D/g,""))}/></div>
+          <div className="field"><label>2FA code <span className="muted tiny">when enabled</span></label><input className="input" inputMode="numeric" maxLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,""))}/></div>
           <div className="field"><label>Recovery code <span className="muted tiny">optional alternative</span></label><input className="input" value={recovery} onChange={e=>setRecovery(e.target.value)}/></div>
           <button className="btn primary" disabled={loading}>{loading?"Signing in…":"Log in"}</button>
           <div className="divider">or</div>

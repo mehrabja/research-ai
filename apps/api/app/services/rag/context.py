@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import get_args
 
@@ -25,6 +26,7 @@ from app.db.models.research_plan import (
     ResearchPlanSection,
 )
 from app.domain.embeddings import (
+    EmbeddingBatchResult,
     EmbeddingProfile,
     build_embedding_profile_id,
 )
@@ -55,13 +57,13 @@ class LexicalOnlyEmbeddingProvider:
     def estimate_input_tokens(self, text: str) -> int | None:
         return None
 
-    def embed_documents(self, texts):
-        raise RetrievalAdvancedConfigurationInvalid(
+    def embed_documents(self, texts: Sequence[str]) -> EmbeddingBatchResult:
+        raise RetrievalAdvancedInvalid(
             "embedding provider is not available for lexical retrieval"
         )
 
     def embed_query(self, text: str) -> list[float]:
-        raise RetrievalAdvancedConfigurationInvalid(
+        raise RetrievalAdvancedInvalid(
             "embedding provider is not available for lexical retrieval"
         )
 
