@@ -278,6 +278,9 @@ export const api={
   planCoverage:(p:string)=>request<ResearchPlanCoverage>("projects/"+p+"/research-plan/coverage"),
 
   manuscript:(r:string)=>request<Manuscript>("reports/"+r+"/manuscript"),
+  manuscriptProseCurrent:(r:string)=>request<import("./generated").ManuscriptProseCurrent>("reports/"+r+"/manuscript/prose/current"),
+  manuscriptProseGenerate:(r:string,b:{base_manuscript_version_id:string;mode?:string;force?:boolean;async?:boolean})=>request<{status:string;job_id:string|null;run_id:string|null;context_hash:string|null;section_count:number|null;word_count:number|null}>("reports/"+r+"/manuscript/prose/generate",{method:"POST",body:JSON.stringify(b)}),
+  manuscriptProseValidate:(r:string)=>request<import("./generated").ManuscriptValidation>("reports/"+r+"/manuscript/prose/validate"),
   manuscriptDraft:(r:string)=>request<{revision:number;base_version_id:string|null;content:unknown}>("reports/"+r+"/manuscript/draft"),
   autosaveManuscript:(r:string,b:object)=>request<{conflict?:boolean;draft:{revision:number;base_version_id:string|null;content:unknown}}>("reports/"+r+"/manuscript/draft/autosave",{method:"PUT",body:JSON.stringify(b)}),
   saveManuscriptVersion:(r:string,b:object)=>request<unknown>("reports/"+r+"/manuscript/save-version",{method:"POST",body:JSON.stringify(b)}),
