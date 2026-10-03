@@ -41,6 +41,44 @@ _VALID_ALGORITHMS = frozenset(get_args(RetrievalAlgorithm))
 
 
 @dataclass(frozen=True)
+class LexicalOnlyEmbeddingProvider:
+    """Contract object used when retrieval mode does not need embeddings."""
+    provider_name = "lexical-only"
+    max_input_tokens_per_item: int | None = None
+    max_input_tokens_per_request: int | None = None
+    max_batch_size = 1
+
+    def __init__(self, profile: EmbeddingProfile) -> None:
+        self.model_name = profile.model
+        self.dimensions = profile.dimensions
+
+    def estimate_input_tokens(self, text: str) -> int | None:
+        return None
+
+    def embed_documents(self, texts):
+        raise RetrievalAdvancedConfigurationInvalid(
+            "embedding provider is not available for lexical retrieval"
+        )
+
+    def embed_query(self, text: str) -> list[float]:
+        raise RetrievalAdvancedConfigurationInvalid(
+            "embedding provider is not available for lexical retrieval"
+        )
+
+
+def provider_for_mode(
+    *, mode: RetrievalMode, profile: EmbeddingProfile, provider: EmbeddingProvider | None
+) -> EmbeddingProvider:
+    if mode == "lexical":
+        return provider if provider is not None else LexicalOnlyEmbeddingProvider(profile)
+    if provider is None:
+        raise RetrievalAdvancedConfigurationInvalid(
+            f"embedding provider required for {mode} retrieval"
+        )
+    return provider
+
+
+@dataclass(frozen=True)
 class EffectiveConfig:
     graph_enabled: bool
     memory_enabled: bool
@@ -285,7 +323,7 @@ def resolve_retrieval_context(
     project_id: uuid.UUID,
     user_id: uuid.UUID,
     query: str,
-    provider: EmbeddingProvider,
+    provider: EmbeddingProvider | None,
     profile: EmbeddingProfile,
     report_id: uuid.UUID | None = None,
     plan_section_id: uuid.UUID | None = None,
@@ -390,6 +428,8 @@ def resolve_retrieval_context(
         candidate_limit=config.candidate_limit,
     )
 
+    resolved_provider = provider_for_mode(mode=mode, profile=profile, provider=provider)
+
     return ResolvedRetrievalContext(
         project_id=project_id,
         user_id=user_id,
@@ -407,7 +447,7 @@ def resolve_retrieval_context(
         config=config,
         profile_id=profile_id,
         context_hash=context_hash,
-        provider=provider,
+        provider=resolved_provider,
         profile=profile,
     )
 

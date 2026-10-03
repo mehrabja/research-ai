@@ -34,7 +34,11 @@ def handle_advanced_rag_retrieve(ctx) -> dict:
 
     with SessionLocal() as db:
         profile: EmbeddingProfile = get_current_embedding_profile()
-        provider: EmbeddingProvider = build_embedding_provider(profile)
+        provider: EmbeddingProvider | None = (
+            build_embedding_provider(profile)
+            if payload.mode in ("semantic", "hybrid")
+            else None
+        )
 
         resolved = ctx_svc.resolve_retrieval_context(
             db,
