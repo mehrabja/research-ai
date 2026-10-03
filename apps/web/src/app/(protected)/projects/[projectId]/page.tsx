@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {use,useEffect,useMemo,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {useRouter} from "next/navigation";
+import {useRouter,useSearchParams} from "next/navigation";
 import {api} from "@/lib/api/client";
 import {useWorkspace} from "@/components/app-shell";
 
@@ -31,14 +31,17 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
     enabled:!!workspaceId,
   });
 
+  const params=useSearchParams();
+  const requestedReportId=params.get("reportId");
   const reportId=reports.data?.items?.[0]?.id;
+  const [selectedReportId,setSelectedReportId]=useState<string>("");
+  const activeReportId=selectedReportId||reportId||"";
   const sources=useQuery({
-    queryKey:["project-sources",reportId],
-    queryFn:()=>api.sources(reportId!),
-    enabled:!!reportId,
+    queryKey:["project-sources",activeReportId],
+    queryFn:()=>api.sources(activeReportId),
+    enabled:!!activeReportId,
   });
 
-  const [selectedReportId,setSelectedReportId]=useState<string>("");
   const [editing,setEditing]=useState(false);
   const [name,setName]=useState("");
   const [domain,setDomain]=useState("");
@@ -62,8 +65,13 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
   },[project.data]);
 
   useEffect(()=>{
+    const validReportIds=reports.data?.items?.map(item=>item.id)??[];
+    if(requestedReportId&&validReportIds.includes(requestedReportId)){
+      setSelectedReportId(requestedReportId);
+      return;
+    }
     if(!selectedReportId&&reportId)setSelectedReportId(reportId);
-  },[reportId,selectedReportId]);
+  },[requestedReportId,reportId,reports.data,selectedReportId]);
 
   const update=useMutation({
     mutationFn:()=>api.updateProject(projectId,workspaceId!,{
@@ -98,7 +106,6 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
     },
   });
 
-  const activeReportId=selectedReportId||reportId||"";
   const activeReport=useMemo(
     ()=>reports.data?.items?.find(x=>x.id===activeReportId)??reports.data?.items?.[0],
     [reports.data,activeReportId],
@@ -239,7 +246,8 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
                   <div className="meta">{r.output_language} · {r.status} · Updated {new Date(r.updated_at).toLocaleString()}</div>
                 </div>
                 <div className="actions">
-                  <Link className={"btn"+(r.id===activeReport?.id?" primary":"")} href={"/research?projectId="+projectId+"&reportId="+r.id}>Research</Link>
+                  <button className={"btn"+(r.id===activeReport?.id?" primary":"")} type="button" onClick={()=>{setSelectedReportId(r.id);router.replace("/projects/"+projectId+"?reportId="+r.id)}}>{r.id===activeReport?.id?"Selected":"Select report"}</button>
+                  <Link className="btn" href={"/research?projectId="+projectId+"&reportId="+r.id}>Research</Link>
                   <Link className="btn" href={"/sources?projectId="+projectId+"&reportId="+r.id}>Sources</Link>
                 </div>
               </div>
