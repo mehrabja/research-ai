@@ -109,6 +109,25 @@ def test_streaming_overflow_endpoint_not_run() -> None:
     assert calls["n"] == 0
 
 
+
+def test_project_file_multipart_upload_bypasses_generic_body_cap() -> None:
+    app, calls = _app(64)
+
+    @app.post("/api/v1/projects/{project_id}/files")
+    async def upload(project_id: str, request: Request) -> dict:
+        calls["n"] += 1
+        return {"len": len(await request.body())}
+
+    file_body = b"x" * 100
+    r = TestClient(app).post(
+        "/api/v1/projects/00000000-0000-0000-0000-000000000001/files",
+        files={"file": ("paper.txt", file_body, "text/plain")},
+    )
+    assert r.status_code == 200
+    assert calls["n"] == 1
+    assert r.json()["len"] > 64
+
+
 def test_delete_with_body_enforced() -> None:
     app, calls = _app(16)
     r = TestClient(app).request("DELETE", "/del", content=b"a" * 100)

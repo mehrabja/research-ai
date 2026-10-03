@@ -9,6 +9,8 @@
   invoking downstream. If the body exceeds the limit, a 413 is
   emitted and the downstream app is never called.
 * Does NOT emit X-Request-ID (owned by RequestIdMiddleware).
+* Project-file multipart uploads are exempt from generic buffering so the
+  file service can enforce its own file-size cap while streaming to storage.
 
 Trade-off: for streaming/chunked bodies the middleware buffers the
 entire payload in memory, bounded by ``max_bytes`` (default 10 MiB).
@@ -21,12 +23,46 @@ from __future__ import annotations
 
 import json
 import re
+import uuid
 from typing import Any
 
 from app.core.request_context import get_request_id
 
 _MAX_SANE_CONTENT_LENGTH = 10 * 1024 * 1024 * 1024  # 10 GiB
 _DIGITS_RE = re.compile(r"[0-9]+")
+
+
+def _is_streaming_project_file_upload(scope: dict[str, Any]) -> bool:
+    """Return True only for the project-file multipart upload endpoint.
+
+    Project files have their own streaming size limit, hashing, MIME
+    detection, and storage-atomicity checks. Buffering that request here
+    would both defeat streaming and impose the unrelated generic body cap.
+    """
+    if scope.get("method") != "POST":
+        return False
+    content_type = ""
+    for key, value in scope.get("headers") or []:
+        if key == b"content-type":
+            try:
+                content_type = value.decode("latin-1").lower()
+            except UnicodeDecodeError:
+                return False
+            break
+    if not content_type.startswith("multipart/form-data;"):
+        return False
+    parts = [part for part in str(scope.get("path") or "").split("/") if part]
+    if len(parts) < 3 or parts[-1] != "files" or parts[-2] == "":
+        return False
+    if parts[-3] != "projects":
+        return False
+    try:
+        uuid.UUID(parts[-2])
+    except (ValueError, AttributeError, TypeError):
+        return False
+    return True
+
+
 
 
 class RequestBodyTooLarge(Exception):
@@ -100,6 +136,10 @@ class BodyLimitMiddleware:
         self, scope: dict[str, Any], receive: Any, send: Any
     ) -> None:
         if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        if _is_streaming_project_file_upload(scope):
             await self.app(scope, receive, send)
             return
 
