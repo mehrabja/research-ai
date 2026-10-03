@@ -49,7 +49,6 @@ function isProjectFile(value:unknown):value is ProjectFile{
     && typeof value.original_filename==="string"
     && typeof value.normalized_filename==="string"
     && (typeof value.extension==="string"||value.extension===null)
-    && typeof value.storage_provider==="string"
     && typeof value.sha256==="string"
     && (typeof value.client_mime_type==="string"||value.client_mime_type===null)
     && (typeof value.detected_mime_type==="string"||value.detected_mime_type===null)
