@@ -146,7 +146,7 @@ def test_search_limit_clamped_to_max() -> None:
             limit=999,
             provider=prov,
         )
-    assert prov.calls[0]["limit"] == 50  # source_search_limit_max
+    assert prov.calls[0]["limit"] == get_settings().source_search_limit_max
 
 
 def test_search_foreign_report_raises() -> None:
