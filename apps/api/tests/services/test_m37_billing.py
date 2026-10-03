@@ -198,3 +198,45 @@ def test_billing_event_idempotent(
         assert c1 is True
         assert c2 is False
         assert e1.id == e2.id
+
+
+class _TrackingBillingProvider:
+    provider_name = "stripe"
+
+    def __init__(self):
+        self.calls = []
+
+    def cancel_subscription(self, **kwargs):
+        self.calls.append(("cancel", kwargs))
+
+    def resume_subscription(self, **kwargs):
+        self.calls.append(("resume", kwargs))
+
+
+def test_cancel_and_resume_call_provider_when_provider_backed(cleanup_users):
+    uid = _mk_user(cleanup_users)
+    ws = _ws_for(uid)
+    provider = _TrackingBillingProvider()
+    with SessionLocal() as db:
+        sub = billing_service.require_live_subscription(db, workspace_id=ws)
+        sub.provider = "stripe"
+        sub.provider_subscription_id = "sub_123"
+        db.commit()
+
+    with SessionLocal() as db:
+        billing_service.cancel_subscription(
+            db, workspace_id=ws, actor_user_id=uid, provider=provider
+        )
+        db.commit()
+    assert provider.calls[0][0] == "cancel"
+    assert provider.calls[0][1]["subscription_id"] == "sub_123"
+    assert provider.calls[0][1]["idempotency_key"] == f"cancel-subscription:{sub.id}"
+
+    with SessionLocal() as db:
+        billing_service.resume_subscription(
+            db, workspace_id=ws, actor_user_id=uid, provider=provider
+        )
+        db.commit()
+    assert provider.calls[1][0] == "resume"
+    assert provider.calls[1][1]["subscription_id"] == "sub_123"
+    assert provider.calls[1][1]["idempotency_key"] == f"resume-subscription:{sub.id}"
