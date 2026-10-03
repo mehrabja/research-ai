@@ -234,6 +234,7 @@ function Team(){
 
 function Billing(){
   const {ws}=useCtx();
+  const qc=useQueryClient();
   const u=useQuery({queryKey:["usage",ws.workspaceId],queryFn:()=>api.usage(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});
   const p=useQuery({queryKey:["plan",ws.workspaceId],queryFn:()=>api.planSubscription(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});
   const s=useQuery({queryKey:["subscription",ws.workspaceId],queryFn:()=>api.subscription(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});
