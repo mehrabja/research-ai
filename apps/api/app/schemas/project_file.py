@@ -53,6 +53,11 @@ class ProjectFileListItem(BaseModel):
     created_at: datetime
 
 
+class ProjectFileUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    folder_id: uuid.UUID | None = None
+
+
 class ProjectFileListResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

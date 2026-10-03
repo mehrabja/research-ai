@@ -395,6 +395,31 @@ def open_content(
 
 
 # ---------------------------------------------------------------------------
+# Move
+# ---------------------------------------------------------------------------
+def move_file(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    file_id: uuid.UUID,
+    folder_id: uuid.UUID | None,
+) -> ProjectFile:
+    pf = get_file(db, user_id=user_id, file_id=file_id)
+    if pf.deleted_at is not None:
+        raise FileNotFound()
+    validate_folder_for_file(
+        db,
+        project_id=pf.project_id,
+        user_id=user_id,
+        folder_id=folder_id,
+    )
+    pf.folder_id = folder_id
+    db.commit()
+    db.refresh(pf)
+    return pf
+
+
+# ---------------------------------------------------------------------------
 # Delete (soft)
 # ---------------------------------------------------------------------------
 def delete_file(

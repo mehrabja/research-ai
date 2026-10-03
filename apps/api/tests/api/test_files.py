@@ -225,6 +225,55 @@ def test_download_content_has_content_length(cleanup_users):
     assert r.headers.get("Content-Length") == str(len(payload))
     assert r.content == payload
 
+
+def test_move_file_between_folders(cleanup_users):
+    _, token = _register_and_login(cleanup_users)
+    pid = _mk_project(token)
+    folder = client.post(
+        f"/api/v1/projects/{pid}/file-folders",
+        headers={**_auth(token), "Content-Type": "application/json"},
+        json={"name": "papers"},
+    )
+    assert folder.status_code == 201, folder.text
+    folder_id = folder.json()["id"]
+    fid = _upload(token, pid, "paper.txt", b"paper").json()["id"]
+
+    moved = client.patch(
+        f"/api/v1/files/{fid}",
+        headers={**_auth(token), "Content-Type": "application/json"},
+        json={"folder_id": folder_id},
+    )
+    assert moved.status_code == 200, moved.text
+    assert moved.json()["folder_id"] == folder_id
+
+    cleared = client.patch(
+        f"/api/v1/files/{fid}",
+        headers={**_auth(token), "Content-Type": "application/json"},
+        json={"folder_id": None},
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["folder_id"] is None
+
+
+def test_move_file_rejects_foreign_folder(cleanup_users):
+    _, ta = _register_and_login(cleanup_users)
+    _, tb = _register_and_login(cleanup_users)
+    pa = _mk_project(ta)
+    pb = _mk_project(tb)
+    folder = client.post(
+        f"/api/v1/projects/{pb}/file-folders",
+        headers={**_auth(tb), "Content-Type": "application/json"},
+        json={"name": "other"},
+    )
+    fid = _upload(ta, pa, "paper.txt", b"paper").json()["id"]
+    moved = client.patch(
+        f"/api/v1/files/{fid}",
+        headers={**_auth(ta), "Content-Type": "application/json"},
+        json={"folder_id": folder.json()["id"]},
+    )
+    assert moved.status_code == 400
+
+
 def test_list_filter_by_kind(cleanup_users):
     _, token = _register_and_login(cleanup_users)
     pid = _mk_project(token)
