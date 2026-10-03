@@ -174,7 +174,7 @@ def retrieve(
         raise RetrievalAdvancedConfigurationInvalid("rag is disabled")
 
     profile = get_current_embedding_profile()
-    provider = build_embedding_provider(profile) if payload.mode in ("semantic", "hybrid") else None
+    provider = build_embedding_provider(profile) if body.mode in ("semantic", "hybrid") else None
 
     # Resolve context ONCE. Sync and async both consume this object.
     ctx = ctx_svc.resolve_retrieval_context(
@@ -244,7 +244,7 @@ def retrieve(
             project_id=project_id,
             user_id=current_user.id,
             query=body.query,
-            provider=provider,
+            provider=ctx.provider,
             profile=profile,
             report_id=body.report_id,
             plan_section_id=body.plan_section_id,

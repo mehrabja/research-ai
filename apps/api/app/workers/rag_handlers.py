@@ -45,7 +45,7 @@ def handle_advanced_rag_retrieve(ctx) -> dict:
             project_id=payload.project_id,
             user_id=payload.user_id,
             query=payload.query,
-            provider=provider,
+            provider=resolved.provider,
             profile=profile,
             report_id=payload.report_id,
             plan_section_id=payload.plan_section_id,
