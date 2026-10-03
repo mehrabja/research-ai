@@ -137,9 +137,14 @@ def add_evidence(
         db, claim_id=claim_id, report_id=report_id
     )
     if source_id is not None:
-        source = db.get(Source, source_id)
+        source = db.execute(
+            select(Source).where(
+                Source.id == source_id,
+                Source.report_id == report_id,
+            )
+        ).scalar_one_or_none()
         if source is None:
-            raise ValueError("source not found")
+            raise ValueError("source does not belong to report")
     row = ClaimEvidence(
         claim_id=claim.id,
         evidence_type=evidence_type,
