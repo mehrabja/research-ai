@@ -1,4 +1,4 @@
-import type {Citation,Invitation,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,QA,RAGResponse,Report,Source,SourceCandidate,Usage,User,Workspace} from "./generated";
+import type {Citation,Invitation,LiteratureCluster,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,QA,RAGResponse,Report,Source,SourceCandidate,Usage,User,Workspace} from "./generated";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
 
@@ -87,7 +87,7 @@ export const api={
 
   literature:(p:string)=>request<unknown>("projects/"+p+"/literature"),
   literatureAnalyze:(p:string,force=false)=>request<unknown>("projects/"+p+"/literature/analyze",{method:"POST",body:JSON.stringify({force})}),
-  literatureClusters:(p:string)=>request<{items:unknown[];total:number}>("projects/"+p+"/literature/clusters"),
+  literatureClusters:(p:string)=>request<{items:LiteratureCluster[];total:number}>("projects/"+p+"/literature/clusters"),
   literatureGaps:(p:string)=>request<{items:unknown[];total:number}>("projects/"+p+"/literature/gaps"),
   literatureRuns:(p:string)=>request<{items:unknown[];total:number}>("projects/"+p+"/literature/runs"),
   knowledgeGraph:(p:string)=>request<unknown>("projects/"+p+"/knowledge-graph"),
