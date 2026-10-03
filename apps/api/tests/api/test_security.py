@@ -346,42 +346,52 @@ def test_settings_rejects_non_hs256_algorithm() -> None:
             database_url="postgresql+psycopg://test:test@localhost/test",
         )
 
+def test_evidence_source_query_is_report_scoped():
+    from types import SimpleNamespace
 
-def test_evidence_source_cannot_cross_report_boundary():
-    # Regression: an evidence link must reference a source in the same report.
-    from app.db.models.citation import CitationRun
-    from app.db.models.source import Source
     from app.services import evidence_matrix
 
-    with SessionLocal() as db:
-        user = db.execute(select(User).where(User.email.like("security-%@example.com"))).scalar_one_or_none()
-        assert user is not None
-        report_a = db.execute(select(Report).where(Report.user_id == user.id)).scalars().first()
-        assert report_a is not None
-        report_b = db.execute(
-            select(Report).where(Report.user_id == user.id, Report.id != report_a.id)
-        ).scalars().first()
-        if report_b is None:
-            pytest.skip("fixture user does not have two reports")
-        source_b = db.execute(
-            select(Source).where(Source.report_id == report_b.id)
-        ).scalars().first()
-        claim = db.execute(
-            select(Claim).join(CitationRun, CitationRun.id == Claim.citation_run_id)
-            .where(CitationRun.report_id == report_a.id)
-        ).scalars().first()
-        if source_b is None or claim is None:
-            pytest.skip("fixture lacks source/claim")
-        with pytest.raises(ValueError, match="does not belong to report"):
-            evidence_matrix.add_evidence(
-                db,
-                report_id=report_a.id,
-                user_id=user.id,
-                claim_id=claim.id,
-                evidence_type="source",
-                evidence_id=source_b.id,
-                source_id=source_b.id,
-                support_level="supports",
-                relevance_score=0.5,
-                provenance={},
-            )
+    report_id = uuid.uuid4()
+    source_id = uuid.uuid4()
+    claim_id = uuid.uuid4()
+
+    class Result:
+        def __init__(self, value):
+            self._value = value
+
+        def scalar_one_or_none(self):
+            return self._value
+
+    class FakeDB:
+        def __init__(self):
+            self.calls = []
+
+        def execute(self, statement):
+            self.calls.append(statement)
+            if len(self.calls) == 1:
+                return Result(SimpleNamespace(id=report_id))
+            if len(self.calls) == 2:
+                return Result(SimpleNamespace(id=claim_id))
+            return Result(None)
+
+        def add(self, _row):
+            raise AssertionError("foreign source must be rejected before insert")
+
+    db = FakeDB()
+    with pytest.raises(ValueError, match="does not belong to report"):
+        evidence_matrix.add_evidence(
+            db,
+            report_id=report_id,
+            user_id=uuid.uuid4(),
+            claim_id=claim_id,
+            evidence_type="source",
+            evidence_id=source_id,
+            source_id=source_id,
+            support_level="supports",
+            relevance_score=0.5,
+            provenance={},
+        )
+
+    source_statement = db.calls[2]
+    sql = str(source_statement.compile(compile_kwargs={"literal_binds": False}))
+    assert "sources.report_id" in sql
