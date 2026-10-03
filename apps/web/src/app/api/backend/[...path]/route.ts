@@ -23,8 +23,15 @@ async function proxy(req:Request,ctx:{params:Promise<{path:string[]}>}){
   if(cookieHeader)headers.set("cookie",cookieHeader);
   if(csrf && !headers.has("X-CSRF-Token") && req.method!=="GET" && req.method!=="HEAD")headers.set("X-CSRF-Token",csrf);
   const method=req.method.toUpperCase();
-  const body=method==="GET"||method==="HEAD"?undefined:await req.arrayBuffer();
-  const upstream=await fetch(target,{method,headers,body,cache:"no-store",redirect:"manual"});
+  const init:RequestInit & {duplex?:"half"}={
+    method,
+    headers,
+    body:method==="GET"||method==="HEAD"?undefined:req.body,
+    cache:"no-store",
+    redirect:"manual",
+  };
+  if(req.body)init.duplex="half";
+  const upstream=await fetch(target,init);
   const responseHeaders=new Headers(upstream.headers);
   responseHeaders.delete("content-encoding");
   responseHeaders.delete("transfer-encoding");
@@ -33,6 +40,8 @@ async function proxy(req:Request,ctx:{params:Promise<{path:string[]}>}){
   for(const cookie of setCookies)out.headers.append("set-cookie",cookie);
   return out;
 }
+
+export const runtime="nodejs";
 
 export const GET=proxy;
 export const POST=proxy;

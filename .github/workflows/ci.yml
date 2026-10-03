@@ -113,11 +113,9 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: "20.9.0"
-          cache: npm
-          cache-dependency-path: apps/web/package-lock.json
       - name: Install frontend
         working-directory: apps/web
-        run: npm ci
+        run: npm install
       - name: Install Playwright browser
         working-directory: apps/web
         run: npx playwright install --with-deps chromium
@@ -125,7 +123,19 @@ jobs:
         working-directory: apps/web
         run: |
           nohup npm run dev > /tmp/research-ai-web.log 2>&1 &
-          npx wait-on http://127.0.0.1:3000
+          python - <<'PY'
+          import time
+          import urllib.request
+          for _ in range(60):
+              try:
+                  with urllib.request.urlopen("http://127.0.0.1:3000", timeout=2) as response:
+                      if response.status < 500:
+                          break
+              except Exception:
+                  time.sleep(1)
+          else:
+              raise SystemExit("frontend did not become ready")
+          PY
       - name: Run E2E
         working-directory: apps/web
         run: npm run test:e2e
