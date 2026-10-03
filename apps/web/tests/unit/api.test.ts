@@ -1,4 +1,17 @@
 import{describe,expect,it,vi}from"vitest";import{api}from"@/lib/api/client";
+describe("source intelligence transport",()=>{
+  it("uses typed extraction and embedding endpoints",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({source_id:"s1",status:"full_text",content_hash:null,chunk_count:3,content_type:"text/plain",content_length:12,extracted_at:null,pipeline_version:"m8.1"}),{status:200}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({source_id:"s1",total_chunks:3,already_current:1,embedded:2,failed:0,pending:0,profile_id:"p1",usage_input_tokens:12}),{status:200}));
+    const extracted=await api.extractSource("r1","s1");
+    expect(extracted.chunk_count).toBe(3);
+    const embedded=await api.embedSource("r1","s1");
+    expect(embedded.embedded).toBe(2);
+    spy.mockRestore();
+  });
+});
+
 describe("upload transport",()=>{
   it("uses typed subscription and invoice endpoints",async()=>{
     const spy=vi.spyOn(globalThis,"fetch").mockResolvedValue(

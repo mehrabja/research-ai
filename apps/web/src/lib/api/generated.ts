@@ -36,3 +36,6 @@ export type LiteratureGap={id:UUID;project_id:UUID;gap_type:string;title:string;
 export type LiteratureRun={id:UUID;project_id:UUID;context_hash:string|null;analysis_version:string;status:string;source_count:number;included_count:number;excluded_count:number;cluster_count:number;gap_count:number;duration_ms:number|null;error_message:string|null;created_at:DateTime};
 
 export type RAGReadiness={project_id:UUID;status:string;saved_sources:number;processed_sources:number;embedded_sources:number;lexical_ready_sources:number;semantic_ready_sources:number;reason:string|null};
+
+export type SourceExtraction={source_id:UUID;status:string;content_hash:string|null;chunk_count:number;content_type:string|null;content_length:number|null;extracted_at:DateTime|null;pipeline_version:string};
+export type SourceEmbedding={source_id:UUID;total_chunks:number;already_current:number;embedded:number;failed:number;pending:number;profile_id:string;usage_input_tokens:number};

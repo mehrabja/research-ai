@@ -350,40 +350,27 @@ function Sources(){
   const q=useQuery({queryKey:["sources",reportId],queryFn:()=>api.sources(reportId!),enabled:Boolean(reportId)});
   const qc=useQueryClient();
   const [processingId,setProcessingId]=useState("");
+  const [embeddingId,setEmbeddingId]=useState("");
   const [error,setError]=useState("");
-  const process=useMutation({
-    mutationFn:(id:string)=>api.extractSource(reportId!,id),
-    onMutate:id=>{setProcessingId(id);setError("");},
-    onSuccess:async()=>{await qc.invalidateQueries({queryKey:["sources",reportId]});},
-    onError:e=>setError(e instanceof Error?e.message:"Source processing failed."),
-    onSettled:()=>setProcessingId(""),
-  });
+  const [embeddingNotice,setEmbeddingNotice]=useState("");
+  const process=useMutation({mutationFn:(id:string)=>api.extractSource(reportId!,id),onMutate:id=>{setProcessingId(id);setError("");},onSuccess:async()=>{await qc.invalidateQueries({queryKey:["sources",reportId]});},onError:e=>setError(e instanceof Error?e.message:"Source processing failed."),onSettled:()=>setProcessingId("")});
+  const embed=useMutation({mutationFn:(id:string)=>api.embedSource(reportId!,id),onMutate:id=>{setEmbeddingId(id);setEmbeddingNotice("");setError("");},onSuccess:result=>{setEmbeddingNotice("Embedding complete: "+result.embedded+" new chunks, "+result.already_current+" already current, "+result.failed+" failed, "+result.pending+" pending.");},onError:e=>setError(e instanceof Error?e.message:"Embedding failed. Check provider configuration and retry."),onSettled:()=>setEmbeddingId("")});
   return <><Head route="sources" actions={<Link className="btn primary" href={reportId?"/research?projectId="+encodeURIComponent(projectId??"")+"&reportId="+encodeURIComponent(reportId):"/research"}>Discover sources</Link>}/>
     <WorkflowContext route="sources" projectId={projectId} reportId={reportId} projects={projects} reports={reports}/>
     {!reportId&&<Card><State title="No active report" description="Create a project report before managing the source library."/></Card>}
-    {reportId&&<Card>
-      <div className="row"><div><h3>Source library</h3><div className="muted small">Saved research sources. Process a source to fetch full text and create retrieval chunks.</div></div><span className="tag">{q.data?.items.length??0} sources</span></div>
+    {reportId&&<Card><div className="row"><div><h3>Source library</h3><div className="muted small">Saved sources are metadata-only until processing creates chunks; semantic retrieval also requires current-profile embeddings.</div></div><span className="tag">{q.data?.items.length??0} sources</span></div>
       {error&&<div className="notice error" style={{marginTop:12}}>{error}</div>}
+      {embeddingNotice&&<div className="notice success" style={{marginTop:12}}>{embeddingNotice}</div>}
       {(q.data?.items??[]).length===0&&!q.isPending&&<State title="Source library is empty" description="Use Research discovery to find and save provider-backed candidates."/>}
-      {(q.data?.items??[]).length>0&&<div className="table-wrap" style={{marginTop:12}}>
-        <table className="table"><thead><tr><th>Source</th><th>Year</th><th>Status</th><th>Links</th><th>Actions</th></tr></thead>
-          <tbody>{q.data?.items.map(source=>{
-            const busy=processingId===source.id;
-            const doi=source.doi?("https://doi.org/"+source.doi.replace(/^doi:\s*/i,"")):null;
-            return <tr key={source.id}>
-              <td><div className="strong" style={{whiteSpace:"normal",overflowWrap:"anywhere",maxWidth:430}}>{source.title}</div><div className="meta">{(source.authors??[]).slice(0,3).join(", ")||"Authors unavailable"}</div></td>
-              <td>{source.year??"—"}</td>
-              <td>{source.status}</td>
-              <td><div className="actions">{source.url&&<a className="btn" href={source.url} target="_blank" rel="noreferrer">Article ↗</a>}{doi&&<a className="btn" href={doi} target="_blank" rel="noreferrer">DOI ↗</a>}</div></td>
-              <td><button className="btn" disabled={busy} onClick={()=>process.mutate(source.id)}>{busy?"Processing…":source.status==="full_text"||source.status==="structured_full_text"?"Re-process":"Process source"}</button></td>
-            </tr>;
-          })}</tbody>
-        </table>
-      </div>}
+      {(q.data?.items??[]).length>0&&<div className="table-wrap" style={{marginTop:12}}><table className="table"><thead><tr><th>Source</th><th>Year</th><th>Processing</th><th>Links</th><th>Actions</th></tr></thead><tbody>{q.data?.items.map(source=>{
+        const processing=processingId===source.id;const embedding=embeddingId===source.id;const doi=source.doi?("https://doi.org/"+source.doi.replace(/^doi:\s*/i,"")):null;
+        return <tr key={source.id}><td><div className="strong" style={{whiteSpace:"normal",overflowWrap:"anywhere",maxWidth:430}}>{source.title}</div><div className="meta">{(source.authors??[]).slice(0,3).join(", ")||"Authors unavailable"}</div></td>
+          <td>{source.year??"—"}</td><td>{source.status}</td><td><div className="actions">{source.url&&<a className="btn" href={source.url} target="_blank" rel="noreferrer">Article ↗</a>}{doi&&<a className="btn" href={doi} target="_blank" rel="noreferrer">DOI ↗</a>}</div></td>
+          <td><div className="actions"><button className="btn" disabled={processing||embedding} onClick={()=>process.mutate(source.id)}>{processing?"Processing…":source.status==="full_text"||source.status==="structured_full_text"?"Re-process":"Process source"}</button><button className="btn" disabled={embedding||processing||source.status==="metadata_only"} onClick={()=>embed.mutate(source.id)}>{embedding?"Embedding…":"Embed source"}</button></div></td>
+        </tr>;})}</tbody></table></div>}
     </Card>}
   </>;
 }
-
 function Literature(){
   const {projectId}=useCtx();
   const q=useQuery({queryKey:["literature",projectId],queryFn:()=>api.literature(projectId!),enabled:Boolean(projectId)});

@@ -1,4 +1,4 @@
-import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,Source,SourceCandidate,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
+import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
 
@@ -160,7 +160,8 @@ export const api={
   sources:(r:string)=>request<{items:Source[]}>("reports/"+r+"/sources"),
   searchSources:(r:string,q:string,limit=25,year?:number,openAccess=false)=>request<{query:string;limit:number;candidates:SourceCandidate[]}>("reports/"+r+"/sources/search?q="+encodeURIComponent(q)+"&limit="+Math.max(1,Math.min(1000,Math.floor(limit)))+(year?"&year="+year:"")+(openAccess?"&open_access=true":"")),
   createSource:(r:string,c:SourceCandidate)=>request<Source>("reports/"+r+"/sources",{method:"POST",body:JSON.stringify(c)}),
-  extractSource:(r:string,id:string)=>request<unknown>("reports/"+r+"/sources/"+id+"/extract",{method:"POST"}),
+  extractSource:(r:string,id:string)=>request<SourceExtraction>("reports/"+r+"/sources/"+id+"/extract",{method:"POST"}),
+  embedSource:(r:string,id:string)=>request<SourceEmbedding>("reports/"+r+"/sources/"+id+"/embed",{method:"POST"}),
 
   literature:(p:string)=>request<{items:LiteratureItem[];total:number;limit:number;offset:number}>("projects/"+p+"/literature"),
   literatureAnalyze:(p:string,force=false)=>request<{status:string;job_id:string|null;run:LiteratureRun|null}>("projects/"+p+"/literature/analyze",{method:"POST",body:JSON.stringify({force})}),
