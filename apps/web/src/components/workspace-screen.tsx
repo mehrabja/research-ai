@@ -653,6 +653,34 @@ function Knowledge(){
         {nodes.isPending?<State title="Loading nodes" description="Reading the active graph version."/>:nodes.isError?<State title="Nodes unavailable" description={nodes.error instanceof Error?nodes.error.message:"The node list could not be loaded."} error/>:nodes.data?.items.length===0?<State title="No nodes match" description="Try a broader search or another node type."/>:<div className="table-wrap" style={{marginTop:12}}><table className="table"><thead><tr><th>Type</th><th>Label</th><th>Entity</th></tr></thead><tbody>{nodes.data?.items.map(node=><tr key={node.id} onClick={()=>setSelectedId(node.id)} style={{cursor:"pointer"}}><td>{node.node_type}</td><td style={{overflowWrap:"anywhere"}}>{node.label||node.node_key}</td><td className="mono">{node.entity_id}</td></tr>)}</tbody></table></div>}
       </Card>
       <Card style={{marginTop:16}}>{!selectedId?<State title="Select a node" description="Choose a row above to inspect connected relationships and bounded traversal."/>:neighbors.isPending?<State title="Loading neighbors" description="Reading graph relationships."/>:neighbors.isError?<State title="Neighbor lookup failed" description={neighbors.error instanceof Error?neighbors.error.message:"The selected node relationships could not be loaded."} error/>:neighbors.data?.length===0?<State title="No neighbors" description="This node has no connected relationships."/>:<div><h3>Neighbors</h3><div className="list" style={{marginTop:10}}>{neighbors.data.map(n=><div className="list-item" key={n.edge_id}><div className="row"><div><div className="title">{n.neighbor.label||n.neighbor.node_key}</div><div className="meta">{n.direction} · {n.relation_type} · {n.provenance_type}</div></div><span className="tag">{n.confidence===null?"Confidence unavailable":Math.round(n.confidence*100)+"%"}</span></div></div>)}</div></div>}</Card>
+      {selectedId&&neighbors.data&&neighbors.data.length>0&&<Card style={{marginTop:16}}><div className="row"><div><h3>Graph view</h3><div className="muted small">Interactive local neighborhood for the selected node. Click a node to inspect its neighbors.</div></div><span className="tag">{Math.min(neighbors.data.length,12)} neighbors</span></div>
+        <div style={{overflowX:"auto",marginTop:12}}>
+          <svg role="img" aria-label="Knowledge graph local neighborhood" viewBox="0 0 720 360" width="100%" height="360" style={{minWidth:560,border:"1px solid var(--border)",borderRadius:12,background:"var(--surface)"}}>
+            {neighbors.data.slice(0,12).map((edge,index)=>{
+              const angle=(Math.PI*2*index)/Math.max(1,Math.min(12,neighbors.data.length));
+              const cx=360+Math.cos(angle)*230;
+              const cy=180+Math.sin(angle)*120;
+              return <line key={"edge-"+edge.edge_id} x1="360" y1="180" x2={cx} y2={cy} stroke="currentColor" strokeOpacity="0.25"/>;
+            })}
+            <g>
+              <circle cx="360" cy="180" r="42" fill="var(--primary)" opacity="0.14" stroke="var(--primary)"/>
+              <text x="360" y="176" textAnchor="middle" fontSize="11" fontWeight="700">Selected</text>
+              <text x="360" y="193" textAnchor="middle" fontSize="8">{selectedId.slice(0,8)}…</text>
+            </g>
+            {neighbors.data.slice(0,12).map((edge,index)=>{
+              const angle=(Math.PI*2*index)/Math.max(1,Math.min(12,neighbors.data.length));
+              const cx=360+Math.cos(angle)*230;
+              const cy=180+Math.sin(angle)*120;
+              const label=(edge.neighbor.label||edge.neighbor.node_key||"Node").slice(0,28);
+              return <g key={edge.edge_id} role="button" tabIndex={0} onClick={()=>setSelectedId(edge.neighbor.id)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" ")setSelectedId(edge.neighbor.id);}} style={{cursor:"pointer"}}>
+                <circle cx={cx} cy={cy} r="30" fill="var(--surface)" stroke="var(--border)"/>
+                <text x={cx} y={cy-2} textAnchor="middle" fontSize="8" fontWeight="600">{label}</text>
+                <text x={cx} y={cy+11} textAnchor="middle" fontSize="7" opacity="0.65">{edge.relation_type.slice(0,20)}</text>
+              </g>;
+            })}
+          </svg>
+        </div>
+      </Card> 
       <Card style={{marginTop:16}}><div className="row"><div><h3>Bounded query</h3><div className="muted small">Traverse from the selected node without exceeding the configured depth/node limits.</div></div>{query.data&&<span className="tag">{query.data.nodes.length} nodes · {query.data.edges.length} edges</span>}</div>
         {!selectedId?<State title="Select a start node" description="Select a node above, then run a bounded graph query."/>:<div className="row" style={{marginTop:12}}><div className="field"><label>Max depth</label><input className="input" type="number" min={1} max={10} value={depth} onChange={e=>setDepth(Math.max(1,Math.min(10,Number(e.target.value)||1)))}/></div><div className="field"><label>Max nodes</label><input className="input" type="number" min={1} max={10000} value={nodeCap} onChange={e=>setNodeCap(Math.max(1,Math.min(10000,Number(e.target.value)||1)))}/></div><button className="btn primary" style={{marginTop:24}} disabled={query.isPending} onClick={()=>query.mutate({start_node_id:selectedId,max_depth:depth,max_nodes:nodeCap})}>{query.isPending?"Querying…":"Run query"}</button></div>}
         {query.isError&&<div className="notice error" style={{marginTop:12}}>{query.error instanceof Error?query.error.message:"Graph query failed. Retry the traversal."}</div>}
