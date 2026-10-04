@@ -101,7 +101,7 @@ class EmbeddingProviderFallback:
         first = providers[0]
         self.provider_name = getattr(first, "provider_name", "router")
         self.model_name = getattr(first, "model_name", "")
-        self.dimensions = getattr(first, "dimensions")
+        self.dimensions = first.dimensions
         self.max_batch_size = min(
             getattr(p, "max_batch_size", 1) for p in providers
         )
