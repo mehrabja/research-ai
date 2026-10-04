@@ -634,11 +634,23 @@ function Evidence(){
 function RAG(){
   const {projectId,reportId,projects,reports}=useCtx();
   const readiness=useQuery({queryKey:["rag-readiness",projectId],queryFn:()=>api.ragReadiness(projectId!),enabled:Boolean(projectId),refetchInterval:5000});
+  const runs=useQuery({queryKey:["rag-runs",projectId],queryFn:()=>api.ragRuns(projectId!,25,0),enabled:Boolean(projectId),refetchInterval:5000});
   const [query,setQuery]=useState("");
   const [mode,setMode]=useState<"lexical"|"semantic"|"hybrid">("hybrid");
   const [maxResults,setMaxResults]=useState(10);
   const [result,setResult]=useState<RAGResponse|null>(null);
-  const retrieve=useMutation({mutationFn:()=>api.ragRetrieve(projectId!,{query:query.trim(),mode,max_results:maxResults,report_id:reportId??undefined,async:false}),onSuccess:setResult});
+  const [selectedRunId,setSelectedRunId]=useState("");
+  const qc=useQueryClient();
+  const selectedRun=useQuery({queryKey:["rag-run",projectId,selectedRunId],queryFn:()=>api.ragRun(projectId!,selectedRunId),enabled:Boolean(projectId&&selectedRunId)});
+  const retrieve=useMutation({
+    mutationFn:()=>api.ragRetrieve(projectId!,{query:query.trim(),mode,max_results:maxResults,report_id:reportId??undefined,async:false}),
+    onSuccess:async response=>{
+      setResult(response);
+      setSelectedRunId(response.run?.id??"");
+      await qc.invalidateQueries({queryKey:["rag-runs",projectId]});
+    }
+  });
+  useEffect(()=>{if(selectedRun.data)setResult(selectedRun.data);},[selectedRun.data]);
   function setSelectedMode(next:string){if(next==="lexical"||next==="semantic"||next==="hybrid")setMode(next);}
   return <><Head route="rag"/>
     <WorkflowContext route="rag" projectId={projectId} reportId={reportId} projects={projects} reports={reports}/>
@@ -656,8 +668,12 @@ function RAG(){
     <button className="btn primary" style={{marginTop:12}} disabled={!query.trim()||retrieve.isPending} onClick={()=>retrieve.mutate()}>{retrieve.isPending?"Retrieving…":"Run retrieval"}</button>
     {retrieve.isError&&<div className="notice error" style={{marginTop:12}}>{retrieve.error instanceof Error?retrieve.error.message:"Retrieval failed. Check the readiness state and retry."}</div>}
     {result?.status==="queued"&&<div className="notice" style={{marginTop:12}}>Retrieval queued. Job <span className="mono">{result.job_id}</span> is processing.</div>}
+    {selectedRun.isError&&<div className="notice error" style={{marginTop:12}}>{selectedRun.error instanceof Error?selectedRun.error.message:"Saved retrieval run could not be loaded."}</div>}
     {result&&result.status!=="queued"&&result.results.length===0&&<State title="No retrieval results" description="No source-backed chunks matched this query and mode. Process more sources or switch retrieval mode."/>}
     {result&&result.results.length>0&&<div className="table-wrap" style={{marginTop:12}}><table className="table"><thead><tr><th>Rank</th><th>Source</th><th>Score</th><th>Stage</th><th>Reason</th></tr></thead><tbody>{result.results.map(item=><tr key={item.rank}><td>{item.rank}</td><td className="mono">{item.source_id??"Unavailable"}</td><td>{item.final_score.toFixed(3)}</td><td>{item.retrieval_stage}</td><td style={{overflowWrap:"anywhere"}}>{item.retrieval_reason.join(", ")||"Ranked by retrieval score."}</td></tr>)}</tbody></table></div>}
+    </Card>}
+    {projectId&&<Card style={{marginTop:16}}><div className="row"><div><h3>Retrieval history</h3><div className="muted small">Persisted retrieval runs for this project. Selecting one reloads its stored results.</div></div><span className="tag">{runs.data?.total??0} runs</span></div>
+      {runs.isError?<State title="Run history unavailable" description={runs.error instanceof Error?runs.error.message:"Retrieval history could not be loaded."} error/>:runs.isPending?<State title="Loading retrieval history" description="Reading persisted retrieval runs."/>:runs.data?.items.length===0?<State title="No retrieval runs" description="Completed retrieval requests will appear here."/>:<div className="list" style={{marginTop:10}}>{runs.data.items.map(run=><button className="list-item" style={{textAlign:"left",width:"100%",cursor:"pointer",background:run.id===selectedRunId?"var(--surface)":"transparent"}} key={run.id} onClick={()=>setSelectedRunId(run.id)}><div className="row"><div><div className="title">{run.query}</div><div className="meta">{run.status} · {run.final_result_count} results · {new Date(run.started_at).toLocaleString()}</div></div><span className="tag">{run.duration_ms===null?"Duration —":run.duration_ms+" ms"}</span></div></button>)}</div>}
     </Card>}
   </>;
 }
