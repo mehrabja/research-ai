@@ -315,30 +315,39 @@ function Billing(){
   const s=useQuery({queryKey:["subscription",ws.workspaceId],queryFn:()=>api.subscription(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});
   const i=useQuery({queryKey:["invoices",ws.workspaceId],queryFn:()=>api.billingInvoices(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});
   const [code,setCode]=useState("pro");
-  const checkout=useMutation({mutationFn:()=>api.billingCheckout(ws.workspaceId!,code)});
-  const changePlan=useMutation({mutationFn:()=>api.billingChangePlan(ws.workspaceId!,code),onSuccess:()=>void qc.invalidateQueries({queryKey:["plan",ws.workspaceId]})});
-  const cancel=useMutation({mutationFn:()=>api.billingCancel(ws.workspaceId!),onSuccess:()=>void qc.invalidateQueries({queryKey:["subscription",ws.workspaceId]})});
-  const resume=useMutation({mutationFn:()=>api.billingResume(ws.workspaceId!),onSuccess:()=>void qc.invalidateQueries({queryKey:["subscription",ws.workspaceId]})});
+  useEffect(()=>{if(s.data?.plan_code)setCode(s.data.plan_code);},[s.data?.plan_code]);
+  const checkout=useMutation({mutationFn:()=>api.billingCheckout(ws.workspaceId!,code),onError:()=>undefined});
+  const changePlan=useMutation({mutationFn:()=>api.billingChangePlan(ws.workspaceId!,code),onSuccess:async()=>{await qc.invalidateQueries({queryKey:["plan",ws.workspaceId]});await qc.invalidateQueries({queryKey:["subscription",ws.workspaceId]});await qc.invalidateQueries({queryKey:["usage",ws.workspaceId]});}});
+  const cancel=useMutation({mutationFn:()=>api.billingCancel(ws.workspaceId!),onSuccess:()=>void qc.invalidateQueries({queryKey:["subscription",ws.workspaceId]}),});
+  const resume=useMutation({mutationFn:()=>api.billingResume(ws.workspaceId!),onSuccess:()=>void qc.invalidateQueries({queryKey:["subscription",ws.workspaceId]}),});
   const usageItems=u.data?.items??[];
   return <><Head route="usage-billing"/>
+    {(p.isError||s.isError||u.isError||i.isError)&&<div className="notice error" style={{marginBottom:14}}>{p.isError?(p.error instanceof Error?p.error.message:"Plan data could not be loaded."):s.isError?(s.error instanceof Error?s.error.message:"Subscription data could not be loaded."):u.isError?(u.error instanceof Error?u.error.message:"Usage data could not be loaded."):i.error instanceof Error?i.error.message:"Invoice data could not be loaded."}</div>}
     <div className="grid grid-4">
-      <Metric label="Plan" value={p.data?.name??p.data?.code}/>
+      <Metric label="Plan" value={p.data?.name??p.data?.code??"Unavailable"}/>
       <Metric label="Subscription" value={s.data?.status??"Unavailable"}/>
-      <Metric label="Billing provider" value={s.data?.provider}/>
+      <Metric label="Billing provider" value={s.data?.provider??"Unavailable"}/>
       <Metric label="Renewal" value={s.data?.current_period_end?new Date(s.data.current_period_end).toLocaleDateString():"Not scheduled"}/>
     </div>
     <Card style={{marginTop:16}}><div className="row"><div><h3>Usage</h3><div className="muted small">Current consumption and plan limits from the workspace entitlement API.</div></div><span className="tag">{usageItems.length} metrics</span></div>
-      {u.isError&&<State title="Usage unavailable" description={u.error instanceof Error?u.error.message:"Usage data could not be loaded."} error/>}
       {usageItems.length===0&&!u.isPending&&!u.isError&&<State title="No usage metrics" description="This workspace does not currently expose usage metrics."/>}
       {usageItems.length>0&&<div className="table-wrap" style={{marginTop:10}}><table className="table"><thead><tr><th>Metric</th><th>Current</th><th>Limit</th><th>Unit</th></tr></thead><tbody>{usageItems.map(item=><tr key={item.metric}><td>{item.metric}</td><td>{item.current}</td><td>{item.limit===null?"Unlimited":item.limit}</td><td>{item.unit}</td></tr>)}</tbody></table></div>}
     </Card>
     <div className="grid grid-2" style={{marginTop:16}}>
-      <Card><h3>Checkout</h3><div className="field"><label>Plan</label><select className="input" value={code} onChange={e=>setCode(e.target.value)}><option value="pro">Pro</option><option value="team">Team</option></select></div><div className="actions" style={{marginTop:12}}><button className="btn primary" onClick={()=>checkout.mutate()} disabled={!ws.workspaceId||checkout.isPending}>{checkout.isPending?"Opening…":"Open checkout"}</button><button className="btn" onClick={()=>changePlan.mutate()} disabled={!ws.workspaceId||changePlan.isPending}>{changePlan.isPending?"Changing…":"Switch plan"}</button>{s.data?.cancel_at_period_end?<button className="btn" onClick={()=>resume.mutate()} disabled={resume.isPending}>{resume.isPending?"Resuming…":"Resume subscription"}</button>:<button className="btn" onClick={()=>cancel.mutate()} disabled={cancel.isPending}>{cancel.isPending?"Cancelling…":"Cancel at period end"}</button>}</div>{checkout.isError&&<div className="notice error" style={{marginTop:10}}>{checkout.error instanceof Error?checkout.error.message:"Checkout failed."}</div>}{(changePlan.isError||cancel.isError||resume.isError)&&<div className="notice error" style={{marginTop:10}}>{(changePlan.error??cancel.error??resume.error) instanceof Error?(changePlan.error??cancel.error??resume.error).message:"Subscription update failed. Retry the action."}</div>}{checkout.data&&<div className="notice success" style={{marginTop:10}}>Checkout session created. <a href={checkout.data.checkout_url} target="_blank" rel="noreferrer">Continue to payment ↗</a></div>}</Card>
-      <Card><h3>Invoices</h3>{i.isError?<State title="Invoices unavailable" description={i.error instanceof Error?i.error.message:"Invoice data could not be loaded."} error/>:i.data?.items.length===0&&!i.isPending?<State title="No invoices" description="Invoices will appear after billing activity is recorded."/>:<div className="table-wrap" style={{marginTop:10}}><table className="table"><thead><tr><th>Status</th><th>Amount</th><th>Created</th><th>Open</th></tr></thead><tbody>{i.data?.items.map(inv=><tr key={inv.id??inv.provider_invoice_id}><td>{inv.status}</td><td>{inv.amount_due===null?"—":String(inv.amount_due)+" "+(inv.currency??"")}</td><td>{inv.provider_created_at?new Date(inv.provider_created_at).toLocaleDateString():"—"}</td><td>{inv.hosted_invoice_url?<a href={inv.hosted_invoice_url} target="_blank" rel="noreferrer">Invoice ↗</a>:inv.invoice_pdf_url?<a href={inv.invoice_pdf_url} target="_blank" rel="noreferrer">PDF ↗</a>:"—"}</td></tr>)}</tbody></table></div>}</Card>
+      <Card><h3>Subscription actions</h3><div className="field"><label>Plan</label><select className="input" value={code} onChange={e=>setCode(e.target.value)} disabled={changePlan.isPending||checkout.isPending}><option value="pro">Pro</option><option value="team">Team</option></select></div>
+        <div className="actions" style={{marginTop:12}}>
+          <button className="btn primary" onClick={()=>checkout.mutate()} disabled={!ws.workspaceId||checkout.isPending}>{checkout.isPending?"Opening…":"Open checkout"}</button>
+          <button className="btn" onClick={()=>changePlan.mutate()} disabled={!ws.workspaceId||changePlan.isPending||code===s.data?.plan_code}>{changePlan.isPending?"Changing…":"Switch plan"}</button>
+          {s.data?.cancel_at_period_end?<button className="btn" onClick={()=>resume.mutate()} disabled={resume.isPending}>{resume.isPending?"Resuming…":"Resume subscription"}</button>:<button className="btn" onClick={()=>cancel.mutate()} disabled={cancel.isPending}>{cancel.isPending?"Cancelling…":"Cancel at period end"}</button>}
+        </div>
+        {checkout.isError&&<div className="notice error" style={{marginTop:10}}>{checkout.error instanceof Error?checkout.error.message:"Checkout failed."}</div>}
+        {(changePlan.isError||cancel.isError||resume.isError)&&<div className="notice error" style={{marginTop:10}}>{(changePlan.error??cancel.error??resume.error) instanceof Error?(changePlan.error??cancel.error??resume.error).message:"Subscription update failed. Retry the action."}</div>}
+        {checkout.data&&<div className="notice success" style={{marginTop:10}}>Checkout session created. <a href={checkout.data.checkout_url} target="_blank" rel="noreferrer">Continue to payment ↗</a></div>}
+      </Card>
+      <Card><h3>Invoices</h3>{i.data?.items.length===0&&!i.isPending?<State title="No invoices" description="Invoices will appear after billing activity is recorded."/>:<div className="table-wrap" style={{marginTop:10}}><table className="table"><thead><tr><th>Status</th><th>Amount</th><th>Created</th><th>Open</th></tr></thead><tbody>{i.data?.items.map(inv=><tr key={inv.id??inv.provider_invoice_id}><td>{inv.status}</td><td>{inv.amount_due===null?"—":String(inv.amount_due)+" "+(inv.currency??"")}</td><td>{inv.provider_created_at?new Date(inv.provider_created_at).toLocaleDateString():"—"}</td><td>{inv.hosted_invoice_url?<a href={inv.hosted_invoice_url} target="_blank" rel="noreferrer">Invoice ↗</a>:inv.invoice_pdf_url?<a href={inv.invoice_pdf_url} target="_blank" rel="noreferrer">PDF ↗</a>:"—"}</td></tr>)}</tbody></table></div>}</Card>
     </div>
   </>;
 }
-
 function Settings(){
   const {ws}=useCtx();
   const qc=useQueryClient();
