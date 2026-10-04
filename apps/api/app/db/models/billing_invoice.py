@@ -9,7 +9,7 @@ from sqlalchemy import DateTime, ForeignKey, Index, Numeric, Text, UniqueConstra
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, CreatedAtMixin, TimestampMixin, UUIDPKMixin
+from app.db.base import Base, TimestampMixin, UUIDPKMixin
 
 
 class BillingInvoice(Base, UUIDPKMixin, TimestampMixin):
