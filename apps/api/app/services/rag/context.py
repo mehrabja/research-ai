@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.exceptions import RetrievalAdvancedInvalid
+from app.core.exceptions import RetrievalAdvancedConfigurationInvalid, RetrievalAdvancedInvalid
 from app.db.models.report import Report
 from app.db.models.research_plan import (
     ResearchEvidenceRequirement,
