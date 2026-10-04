@@ -34,3 +34,7 @@ class ManuscriptDraftSaveResponse(BaseModel):
 
 class ManuscriptSaveVersionRequest(BaseModel):
     expected_revision: int = Field(..., ge=0)
+
+
+class ManuscriptRestoreVersionRequest(BaseModel):
+    expected_revision: int = Field(..., ge=0)
