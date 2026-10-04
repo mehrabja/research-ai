@@ -206,6 +206,7 @@ export const api={
       const xhr=new XMLHttpRequest();
       let settled=false;
       let lastProgressPercent=-1;
+      let lastProgressPercent=-1;
 
       const abort=()=>{if(!settled)xhr.abort();};
       const handleProgress=()=>{
