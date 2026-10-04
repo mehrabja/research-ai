@@ -27,6 +27,7 @@ from app.schemas.retrieval_advanced import (
     RetrievedChunkRead,
     RetrieveRequest,
     RetrieveResponse,
+    RetrievalRunListResponse,
     RAGReadinessResponse,
 )
 from app.domain.embeddings import build_embedding_profile_id
@@ -274,6 +275,42 @@ def retrieve(
             if outcome.coverage else None
         ),
         warnings=outcome.warnings,
+    )
+
+
+@router.get(
+    "/{project_id}/rag/runs",
+    response_model=RetrievalRunListResponse,
+)
+def list_runs(
+    project_id: uuid.UUID,
+    limit: int = Query(default=25, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> RetrievalRunListResponse:
+    get_project(db, user_id=current_user.id, project_id=project_id)
+    total = int(
+        db.execute(
+            select(func.count(RetrievalRun.id)).where(
+                RetrievalRun.project_id == project_id
+            )
+        ).scalar_one()
+    )
+    rows = list(
+        db.execute(
+            select(RetrievalRun)
+            .where(RetrievalRun.project_id == project_id)
+            .order_by(RetrievalRun.started_at.desc(), RetrievalRun.id.desc())
+            .limit(limit)
+            .offset(offset)
+        ).scalars().all()
+    )
+    return RetrievalRunListResponse(
+        items=[RetrievalRunRead.model_validate(row) for row in rows],
+        total=total,
+        limit=limit,
+        offset=offset,
     )
 
 
