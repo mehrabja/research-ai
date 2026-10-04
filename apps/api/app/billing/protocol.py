@@ -55,6 +55,8 @@ class BillingProvider(Protocol):
         idempotency_key: str | None = None,
     ) -> None: ...
 
+    def price_id_for_plan(self, *, plan_code: str) -> str | None: ...
+
     def resume_subscription(
         self,
         *,
