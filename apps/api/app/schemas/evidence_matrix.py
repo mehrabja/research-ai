@@ -14,7 +14,7 @@ class EvidenceClaimCreate(BaseModel):
     manuscript_version_id: uuid.UUID
     manuscript_section_id: uuid.UUID | None = None
     claim_text: str = Field(..., min_length=1, max_length=10000)
-    claim_type: str = Field(default="factual", min_length=1, max_length=64)
+    claim_type: str = Field(default="background", min_length=1, max_length=64)
     location: dict[str, Any] | None = None
 
 
