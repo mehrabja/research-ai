@@ -1,9 +1,9 @@
 """Billing checkout and invoice API schemas."""
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 from decimal import Decimal
-import uuid
 
 from pydantic import BaseModel, Field
 
