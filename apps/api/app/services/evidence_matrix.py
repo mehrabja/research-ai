@@ -9,7 +9,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ReportNotFound
-from app.db.models.citation import Claim, ClaimEvidence, CitationRun
+from app.db.models.citation import CitationRun, Claim, ClaimEvidence
 from app.db.models.manuscript import Manuscript, ManuscriptSection, ManuscriptVersion
 from app.db.models.report import Report
 from app.db.models.source import Source
