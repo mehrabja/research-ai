@@ -29,7 +29,7 @@ export type KnowledgeGraphNodeList={items:KnowledgeGraphNode[];total:number;limi
 
 export type Subscription={id:UUID;workspace_id:UUID;plan_id:UUID;plan_code:string;status:string;current_period_start:DateTime|null;current_period_end:DateTime|null;provider:string;cancel_at_period_end:boolean;created_at:DateTime};
 export type BillingInvoice={id:UUID|null;provider:string;provider_invoice_id:string;status:string;currency:string|null;amount_due:number|null;amount_paid:number|null;hosted_invoice_url:string|null;invoice_pdf_url:string|null;provider_created_at:DateTime|null};
-export type APIToken={id:UUID;name:string;token_prefix:string;scopes:string[];expires_at:DateTime|null;revoked_at:DateTime|null;last_used_at:DateTime|null;created_at:DateTime};
+export type APIToken={id:UUID;name:string;token_prefix:string;scopes:string[];expires_at:DateTime|null;revoked_at:DateTime|null;last_used_at:DateTime|null;created_at:DateTime};export type Session={id:UUID;created_at:DateTime;last_used_at:DateTime|null;expires_at:DateTime;revoked_at:DateTime|null;user_agent:string|null;ip_address:string|null};
 export type NotificationPreference={id:UUID;workspace_id:UUID|null;channel:string;preferences:Record<string,boolean>;created_at:DateTime;updated_at:DateTime};
 export type APITokenCreateResponse={token:string;item:APIToken};
 export type TwoFactorEnrollment={enabled:boolean;secret:string;provisioning_uri:string;recovery_codes:string[]};
