@@ -31,8 +31,8 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
     enabled:!!workspaceId,
   });
 
-  const params=useSearchParams();
-  const requestedReportId=params.get("reportId");
+  const searchParams=useSearchParams();
+  const requestedReportId=searchParams.get("reportId");
   const reportId=reports.data?.items?.[0]?.id;
   const [selectedReportId,setSelectedReportId]=useState<string>("");
   const activeReportId=selectedReportId||reportId||"";

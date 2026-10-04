@@ -205,11 +205,18 @@ export const api={
 
       const xhr=new XMLHttpRequest();
       let settled=false;
+      let lastProgressPercent=-1;
 
       const abort=()=>{if(!settled)xhr.abort();};
       const handleProgress=()=>{
         const total=xhr.upload.total;
-        if(total>0)options.onProgress?.({loaded:xhr.upload.loaded,total,percent:Math.min(100,(xhr.upload.loaded/total)*100)});
+        if(total>0){
+          const percent=Math.min(100,(xhr.upload.loaded/total)*100);
+          if(percent!==lastProgressPercent){
+            lastProgressPercent=percent;
+            options.onProgress?.({loaded:xhr.upload.loaded,total,percent});
+          }
+        }
       };
       const cleanup=()=>{
         options.signal?.removeEventListener("abort",abort);
@@ -240,7 +247,10 @@ export const api={
               return;
             }
             settled=true;cleanup();
-            options.onProgress?.({loaded:file.size,total:file.size,percent:100});
+            if(lastProgressPercent<100){
+              lastProgressPercent=100;
+              options.onProgress?.({loaded:file.size,total:file.size,percent:100});
+            }
             resolve(parsed);
           }catch{
             fail(new ApiRequestError("Upload completed but the server response could not be read.",status,{requestId}));
@@ -337,5 +347,4 @@ export const api={
 
   citations:(r:string)=>request<Citation>("reports/"+r+"/citations/current"),
   qa:(r:string)=>request<QA>("reports/"+r+"/academic-qa/current"),
-  ragRetrieve:(p:string,b:object)=>request<RAGResponse>("projects/"+p+"/rag/retrieve",{method:"POST",body:JSON.stringify(b)}),
 };

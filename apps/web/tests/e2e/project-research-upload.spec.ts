@@ -49,7 +49,7 @@ test("creates project/report and uploads a research file through the browser",as
     buffer:Buffer.from("A browser-uploaded research source for end-to-end validation.\n"),
   });
 
-  await expect(page.getByText(new RegExp("Uploaded \\""+fileName+"\\"")).first()).toBeVisible({timeout:30_000});
+  await expect(page.getByText(new RegExp(`Uploaded "${fileName}"`)).first()).toBeVisible({timeout:30_000});
   await expect(page.getByText(fileName,{exact:true}).first()).toBeVisible({timeout:30_000});
   await page.reload();
   await expect(page.getByText(fileName,{exact:true}).first()).toBeVisible({timeout:30_000});
