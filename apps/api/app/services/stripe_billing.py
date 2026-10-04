@@ -145,11 +145,11 @@ def sync_invoice(
     )
     amount_due = payload.get("amount_due")
     row.amount_due = (
-        amount_due / 100 if isinstance(amount_due, int) else None
+        Decimal(amount_due) / Decimal(100) if isinstance(amount_due, int) else None
     )
     amount_paid = payload.get("amount_paid")
     row.amount_paid = (
-        amount_paid / 100 if isinstance(amount_paid, int) else None
+        Decimal(amount_paid) / Decimal(100) if isinstance(amount_paid, int) else None
     )
     row.hosted_invoice_url = payload.get("hosted_invoice_url")
     row.invoice_pdf_url = payload.get("invoice_pdf")
