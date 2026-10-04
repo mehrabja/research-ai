@@ -12,6 +12,7 @@ from app.db.models.file_folder import ProjectFileFolder
 from app.db.models.project import Project
 from app.db.models.project_file import ProjectFile
 
+
 class FileFolderError(Exception): ...
 
 def _require_project(
