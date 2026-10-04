@@ -62,9 +62,9 @@ from app.services.session import (
 from app.services.two_factor import (
     begin_enrollment,
     confirm_enrollment,
-    disable as disable_two_factor,
     verify_second_factor,
 )
+from app.services.two_factor import disable as disable_two_factor
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 _bearer = HTTPBearer(auto_error=False)
