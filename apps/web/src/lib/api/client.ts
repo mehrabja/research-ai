@@ -180,6 +180,8 @@ export const api={
   },
   ragReadiness:(p:string)=>request<import("./generated").RAGReadiness>("projects/"+p+"/rag/readiness"),
   ragRetrieve:(p:string,b:object)=>request<RAGResponse>("projects/"+p+"/rag/retrieve",{method:"POST",body:JSON.stringify(b)}),
+  ragRuns:(p:string,limit=25,offset=0)=>request<{items:import("./generated").RetrievalRun[];total:number;limit:number;offset:number}>("projects/"+p+"/rag/runs?limit="+limit+"&offset="+offset),
+  ragRun:(p:string,id:string)=>request<RAGResponse>("projects/"+p+"/rag/runs/"+id),
 
   evidenceMatrix:(r:string)=>request<EvidenceMatrixItem[]>("reports/"+r+"/evidence-matrix"),
   createEvidenceClaim:(r:string,b:object)=>request<EvidenceClaim>("reports/"+r+"/evidence/claims",{method:"POST",body:JSON.stringify(b)}),
