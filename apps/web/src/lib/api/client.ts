@@ -1,4 +1,4 @@
-import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,Job,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
+import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,Job,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,ManuscriptVersion,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
 
@@ -279,12 +279,14 @@ export const api={
   planCoverage:(p:string)=>request<ResearchPlanCoverage>("projects/"+p+"/research-plan/coverage"),
 
   manuscript:(r:string)=>request<Manuscript>("reports/"+r+"/manuscript"),
+  manuscriptVersions:(r:string)=>request<{items:ManuscriptVersion[];total:number;limit:number;offset:number}>("reports/"+r+"/manuscript/versions"),
   manuscriptProseCurrent:(r:string)=>request<import("./generated").ManuscriptProseCurrent>("reports/"+r+"/manuscript/prose/current"),
   manuscriptProseGenerate:(r:string,b:{base_manuscript_version_id:string;mode?:string;force?:boolean;async?:boolean})=>request<{status:string;job_id:string|null;run_id:string|null;context_hash:string|null;section_count:number|null;word_count:number|null}>("reports/"+r+"/manuscript/prose/generate",{method:"POST",body:JSON.stringify(b)}),
   manuscriptProseValidate:(r:string)=>request<import("./generated").ManuscriptValidation>("reports/"+r+"/manuscript/prose/validate"),
   manuscriptDraft:(r:string)=>request<{revision:number;base_version_id:string|null;content:unknown}>("reports/"+r+"/manuscript/draft"),
   autosaveManuscript:(r:string,b:object)=>request<{conflict?:boolean;draft:{revision:number;base_version_id:string|null;content:unknown}}>("reports/"+r+"/manuscript/draft/autosave",{method:"PUT",body:JSON.stringify(b)}),
   saveManuscriptVersion:(r:string,b:object)=>request<unknown>("reports/"+r+"/manuscript/save-version",{method:"POST",body:JSON.stringify(b)}),
+  restoreManuscriptVersion:(r:string,v:string,b:{expected_revision:number})=>request<{saved:boolean;conflict:boolean;draft:{revision:number;base_version_id:string|null;content:unknown}}>("reports/"+r+"/manuscript/versions/"+v+"/restore",{method:"POST",body:JSON.stringify(b)}),
 
   generate:(r:string,b:object)=>request<unknown>("reports/"+r+"/generate",{method:"POST",body:JSON.stringify(b)}),
   humanize:(r:string,b:object)=>request<unknown>("reports/"+r+"/humanization/enqueue",{method:"POST",body:JSON.stringify(b)}),
