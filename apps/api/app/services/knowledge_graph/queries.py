@@ -16,7 +16,10 @@ from app.db.models.knowledge_graph import (
     KnowledgeGraphNode,
     KnowledgeGraphVersion,
 )
-from app.domain.knowledge_graph import (\n    KNOWLEDGE_GRAPH_NODE_TYPES,\n    KNOWLEDGE_GRAPH_RELATION_TYPES,\n)
+from app.domain.knowledge_graph import (
+    KNOWLEDGE_GRAPH_NODE_TYPES,
+    KNOWLEDGE_GRAPH_RELATION_TYPES,
+)
 
 
 def get_active_version(
