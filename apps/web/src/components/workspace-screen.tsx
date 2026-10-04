@@ -840,6 +840,7 @@ function Plan(){
 function Manuscript(){
   const {reportId}=useCtx();
   const current=useQuery({queryKey:["manuscript",reportId],queryFn:()=>api.manuscript(reportId!),enabled:Boolean(reportId)});
+  const versions=useQuery({queryKey:["manuscript-versions",reportId],queryFn:()=>api.manuscriptVersions(reportId!),enabled:Boolean(reportId)});
   const prose=useQuery({queryKey:["manuscript-prose",reportId],queryFn:()=>api.manuscriptProseCurrent(reportId!),enabled:Boolean(reportId)});
   const draft=useQuery({queryKey:["draft",reportId],queryFn:()=>api.manuscriptDraft(reportId!),enabled:Boolean(reportId)});
   const qc=useQueryClient();
@@ -848,26 +849,114 @@ function Manuscript(){
   const [baseVersionId,setBaseVersionId]=useState<string|undefined>();
   const [dirty,setDirty]=useState(false);
   const [savingError,setSavingError]=useState("");
+  const [conflictDraft,setConflictDraft]=useState<{revision:number;base_version_id:string|null;content:unknown}|null>(null);
   const initialized=useRef(false);
-  useEffect(()=>{if(!draft.data||initialized.current)return;initialized.current=true;setRevision(draft.data.revision);setBaseVersionId(draft.data.base_version_id??undefined);const existing=row(draft.data.content).sections;const map:Record<string,string>={};if(existing&&typeof existing==="object"&&!Array.isArray(existing)){for(const [key,val] of Object.entries(existing as Record<string,unknown>))if(typeof val==="string")map[key]=val;}if(Object.keys(map).length===0&&prose.data?.sections.length){for(const section of prose.data.sections)map[section.section_key]=section.text;}setSectionDrafts(map);},[draft.data,prose.data]);
-  const saveDraft=useMutation({mutationFn:()=>api.autosaveManuscript(reportId!,{revision,content:{sections:sectionDrafts},base_version_id:baseVersionId}),onSuccess:res=>{setRevision(res.draft.revision);setBaseVersionId(res.draft.base_version_id??undefined);setDirty(false);setSavingError("");void qc.invalidateQueries({queryKey:["draft",reportId]});},onError:e=>setSavingError(e instanceof Error?e.message:"Autosave failed. Reload the current draft and retry.")});
-  useEffect(()=>{if(!dirty||!reportId)return;const timer=window.setTimeout(()=>{void saveDraft.mutateAsync();},700);return()=>window.clearTimeout(timer);},[dirty,reportId,sectionDrafts]);
-  const saveVersion=useMutation({mutationFn:()=>api.saveManuscriptVersion(reportId!,{expected_revision:revision}),onSuccess:()=>{void qc.invalidateQueries({queryKey:["manuscript",reportId]});void qc.invalidateQueries({queryKey:["draft",reportId]});},onError:e=>setSavingError(e instanceof Error?e.message:"Version save failed.")});
+
+  function contentSections(content:unknown):Record<string,string>{
+    const obj=row(content);
+    const sections=row(obj.sections);
+    const result:Record<string,string>={};
+    if(!Array.isArray(sections)){
+      for(const [key,val] of Object.entries(sections))if(typeof val==="string")result[key]=val;
+    }
+    return result;
+  }
+  function applyDraft(remote:{revision:number;base_version_id:string|null;content:unknown}){
+    const map=contentSections(remote.content);
+    setRevision(remote.revision);
+    setBaseVersionId(remote.base_version_id??undefined);
+    setSectionDrafts(map);
+    setDirty(false);
+    setConflictDraft(null);
+    setSavingError("");
+  }
+
+  useEffect(()=>{
+    if(!draft.data||initialized.current)return;
+    initialized.current=true;
+    setRevision(draft.data.revision);
+    setBaseVersionId(draft.data.base_version_id??undefined);
+    const map=contentSections(draft.data.content);
+    if(Object.keys(map).length===0&&prose.data?.sections.length){
+      for(const section of prose.data.sections)map[section.section_key]=section.text;
+    }
+    setSectionDrafts(map);
+  },[draft.data,prose.data]);
+
+  const saveDraft=useMutation({
+    mutationFn:()=>api.autosaveManuscript(reportId!,{revision,content:{sections:sectionDrafts},base_version_id:baseVersionId}),
+    onSuccess:res=>{
+      if(res.conflict){
+        setConflictDraft(res.draft);
+        setSavingError("Draft changed elsewhere. Your local edits were not accepted.");
+        return;
+      }
+      setRevision(res.draft.revision);
+      setBaseVersionId(res.draft.base_version_id??undefined);
+      setDirty(false);
+      setSavingError("");
+      setConflictDraft(null);
+      void qc.invalidateQueries({queryKey:["draft",reportId]});
+    },
+    onError:e=>setSavingError(e instanceof Error?e.message:"Autosave failed. Reload the current draft and retry."),
+  });
+
+  useEffect(()=>{
+    if(!dirty||!reportId)return;
+    const timer=window.setTimeout(()=>{void saveDraft.mutateAsync();},700);
+    return()=>window.clearTimeout(timer);
+  },[dirty,reportId,sectionDrafts]);
+
+  const saveVersion=useMutation({
+    mutationFn:()=>api.saveManuscriptVersion(reportId!,{expected_revision:revision}),
+    onSuccess:async()=>{
+      setSavingError("");
+      await Promise.all([
+        qc.invalidateQueries({queryKey:["manuscript",reportId]}),
+        qc.invalidateQueries({queryKey:["manuscript-versions",reportId]}),
+        qc.invalidateQueries({queryKey:["draft",reportId]}),
+      ]);
+    },
+    onError:e=>setSavingError(e instanceof Error?e.message:"Version save failed."),
+  });
+
+  const restoreVersion=useMutation({
+    mutationFn:(versionId:string)=>api.restoreManuscriptVersion(reportId!,versionId,{expected_revision:revision}),
+    onSuccess:res=>{
+      if(res.conflict){
+        setConflictDraft(res.draft);
+        setSavingError("Restore was not applied because the draft changed elsewhere.");
+        return;
+      }
+      applyDraft(res.draft);
+      void qc.invalidateQueries({queryKey:["draft",reportId]});
+      setSavingError("Historical version restored into the draft. Review it before saving a new version.");
+    },
+    onError:e=>setSavingError(e instanceof Error?e.message:"Version restore failed."),
+  });
+
   const validate=useMutation({mutationFn:()=>api.manuscriptProseValidate(reportId!),onError:e=>setSavingError(e instanceof Error?e.message:"Manuscript validation failed.")});
-  const regenerate=useMutation({mutationFn:()=>api.manuscriptProseGenerate(reportId!,{base_manuscript_version_id:current.data?.version.id??"",async:false,force:true}),onSuccess:async()=>{await qc.invalidateQueries({queryKey:["manuscript-prose",reportId]});},onError:e=>setSavingError(e instanceof Error?e.message:"Prose generation failed. Retry the generation run.")});
+  const regenerate=useMutation({
+    mutationFn:()=>api.manuscriptProseGenerate(reportId!,{base_manuscript_version_id:current.data?.version.id??"",async:false,force:true}),
+    onSuccess:async()=>{setSavingError("");await qc.invalidateQueries({queryKey:["manuscript-prose",reportId]});},
+    onError:e=>setSavingError(e instanceof Error?e.message:"Prose generation failed. Retry the generation run."),
+  });
   const version=current.data?.version;
-  return <><Head route="manuscript" actions={<><span className="tag">{savingError?"Save failed":dirty?"Saving…":"Autosaved"}</span><button className="btn" disabled={!reportId||validate.isPending} onClick={()=>validate.mutate()}>{validate.isPending?"Validating…":"Validate"}</button><button className="btn" disabled={!reportId||regenerate.isPending||!version} onClick={()=>regenerate.mutate()}>{regenerate.isPending?"Generating…":"Regenerate prose"}</button><button className="btn primary" disabled={!reportId||saveVersion.isPending||dirty} onClick={()=>saveVersion.mutate()}>{saveVersion.isPending?"Saving…":"Save version"}</button></>}/>
-    {savingError&&<div className="notice error" style={{marginBottom:14}}>{savingError}</div>}
+
+  return <><Head route="manuscript" actions={<><span className="tag">{savingError?"Attention required":dirty?"Saving…":"Autosaved"}</span><button className="btn" disabled={!reportId||validate.isPending} onClick={()=>validate.mutate()}>{validate.isPending?"Validating…":"Validate"}</button><button className="btn" disabled={!reportId||regenerate.isPending||!version} onClick={()=>regenerate.mutate()}>{regenerate.isPending?"Generating…":"Regenerate prose"}</button><button className="btn primary" disabled={!reportId||saveVersion.isPending||dirty||Boolean(conflictDraft)} onClick={()=>saveVersion.mutate()}>{saveVersion.isPending?"Saving…":"Save version"}</button></>}/>
+    {savingError&&<div className="notice error" style={{marginBottom:14}}>{savingError}{conflictDraft&&<button className="btn" style={{marginLeft:10}} onClick={()=>applyDraft(conflictDraft)}>Reload authoritative draft</button>}</div>}
     {!reportId&&<Card><State title="No active report" description="Manuscript editing is scoped to a report."/></Card>}
     {reportId&&current.isError&&<Card><State title="Manuscript unavailable" description={current.error instanceof Error?current.error.message:"Generate a manuscript architecture before editing prose."} error/></Card>}
-    {reportId&&current.data&&<><Card><div className="row"><div><div className="title">{version?.title??"Untitled manuscript"}</div><div className="meta">Architecture {value(version?.architecture_version)} · Version {value(version?.version?.toString())}</div></div><Link className="btn" href={"/evidence?reportId="+reportId}>Evidence</Link></div>{validate.data&&<div className="notice" style={{marginTop:12}}>Validation: {validate.data.validation_status}{validate.data.validation_errors.length?" · "+validate.data.validation_errors.join(" "):""}{validate.data.warnings.length?" · Warnings: "+validate.data.warnings.join(" "):""}</div>}</Card>
+    {reportId&&current.data&&<><Card><div className="row"><div><div className="title">{version?.title??"Untitled manuscript"}</div><div className="meta">Architecture {value(version?.architecture_version)} · Current version {value(version?.version?.toString())}</div></div><Link className="btn" href={"/evidence?reportId="+reportId}>Evidence</Link></div>{validate.data&&<div className="notice" style={{marginTop:12}}>Validation: {validate.data.validation_status}{validate.data.validation_errors.length?" · "+validate.data.validation_errors.join(" "):""}{validate.data.warnings.length?" · Warnings: "+validate.data.warnings.join(" "):""}</div>}</Card>
       <Card style={{marginTop:16}}><div className="row"><div><h3>Manuscript prose</h3><div className="muted small">Each section is edited independently and autosaved against the current draft revision.</div></div><span className="tag">{prose.data?.run.status??"Not generated"}</span></div>
-        {prose.isError?<State title="Prose unavailable" description={prose.error instanceof Error?prose.error.message:"Generate manuscript prose before editing sections."} error/>:prose.isPending?<State title="Loading prose" description="Reading the latest persisted prose run."/>:prose.data?.sections.length===0?<State title="No prose sections yet" description="Use Regenerate prose to run the persisted manuscript prose pipeline."/>:<div className="list" style={{marginTop:12}}>{prose.data.sections.map(section=>{const architectureSection=current.data.sections.find(s=>s.section_key===section.section_key);return <div className="list-item" key={section.id}><div className="row"><div><div className="title">{section.display_order+1}. {section.title}</div><div className="meta">{section.word_count} words · {section.status}</div></div><span className="tag">{architectureSection?.citation_required?"Citations required":"Citations optional"}</span></div><textarea className="input textarea" style={{marginTop:10,minHeight:180}} value={sectionDrafts[section.section_key]??section.text} onChange={event=>{setSectionDrafts(prev=>({...prev,[section.section_key]:event.target.value}));setDirty(true);}}/>{section.error_message&&<div className="notice error" style={{marginTop:8}}>{section.error_message}</div>}</div>;})}</div>}
+        {prose.isError?<State title="Prose unavailable" description={prose.error instanceof Error?prose.error.message:"Generate manuscript prose before editing sections."} error/>:prose.isPending?<State title="Loading prose" description="Reading the latest persisted prose run."/>:prose.data?.sections.length===0?<State title="No prose sections yet" description="Use Regenerate prose to run the persisted manuscript prose pipeline."/>:<div className="list" style={{marginTop:12}}>{prose.data.sections.map(section=>{const architectureSection=current.data.sections.find(s=>s.section_key===section.section_key);return <div className="list-item" key={section.id}><div className="row"><div><div className="title">{section.display_order+1}. {section.title}</div><div className="meta">{section.word_count} words · {section.status}</div></div><span className="tag">{architectureSection?.citation_required?"Citations required":"Citations optional"}</span></div><textarea className="input textarea" style={{marginTop:10,minHeight:180}} aria-label={"Edit "+section.title} value={sectionDrafts[section.section_key]??section.text} onChange={event=>{setSectionDrafts(prev=>({...prev,[section.section_key]:event.target.value}));setDirty(true);setSavingError("");}}/>{section.error_message&&<div className="notice error" style={{marginTop:8}}>{section.error_message}</div>}</div>;})}</div>}
+      </Card>
+      <Card style={{marginTop:16}}><div className="row"><div><h3>Version history</h3><div className="muted small">Restore copies a historical snapshot into the current draft; it does not silently overwrite the saved current version.</div></div><span className="tag">{versions.data?.total??0} versions</span></div>
+        {versions.isError?<State title="Version history unavailable" description={versions.error instanceof Error?versions.error.message:"Manuscript versions could not be loaded."} error/>:versions.isPending?<State title="Loading versions" description="Reading saved manuscript versions."/>:versions.data?.items.length===0?<State title="No saved versions" description="Save the current draft as a version to build history."/>:<div className="list" style={{marginTop:10}}>{versions.data.items.map(item=><div className="list-item" key={item.id}><div className="row"><div><div className="title">Version {item.version}{item.id===version?.id?" · Current":""}</div><div className="meta">{item.status} · {item.word_target} word target · {new Date(item.created_at).toLocaleString()}</div></div><button className="btn" disabled={dirty||restoreVersion.isPending||item.id===version?.id} onClick={()=>restoreVersion.mutate(item.id)}>{restoreVersion.isPending?"Restoring…":"Restore to draft"}</button></div></div>)}</div>}
       </Card>
     </>}
   </>;
 }
-
 function Generate(){
   const {reportId}=useCtx();const [brief,setBrief]=useState("");const m=useMutation({mutationFn:()=>api.enqueueJob("generate_report",{report_id:reportId,brief},reportId)});
   return <><Head route="generate"/><div className="grid grid-2"><Card><div className="field"><label>Generation brief</label><textarea className="input textarea" value={brief} onChange={e=>setBrief(e.target.value)} placeholder="Draft Methods, Discussion, Abstract or Reviewer Response…"/></div><div className="pillbar" style={{marginTop:12}}><span className="tag primary">Evidence grounded</span><span className="tag">Verified evidence</span><span className="tag">Unsupported claim flag</span></div><button className="btn primary" style={{marginTop:14}} disabled={!reportId||m.isPending} onClick={()=>m.mutate()}>{m.isPending?"Queueing…":"Generate"}</button>{m.isError&&<div className="notice error" style={{marginTop:12}}>Generation request failed.</div>}{Boolean(m.data)&&<div className="notice success" style={{marginTop:12}}>Job queued: {value((m.data as Obj).id??(m.data as Obj).job_id)}</div>}</Card><Card><h3>Context</h3><div className="list"><div className="list-item">Evidence matrix</div><div className="list-item">Research plan</div><div className="list-item">Current report</div><div className="list-item">Durable job state</div></div></Card></div></>;
