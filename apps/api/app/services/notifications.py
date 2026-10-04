@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models.notifications import Notification, NotificationPreference
 
+
 def create_notification(
     db: Session,
     *,
