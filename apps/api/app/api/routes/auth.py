@@ -353,7 +353,7 @@ def sessions(
         user_id=current_user.id,
     )
     return SessionListResponse(
-        items=items,
+        items=[SessionResponse.model_validate(item) for item in items],
         total=len(items),
     )
 
@@ -529,7 +529,7 @@ def create_api_token(
     )
     return APITokenCreateResponse(
         token=raw,
-        item=row,
+        item=APITokenRead.model_validate(row),
     )
 
 
@@ -541,10 +541,10 @@ def list_api_tokens(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[APITokenRead]:
-    return list_tokens(
-        db,
-        user_id=current_user.id,
-    )
+    return [
+        APITokenRead.model_validate(item)
+        for item in list_tokens(db, user_id=current_user.id)
+    ]
 
 
 @router.delete(
