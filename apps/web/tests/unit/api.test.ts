@@ -59,7 +59,6 @@ describe("upload transport",()=>{
         folder_id:null,
         original_filename:"paper.pdf",
         normalized_filename:"paper.pdf",
-        normalized_filename:"paper.pdf",
         extension:".pdf",
         sha256:"a".repeat(64),
         client_mime_type:"application/pdf",
