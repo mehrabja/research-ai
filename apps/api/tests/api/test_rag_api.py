@@ -8,6 +8,7 @@ from sqlalchemy import delete, select
 from app.api.dependencies import get_current_user
 from app.core.config import get_settings
 from app.db.models.project import Project, ProjectEvent
+from app.db.models.retrieval import RetrievalRun
 from app.db.models.user import User
 from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal, get_db
@@ -175,3 +176,37 @@ def test_lexical_only_provider_contract(client):
     provider = LexicalOnlyEmbeddingProvider(profile)
     assert provider.provider_name == "lexical-only"
     assert provider.dimensions == 1536
+
+
+def test_retrieval_run_history_is_project_scoped(client, cleanup_users):
+    c, uid = client
+    pid = _mk_project(uid)
+    run_id = uuid.uuid4()
+    with SessionLocal() as db:
+        db.add(
+            RetrievalRun(
+                id=run_id,
+                project_id=pid,
+                user_id=uid,
+                query="scoped query",
+                normalized_query="scoped query",
+                query_hash=uuid.uuid4().hex,
+                context_hash=uuid.uuid4().hex,
+                retrieval_version="m26",
+                ranking_model_version="rank1",
+                status="completed",
+                candidate_count=2,
+                final_result_count=1,
+                duration_ms=12,
+                coverage=None,
+                warnings=[],
+            )
+        )
+        db.commit()
+
+    response = c.get(f"/api/v1/projects/{pid}/rag/runs?limit=1&offset=0")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["id"] == str(run_id)
+    assert body["items"][0]["query"] == "scoped query"
