@@ -81,6 +81,7 @@ jobs:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@127.0.0.1:5432/research_ai_test
       API_OPENAPI_URL: http://127.0.0.1:8000/openapi.json
       NEXT_PUBLIC_API_BASE: /api/backend
+      AUTH_REQUIRE_EMAIL_VERIFICATION: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v6
