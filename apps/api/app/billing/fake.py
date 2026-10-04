@@ -124,6 +124,19 @@ class FakeBillingProvider:
             )
         sub["cancel_at_period_end"] = False
 
+    def change_subscription_plan(
+        self,
+        *,
+        subscription_id: str,
+        price_id: str,
+        idempotency_key: str | None = None,
+    ) -> None:
+        if subscription_id not in self._subscriptions:
+            raise ValueError(f"unknown subscription: {subscription_id}")
+        if not price_id:
+            raise ValueError("price_id is required")
+        self._subscriptions[subscription_id]["plan_code"] = price_id
+
     def get_subscription(
         self, *, subscription_id: str
     ) -> dict[str, Any] | None:
