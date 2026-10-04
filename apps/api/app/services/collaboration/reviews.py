@@ -76,12 +76,9 @@ def create_review_task(
     if severity not in REVIEW_SEVERITIES:
         raise CollaborationInvalid(f"unknown severity: {severity}")
     if assignee_user_id is not None:
-        project = db.get(Report, report_id)
-        owner = (
-            db.get(Project, project.project_id).user_id
-            if project is not None and project.project_id is not None and db.get(Project, project.project_id) is not None
-            else None
-        )
+        report = db.get(Report, report_id)
+        project = db.get(Project, report.project_id) if report is not None else None
+        owner = project.user_id if project is not None else None
         assigned_member = db.execute(
             select(ProjectMember).where(
                 ProjectMember.project_id == project_id,
