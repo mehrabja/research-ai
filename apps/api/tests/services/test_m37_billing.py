@@ -208,7 +208,7 @@ class _TrackingBillingProvider:
 
     def price_id_for_plan(self, **kwargs):
         self.calls.append(("price", kwargs))
-        return f"price_{kwargs["plan_code"]}"
+        return f"price_{kwargs['plan_code']}"
 
     def change_subscription_plan(self, **kwargs):
         self.calls.append(("change_plan", kwargs))
