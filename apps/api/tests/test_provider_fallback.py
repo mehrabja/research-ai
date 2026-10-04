@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import uuid
-
 from app.integrations.generation.base import GenerationProviderUnavailableError
 from app.services.provider_registry import GenerationProviderFallback
 
