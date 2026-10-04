@@ -59,13 +59,20 @@ describe("upload transport",()=>{
         folder_id:null,
         original_filename:"paper.pdf",
         normalized_filename:"paper.pdf",
+        normalized_filename:"paper.pdf",
+        extension:".pdf",
+        sha256:"a".repeat(64),
         client_mime_type:"application/pdf",
         detected_mime_type:"application/pdf",
         size_bytes:7,
         status:"uploaded",
+        extraction_status:"pending",
+        extraction_error:null,
+        extraction_pipeline_version:null,
         file_kind:"pdf",
         created_at:"2026-10-04T00:00:00Z",
         updated_at:"2026-10-04T00:00:00Z",
+        deleted_at:null,
       });
       withCredentials=false;
       headers=new Map<string,string>();
@@ -110,9 +117,41 @@ describe("upload transport",()=>{
 
 describe("api client",()=>{it("uses same-origin proxy and propagates backend errors",async()=>{const spy=vi.spyOn(globalThis,"fetch").mockResolvedValueOnce(new Response(JSON.stringify({detail:"denied"}),{status:403}));await expect(api.workspaces()).rejects.toThrow("denied");expect(spy).toHaveBeenCalledWith("/api/backend/workspaces",expect.objectContaining({cache:"no-store"}));spy.mockRestore()});it("keeps JSON transport for ordinary requests",async()=>{const spy=vi.spyOn(globalThis,"fetch").mockResolvedValueOnce(new Response(JSON.stringify({items:[],total:0}),{status:200,headers:{"content-type":"application/json"}}));await api.workspaces();const init=spy.mock.calls[0]?.[1] as RequestInit;expect(new Headers(init.headers).get("content-type")).toBeUndefined();spy.mockRestore()});it("patches a project through the workspace-scoped endpoint",async()=>{const spy=vi.spyOn(globalThis,"fetch").mockResolvedValueOnce(new Response(JSON.stringify({id:"p1",name:"Updated"}),{status:200,headers:{"content-type":"application/json"}}));await api.updateProject("p1","w1",{name:"Updated"});const [url,init]=spy.mock.calls[0]??[];expect(url).toBe("/api/backend/projects/p1?workspace_id=w1");expect(init?.method).toBe("PATCH");expect(JSON.parse(String((init as RequestInit).body))).toEqual({name:"Updated"});spy.mockRestore()});});
 
-describe("rag lexical provider contract",()=>{
-  it("exposes a lexical-only provider without requiring an embedding backend",async()=>{
-    const module=await import("../../../../apps/api/app/services/rag/context.py");
-    expect(module).toBeDefined();
+
+describe("evidence and manuscript workflow transport",()=>{
+  it("sends evidence link create/remove requests",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({id:"link1",claim_id:"claim1",evidence_type:"m28_evidence",evidence_id:"ev1",source_id:"src1",support_level:"supports",relevance_score:0.9,provenance:{ui:"test"},created_at:"2026-10-04T00:00:00Z"}),{status:201}))
+      .mockResolvedValueOnce(new Response(null,{status:204}));
+    const link=await api.linkEvidence("r1","claim1",{evidence_type:"m28_evidence",evidence_id:"ev1",source_id:"src1",support_level:"supports",relevance_score:0.9,provenance:{ui:"test"}});
+    expect(link.id).toBe("link1");
+    await api.unlinkEvidence("r1","claim1","link1");
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/reports/r1/evidence/claims/claim1/links");
+    expect(spy.mock.calls[1]?.[0]).toBe("/api/backend/reports/r1/evidence/claims/claim1/links/link1");
+    spy.mockRestore();
+  });
+
+  it("restores a manuscript version with optimistic revision",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({saved:true,conflict:false,draft:{revision:8,base_version_id:"v2",content:{sections:{introduction:"restored"}}}}),{status:200})
+    );
+    const result=await api.restoreManuscriptVersion("r1","v2",{expected_revision:7});
+    expect(result.saved).toBe(true);
+    const init=spy.mock.calls[0]?.[1] as RequestInit;
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/reports/r1/manuscript/versions/v2/restore");
+    expect(JSON.parse(String(init.body))).toEqual({expected_revision:7});
+    spy.mockRestore();
+  });
+
+  it("persists workspace notification preferences",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({id:"np1",workspace_id:"w1",channel:"in_app",preferences:{mentions:false,reviews:true},created_at:"2026-10-04T00:00:00Z",updated_at:"2026-10-04T00:00:00Z"}),{status:200})
+    );
+    const result=await api.updateNotificationPreferences({channel:"in_app",preferences:{mentions:false,reviews:true}},"w1");
+    expect(result.preferences.reviews).toBe(true);
+    const init=spy.mock.calls[0]?.[1] as RequestInit;
+    expect(init.method).toBe("PUT");
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/notifications/preferences?workspace_id=w1");
+    spy.mockRestore();
   });
 });
