@@ -15,11 +15,11 @@ from app.core.config import get_settings
 from app.domain.embeddings import EmbeddingProfile
 from app.domain.generation import GenerationProfile
 
-
-ProviderCapability = Literal["generation", "embedding", "translation"]
-
 if TYPE_CHECKING:
     from app.services.translation_profile import TranslationProfile
+
+
+ProviderCapability = Literal["generation", "embedding", "translation"]
 
 
 class GenerationProviderFallback:
