@@ -223,3 +223,54 @@ def save_version(
     draft.base_version_id = new_version.id
     db.commit()
     return new_version
+
+def restore_version(
+    db: Session,
+    *,
+    report_id: uuid.UUID,
+    user_id: uuid.UUID,
+    version_id: uuid.UUID,
+    expected_revision: int,
+) -> ManuscriptDraft:
+    """Restore a saved manuscript version into the durable draft.
+
+    This does not silently replace the current saved version. It creates
+    a new draft revision whose base is the selected historical version.
+    """
+    get_report(db, user_id=user_id, report_id=report_id)
+    ms = _current_manuscript(db, report_id=report_id)
+    draft = get_or_create_draft(db, report_id=report_id, user_id=user_id)
+    if draft.revision != expected_revision:
+        raise ManuscriptDraftConflict(
+            f"draft revision conflict: expected {expected_revision}, current {draft.revision}",
+            draft,
+        )
+
+    version = db.execute(
+        select(ManuscriptVersion).where(
+            ManuscriptVersion.id == version_id,
+            ManuscriptVersion.manuscript_id == ms.id,
+        )
+    ).scalar_one_or_none()
+    if version is None:
+        raise ManuscriptNotFound()
+
+    content = version.content_snapshot
+    if not isinstance(content, dict):
+        content = {}
+
+    draft.revision += 1
+    draft.content = content
+    draft.base_version_id = version.id
+    draft.updated_by = user_id
+    db.add(
+        ManuscriptDraftHistory(
+            draft_id=draft.id,
+            revision=draft.revision,
+            content=content,
+            saved_by=user_id,
+        )
+    )
+    db.commit()
+    db.refresh(draft)
+    return draft
