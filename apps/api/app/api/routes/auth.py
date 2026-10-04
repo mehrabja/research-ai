@@ -32,6 +32,7 @@ from app.schemas.auth import (
     PasswordResetRequest,
     RegisterRequest,
     SessionListResponse,
+    SessionResponse,
     TokenResponse,
     TwoFactorConfirmRequest,
     TwoFactorDisableRequest,
