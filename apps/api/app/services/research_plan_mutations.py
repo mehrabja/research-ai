@@ -103,8 +103,8 @@ def save_research_plan(
         "budget": patch.budget if patch.budget is not None else current.budget,
     }
 
-    section_writes = patch.sections
-    if section_writes is None:
+    section_writes: list[ResearchPlanSectionWrite] = patch.sections or []
+    if not section_writes and patch.sections is None:
         section_writes = [
             ResearchPlanSectionWrite(
                 section_key=s.section_key,
@@ -129,8 +129,8 @@ def save_research_plan(
         raise ResearchPlanInvalid("section display_order values must be unique")
     section_key_set = set(section_keys)
 
-    req_writes = patch.evidence_requirements
-    if req_writes is None:
+    req_writes: list[ResearchEvidenceRequirementWrite] = patch.evidence_requirements or []
+    if patch.evidence_requirements is None:
         old_by_section = {
             s.id: s.section_key for s in sections
         }
@@ -158,8 +158,8 @@ def save_research_plan(
             for r in requirements
         ]
 
-    dependencies_writes = patch.dependencies
-    if dependencies_writes is None:
+    dependencies_writes: list[ResearchPlanDependencyWrite] = patch.dependencies or []
+    if patch.dependencies is None:
         old_by_id = {s.id: s.section_key for s in sections}
         dependencies_writes = [
             ResearchPlanDependencyWrite(
