@@ -701,7 +701,7 @@ function Knowledge(){
         {nodes.isPending?<State title="Loading nodes" description="Reading the active graph version."/>:nodes.isError?<State title="Nodes unavailable" description={nodes.error instanceof Error?nodes.error.message:"The node list could not be loaded."} error/>:nodes.data?.items.length===0?<State title="No nodes match" description="Try a broader search or another node type."/>:<div className="table-wrap" style={{marginTop:12}}><table className="table"><thead><tr><th>Type</th><th>Label</th><th>Entity</th></tr></thead><tbody>{nodes.data?.items.map(node=><tr key={node.id} onClick={()=>setSelectedId(node.id)} style={{cursor:"pointer"}}><td>{node.node_type}</td><td style={{overflowWrap:"anywhere"}}>{node.label||node.node_key}</td><td className="mono">{node.entity_id}</td></tr>)}</tbody></table></div>}
       </Card>
       <Card style={{marginTop:16}}>{!selectedId?<State title="Select a node" description="Choose a row above to inspect connected relationships and bounded traversal."/>:neighbors.isPending?<State title="Loading neighbors" description="Reading graph relationships."/>:neighbors.isError?<State title="Neighbor lookup failed" description={neighbors.error instanceof Error?neighbors.error.message:"The selected node relationships could not be loaded."} error/>:neighbors.data?.length===0?<State title="No neighbors" description="This node has no connected relationships."/>:<div><h3>Neighbors</h3><div className="list" style={{marginTop:10}}>{neighbors.data.map(n=><div className="list-item" key={n.edge_id}><div className="row"><div><div className="title">{n.neighbor.label||n.neighbor.node_key}</div><div className="meta">{n.direction} · {n.relation_type} · {n.provenance_type}</div></div><span className="tag">{n.confidence===null?"Confidence unavailable":Math.round(n.confidence*100)+"%"}</span></div></div>)}</div></div>}</Card>
-      {selectedId&&neighbors.data&&neighbors.data.length>0&&<Card style={{marginTop:16}}><div className="row"><div><h3>Graph view</h3><div className="muted small">Interactive local neighborhood for the selected node. Click a node to inspect its neighbors.</div></div><span className="tag">{Math.min(neighbors.data.length,12)} neighbors</span></div>
+      {selectedId&&neighbors.data&&neighbors.data.length>0&&<><Card style={{marginTop:16}}><div className="row"><div><h3>Graph view</h3><div className="muted small">Interactive local neighborhood for the selected node. Click a node to inspect its neighbors.</div></div><span className="tag">{Math.min(neighbors.data.length,12)} neighbors</span></div>
         <div style={{overflowX:"auto",marginTop:12}}>
           <svg role="img" aria-label="Knowledge graph local neighborhood" viewBox="0 0 720 360" width="100%" height="360" style={{minWidth:560,border:"1px solid var(--border)",borderRadius:12,background:"var(--surface)"}}>
             {neighbors.data.slice(0,12).map((edge,index)=>{
@@ -789,11 +789,11 @@ function Files(){
         onProgress:progress=>setUploadProgress(progress.percent),
       });
       setUploadProgress(100);
-      setUploadNotice("Uploaded \\"+file.name+"\\". Processing continues in the background.");
+      setUploadNotice(`Uploaded "${file.name}". Processing continues in the background.`);
       await qc.invalidateQueries({queryKey:["files",projectId]});
     }catch(e){
       if(e instanceof Error&&e.name==="UploadCancelledError"){
-        setUploadNotice("Upload of \\"+file.name+"\\" was cancelled.");
+        setUploadNotice(`Upload of "${file.name}" was cancelled.`);
       }else{
         setError(e instanceof Error?e.message:"Upload failed. Retry the file.");
         setRetryFile(file);
