@@ -46,11 +46,11 @@ from app.services.manuscript import validation as val_svc
 from app.services.manuscript.ordering import research_order_for_sections
 from app.services.manuscript_drafts import (
     ManuscriptDraftConflict,
-    autosave as autosave_draft,
     read_draft,
-    restore_version as restore_draft_version,
-    save_version as save_draft_version,
 )
+from app.services.manuscript_drafts import autosave as autosave_draft
+from app.services.manuscript_drafts import restore_version as restore_draft_version
+from app.services.manuscript_drafts import save_version as save_draft_version
 
 router = APIRouter(prefix="/reports", tags=["manuscript"])
 
