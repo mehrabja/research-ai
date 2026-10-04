@@ -137,6 +137,9 @@ class FakeBillingProvider:
             raise ValueError("price_id is required")
         self._subscriptions[subscription_id]["plan_code"] = price_id
 
+    def price_id_for_plan(self, *, plan_code: str) -> str | None:
+        return plan_code or None
+
     def get_subscription(
         self, *, subscription_id: str
     ) -> dict[str, Any] | None:
