@@ -25,6 +25,7 @@ from app.schemas.manuscript_draft import (
     ManuscriptDraftRead,
     ManuscriptDraftSaveRequest,
     ManuscriptDraftSaveResponse,
+    ManuscriptRestoreVersionRequest,
     ManuscriptSaveVersionRequest,
 )
 from app.schemas.manuscript import (
@@ -47,6 +48,7 @@ from app.services.manuscript_drafts import (
     ManuscriptDraftConflict,
     autosave as autosave_draft,
     read_draft,
+    restore_version as restore_draft_version,
     save_version as save_draft_version,
 )
 
@@ -276,6 +278,37 @@ def save_manuscript_version(
         expected_revision=body.expected_revision,
     )
     return ManuscriptVersionRead.model_validate(version)
+
+
+@router.post(
+    "/{report_id}/manuscript/versions/{version_id}/restore",
+    response_model=ManuscriptDraftSaveResponse,
+)
+def restore_manuscript_version(
+    report_id: uuid.UUID,
+    version_id: uuid.UUID,
+    body: ManuscriptRestoreVersionRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ManuscriptDraftSaveResponse:
+    try:
+        draft = restore_draft_version(
+            db,
+            report_id=report_id,
+            user_id=current_user.id,
+            version_id=version_id,
+            expected_revision=body.expected_revision,
+        )
+    except ManuscriptDraftConflict as exc:
+        return ManuscriptDraftSaveResponse(
+            draft=ManuscriptDraftRead.model_validate(exc.draft),
+            saved=False,
+            conflict=True,
+        )
+    return ManuscriptDraftSaveResponse(
+        draft=ManuscriptDraftRead.model_validate(draft),
+        saved=True,
+    )
 
 
 @router.post(
