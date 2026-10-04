@@ -19,9 +19,8 @@ from app.core.exceptions import (
 from app.db.models.billing_invoice import BillingInvoice
 from app.db.models.plan import Plan
 from app.db.models.subscription import Subscription
-from app.db.session import get_db
 from app.db.models.user import User
-from app.schemas.subscription import SubscriptionRead
+from app.db.session import get_db
 from app.schemas.billing import (
     ChangePlanRequest,
     CheckoutRequest,
@@ -29,6 +28,7 @@ from app.schemas.billing import (
     InvoiceListResponse,
     InvoiceRead,
 )
+from app.schemas.subscription import SubscriptionRead
 from app.services import billing as billing_service
 from app.services import memberships as memberships_service
 from app.services.stripe_billing import create_checkout, sync_invoice
@@ -51,8 +51,7 @@ def create_checkout_route(
 
     success_url = settings.stripe_success_url
     cancel_url = settings.stripe_cancel_url
-    if provider.provider_name != "stripe":
-        if not success_url or not cancel_url:
+    if provider.provider_name != "stripe" and (not success_url or not cancel_url):
             raise AppError("billing return URLs are not configured")
     result = create_checkout(
         db,
