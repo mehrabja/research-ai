@@ -10,8 +10,9 @@ It does not fabricate a provider or hide configuration failures.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from app.services.provider_registry import (
     ProviderCapability,
@@ -29,7 +30,7 @@ class ProviderAttemptError(RuntimeError):
     def __init__(
         self,
         capability: ProviderCapability,
-        attempts: tuple["ProviderAttempt", ...],
+        attempts: tuple[ProviderAttempt, ...],
     ) -> None:
         self.capability = capability
         self.attempts = attempts
