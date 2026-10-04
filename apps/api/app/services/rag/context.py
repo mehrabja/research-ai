@@ -12,7 +12,7 @@ import hashlib
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import get_args
+from typing import cast, get_args
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -72,7 +72,7 @@ def provider_for_mode(
     *, mode: RetrievalMode, profile: EmbeddingProfile, provider: EmbeddingProvider | None
 ) -> EmbeddingProvider:
     if mode == "lexical":
-        return provider if provider is not None else LexicalOnlyEmbeddingProvider(profile)
+        return provider if provider is not None else cast(EmbeddingProvider, LexicalOnlyEmbeddingProvider(profile))
     if provider is None:
         raise RetrievalAdvancedConfigurationInvalid(
             f"embedding provider required for {mode} retrieval"
