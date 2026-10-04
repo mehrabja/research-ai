@@ -437,26 +437,106 @@ function Literature(){
 }
 function Evidence(){
   const {reportId}=useCtx();
-  const q=useQuery({queryKey:["evidence",reportId],queryFn:()=>api.evidenceMatrix(reportId!),enabled:Boolean(reportId)});
+  const matrix=useQuery({queryKey:["evidence",reportId],queryFn:()=>api.evidenceMatrix(reportId!),enabled:Boolean(reportId)});
+  const manuscript=useQuery({queryKey:["evidence-manuscript",reportId],queryFn:()=>api.manuscript(reportId!),enabled:Boolean(reportId)});
+  const citations=useQuery({queryKey:["evidence-citations",reportId],queryFn:()=>api.citations(reportId!),enabled:Boolean(reportId)});
+  const sources=useQuery({queryKey:["evidence-sources",reportId],queryFn:()=>api.sources(reportId!),enabled:Boolean(reportId)});
+  const qc=useQueryClient();
+  const [claimText,setClaimText]=useState("");
+  const [claimType,setClaimType]=useState("background");
+  const [sectionId,setSectionId]=useState("");
+  const [evidenceType,setEvidenceType]=useState("m28_evidence");
+  const [evidenceId,setEvidenceId]=useState("");
+  const [sourceId,setSourceId]=useState("");
+  const [supportLevel,setSupportLevel]=useState("supports");
+  const [relevance,setRelevance]=useState("0.8");
+  const [error,setError]=useState("");
+
+  const claims=matrix.data??[];
+  const createClaim=useMutation({
+    mutationFn:()=>api.createEvidenceClaim(reportId!,{
+      citation_run_id:citations.data!.run.id,
+      manuscript_version_id:manuscript.data!.version.id,
+      manuscript_section_id:sectionId||null,
+      claim_text:claimText.trim(),
+      claim_type:claimType,
+      location:null,
+    }),
+    onSuccess:async()=>{setClaimText("");setError("");await qc.invalidateQueries({queryKey:["evidence",reportId]});},
+    onError:e=>setError(e instanceof Error?e.message:"Claim creation failed."),
+  });
+  const link=useMutation({
+    mutationFn:(claimId:string)=>api.linkEvidence(reportId!,claimId,{
+      evidence_type:evidenceType,
+      evidence_id:evidenceId.trim(),
+      source_id:sourceId||null,
+      support_level:supportLevel,
+      relevance_score:Math.max(0,Math.min(1,Number(relevance)||0)),
+      provenance:{ui:"evidence-matrix"},
+    }),
+    onSuccess:async()=>{setEvidenceId("");setSourceId("");setError("");await qc.invalidateQueries({queryKey:["evidence",reportId]});},
+    onError:e=>setError(e instanceof Error?e.message:"Evidence link failed."),
+  });
+  const unlink=useMutation({
+    mutationFn:(x:{claimId:string;linkId:string})=>api.unlinkEvidence(reportId!,x.claimId,x.linkId),
+    onSuccess:async()=>{setError("");await qc.invalidateQueries({queryKey:["evidence",reportId]});},
+    onError:e=>setError(e instanceof Error?e.message:"Evidence unlink failed."),
+  });
+
+  const canCreate=Boolean(reportId&&claimText.trim()&&manuscript.data?.version.id&&citations.data?.run.id&&!createClaim.isPending);
+  const canLink=Boolean(reportId&&evidenceId.trim()&&claims.length&&!link.isPending);
   return <><Head route="evidence" actions={<Link className="btn" href={reportId?"/generate?reportId="+reportId:"/generate"}>Use in generation</Link>}/>
-    <Card>
-      {!reportId&&<State title="No active report" description="Evidence is scoped to a report."/>}
-      {reportId&&q.isError&&<State title="Evidence unavailable" description={q.error instanceof Error?q.error.message:"The evidence service returned an error."} error/>}
-      {reportId&&q.isPending&&<State title="Loading evidence" description="Reading claim-to-source support from the selected report."/>}
-      {reportId&&!q.isPending&&!q.isError&&(q.data?.length??0)===0&&<State title="No evidence claims yet" description="Claims and their supporting or conflicting sources will appear after evidence processing."/>}
-      {q.data&&q.data.length>0&&<div className="list">{q.data.map(item=><div className="list-item" key={item.claim.id}>
-        <div className="title" style={{overflowWrap:"anywhere"}}>{item.claim.claim_text}</div>
-        <div className="meta">{item.claim.claim_type} · {item.claim.status} · {new Date(item.claim.created_at).toLocaleString()}</div>
-        <div className="list" style={{marginTop:10}}>{item.evidence.length===0?<div className="muted tiny">No linked evidence yet.</div>:item.evidence.map(link=><div className="notice" key={link.id}>
-          <div className="row"><b>{link.support_level}</b><span className="tag">{Math.round(link.relevance_score*100)}% relevance</span></div>
-          <div className="muted tiny" style={{marginTop:4}}>{link.source_id?"Source "+link.source_id:"Evidence "+link.evidence_id}</div>
-          {Object.keys(link.provenance).length>0&&<div className="muted tiny" style={{marginTop:4}}>Provenance recorded</div>}
-        </div>)}</div>
-      </div>)}</div>}
-    </Card>
+    {error&&<div className="notice error" style={{marginTop:12}}>{error}</div>}
+    {!reportId&&<Card><State title="No active report" description="Evidence is scoped to a report."/></Card>}
+    {reportId&&matrix.isError&&<Card><State title="Evidence unavailable" description={matrix.error instanceof Error?matrix.error.message:"The evidence service returned an error."} error/></Card>}
+    {reportId&&<div className="grid grid-2" style={{marginTop:16}}>
+      <Card>
+        <h3>Create claim</h3>
+        <p className="muted small">Claims are attached to the current manuscript version and active citation run.</p>
+        {!manuscript.data||!citations.data?<State title="Preparing claim context" description="Loading the current manuscript version and citation run."/>:<>
+          <div className="field" style={{marginTop:10}}><label>Claim text</label><textarea className="input textarea" value={claimText} onChange={e=>setClaimText(e.target.value)} placeholder="State the evidence-bearing claim precisely."/></div>
+          <div className="grid grid-2" style={{marginTop:10}}>
+            <div className="field"><label>Claim type</label><select className="input" value={claimType} onChange={e=>setClaimType(e.target.value)}>
+              {["background","definition","method","result","comparison","causal","limitation","synthesis","conclusion","technical"].map(t=><option key={t} value={t}>{t}</option>)}
+            </select></div>
+            <div className="field"><label>Manuscript section</label><select className="input" value={sectionId} onChange={e=>setSectionId(e.target.value)}><option value="">Not specified</option>{manuscript.data.sections.map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></div>
+          </div>
+          <button className="btn primary" style={{marginTop:12}} disabled={!canCreate} onClick={()=>createClaim.mutate()}>{createClaim.isPending?"Creating…":"Create claim"}</button>
+        </>}
+      </Card>
+
+      <Card>
+        <h3>Link evidence</h3>
+        <p className="muted small">Use a durable evidence record ID; optionally bind the record to a source in this report.</p>
+        {claims.length===0?<State title="Create a claim first" description="The claim list must contain a target before evidence can be linked."/>:<>
+          <div className="field" style={{marginTop:10}}><label>Claim</label><select className="input" value={""} onChange={()=>{}}>
+            <option value="">Select the claim below</option>
+          </select></div>
+          <div className="grid grid-2" style={{marginTop:10}}>
+            <div className="field"><label>Evidence type</label><select className="input" value={evidenceType} onChange={e=>setEvidenceType(e.target.value)}>{["m28_evidence","m29_technical_fact","m29_experiment_result","m29_metric"].map(t=><option key={t} value={t}>{t}</option>)}</select></div>
+            <div className="field"><label>Evidence record UUID</label><input className="input" value={evidenceId} onChange={e=>setEvidenceId(e.target.value)} placeholder="UUID"/></div>
+          </div>
+          <div className="grid grid-2" style={{marginTop:10}}>
+            <div className="field"><label>Source (optional)</label><select className="input" value={sourceId} onChange={e=>setSourceId(e.target.value)}><option value="">No source</option>{sources.data?.items.map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></div>
+            <div className="field"><label>Support</label><select className="input" value={supportLevel} onChange={e=>setSupportLevel(e.target.value)}>{["supports","partially_supports","contradicts","context_only"].map(t=><option key={t} value={t}>{t}</option>)}</select></div>
+          </div>
+          <div className="field" style={{marginTop:10}}><label>Relevance (0–1)</label><input className="input" type="number" min={0} max={1} step={0.05} value={relevance} onChange={e=>setRelevance(e.target.value)}/></div>
+          <div className="muted tiny" style={{marginTop:8}}>Click “Link” on the claim you want to update; the same evidence tuple is idempotent.</div>
+          <div className="list" style={{marginTop:10}}>{claims.map(item=><div className="list-item" key={item.claim.id}>
+            <div className="row"><div className="title" style={{overflowWrap:"anywhere"}}>{item.claim.claim_text}</div><span className="tag">{item.evidence.length} linked</span></div>
+            <div className="meta">{item.claim.claim_type} · {item.claim.status}</div>
+            <button className="btn" style={{marginTop:8}} disabled={!canLink||link.isPending} onClick={()=>link.mutate(item.claim.id)}>{link.isPending?"Linking…":"Link evidence to this claim"}</button>
+            {item.evidence.length>0&&<div className="list" style={{marginTop:8}}>{item.evidence.map(ev=><div className="notice" key={ev.id}><div className="row"><span><b>{ev.support_level}</b> · {Math.round(ev.relevance_score*100)}% relevance</span><button className="btn" disabled={unlink.isPending} onClick={()=>unlink.mutate({claimId:item.claim.id,linkId:ev.id})}>Remove</button></div><div className="muted tiny" style={{marginTop:4}}>{ev.evidence_type} · {ev.evidence_id}{ev.source_id?" · Source "+ev.source_id:""}</div></div>)}</div>}
+          </div>)}</div>
+        </>}
+      </Card>
+    </div>}
+    {reportId&&<Card style={{marginTop:16}}>
+      <div className="row"><div><h3>Evidence matrix</h3><div className="muted small">Persistent claim-to-evidence relationships, including support level and provenance.</div></div><span className="tag">{claims.length} claims</span></div>
+      {matrix.isPending?<State title="Loading evidence" description="Reading claim-to-source support from the selected report."/>:claims.length===0?<State title="No evidence claims yet" description="Create the first claim above, then link supporting or conflicting evidence."/>:<div className="table-wrap" style={{marginTop:10}}><table className="table"><thead><tr><th>Claim</th><th>Links</th><th>Status</th><th>Created</th></tr></thead><tbody>{claims.map(item=><tr key={item.claim.id}><td style={{maxWidth:560,whiteSpace:"normal",overflowWrap:"anywhere"}}>{item.claim.claim_text}</td><td>{item.evidence.length}</td><td>{item.claim.status}</td><td>{new Date(item.claim.created_at).toLocaleString()}</td></tr>)}</tbody></table></div>}
+    </Card>}
   </>;
 }
-
 function RAG(){
   const {projectId,reportId,projects,reports}=useCtx();
   const readiness=useQuery({queryKey:["rag-readiness",projectId],queryFn:()=>api.ragReadiness(projectId!),enabled:Boolean(projectId),refetchInterval:5000});
