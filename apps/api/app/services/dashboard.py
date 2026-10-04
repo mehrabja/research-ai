@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import TypedDict
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -17,6 +18,17 @@ from app.db.models.report import Report
 from app.db.models.source import Source
 from app.db.models.subscription import Subscription
 from app.db.models.usage import UsageEvent
+
+
+class DashboardStatsData(TypedDict):
+    active_projects: int
+    saved_sources: int
+    evidence_items: int
+    active_jobs: int
+    storage_bytes: int
+    ai_generation_units: int
+    ai_generation_limit: int | None
+    workspace_count: int
 
 
 def _active_workspace_ids(
@@ -39,7 +51,7 @@ def get_dashboard_stats(
     *,
     user_id: uuid.UUID,
     workspace_id: uuid.UUID | None,
-) -> dict[str, int | None]:
+) -> DashboardStatsData:
     workspace_ids = _active_workspace_ids(db, user_id=user_id)
     if workspace_id is not None:
         workspace_ids = [
