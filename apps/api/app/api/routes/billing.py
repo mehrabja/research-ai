@@ -86,11 +86,21 @@ def change_plan_route(
     ).scalar_one_or_none()
     if plan is None:
         raise billing_service.PlanNotFound()
+    live = billing_service.require_live_subscription(
+        db, workspace_id=workspace_id
+    )
+    provider = None
+    if live.provider != "none" and live.provider_subscription_id:
+        configured = build_billing_provider()
+        if configured.provider_name != live.provider:
+            raise AppError("billing provider configuration does not match the subscription")
+        provider = configured
     sub = billing_service.change_plan(
         db,
         workspace_id=workspace_id,
         actor_user_id=current_user.id,
         new_plan_id=plan.id,
+        provider=provider,
     )
     db.commit()
     db.refresh(sub)
