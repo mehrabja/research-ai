@@ -91,6 +91,7 @@ def change_plan(
     workspace_id: uuid.UUID,
     actor_user_id: uuid.UUID,
     new_plan_id: uuid.UUID,
+    provider: BillingProvider | None = None,
 ) -> Subscription:
     """Owner-only plan swap on the live subscription.
 
@@ -113,6 +114,17 @@ def change_plan(
         return sub
 
     old_plan_id = sub.plan_id
+    if provider is not None and sub.provider_subscription_id:
+        price_id = provider.price_id_for_plan(plan_code=plan.code)
+        if not price_id:
+            raise BillingOperationUnavailable(
+                f"billing provider has no price configured for plan {plan.code!r}"
+            )
+        provider.change_subscription_plan(
+            subscription_id=sub.provider_subscription_id,
+            price_id=price_id,
+            idempotency_key=f"plan-change:{sub.id}:{new_plan_id}",
+        )
     sub.plan_id = new_plan_id
     db.flush()
 
