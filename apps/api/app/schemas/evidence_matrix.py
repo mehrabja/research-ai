@@ -37,7 +37,7 @@ class EvidenceLinkCreate(BaseModel):
     evidence_id: uuid.UUID
     source_id: uuid.UUID | None = None
     support_level: str = Field(..., min_length=1, max_length=64)
-    relevance_score: Decimal = Field(default=0, ge=0, le=1)
+    relevance_score: Decimal = Field(default=Decimal("0"), ge=0, le=1)
     provenance: dict[str, Any] = Field(default_factory=dict)
 
 
