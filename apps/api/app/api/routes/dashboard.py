@@ -21,10 +21,22 @@ def dashboard(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> DashboardStats:
+    stats = get_dashboard_stats(
+        db,
+        user_id=current_user.id,
+        workspace_id=workspace_id,
+    )
     return DashboardStats(
-        **get_dashboard_stats(
-            db,
-            user_id=current_user.id,
-            workspace_id=workspace_id,
-        )
+        active_projects=int(stats["active_projects"]),
+        saved_sources=int(stats["saved_sources"]),
+        evidence_items=int(stats["evidence_items"]),
+        active_jobs=int(stats["active_jobs"]),
+        storage_bytes=int(stats["storage_bytes"]),
+        ai_generation_units=int(stats["ai_generation_units"]),
+        ai_generation_limit=(
+            int(stats["ai_generation_limit"])
+            if stats["ai_generation_limit"] is not None
+            else None
+        ),
+        workspace_count=int(stats["workspace_count"]),
     )
