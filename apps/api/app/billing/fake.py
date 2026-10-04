@@ -131,11 +131,15 @@ class FakeBillingProvider:
         price_id: str,
         idempotency_key: str | None = None,
     ) -> None:
+        if idempotency_key is not None and idempotency_key in self._idem:
+            return
         if subscription_id not in self._subscriptions:
             raise ValueError(f"unknown subscription: {subscription_id}")
         if not price_id:
             raise ValueError("price_id is required")
         self._subscriptions[subscription_id]["plan_code"] = price_id
+        if idempotency_key is not None:
+            self._idem[idempotency_key] = subscription_id
 
     def price_id_for_plan(self, *, plan_code: str) -> str | None:
         return plan_code or None
