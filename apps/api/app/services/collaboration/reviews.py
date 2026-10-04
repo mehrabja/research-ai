@@ -13,8 +13,9 @@ from app.core.exceptions import (
     CollaborationInvalid,
     CollaborationNotFound,
 )
-from app.db.models.collaboration import ManuscriptReviewTask
+from app.db.models.collaboration import ManuscriptReviewTask, ProjectMember
 from app.db.models.manuscript import Manuscript, ManuscriptVersion
+from app.db.models.project import Project
 from app.db.models.report import Report
 from app.domain.collaboration import (
     REVIEW_SEVERITIES,
@@ -74,6 +75,21 @@ def create_review_task(
         raise CollaborationInvalid("review title is required")
     if severity not in REVIEW_SEVERITIES:
         raise CollaborationInvalid(f"unknown severity: {severity}")
+    if assignee_user_id is not None:
+        project = db.get(Report, report_id)
+        owner = (
+            db.get(Project, project.project_id).user_id
+            if project is not None and project.project_id is not None and db.get(Project, project.project_id) is not None
+            else None
+        )
+        assigned_member = db.execute(
+            select(ProjectMember).where(
+                ProjectMember.project_id == project_id,
+                ProjectMember.user_id == assignee_user_id,
+            )
+        ).scalar_one_or_none()
+        if assignee_user_id != owner and assigned_member is None:
+            raise CollaborationInvalid("review assignee is not a member of this project")
 
     existing = list(db.execute(
         select(ManuscriptReviewTask).where(
