@@ -1,11 +1,11 @@
-"""M37 Phase 2-F — local-authoritative subscription service.
+"""M37/M39 — local-authoritative subscription service.
 
 The ``subscriptions`` table is the source of truth for application
 state.  Provider-specific fields (``provider_customer_id``,
 ``provider_subscription_id``) are integration metadata only.
 
-No route or service imports a real provider SDK.  Real provider
-wiring belongs to M40.
+Provider-backed mutations are issued through the provider abstraction
+and then mirrored into local subscription state.
 """
 from __future__ import annotations
 
