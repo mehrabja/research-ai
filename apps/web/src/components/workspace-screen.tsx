@@ -340,28 +340,44 @@ function Billing(){
 }
 
 function Settings(){
+  const {ws}=useCtx();
   const qc=useQueryClient();
   const sessions=useQuery({queryKey:["sessions"],queryFn:api.sessions});
   const tokens=useQuery({queryKey:["tokens"],queryFn:api.apiTokens});
   const tf=useQuery({queryKey:["2fa"],queryFn:api.twoFactor});
+  const preferences=useQuery({queryKey:["notification-preferences",ws.workspaceId],queryFn:()=>api.notificationPreferences(ws.workspaceId),enabled:Boolean(ws.workspaceId)});
   const [tokenName,setTokenName]=useState("");
   const [tokenScopes,setTokenScopes]=useState("read");
   const [createdToken,setCreatedToken]=useState("");
   const [twoFaSetup,setTwoFaSetup]=useState<TwoFactorEnrollment|null>(null);
   const [twoFaCode,setTwoFaCode]=useState("");
-  const revokeSession=useMutation({mutationFn:(id:string)=>api.revokeSession(id),onSuccess:()=>qc.invalidateQueries({queryKey:["sessions"]})});
-  const revokeOthers=useMutation({mutationFn:()=>api.revokeOtherSessions(),onSuccess:()=>qc.invalidateQueries({queryKey:["sessions"]})});
+  const [prefValues,setPrefValues]=useState<Record<string,boolean>>({});
+  const [prefError,setPrefError]=useState("");
+
+  useEffect(()=>{
+    if(preferences.data) setPrefValues(preferences.data.preferences);
+  },[preferences.data]);
+
+  const revokeSession=useMutation({mutationFn:(id:string)=>api.revokeSession(id),onSuccess:()=>void qc.invalidateQueries({queryKey:["sessions"]})});
+  const revokeOthers=useMutation({mutationFn:()=>api.revokeOtherSessions(),onSuccess:()=>void qc.invalidateQueries({queryKey:["sessions"]})});
   const createToken=useMutation({mutationFn:()=>api.createApiToken({name:tokenName,scopes:tokenScopes.split(",").map(x=>x.trim()).filter(Boolean)}),onSuccess:r=>{setCreatedToken(r.token);setTokenName("");void qc.invalidateQueries({queryKey:["tokens"]});}});
-  const revokeToken=useMutation({mutationFn:(id:string)=>api.revokeApiToken(id),onSuccess:()=>qc.invalidateQueries({queryKey:["tokens"]})});
+  const revokeToken=useMutation({mutationFn:(id:string)=>api.revokeApiToken(id),onSuccess:()=>void qc.invalidateQueries({queryKey:["tokens"]})});
   const begin2fa=useMutation({mutationFn:()=>api.beginTwoFactor(),onSuccess:setTwoFaSetup});
   const confirm2fa=useMutation({mutationFn:()=>api.confirmTwoFactor(twoFaCode),onSuccess:()=>{setTwoFaSetup(null);setTwoFaCode("");void qc.invalidateQueries({queryKey:["2fa"]});}});
   const disable2fa=useMutation({mutationFn:()=>api.disableTwoFactor(twoFaCode),onSuccess:()=>{setTwoFaCode("");void qc.invalidateQueries({queryKey:["2fa"]});}});
+  const savePreferences=useMutation({
+    mutationFn:()=>api.updateNotificationPreferences({channel:preferences.data?.channel??"in_app",preferences:prefValues},ws.workspaceId),
+    onSuccess:r=>{setPrefValues(r.preferences);setPrefError("");void qc.invalidateQueries({queryKey:["notification-preferences",ws.workspaceId]});},
+    onError:e=>setPrefError(e instanceof Error?e.message:"Notification preferences could not be saved."),
+  });
+
+  const preferenceEntries=Object.entries(prefValues);
   return <><Head route="settings"/>
     <div className="grid grid-2">
       <Card id="security"><div className="row"><div><h3>Two-factor authentication</h3><div className="muted small">Protect account login with TOTP or a recovery code.</div></div><span className="tag">{tf.data?.enabled?"Enabled":"Not enabled"}</span></div>
         {!tf.data?.enabled&&!twoFaSetup&&<button className="btn primary" style={{marginTop:12}} disabled={begin2fa.isPending} onClick={()=>begin2fa.mutate()}>{begin2fa.isPending?"Preparing…":"Set up 2FA"}</button>}
-        {twoFaSetup&&<div className="notice" style={{marginTop:12}}><div><b>Authenticator setup</b></div><div className="tiny" style={{marginTop:6}}>Secret: <span className="mono" style={{overflowWrap:"anywhere"}}>{twoFaSetup.secret}</span></div><div className="tiny" style={{marginTop:4}}>Provisioning URI: <span className="mono" style={{overflowWrap:"anywhere"}}>{twoFaSetup.provisioning_uri}</span></div><div className="tiny" style={{marginTop:4}}>Recovery codes: {twoFaSetup.recovery_codes.join(", ")}</div><div className="row" style={{marginTop:10}}><input className="input" inputMode="numeric" maxLength={6} value={twoFaCode} onChange={e=>setTwoFaCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code"/><button className="btn" disabled={twoFaCode.length!==6||confirm2fa.isPending} onClick={()=>confirm2fa.mutate()}>{confirm2fa.isPending?"Confirming…":"Confirm"}</button></div></div>}
-        {tf.data?.enabled&&<div className="row" style={{marginTop:12}}><input className="input" inputMode="numeric" maxLength={6} value={twoFaCode} onChange={e=>setTwoFaCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code"/><button className="btn" disabled={twoFaCode.length!==6||disable2fa.isPending} onClick={()=>disable2fa.mutate()}>{disable2fa.isPending?"Disabling…":"Disable 2FA"}</button></div>}
+        {twoFaSetup&&<div className="notice" style={{marginTop:12}}><div><b>Authenticator setup</b></div><div className="tiny" style={{marginTop:6}}>Secret: <span className="mono" style={{overflowWrap:"anywhere"}}>{twoFaSetup.secret}</span></div><div className="tiny" style={{marginTop:4}}>Provisioning URI: <span className="mono" style={{overflowWrap:"anywhere"}}>{twoFaSetup.provisioning_uri}</span></div><div className="tiny" style={{marginTop:4}}>Recovery codes: {twoFaSetup.recovery_codes.join(", ")}</div><div className="row" style={{marginTop:10}}><input className="input" aria-label="2FA confirmation code" inputMode="numeric" maxLength={6} value={twoFaCode} onChange={e=>setTwoFaCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code"/><button className="btn" disabled={twoFaCode.length!==6||confirm2fa.isPending} onClick={()=>confirm2fa.mutate()}>{confirm2fa.isPending?"Confirming…":"Confirm"}</button></div></div>}
+        {tf.data?.enabled&&<div className="row" style={{marginTop:12}}><input className="input" aria-label="2FA disable code" inputMode="numeric" maxLength={6} value={twoFaCode} onChange={e=>setTwoFaCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code"/><button className="btn" disabled={twoFaCode.length!==6||disable2fa.isPending} onClick={()=>disable2fa.mutate()}>{disable2fa.isPending?"Disabling…":"Disable 2FA"}</button></div>}
         {(begin2fa.isError||confirm2fa.isError||disable2fa.isError)&&<div className="notice error" style={{marginTop:10}}>{(begin2fa.error??confirm2fa.error??disable2fa.error) instanceof Error?(begin2fa.error??confirm2fa.error??disable2fa.error).message:"2FA operation failed."}</div>}
       </Card>
       <Card><div className="row"><div><h3>Sessions</h3><div className="muted small">Revoke access from individual sessions or all other sessions.</div></div><button className="btn" disabled={revokeOthers.isPending} onClick={()=>revokeOthers.mutate()}>{revokeOthers.isPending?"Revoking…":"Revoke others"}</button></div>
@@ -373,7 +389,13 @@ function Settings(){
         {createToken.isError&&<div className="notice error" style={{marginTop:10}}>{createToken.error instanceof Error?createToken.error.message:"Token creation failed."}</div>}
         <div className="list" style={{marginTop:10}}>{tokens.data?.length===0&&!tokens.isPending?<State title="No API tokens" description="Create a scoped token for programmatic access."/>:tokens.data?.map(t=><div className="list-item" key={t.id}><div className="row"><div><div className="title">{t.name}</div><div className="meta">{t.token_prefix} · {t.scopes.join(", ")||"No scopes"} · {t.expires_at?new Date(t.expires_at).toLocaleDateString():"No expiry"}</div></div>{t.revoked_at?<span className="tag">Revoked</span>:<button className="btn" disabled={revokeToken.isPending} onClick={()=>revokeToken.mutate(t.id)}>Revoke</button>}</div></div>)}</div>
       </Card>
-      <Card id="notifications"><h3>Notification settings</h3><p className="muted small">Notification preferences and unread state are served by the backend notification API.</p></Card>
+      <Card id="notifications"><div className="row"><div><h3>Notification settings</h3><div className="muted small">Workspace-scoped in-app notification preferences.</div></div><span className="tag">{preferences.data?.channel??"in_app"}</span></div>
+        {preferences.isError?<State title="Notification settings unavailable" description={preferences.error instanceof Error?preferences.error.message:"Notification preferences could not be loaded."} error/>:preferences.isPending?<State title="Loading notification settings" description="Reading current notification preferences."/>:preferenceEntries.length===0?<State title="No configurable preferences" description="The workspace has no notification toggles configured."/>:<>
+          <div className="list" style={{marginTop:10}}>{preferenceEntries.map(([key,enabled])=><label className="list-item row" key={key}><span><b>{key}</b><span className="muted tiny" style={{display:"block"}}>In-app notifications</span></span><input type="checkbox" checked={enabled} onChange={e=>setPrefValues(prev=>({...prev,[key]:e.target.checked}))}/></label>)}</div>
+          {prefError&&<div className="notice error" style={{marginTop:10}}>{prefError}</div>}
+          <button className="btn primary" style={{marginTop:10}} disabled={savePreferences.isPending} onClick={()=>savePreferences.mutate()}>{savePreferences.isPending?"Saving…":"Save notification settings"}</button>
+        </>}
+      </Card>
     </div>
   </>;
 }
