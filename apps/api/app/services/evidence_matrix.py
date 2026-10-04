@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ReportNotFound
 from app.db.models.citation import Claim, ClaimEvidence, CitationRun
-from app.db.models.manuscript import ManuscriptVersion
+from app.db.models.manuscript import Manuscript, ManuscriptVersion
 from app.db.models.report import Report
 from app.db.models.source import Source
 
@@ -103,9 +103,11 @@ def create_claim(
     if run is None:
         raise ValueError("citation run does not belong to report")
     manuscript_version = db.execute(
-        select(ManuscriptVersion).where(
+        select(ManuscriptVersion)
+        .join(Manuscript, Manuscript.id == ManuscriptVersion.manuscript_id)
+        .where(
             ManuscriptVersion.id == manuscript_version_id,
-            ManuscriptVersion.manuscript.has(report_id=report_id),
+            Manuscript.report_id == report_id,
         )
     ).scalar_one_or_none()
     if manuscript_version is None:
