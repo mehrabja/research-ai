@@ -17,7 +17,6 @@ from typing import Any, Generic, TypeVar
 from app.services.provider_registry import (
     ProviderCapability,
     ProviderDefinition,
-    ProviderNotConfiguredError,
     get_provider_registry,
 )
 
