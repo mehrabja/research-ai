@@ -15,22 +15,22 @@ from app.core.exceptions import (
 )
 from app.db.models.report import Report
 from app.db.models.research_memory import ResearchMemory
-from app.db.models.source import Chunk, Source
 from app.db.models.retrieval import RetrievalResult, RetrievalRun
+from app.db.models.source import Chunk, Source
 from app.db.models.user import User
 from app.db.session import get_db
+from app.domain.embeddings import build_embedding_profile_id
 from app.schemas.retrieval_advanced import (
     CoverageRead,
     MemoryListResponse,
     MemoryRead,
+    RAGReadinessResponse,
+    RetrievalRunListResponse,
     RetrievalRunRead,
     RetrievedChunkRead,
     RetrieveRequest,
     RetrieveResponse,
-    RetrievalRunListResponse,
-    RAGReadinessResponse,
 )
-from app.domain.embeddings import build_embedding_profile_id
 from app.services.embedding_profile import (
     build_embedding_provider,
     get_current_embedding_profile,
