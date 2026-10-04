@@ -154,3 +154,41 @@ describe("evidence and manuscript workflow transport",()=>{
     spy.mockRestore();
   });
 });
+
+
+describe("rag and collaboration transport",()=>{
+  it("lists and loads persisted retrieval runs",async()=>{
+    const run={
+      id:"run1",project_id:"p1",query:"causal inference",normalized_query:"causal inference",
+      query_hash:"qh",context_hash:"ch",retrieval_version:"m26",ranking_model_version:"rank1",
+      status:"completed",candidate_count:4,final_result_count:2,duration_ms:42,
+      started_at:"2026-10-04T00:00:00Z",completed_at:"2026-10-04T00:00:42Z",
+      coverage:null,warnings:null
+    };
+    const response={
+      status:"completed",job_id:null,run,
+      results:[{rank:1,chunk_id:"c1",source_id:"s1",final_score:0.91,vector_score:null,lexical_score:0.9,graph_score:null,memory_score:null,quality_score:null,diversity_penalty:null,retrieval_stage:"lexical",retrieval_reason:["lexical"],graph_distance:null,memory_match:null}],
+      coverage:null,warnings:[]
+    };
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({items:[run],total:1,limit:25,offset:0}),{status:200}))
+      .mockResolvedValueOnce(new Response(JSON.stringify(response),{status:200}));
+    expect((await api.ragRuns("p1")).items[0]?.id).toBe("run1");
+    expect((await api.ragRun("p1","run1")).results[0]?.source_id).toBe("s1");
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/projects/p1/rag/runs?limit=25&offset=0");
+    expect(spy.mock.calls[1]?.[0]).toBe("/api/backend/projects/p1/rag/runs/run1");
+    spy.mockRestore();
+  });
+
+  it("posts invitation acceptance through the authenticated API",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({workspace_id:"w1",user_id:"u1",role:"member",status:"active"}),{status:200})
+    );
+    const result=await api.acceptInvitation("invite-token");
+    expect(result.workspace_id).toBe("w1");
+    const init=spy.mock.calls[0]?.[1] as RequestInit;
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/invitations/invite-token/accept");
+    expect(init.method).toBe("POST");
+    spy.mockRestore();
+  });
+});
