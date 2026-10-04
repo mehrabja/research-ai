@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ReportNotFound
 from app.db.models.citation import Claim, ClaimEvidence, CitationRun
+from app.db.models.manuscript import ManuscriptVersion
 from app.db.models.report import Report
 from app.db.models.source import Source
 
@@ -101,6 +102,14 @@ def create_claim(
     ).scalar_one_or_none()
     if run is None:
         raise ValueError("citation run does not belong to report")
+    manuscript_version = db.execute(
+        select(ManuscriptVersion).where(
+            ManuscriptVersion.id == manuscript_version_id,
+            ManuscriptVersion.manuscript.has(report_id=report_id),
+        )
+    ).scalar_one_or_none()
+    if manuscript_version is None:
+        raise ValueError("manuscript version does not belong to report")
     normalized = " ".join(claim_text.split())
     claim_hash = hashlib.sha256(normalized.lower().encode("utf-8")).hexdigest()
     row = Claim(
@@ -145,6 +154,16 @@ def add_evidence(
         ).scalar_one_or_none()
         if source is None:
             raise ValueError("source does not belong to report")
+    existing = db.execute(
+        select(ClaimEvidence).where(
+            ClaimEvidence.claim_id == claim.id,
+            ClaimEvidence.evidence_type == evidence_type,
+            ClaimEvidence.evidence_id == evidence_id,
+            ClaimEvidence.source_id == source_id,
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
     row = ClaimEvidence(
         claim_id=claim.id,
         evidence_type=evidence_type,
