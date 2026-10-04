@@ -67,8 +67,9 @@ def create_checkout(
 
     price_id = plan_code
     if provider.provider_name == "stripe":
-        from app.core.config import get_settings
         import json
+
+        from app.core.config import get_settings
 
         try:
             price_map = json.loads(get_settings().stripe_price_map_json or "{}")
