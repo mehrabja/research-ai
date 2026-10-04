@@ -90,7 +90,7 @@ def change_plan_route(
         db, workspace_id=workspace_id
     )
     provider = None
-    if live.provider != "none" and live.provider_subscription_id:
+    if live.provider == "stripe" and live.provider_subscription_id:
         configured = build_billing_provider()
         if configured.provider_name != live.provider:
             raise AppError("billing provider configuration does not match the subscription")
