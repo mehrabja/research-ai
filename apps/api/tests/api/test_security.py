@@ -395,3 +395,55 @@ def test_evidence_source_query_is_report_scoped():
     source_statement = db.calls[2]
     sql = str(source_statement.compile(compile_kwargs={"literal_binds": False}))
     assert "sources.report_id" in sql
+
+
+def test_evidence_claim_rejects_foreign_manuscript_version() -> None:
+    from types import SimpleNamespace
+
+    from app.services import evidence_matrix
+
+    report_id = uuid.uuid4()
+    run_id = uuid.uuid4()
+    foreign_version_id = uuid.uuid4()
+
+    class Result:
+        def __init__(self, value):
+            self._value = value
+
+        def scalar_one_or_none(self):
+            return self._value
+
+    class FakeDB:
+        def __init__(self):
+            self.calls = []
+            self.added = False
+
+        def execute(self, statement):
+            self.calls.append(statement)
+            if len(self.calls) == 1:
+                return Result(SimpleNamespace(id=report_id))
+            if len(self.calls) == 2:
+                return Result(SimpleNamespace(id=run_id))
+            return Result(None)
+
+        def add(self, _row):
+            self.added = True
+
+    db = FakeDB()
+    with pytest.raises(
+        ValueError, match="manuscript version does not belong to report"
+    ):
+        evidence_matrix.create_claim(
+            db,
+            report_id=report_id,
+            user_id=uuid.uuid4(),
+            citation_run_id=run_id,
+            manuscript_version_id=foreign_version_id,
+            manuscript_section_id=None,
+            claim_text="A scoped research claim.",
+            claim_type="background",
+            location=None,
+        )
+
+    assert db.added is False
+    assert len(db.calls) == 3
