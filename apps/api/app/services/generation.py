@@ -210,7 +210,6 @@ def generate_report(
             user_id=user_id,
             report_id=report_id,
             profile_id=profile_id,
-            workspace_id=workspace_id,
         )
         db.commit()
         attempt_run = cast(Any, lease.run)
@@ -334,6 +333,7 @@ def generate_report(
             provider_result=provider_result,
             cited=cited,
             profile_id=profile_id,
+            workspace_id=workspace_id,
         )
     except GenerationAlreadySucceeded:
         raise
