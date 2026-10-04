@@ -184,6 +184,7 @@ export const api={
   evidenceMatrix:(r:string)=>request<EvidenceMatrixItem[]>("reports/"+r+"/evidence-matrix"),
   createEvidenceClaim:(r:string,b:object)=>request<EvidenceClaim>("reports/"+r+"/evidence/claims",{method:"POST",body:JSON.stringify(b)}),
   linkEvidence:(r:string,claimId:string,b:object)=>request<EvidenceLink>("reports/"+r+"/evidence/claims/"+claimId+"/links",{method:"POST",body:JSON.stringify(b)}),
+  unlinkEvidence:(r:string,claimId:string,linkId:string)=>request<void>("reports/"+r+"/evidence/claims/"+claimId+"/links/"+linkId,{method:"DELETE"}),
 
   folders:(p:string)=>request<FileFolder[]>("projects/"+p+"/file-folders"),
   createFolder:(p:string,b:object)=>request<FileFolder>("projects/"+p+"/file-folders",{method:"POST",body:JSON.stringify(b)}),
