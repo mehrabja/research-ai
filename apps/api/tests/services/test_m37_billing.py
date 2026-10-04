@@ -206,6 +206,13 @@ class _TrackingBillingProvider:
     def __init__(self):
         self.calls = []
 
+    def price_id_for_plan(self, **kwargs):
+        self.calls.append(("price", kwargs))
+        return f"price_{kwargs["plan_code"]}"
+
+    def change_subscription_plan(self, **kwargs):
+        self.calls.append(("change_plan", kwargs))
+
     def cancel_subscription(self, **kwargs):
         self.calls.append(("cancel", kwargs))
 
@@ -240,3 +247,36 @@ def test_cancel_and_resume_call_provider_when_provider_backed(cleanup_users):
     assert provider.calls[1][0] == "resume"
     assert provider.calls[1][1]["subscription_id"] == "sub_123"
     assert provider.calls[1][1]["idempotency_key"] == f"resume-subscription:{sub.id}"
+
+
+def test_provider_backed_plan_change_calls_provider(
+    cleanup_users: list[uuid.UUID],
+) -> None:
+    uid = _mk_user(cleanup_users)
+    ws = _ws_for(uid)
+    provider = _TrackingBillingProvider()
+    with SessionLocal() as db:
+        sub = billing_service.require_live_subscription(db, workspace_id=ws)
+        sub.provider = "stripe"
+        sub.provider_subscription_id = "sub_456"
+        db.commit()
+
+    with SessionLocal() as db:
+        pro = db.execute(
+            select(Plan).where(Plan.code == "pro")
+        ).scalar_one()
+        sub = billing_service.change_plan(
+            db,
+            workspace_id=ws,
+            actor_user_id=uid,
+            new_plan_id=pro.id,
+            provider=provider,
+        )
+        db.commit()
+
+    assert sub.plan_id == pro.id
+    assert provider.calls[0][0] == "price"
+    assert provider.calls[1][0] == "change_plan"
+    assert provider.calls[1][1]["subscription_id"] == "sub_456"
+    assert provider.calls[1][1]["price_id"] == "price_pro"
+    assert provider.calls[1][1]["idempotency_key"] == f"plan-change:{sub.id}:{pro.id}"
