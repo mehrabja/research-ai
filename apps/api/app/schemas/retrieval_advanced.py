@@ -88,6 +88,13 @@ class RetrieveResponse(BaseModel):
     coverage: CoverageRead | None = None
     warnings: list[str] = Field(default_factory=list)
 
+class RetrievalRunListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[RetrievalRunRead] = Field(default_factory=list)
+    total: int
+    limit: int
+    offset: int
+
 
 class MemoryRead(BaseModel):
     model_config = ConfigDict(from_attributes=True, extra="forbid")
