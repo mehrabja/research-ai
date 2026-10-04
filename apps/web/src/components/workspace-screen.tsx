@@ -509,9 +509,7 @@ function Evidence(){
         <h3>Link evidence</h3>
         <p className="muted small">Use a durable evidence record ID; optionally bind the record to a source in this report.</p>
         {claims.length===0?<State title="Create a claim first" description="The claim list must contain a target before evidence can be linked."/>:<>
-          <div className="field" style={{marginTop:10}}><label>Claim</label><select className="input" value={""} onChange={()=>{}}>
-            <option value="">Select the claim below</option>
-          </select></div>
+          <div className="notice" style={{marginTop:10}}>Use “Link evidence to this claim” under the target claim below.</div>
           <div className="grid grid-2" style={{marginTop:10}}>
             <div className="field"><label>Evidence type</label><select className="input" value={evidenceType} onChange={e=>setEvidenceType(e.target.value)}>{["m28_evidence","m29_technical_fact","m29_experiment_result","m29_metric"].map(t=><option key={t} value={t}>{t}</option>)}</select></div>
             <div className="field"><label>Evidence record UUID</label><input className="input" value={evidenceId} onChange={e=>setEvidenceId(e.target.value)} placeholder="UUID"/></div>
