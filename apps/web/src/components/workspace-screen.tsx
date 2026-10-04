@@ -219,30 +219,94 @@ function Jobs(){
 }
 function Team(){
   const {ws}=useCtx();
-  const q=useQuery({queryKey:["members",ws.workspaceId],queryFn:()=>api.members(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});
   const qc=useQueryClient();
-  const [email,setEmail]=useState("");const [role,setRole]=useState("member");const [error,setError]=useState("");
+  const members=useQuery({queryKey:["members",ws.workspaceId],queryFn:()=>api.members(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});
+  const invitations=useQuery({queryKey:["invitations",ws.workspaceId],queryFn:()=>api.invitations(ws.workspaceId!),enabled:Boolean(ws.workspaceId)});
+  const me=useQuery({queryKey:["me"],queryFn:api.me});
+  const [email,setEmail]=useState("");
+  const [role,setRole]=useState("member");
+  const [transferTarget,setTransferTarget]=useState("");
+  const [inviteToken,setInviteToken]=useState("");
+  const [error,setError]=useState("");
+
   const invite=useMutation({
     mutationFn:()=>api.invite(ws.workspaceId!,{email,role}),
-    onSuccess:()=>{setEmail("");setError("");void qc.invalidateQueries({queryKey:["members",ws.workspaceId]});},
+    onSuccess:async result=>{
+      setEmail("");
+      setInviteToken(result.token);
+      setError("");
+      await qc.invalidateQueries({queryKey:["members",ws.workspaceId]});
+      await qc.invalidateQueries({queryKey:["invitations",ws.workspaceId]});
+    },
     onError:e=>setError(e instanceof Error?e.message:"Invitation failed."),
+  });
+  const revokeInvitation=useMutation({
+    mutationFn:(id:string)=>api.revokeInvitation(ws.workspaceId!,id),
+    onSuccess:()=>{setError("");void qc.invalidateQueries({queryKey:["invitations",ws.workspaceId]});},
+    onError:e=>setError(e instanceof Error?e.message:"Invitation could not be revoked."),
   });
   const changeRole=useMutation({
     mutationFn:(x:{userId:string;role:string})=>api.changeMemberRole(ws.workspaceId!,x.userId,x.role),
-    onSuccess:()=>void qc.invalidateQueries({queryKey:["members",ws.workspaceId]}),
+    onSuccess:()=>{setError("");void qc.invalidateQueries({queryKey:["members",ws.workspaceId]});},
+    onError:e=>setError(e instanceof Error?e.message:"Member role could not be changed."),
   });
   const remove=useMutation({
     mutationFn:(id:string)=>api.removeMember(ws.workspaceId!,id),
-    onSuccess:()=>void qc.invalidateQueries({queryKey:["members",ws.workspaceId]}),
+    onSuccess:()=>{setError("");void qc.invalidateQueries({queryKey:["members",ws.workspaceId]});},
+    onError:e=>setError(e instanceof Error?e.message:"Member could not be removed."),
   });
-  return <><Head route="team"/><div className="grid grid-2">
-    <Card><h3>Invite collaborator</h3><p className="muted small">Invitation state is persisted by the workspace membership service and delivered asynchronously when email is configured.</p><div className="field" style={{marginTop:14}}><label>Email</label><input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="researcher@lab.edu"/></div><div className="field" style={{marginTop:12}}><label>Role</label><select className="input" value={role} onChange={e=>setRole(e.target.value)}><option value="member">Member</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select></div><button className="btn primary" style={{marginTop:12}} disabled={!ws.workspaceId||!email||invite.isPending} onClick={()=>invite.mutate()}>{invite.isPending?"Sending…":"Send invitation"}</button>{error&&<div className="notice error" style={{marginTop:12}}>{error}</div>}</Card>
-    <Card><h3>Role matrix</h3><div className="list" style={{marginTop:10}}>{[["Owner","workspace ownership"],["Admin","members, billing and settings"],["Member","research and content"],["Viewer","read-only access"]].map(([a,b])=><div className="list-item" key={a}><div className="row"><b>{a}</b><span className="muted small">{b}</span></div></div>)}</div></Card>
-  </div>
-  <Card style={{marginTop:16}}><h3>Members</h3><div className="table-wrap"><table className="table"><thead><tr><th>Member</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>{q.data?.items?.map(m=>{const id=m.user_id;const rle=m.role;return <tr key={id}><td>{m.email}</td><td><select className="input" value={rle} onChange={e=>changeRole.mutate({userId:id,role:e.target.value})} disabled={changeRole.isPending||rle==="owner"}><option value="owner" disabled>Owner</option><option value="admin">Admin</option><option value="member">Member</option><option value="viewer">Viewer</option></select></td><td>{m.status}</td><td><button className="btn" disabled={remove.isPending||rle==="owner"} onClick={()=>remove.mutate(id)}>Remove</button></td></tr>})}</tbody></table></div></Card>
+  const transfer=useMutation({
+    mutationFn:()=>api.transferOwnership(ws.workspaceId!,transferTarget),
+    onSuccess:async()=>{
+      setTransferTarget("");
+      setError("");
+      await qc.invalidateQueries({queryKey:["members",ws.workspaceId]});
+      await qc.invalidateQueries({queryKey:["workspaces"]});
+    },
+    onError:e=>setError(e instanceof Error?e.message:"Ownership transfer failed."),
+  });
+
+  const activeMembers=members.data?.items??[];
+  const transferable=activeMembers.filter(member=>member.role!=="owner"&&member.user_id!==me.data?.id);
+  const pendingInvites=(invitations.data?.items??[]).filter(inv=>inv.state==="pending");
+
+  async function copyInviteToken(){
+    if(!inviteToken)return;
+    try{
+      await navigator.clipboard.writeText(inviteToken);
+      setError("");
+    }catch{
+      setError("The browser did not allow clipboard access. Copy the token manually.");
+    }
+  }
+
+  return <><Head route="team"/>
+    {error&&<div className="notice error" style={{marginBottom:14}}>{error}</div>}
+    <div className="grid grid-2">
+      <Card><h3>Invite collaborator</h3><p className="muted small">Invitation state is durable. The raw token is displayed only once after creation.</p>
+        <div className="field" style={{marginTop:14}}><label>Email</label><input className="input" type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="researcher@lab.edu"/></div>
+        <div className="field" style={{marginTop:12}}><label>Role</label><select className="input" value={role} onChange={e=>setRole(e.target.value)}><option value="member">Member</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select></div>
+        <button className="btn primary" style={{marginTop:12}} disabled={!ws.workspaceId||!email||invite.isPending} onClick={()=>invite.mutate()}>{invite.isPending?"Creating…":"Create invitation"}</button>
+        {inviteToken&&<div className="notice success" style={{marginTop:12}}><div><b>Invitation token</b> — copy it now; it will not be returned again.</div><div className="mono" style={{overflowWrap:"anywhere",marginTop:8}}>{inviteToken}</div><button className="btn" style={{marginTop:8}} onClick={()=>void copyInviteToken()}>Copy token</button></div>}
+      </Card>
+      <Card><h3>Ownership transfer</h3><p className="muted small">Transfer makes the selected active member the workspace owner. The current owner becomes an admin.</p>
+        <select className="input" value={transferTarget} onChange={e=>setTransferTarget(e.target.value)} disabled={transfer.isPending||transferable.length===0}>
+          <option value="">{transferable.length?"Select active member":"No eligible member"}</option>
+          {transferable.map(member=><option key={member.user_id} value={member.user_id}>{member.email} · {member.role}</option>)}
+        </select>
+        <button className="btn" style={{marginTop:10}} disabled={!transferTarget||transfer.isPending} onClick={()=>{if(confirm("Transfer workspace ownership to the selected member?"))transfer.mutate();}}>{transfer.isPending?"Transferring…":"Transfer ownership"}</button>
+      </Card>
+    </div>
+
+    <Card style={{marginTop:16}}><div className="row"><div><h3>Pending invitations</h3><div className="muted tiny">Revoke invitations that should no longer be accepted.</div></div><span className="tag">{pendingInvites.length}</span></div>
+      {invitations.isError?<State title="Invitations unavailable" description={invitations.error instanceof Error?invitations.error.message:"Invitation state could not be loaded."} error/>:pendingInvites.length===0&&!invitations.isPending?<State title="No pending invitations" description="New invitation tokens will appear here after creation."/>:<div className="list" style={{marginTop:10}}>{pendingInvites.map(inv=><div className="list-item" key={inv.id}><div className="row"><div><div className="title">{inv.email}</div><div className="meta">{inv.role} · expires {new Date(inv.expires_at).toLocaleString()}</div></div><button className="btn" disabled={revokeInvitation.isPending} onClick={()=>{if(confirm("Revoke this invitation?"))revokeInvitation.mutate(inv.id);}}>Revoke</button></div></div>)}</div>}
+    </Card>
+
+    <Card style={{marginTop:16}}><h3>Members</h3>{members.isError?<State title="Members unavailable" description={members.error instanceof Error?members.error.message:"Workspace membership could not be loaded."} error/>:members.isPending?<State title="Loading members" description="Reading active workspace membership."/>:<div className="table-wrap"><table className="table"><thead><tr><th>Member</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>{activeMembers.map(member=><tr key={member.user_id}><td>{member.email}</td><td><select className="input" aria-label={"Role for "+member.email} value={member.role} onChange={e=>changeRole.mutate({userId:member.user_id,role:e.target.value})} disabled={changeRole.isPending||member.role==="owner"}><option value="owner" disabled>Owner</option><option value="admin">Admin</option><option value="member">Member</option><option value="viewer">Viewer</option></select></td><td>{member.status}</td><td><button className="btn" disabled={remove.isPending||member.role==="owner"} onClick={()=>{if(confirm("Remove this member from the workspace?"))remove.mutate(member.user_id);}}>Remove</button></td></tr>)}</tbody></table></div>}</Card>
+
+    <Card style={{marginTop:16}}><h3>Role matrix</h3><div className="list" style={{marginTop:10}}>{[["Owner","workspace ownership"],["Admin","members, billing and settings"],["Member","research and content"],["Viewer","read-only access"]].map(([a,b])=><div className="list-item" key={a}><div className="row"><b>{a}</b><span className="muted small">{b}</span></div></div>)}</div></Card>
   </>;
 }
-
 function Billing(){
   const {ws}=useCtx();
   const qc=useQueryClient();
