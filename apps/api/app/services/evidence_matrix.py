@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ReportNotFound
 from app.db.models.citation import Claim, ClaimEvidence, CitationRun
-from app.db.models.manuscript import Manuscript, ManuscriptVersion
+from app.db.models.manuscript import Manuscript, ManuscriptSection, ManuscriptVersion
 from app.db.models.report import Report
 from app.db.models.source import Source
 
@@ -112,6 +112,15 @@ def create_claim(
     ).scalar_one_or_none()
     if manuscript_version is None:
         raise ValueError("manuscript version does not belong to report")
+    if manuscript_section_id is not None:
+        section = db.execute(
+            select(ManuscriptSection).where(
+                ManuscriptSection.id == manuscript_section_id,
+                ManuscriptSection.manuscript_version_id == manuscript_version.id,
+            )
+        ).scalar_one_or_none()
+        if section is None:
+            raise ValueError("manuscript section does not belong to version")
     normalized = " ".join(claim_text.split())
     claim_hash = hashlib.sha256(normalized.lower().encode("utf-8")).hexdigest()
     row = Claim(
