@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import text
 
 from app.core import exceptions as exc
+from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.domain.source import SourceCandidate
 from app.integrations.sources.base import (
