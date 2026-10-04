@@ -2,7 +2,7 @@
 import Link from "next/link";
 import {useEffect,useMemo,useRef,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {useSearchParams} from "next/navigation";
+import {useRouter,useSearchParams} from "next/navigation";
 import {AppShell,useWorkspace} from "./app-shell";
 import {api} from "@/lib/api/client";
 import type {FileFolder,RAGResponse,SourceCandidate,TwoFactorEnrollment} from "@/lib/api/generated";
@@ -96,6 +96,7 @@ function Metric({label,value:v}:{label:string;value:unknown}){return <div classN
 function Research(){
   const {ws,reportId,projectId,projects,reports}=useCtx();
   const p=useSearchParams();
+  const qc=useQueryClient();
   const [q,setQ]=useState(p.get("q")??"");
   const [submittedQuery,setSubmittedQuery]=useState("");
   const [year,setYear]=useState("");
