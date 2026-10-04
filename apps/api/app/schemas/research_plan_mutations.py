@@ -1,7 +1,6 @@
 """Research plan mutation schemas."""
 from __future__ import annotations
 
-import uuid
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
