@@ -1,4 +1,4 @@
-import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,Job,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,ManuscriptVersion,Member,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
+import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,Job,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,ManuscriptVersion,Member,NotificationPreference,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
 
@@ -140,8 +140,8 @@ export const api={
   notifications:(w?:string)=>request<NotificationList>("notifications"+(w?"?workspace_id="+encodeURIComponent(w):"")),
   markNotificationRead:(id:string)=>request<void>("notifications/"+id+"/read",{method:"POST"}),
   readAllNotifications:(w?:string)=>request<void>("notifications/read-all"+(w?"?workspace_id="+encodeURIComponent(w):""),{method:"POST"}),
-  notificationPreferences:(w?:string)=>request<Record<string,unknown>>("notifications/preferences"+(w?"?workspace_id="+encodeURIComponent(w):"")),
-  updateNotificationPreferences:(body:object,w?:string)=>request<Record<string,unknown>>("notifications/preferences"+(w?"?workspace_id="+encodeURIComponent(w):""),{method:"PUT",body:JSON.stringify(body)}),
+  notificationPreferences:(w?:string)=>request<NotificationPreference>("notifications/preferences"+(w?"?workspace_id="+encodeURIComponent(w):"")),
+  updateNotificationPreferences:(body:{channel:string;preferences:Record<string,boolean>},w?:string)=>request<NotificationPreference>("notifications/preferences"+(w?"?workspace_id="+encodeURIComponent(w):""),{method:"PUT",body:JSON.stringify(body)}),
 
   globalSearch:(q:string,w?:string,limit=50,offset=0)=>request<SearchResponse>(
     "search?q="+encodeURIComponent(q)+(w?"&workspace_id="+encodeURIComponent(w):"")+"&limit="+limit+"&offset="+offset
