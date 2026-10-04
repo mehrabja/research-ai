@@ -322,6 +322,7 @@ export const api={
   removeMember:(w:string,u:string)=>request<null>("workspaces/"+w+"/members/"+u,{method:"DELETE"}),
   invitations:(w:string)=>request<{items:Invitation[];total:number}>("workspaces/"+w+"/members/invitations"),
   invite:(w:string,b:object)=>request<{invitation:Invitation;token:string}>("workspaces/"+w+"/members/invitations",{method:"POST",body:JSON.stringify(b)}),
+  acceptInvitation:(token:string)=>request<{workspace_id:string;user_id:string;role:string;status:string}>("invitations/"+encodeURIComponent(token)+"/accept",{method:"POST"}),
   revokeInvitation:(w:string,i:string)=>request<null>("workspaces/"+w+"/members/invitations/"+i,{method:"DELETE"}),
   transferOwnership:(w:string,u:string)=>request<Workspace>("workspaces/"+w+"/transfer-ownership",{method:"POST",body:JSON.stringify({target_user_id:u})}),
 
