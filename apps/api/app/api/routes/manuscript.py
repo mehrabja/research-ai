@@ -21,13 +21,6 @@ from app.db.models.manuscript import (
 )
 from app.db.models.user import User
 from app.db.session import get_db
-from app.schemas.manuscript_draft import (
-    ManuscriptDraftRead,
-    ManuscriptDraftSaveRequest,
-    ManuscriptDraftSaveResponse,
-    ManuscriptRestoreVersionRequest,
-    ManuscriptSaveVersionRequest,
-)
 from app.schemas.manuscript import (
     ManuscriptCurrentRead,
     ManuscriptGenerateRequest,
@@ -38,6 +31,13 @@ from app.schemas.manuscript import (
     ManuscriptValidationRead,
     ManuscriptVersionListResponse,
     ManuscriptVersionRead,
+)
+from app.schemas.manuscript_draft import (
+    ManuscriptDraftRead,
+    ManuscriptDraftSaveRequest,
+    ManuscriptDraftSaveResponse,
+    ManuscriptRestoreVersionRequest,
+    ManuscriptSaveVersionRequest,
 )
 from app.services import reports as reports_service
 from app.services.manuscript import builder as builder_svc
