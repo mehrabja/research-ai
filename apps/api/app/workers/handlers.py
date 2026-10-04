@@ -20,6 +20,7 @@ from typing import cast
 
 from sqlalchemy import select
 
+from app.core.config import get_settings
 from app.core.exceptions import AppError
 from app.db.models.pipeline import TranslationRun, TranslationVersion
 from app.db.session import SessionLocal
@@ -734,9 +735,9 @@ def _frontend_link(path: str, token: str) -> str:
 
 def _send_email_verification(ctx: JobContext) -> None:
     from app.db.models.user import User
+    from app.integrations.email import EmailMessagePayload
     from app.services.auth_tokens import issue_email_verification_token
     from app.services.email_provider import build_email_provider
-    from app.integrations.email import EmailMessagePayload
 
     user_id = _email_user_id(ctx)
     with SessionLocal() as db:
@@ -762,9 +763,9 @@ def _send_email_verification(ctx: JobContext) -> None:
 
 def _send_password_reset(ctx: JobContext) -> None:
     from app.db.models.user import User
+    from app.integrations.email import EmailMessagePayload
     from app.services.auth_tokens import issue_password_reset_token
     from app.services.email_provider import build_email_provider
-    from app.integrations.email import EmailMessagePayload
 
     user_id = _email_user_id(ctx)
     with SessionLocal() as db:
