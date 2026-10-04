@@ -680,6 +680,9 @@ def run_humanization(
                 prompt=prompt,
                 policy=policy,
                 before_snapshot=before_snapshot,
+                workspace_id=workspace_id,
+                user_id=user_id,
+                report_id=report_id,
             )
 
             for idx, call in enumerate(calls):
