@@ -144,6 +144,7 @@ def _get_or_create_running_run(
     db: Session,
     *,
     report_id: uuid.UUID,
+    job_id: uuid.UUID | None = None,
     source_version_id: uuid.UUID,
     source_lang: str,
     target_lang: str,
