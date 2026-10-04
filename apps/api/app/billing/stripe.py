@@ -191,6 +191,10 @@ class StripeBillingProvider(BillingProvider):
             idempotency_key=idempotency_key,
         )
 
+    def price_id_for_plan(self, *, plan_code: str) -> str | None:
+        value = self._price_map.get(plan_code)
+        return value if value else None
+
     def change_subscription_plan(
         self,
         *,
