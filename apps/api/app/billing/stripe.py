@@ -267,7 +267,7 @@ class StripeBillingProvider(BillingProvider):
             timestamp = int(parts["t"])
             expected = hmac.new(
                 self.webhook_secret.encode("utf-8"),
-                f"{timestamp}.".encode("utf-8") + raw_body,
+                f"{timestamp}.".encode() + raw_body,
                 hashlib.sha256,
             ).hexdigest()
             supplied = [
