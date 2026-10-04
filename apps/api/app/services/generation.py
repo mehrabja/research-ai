@@ -42,9 +42,8 @@ from app.integrations.generation.base import (
 )
 from app.services import report_status as report_status_service
 from app.services import report_versions as report_versions_service
-from app.services.ai_metering import execute_metered_provider_call
-from app.services.usage import record_event
 from app.services import retrieval as retrieval_service
+from app.services.ai_metering import execute_metered_provider_call
 from app.services.embedding_profile import (
     build_embedding_provider,
     get_current_embedding_profile,
@@ -57,6 +56,7 @@ from app.services.generation_prompt import (
     build_system_prompt,
     build_user_prompt,
 )
+from app.services.usage import record_event
 
 logger = logging.getLogger(__name__)
 
