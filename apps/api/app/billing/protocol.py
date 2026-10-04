@@ -47,6 +47,14 @@ class BillingProvider(Protocol):
         idempotency_key: str | None = None,
     ) -> None: ...
 
+    def change_subscription_plan(
+        self,
+        *,
+        subscription_id: str,
+        price_id: str,
+        idempotency_key: str | None = None,
+    ) -> None: ...
+
     def resume_subscription(
         self,
         *,
