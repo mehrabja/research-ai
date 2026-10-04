@@ -9,10 +9,14 @@ export default function ForgotPasswordPage(){
   const [busy,setBusy]=useState(false);
   async function submit(e:React.FormEvent){
     e.preventDefault();setBusy(true);setMessage("");
-    const res=await fetch("/api/backend/auth/password-reset/request",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email})});
-    const body=await res.json().catch(()=>({}));
-    setMessage(typeof body?.message==="string"?body.message:"If the account exists, a password reset email will be sent.");
-    setBusy(false);
+    try{
+      const res=await fetch("/api/backend/auth/password-reset/request",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email})});
+      const body=await res.json().catch(()=>({}));
+      if(!res.ok)throw new Error(typeof body?.detail==="string"?body.detail:typeof body?.message==="string"?body.message:"Password reset request failed.");
+      setMessage(typeof body?.message==="string"?body.message:"If the account exists, a password reset email will be sent.");
+    }catch(err){
+      setMessage(err instanceof Error?err.message:"Password reset request failed.");
+    }finally{setBusy(false);}
   }
   return <div className="auth-page">
     <section className="auth-side"><Link className="brand" href="/"><span className="brand-mark">R</span><span>Research AI</span></Link><div className="eyebrow" style={{marginTop:70}}>Password recovery</div><h1>Recover access without exposing account existence.</h1><p>The API returns the same response shape whether or not an account exists.</p></section>
