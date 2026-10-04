@@ -191,6 +191,32 @@ class StripeBillingProvider(BillingProvider):
             idempotency_key=idempotency_key,
         )
 
+    def change_subscription_plan(
+        self,
+        *,
+        subscription_id: str,
+        price_id: str,
+        idempotency_key: str | None = None,
+    ) -> None:
+        current = self._request("GET", f"/v1/subscriptions/{subscription_id}")
+        items = current.get("items")
+        data = items.get("data") if isinstance(items, dict) else None
+        if not isinstance(data, list) or not data:
+            raise StripeProviderError("Stripe subscription has no items")
+        item = data[0]
+        item_id = item.get("id") if isinstance(item, dict) else None
+        if not isinstance(item_id, str) or not item_id:
+            raise StripeProviderError("Stripe subscription item has no id")
+        self._request(
+            "POST",
+            f"/v1/subscriptions/{subscription_id}",
+            data={
+                "items[0][id]": item_id,
+                "items[0][price]": price_id,
+            },
+            idempotency_key=idempotency_key,
+        )
+
     def get_subscription(
         self,
         *,
