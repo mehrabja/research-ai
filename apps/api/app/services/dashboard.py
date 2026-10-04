@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models.citation import Claim, CitationRun
+from app.db.models.citation import CitationRun, Claim
 from app.db.models.jobs import Job
 from app.db.models.membership import WorkspaceMembership
 from app.db.models.plan import Plan, PlanEntitlement
