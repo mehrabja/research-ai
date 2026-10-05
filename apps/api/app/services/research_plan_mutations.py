@@ -229,52 +229,54 @@ def save_research_plan(
     db.flush()
 
     new_sections: dict[str, ResearchPlanSection] = {}
-    for data in section_writes:
+    for section_data in section_writes:
         row = ResearchPlanSection(
             plan_id=plan.id,
-            section_key=data.section_key,
-            title=data.title,
-            purpose=data.purpose,
-            section_type=data.section_type,
-            display_order=data.display_order,
-            required=data.required,
-            word_budget=data.word_budget,
-            budget_weight=data.budget_weight,
-            evidence_coverage_target=data.evidence_coverage_target,
-            status=data.status,
+            section_key=section_data.section_key,
+            title=section_data.title,
+            purpose=section_data.purpose,
+            section_type=section_data.section_type,
+            display_order=section_data.display_order,
+            required=section_data.required,
+            word_budget=section_data.word_budget,
+            budget_weight=section_data.budget_weight,
+            evidence_coverage_target=section_data.evidence_coverage_target,
+            status=section_data.status,
         )
         db.add(row)
         db.flush()
-        new_sections[data.section_key] = row
+        new_sections[section_data.section_key] = row
 
+    for requirement_data in req_writes:
     for data in req_writes:
         db.add(
             ResearchEvidenceRequirement(
                 plan_id=plan.id,
-                section_id=new_sections[data.section_key].id,
-                requirement_key=data.requirement_key,
-                requirement_type=data.requirement_type,
-                description=data.description,
-                required=data.required,
-                priority=data.priority,
-                min_sources=data.min_sources,
-                max_sources=data.max_sources,
-                preferred_paper_types=data.preferred_paper_types,
-                preferred_research_designs=data.preferred_research_designs,
-                max_age_years=data.max_age_years,
-                full_text_required=data.full_text_required,
-                min_relevance_score=data.min_relevance_score,
-                coverage_weight=data.coverage_weight,
+                section_id=new_sections[requirement_data.section_key].id,
+                requirement_key=requirement_data.requirement_key,
+                requirement_type=requirement_data.requirement_type,
+                description=requirement_data.description,
+                required=requirement_data.required,
+                priority=requirement_data.priority,
+                min_sources=requirement_data.min_sources,
+                max_sources=requirement_data.max_sources,
+                preferred_paper_types=requirement_data.preferred_paper_types,
+                preferred_research_designs=requirement_data.preferred_research_designs,
+                max_age_years=requirement_data.max_age_years,
+                full_text_required=requirement_data.full_text_required,
+                min_relevance_score=requirement_data.min_relevance_score,
+                coverage_weight=requirement_data.coverage_weight,
             )
         )
 
+    for dependency_data in dependencies_writes:
     for data in dependencies_writes:
         db.add(
             ResearchPlanDependency(
                 plan_id=plan.id,
-                upstream_section_id=new_sections[data.upstream_section_key].id,
-                downstream_section_id=new_sections[data.downstream_section_key].id,
-                dependency_type=data.dependency_type,
+                upstream_section_id=new_sections[dependency_data.upstream_section_key].id,
+                downstream_section_id=new_sections[dependency_data.downstream_section_key].id,
+                dependency_type=dependency_data.dependency_type,
             )
         )
 
