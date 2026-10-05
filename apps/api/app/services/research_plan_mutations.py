@@ -248,7 +248,6 @@ def save_research_plan(
         new_sections[section_data.section_key] = row
 
     for requirement_data in req_writes:
-    for data in req_writes:
         db.add(
             ResearchEvidenceRequirement(
                 plan_id=plan.id,
@@ -270,7 +269,6 @@ def save_research_plan(
         )
 
     for dependency_data in dependencies_writes:
-    for data in dependencies_writes:
         db.add(
             ResearchPlanDependency(
                 plan_id=plan.id,
