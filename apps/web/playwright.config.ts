@@ -13,7 +13,7 @@ export default defineConfig({
       command:`${backendPython} -m uvicorn app.main:app --host 127.0.0.1 --port 8000`,
       cwd:"../api",
       url:"http://127.0.0.1:8000/api/v1/health/live",
-      reuseExistingServer:true,
+      reuseExistingServer:false,
     },
     {
       command:"npm run dev",
