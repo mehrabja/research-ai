@@ -416,7 +416,27 @@ function Settings(){
 function Workspace(){
   const {ws,projects}=useCtx();
   const [name,setName]=useState("");
+  const [workspaceName,setWorkspaceName]=useState("");
   const qc=useQueryClient();
+  const current=ws.workspaces.find(w=>w.id===ws.workspaceId);
+  const detail=useQuery({
+    queryKey:["workspace",ws.workspaceId],
+    queryFn:()=>api.workspace(ws.workspaceId!),
+    enabled:Boolean(ws.workspaceId),
+  });
+  useEffect(()=>{
+    const next=detail.data?.name??current?.name??"";
+    setWorkspaceName(next);
+  },[current?.name,detail.data?.name]);
+
+  const update=useMutation({
+    mutationFn:()=>api.updateWorkspace(ws.workspaceId!,{name:workspaceName.trim()}),
+    onSuccess:async workspace=>{
+      setWorkspaceName(workspace.name);
+      await qc.invalidateQueries({queryKey:["workspaces"]});
+      await qc.invalidateQueries({queryKey:["workspace",ws.workspaceId]});
+    },
+  });
   const create=useMutation({
     mutationFn:()=>api.createWorkspace(name.trim()),
     onSuccess:async workspace=>{
@@ -425,15 +445,20 @@ function Workspace(){
       await qc.invalidateQueries({queryKey:["workspaces"]});
     },
   });
-  const current=ws.workspaces.find(w=>w.id===ws.workspaceId);
   return <><Head route="workspace" actions={<Link className="btn primary" href="/projects">Create project →</Link>}/>
     <div className="grid grid-2">
       <Card>
-        <h3>Current workspace</h3>
+        <div className="row"><h3>Current workspace</h3>{detail.isPending&&<span className="tag">Loading</span>}</div>
         {current ? (
           <>
-            <div className="title" style={{marginTop:10,fontSize:15}}>{current.name}</div>
-            <div className="meta">{current.slug} · {current.status} · Role: {current.role}</div>
+            <div className="field" style={{marginTop:10}}>
+              <label htmlFor="workspace-name">Workspace name</label>
+              <input id="workspace-name" className="input" value={workspaceName} onChange={e=>setWorkspaceName(e.target.value)} disabled={update.isPending}/>
+            </div>
+            <div className="meta" style={{marginTop:7}}>{detail.data?.slug??current.slug} · {detail.data?.status??current.status} · Role: {current.role}</div>
+            <button className="btn primary" style={{marginTop:12}} disabled={!workspaceName.trim()||update.isPending||workspaceName.trim()===(detail.data?.name??current.name)} onClick={()=>update.mutate()}>{update.isPending?"Saving…":"Save workspace"}</button>
+            {update.isError&&<div className="notice error" style={{marginTop:10}}>{update.error instanceof Error?update.error.message:"Workspace update failed."}</div>}
+            {detail.isError&&<div className="notice error" style={{marginTop:10}}>{detail.error instanceof Error?detail.error.message:"Workspace detail could not be loaded."}</div>}
             <div className="notice" style={{marginTop:14}}>
               <b>Workspace is the tenant boundary.</b>
               <div className="muted tiny" style={{marginTop:4}}>Membership, access, usage and billing belong here. Research work belongs in projects.</div>
@@ -475,6 +500,7 @@ function Workspace(){
       <div style={{marginTop:10}}><Table data={rows(projects.data?.items)}/></div>
       {!projects.isPending&&!(projects.data?.items?.length)&&<div className="notice" style={{marginTop:12}}>No projects yet. <Link href="/projects" style={{color:"var(--primary)",fontWeight:700}}>Create the first project.</Link></div>}
     </Card>
+  </Card>}
   </>;
 }
 
@@ -639,6 +665,12 @@ function RAG(){
   const {projectId,reportId,projects,reports}=useCtx();
   const readiness=useQuery({queryKey:["rag-readiness",projectId],queryFn:()=>api.ragReadiness(projectId!),enabled:Boolean(projectId),refetchInterval:5000});
   const runs=useQuery({queryKey:["rag-runs",projectId],queryFn:()=>api.ragRuns(projectId!,25,0),enabled:Boolean(projectId),refetchInterval:5000});
+  const memory=useQuery({
+    queryKey:["rag-memory",projectId],
+    queryFn:()=>api.ragMemory(projectId!,undefined,100),
+    enabled:Boolean(projectId),
+    refetchInterval:10000,
+  });
   const [query,setQuery]=useState("");
   const [mode,setMode]=useState<"lexical"|"semantic"|"hybrid">("hybrid");
   const [maxResults,setMaxResults]=useState(10);
@@ -679,10 +711,41 @@ function RAG(){
     {projectId&&<Card style={{marginTop:16}}><div className="row"><div><h3>Retrieval history</h3><div className="muted small">Persisted retrieval runs for this project. Selecting one reloads its stored results.</div></div><span className="tag">{runs.data?.total??0} runs</span></div>
       {runs.isError?<State title="Run history unavailable" description={runs.error instanceof Error?runs.error.message:"Retrieval history could not be loaded."} error/>:runs.isPending?<State title="Loading retrieval history" description="Reading persisted retrieval runs."/>:runs.data?.items.length===0?<State title="No retrieval runs" description="Completed retrieval requests will appear here."/>:<div className="list" style={{marginTop:10}}>{runs.data.items.map(run=><button className="list-item" style={{textAlign:"left",width:"100%",cursor:"pointer",background:run.id===selectedRunId?"var(--surface)":"transparent"}} key={run.id} onClick={()=>setSelectedRunId(run.id)}><div className="row"><div><div className="title">{run.query}</div><div className="meta">{run.status} · {run.final_result_count} results · {new Date(run.started_at).toLocaleString()}</div></div><span className="tag">{run.duration_ms===null?"Duration —":run.duration_ms+" ms"}</span></div></button>)}</div>}
     </Card>}
+    {projectId&&<Card style={{marginTop:16}}>
+      <div className="row"><div><h3>Research memory</h3><div className="muted small">Persisted memory records available to advanced retrieval for this project.</div></div><span className="tag">{memory.data?.total??0} records</span></div>
+      {memory.isPending?<State title="Loading research memory" description="Reading persisted memory records."/>:
+       memory.isError?<State title="Research memory unavailable" description={memory.error instanceof Error?memory.error.message:"The memory store could not be loaded."} error/>:
+       memory.data?.items.length===0?<State title="No research memory yet" description="Memory records appear as research workflows persist reusable context."/>:
+       <div className="list" style={{marginTop:10}}>{memory.data.items.map(item=><div className="list-item" key={item.id}>
+         <div className="row"><div><div className="title">{item.memory_type}</div><div className="meta">{item.status} · reuse {item.reuse_count}</div></div><span className="tag">{Math.round(item.confidence*100)}% confidence</span></div>
+         <div className="muted small" style={{marginTop:5}}>{item.summary}</div>
+       </div>)}</div>}
+    </Card>}
   </>;
 }
 function Knowledge(){
   const {projectId}=useCtx();
+  const qc=useQueryClient();
+  const [jobId,setJobId]=useState("");
+  const job=useQuery({
+    queryKey:["kg-generate-job",jobId],
+    queryFn:()=>api.job(jobId),
+    enabled:Boolean(jobId),
+    refetchInterval:3000,
+  });
+  const generate=useMutation({
+    mutationFn:()=>api.knowledgeGraphGenerate(projectId!,{force:true,async:true}),
+    onSuccess:async response=>{
+      if(response.job_id){
+        setJobId(response.job_id);
+        return;
+      }
+      await Promise.all([
+        qc.invalidateQueries({queryKey:["kg-summary",projectId]}),
+        qc.invalidateQueries({queryKey:["kg-nodes",projectId]}),
+      ]);
+    },
+  });
   const summary=useQuery({queryKey:["kg-summary",projectId],queryFn:()=>api.knowledgeGraphSummary(projectId!),enabled:Boolean(projectId)});
   const [search,setSearch]=useState("");
   const [nodeType,setNodeType]=useState("");
@@ -696,7 +759,19 @@ function Knowledge(){
   const ex=useMutation({mutationFn:(f:"json"|"csv")=>api.knowledgeGraphExport(projectId!,f),onError:e=>setExportError(e instanceof Error?e.message:"Knowledge graph export failed. Retry.")});
   async function exportGraph(format:"json"|"csv"){try{const blob=await ex.mutateAsync(format);const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download="knowledge-graph-"+projectId+"."+format;document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){setExportError(e instanceof Error?e.message:"Knowledge graph export failed. Retry.");}}
   const nodeTypes=Object.keys(summary.data?.node_type_counts??{});
-  return <><Head route="knowledge" actions={<><button className="btn" disabled={!projectId||ex.isPending} onClick={()=>void exportGraph("json")}>{ex.isPending?"Exporting…":"Export JSON"}</button><button className="btn" disabled={!projectId||ex.isPending} onClick={()=>void exportGraph("csv")}>Export CSV</button></>}/>
+  useEffect(()=>{
+    const status=job.data?.status;
+    if(status==="completed"||status==="failed"||status==="cancelled"){
+      setJobId("");
+      void Promise.all([
+        qc.invalidateQueries({queryKey:["kg-summary",projectId]}),
+        qc.invalidateQueries({queryKey:["kg-nodes",projectId]}),
+      ]);
+    }
+  },[job.data?.status,qc,projectId]);
+  return <><Head route="knowledge" actions={<><button className="btn" disabled={!projectId||ex.isPending} onClick={()=>void exportGraph("json")}>{ex.isPending?"Exporting…":"Export JSON"}</button><button className="btn" disabled={!projectId||ex.isPending} onClick={()=>void exportGraph("csv")}>Export CSV</button><button className="btn primary" disabled={!projectId||generate.isPending||Boolean(jobId)} onClick={()=>generate.mutate()}>{generate.isPending?"Queueing…":jobId?"Building…":"Generate / rebuild graph"}</button></>}/>
+    {jobId&&<Card><div className="notice">Knowledge graph job: <b>{job.data?.status??"queued"}</b></div></Card>}
+    {generate.isError&&<div className="notice error" style={{marginTop:12}}>{generate.error instanceof Error?generate.error.message:"Knowledge graph generation failed."}</div>}
     {!projectId&&<Card><State title="No active project" description="Create a project before inspecting the knowledge graph."/></Card>}
     {exportError&&<div className="notice error" style={{marginTop:12}}>{exportError}</div>}
     {projectId&&summary.isError&&<Card><State title="Knowledge graph unavailable" description={summary.error instanceof Error?summary.error.message:"No ready knowledge graph is available. Generate the graph after literature and planning inputs are ready."} error/></Card>}
@@ -1210,6 +1285,20 @@ function Translate(){
     enabled:Boolean(reportId),
     retry:false,
   });
+  const [postJobId,setPostJobId]=useState("");
+  const postJob=useQuery({
+    queryKey:["post-translation-humanization-job",postJobId],
+    queryFn:()=>api.job(postJobId),
+    enabled:Boolean(postJobId),
+    refetchInterval:postJobId?3000:false,
+  });
+  const postHumanize=useMutation({
+    mutationFn:()=>api.postTranslationHumanization(reportId!,{
+      translation_run_id:current.data!.run.id,
+      translation_version_id:current.data!.version.id,
+    }),
+    onSuccess:data=>setPostJobId(data.job_id??""),
+  });
   const m=useMutation({
     mutationFn:()=>api.translate(reportId!,{source_version_id:sourceVersionId!,target_language:lang.trim()}),
     onSuccess:data=>setJobId(data.job_id),
@@ -1219,6 +1308,13 @@ function Translate(){
       void qc.invalidateQueries({queryKey:["translation-current",reportId]});
     }
   },[job.data?.status,qc,reportId]);
+  useEffect(()=>{
+    const status=postJob.data?.status;
+    if(status==="completed"||status==="failed"||status==="cancelled"){
+      setPostJobId("");
+      void qc.invalidateQueries({queryKey:["translation-current",reportId]});
+    }
+  },[postJob.data?.status,qc,reportId]);
   const translated=current.data?.version;
   const statusReady=activeReport?.status==="translating";
   const preservationPassed=current.data?.version.preservation_check_status==="passed";
@@ -1235,6 +1331,12 @@ function Translate(){
     {current.isSuccess&&<Card style={{marginTop:16}}>
       <div className="row"><div><h3>Latest persisted translation</h3><div className="muted small">{current.data.run.source_lang} → {current.data.run.target_lang} · {current.data.run.provider}</div></div><span className={"tag "+(preservationPassed?"success":"")}>{current.data.version.preservation_check_status}</span></div>
       <div className="field" style={{marginTop:12}}><label>Translated content</label><textarea className="input textarea" value={current.data?.version.content ?? ""} readOnly style={{minHeight:320}}/></div>
+      <div className="actions" style={{marginTop:12}}>
+        <button className="btn primary" disabled={!preservationPassed||postHumanize.isPending||Boolean(postJobId)} onClick={()=>postHumanize.mutate()}>{postHumanize.isPending?"Queueing…":postJobId?"Humanizing…":"Post-translation humanize"}</button>
+        {postJobId&&<span className="tag">Job: {postJob.data?.status??"queued"}</span>}
+      </div>
+      {postHumanize.isError&&<div className="notice error" style={{marginTop:10}}>{postHumanize.error instanceof Error?postHumanize.error.message:"Post-translation humanization failed."}</div>}
+      {postJob.data?.status==="failed"&&<div className="notice error" style={{marginTop:10}}>Post-translation humanization job failed: {postJob.data.last_error_message??postJob.data.last_error_code??"unknown error"}.</div>}
     </Card>}
     {current.isError&&current.error instanceof Error&&/404|not found/i.test(current.error.message)&&<Card style={{marginTop:16}}><State title="No completed translation" description="The latest successful translation will appear here after the worker finishes."/></Card>}
     </>}
