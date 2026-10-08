@@ -140,7 +140,8 @@ def test_usage_includes_active_file_storage(cleanup_users):
     project = client.post(
         "/api/v1/projects",
         headers=_auth(token),
-        json={"workspace_id": wid, "name": "P"},
+        params={"workspace_id": wid},
+        json={"name": "P"},
     )
     assert project.status_code == 201, project.text
     pid = project.json()["id"]
