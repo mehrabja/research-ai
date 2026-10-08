@@ -70,8 +70,11 @@ test("creates project/report and uploads a research file through the browser",as
   const uploadResponsePromise=page.waitForResponse(response=>
     uploadPathPattern.test(new URL(response.url()).pathname)&&response.request().method()==="POST"
   );
+  const fileChooserPromise=page.waitForEvent("filechooser");
+  await page.getByRole("button",{name:"Choose a file"}).click();
+  const fileChooser=await fileChooserPromise;
   const fileInput=page.locator('input[type="file"]');
-  await fileInput.setInputFiles({
+  await fileChooser.setFiles({
     name:fileName,
     mimeType:"text/plain",
     buffer:Buffer.from("A browser-uploaded research source for end-to-end validation.\n"),
