@@ -9,7 +9,6 @@ from pydantic import BaseModel, ConfigDict
 
 class DetectionEnqueueResponse(BaseModel):
     job_id: uuid.UUID
-    run_id: uuid.UUID
     report_id: uuid.UUID
     version_id: uuid.UUID
     status: Literal["queued"]
