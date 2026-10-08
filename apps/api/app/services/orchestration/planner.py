@@ -54,7 +54,6 @@ _GOAL_PRESETS: dict[str, list[str]] = {
     "resolve_qa_blockers": [
         "academic_qa",
         "humanize",
-        "academic_qa",
     ],
     "improve_citation_completeness": [
         "technical_intelligence",
