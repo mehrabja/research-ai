@@ -47,7 +47,7 @@ export function TechnicalIntelligenceScreen(){
   const runs=useQuery({queryKey:["technical-runs",projectId],queryFn:()=>api.technicalIntelligenceRuns(projectId!),enabled:Boolean(projectId)});
   const [jobId,setJobId]=useState("");
   const job=useQuery({queryKey:["technical-job",jobId],queryFn:()=>api.job(jobId),enabled:Boolean(jobId),refetchInterval:3000});
-  const generate=useMutation({mutationFn:()=>api.technicalIntelligenceGenerate(projectId!,{force:true,async:true}),onSuccess:d=>setJobId(d.job_id??"")});
+  const generate=useMutation({mutationFn:()=>api.technicalIntelligenceGenerate(projectId!,{force:true,async:true}),onSuccess:d=>{if(d.job_id)setJobId(d.job_id);else void Promise.all([qc.invalidateQueries({queryKey:["technical-current",projectId]}),qc.invalidateQueries({queryKey:["technical-facts",projectId]}),qc.invalidateQueries({queryKey:["technical-results",projectId]}),qc.invalidateQueries({queryKey:["technical-metrics",projectId]}),qc.invalidateQueries({queryKey:["technical-runs",projectId]})]);}});
   const validate=useMutation({mutationFn:()=>api.technicalIntelligenceValidate(projectId!),onSuccess:()=>void qc.invalidateQueries({queryKey:["technical-current",projectId]})});
   useEffect(()=>{
     const s=job.data?.status;
@@ -120,7 +120,7 @@ export function SectionResearchScreen(){
   const runs=useQuery({queryKey:["section-research-runs",reportId,sectionId],queryFn:()=>api.sectionResearchRuns(reportId!,sectionId),enabled:Boolean(reportId&&sectionId)});
   const [jobId,setJobId]=useState("");
   const job=useQuery({queryKey:["section-research-job",jobId],queryFn:()=>api.job(jobId),enabled:Boolean(jobId),refetchInterval:3000});
-  const generate=useMutation({mutationFn:()=>api.sectionResearchGenerate(reportId!,sectionId,{force:true,async:true}),onSuccess:d=>setJobId(d.job_id??"")});
+  const generate=useMutation({mutationFn:()=>api.sectionResearchGenerate(reportId!,sectionId,{force:true,async:true}),onSuccess:d=>{if(d.job_id)setJobId(d.job_id);else void Promise.all([qc.invalidateQueries({queryKey:["section-research-current",reportId,sectionId]}),qc.invalidateQueries({queryKey:["section-research-runs",reportId,sectionId]})]);}});
   const validate=useMutation({mutationFn:()=>api.sectionResearchValidate(reportId!,sectionId)});
   useEffect(()=>{
     const s=job.data?.status;
