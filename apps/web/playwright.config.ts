@@ -1,6 +1,6 @@
 import{defineConfig,devices}from"@playwright/test";
 
-const backendPython=process.platform==="win32"?".venv\\Scripts\\python.exe":".venv/bin/python";
+const backendPython=process.env.PYTHON_EXECUTABLE??"python";
 
 export default defineConfig({
   testDir:"./tests/e2e",
