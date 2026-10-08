@@ -53,23 +53,40 @@ test("creates project/report and uploads a research file through the browser",as
   await expect(page.getByRole("heading",{name:"Upload"})).toBeVisible();
 
   const fileName="research-upload-"+Date.now()+".txt";
-  const uploadPathPattern=/\/api\/backend\/projects\/[^/]+\/files(?:\?|$)/;
+  const filePathPattern=/\/api\/backend\/projects\/[^/]+\/files(?:\?|$)/;
   page.on("requestfailed",request=>{
-    if(uploadPathPattern.test(new URL(request.url()).pathname)){
-      console.log(`[E2E] upload request failed: ${request.failure()?.errorText??"unknown"} ${request.url()}`);
+    if(filePathPattern.test(new URL(request.url()).pathname)){
+      console.log(`[E2E] file request failed: ${request.failure()?.errorText??"unknown"} ${request.url()}`);
     }
   });
   page.on("response",response=>{
-    if(uploadPathPattern.test(new URL(response.url()).pathname)){
-      console.log(`[E2E] upload response: ${response.status()} ${response.url()}`);
+    if(filePathPattern.test(new URL(response.url()).pathname)){
+      console.log(`[E2E] file response: ${response.request().method()} ${response.status()} ${response.url()}`);
     }
   });
+
   const uploadRequestPromise=page.waitForRequest(request=>
-    uploadPathPattern.test(new URL(request.url()).pathname)&&request.method()==="POST"
+    filePathPattern.test(new URL(request.url()).pathname)&&request.method()==="POST"
   );
   const uploadResponsePromise=page.waitForResponse(response=>
-    uploadPathPattern.test(new URL(response.url()).pathname)&&response.request().method()==="POST"
+    filePathPattern.test(new URL(response.url()).pathname)&&response.request().method()==="POST"
   );
+  const persistedFileResponsePromise=page.waitForResponse(async response=>{
+    if(
+      !filePathPattern.test(new URL(response.url()).pathname)||
+      response.request().method()!=="GET"||
+      !response.ok()
+    ){
+      return false;
+    }
+    try{
+      const body=await response.json() as {items?:Array<{original_filename?:string}>};
+      return body.items?.some(item=>item.original_filename===fileName)===true;
+    }catch{
+      return false;
+    }
+  });
+
   const fileChooserPromise=page.waitForEvent("filechooser");
   await page.getByRole("button",{name:"Choose a file"}).click();
   const fileChooser=await fileChooserPromise;
@@ -81,12 +98,13 @@ test("creates project/report and uploads a research file through the browser",as
   });
   await expect.poll(async()=>fileInput.evaluate(element=>(element as HTMLInputElement).files?.[0]?.name??""))
     .toBe(fileName);
+
   const uploadRequest=await uploadRequestPromise;
   console.log(`[E2E] upload request started: ${uploadRequest.url()}`);
   const uploadResponse=await uploadResponsePromise;
   expect(uploadResponse.ok(),await uploadResponse.text()).toBeTruthy();
 
-  await expect(page.getByText(new RegExp(`Uploaded "${fileName}"`)).first()).toBeVisible({timeout:30_000});
+  await persistedFileResponsePromise;
   await expect(page.getByText(fileName,{exact:true}).first()).toBeVisible({timeout:30_000});
   await page.reload();
   await expect(page.getByText(fileName,{exact:true}).first()).toBeVisible({timeout:30_000});
