@@ -9,6 +9,6 @@ const tmp=path.join(os.tmpdir(),"research-ai-openapi.json");
 const res=await fetch(url);
 if(!res.ok)throw new Error("OpenAPI fetch failed: "+res.status+" "+url);
 await fs.writeFile(tmp,await res.text(),"utf8");
-await exec(process.platform==="win32"?"npx.cmd":"npx",["openapi-typescript",tmp,"-o",out.pathname],{stdio:"inherit"});
+await exec(process.platform==="win32"?"npx.cmd":"npx",["openapi-typescript",tmp,"-o",out.pathname]);
 console.log("Generated",out.pathname);
 console.log("OpenAPI source",url);
