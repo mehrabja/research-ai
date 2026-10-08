@@ -158,6 +158,7 @@ export const api={
   reports:(w:string)=>request<Report[]>(routes.reports(w)),
   report:(r:string)=>request<Report>(routes.report(r)),
   reportVersion:(r:string,v:string)=>request<{id:string;report_id:string;version_number:number;language:string;content:string;created_by_user:boolean;change_type:string|null;created_at:string}>(routes.reportVersion(r,v)),
+  generationCurrent:(r:string)=>request<import("./generated").GenerationCurrent>(routes.generationCurrent(r)),
   preTranslationReview:(r:string)=>request<PreTranslationReview>(routes.preTranslationReview(r)),
 
   sources:(r:string)=>request<{items:Source[]}>(routes.sources(r)),
