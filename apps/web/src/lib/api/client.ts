@@ -208,13 +208,14 @@ export const api={
       let lastProgressPercent=-1;
 
       const abort=()=>{if(!settled)xhr.abort();};
-      const handleProgress=()=>{
-        const total=xhr.upload.total;
+      const handleProgress=(event:ProgressEvent<XMLHttpRequestEventTarget>)=>{
+        const total=event.total;
+        const loaded=event.loaded;
         if(total>0){
-          const percent=Math.min(100,(xhr.upload.loaded/total)*100);
+          const percent=Math.min(100,(loaded/total)*100);
           if(percent!==lastProgressPercent){
             lastProgressPercent=percent;
-            options.onProgress?.({loaded:xhr.upload.loaded,total,percent});
+            options.onProgress?.({loaded,total,percent});
           }
         }
       };
@@ -321,11 +322,11 @@ export const api={
   confirmTwoFactor:(code:string)=>request<{enabled:boolean}>("auth/2fa/confirm",{method:"POST",body:JSON.stringify({code})}),
   disableTwoFactor:(code:string)=>request<{enabled:boolean}>("auth/2fa/disable",{method:"POST",body:JSON.stringify({code})}),
   members:(w:string)=>request<{items:Member[];total:number}>("workspaces/"+w+"/members"),
-  manuscriptComments:(r:string,v:string)=>request<{items:unknown[];total:number}>("reports/"+r+"/manuscript-versions/"+v+"/comments"),
+  manuscriptComments:(r:string,v:string)=>request<import("./generated").ManuscriptCommentList>("reports/"+r+"/manuscript-versions/"+v+"/comments"),
   addManuscriptComment:(r:string,v:string,body:object)=>request<unknown>("reports/"+r+"/manuscript-versions/"+v+"/comments",{method:"POST",body:JSON.stringify(body)}),
   resolveComment:(r:string,id:string)=>request<unknown>("reports/"+r+"/comments/"+id+"/resolve",{method:"POST"}),
   reopenComment:(r:string,id:string)=>request<unknown>("reports/"+r+"/comments/"+id+"/reopen",{method:"POST"}),
-  reviewTasks:(r:string,v:string)=>request<{items:unknown[];total:number}>("reports/"+r+"/manuscript-versions/"+v+"/reviews"),
+  reviewTasks:(r:string,v:string)=>request<import("./generated").ManuscriptReviewTaskList>("reports/"+r+"/manuscript-versions/"+v+"/reviews"),
   createReviewTask:(r:string,v:string,body:object)=>request<unknown>("reports/"+r+"/manuscript-versions/"+v+"/reviews",{method:"POST"}),
   updateReviewTask:(r:string,id:string,body:object)=>request<unknown>("reports/"+r+"/reviews/"+id,{method:"PATCH",body:JSON.stringify(body)}),
   changeMemberRole:(w:string,u:string,role:string)=>request<Member>("workspaces/"+w+"/members/"+u,{method:"PATCH",body:JSON.stringify({role})}),
