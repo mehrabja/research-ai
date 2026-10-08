@@ -27,25 +27,21 @@ const [routesSource,clientSource,files]=await Promise.all([
 
 const routeNames=[...routesSource.matchAll(/^\s{2}([A-Za-z0-9_]+)\s*:/gm)].map(m=>m[1]);
 const uniqueRouteNames=[...new Set(routeNames)];
-const referenced=new Set(
-  [...clientSource.matchAll(/\\broutes\.([A-Za-z0-9_]+)\\b/g)].map(m=>m[1]),
-);
+const referenced=new Set([...clientSource.matchAll(/\broutes\.([A-Za-z0-9_]+)\b/g)].map(m=>m[1]));
 const unused=uniqueRouteNames.filter(name=>!referenced.has(name));
 
 const violations=[];
 for(const file of files){
   const rel=path.relative(root,file).replaceAll(path.sep,"/");
-  if(rel==="src/lib/server/backend-url.ts")continue;
+  if(rel==="src/lib/server/backend-url.ts"||rel==="src/lib/api/generated.openapi.ts")continue;
   const text=await fs.readFile(file,"utf8");
-  if(rel==="src/lib/api/generated.openapi.ts")continue;
-
-  if(/https?:\\/\\/(?:api\\.)?(?:openai\\.com|openrouter\\.ai)\\b/i.test(text)){
+  if(text.includes("https://api.openai.com")||text.includes("https://openrouter.ai")){
     violations.push(rel+": direct AI provider URL in frontend source");
   }
-  if(/["']\\/api\\/v1\\//.test(text)){
+  if(text.includes("/api/v1/")){
     violations.push(rel+": direct /api/v1 backend path in frontend source; use /api/backend proxy");
   }
-  if(/localStorage\\.(?:setItem|getItem|removeItem)\\([^)]*research_ai_(?:access_token|refresh)/i.test(text)){
+  if(/localStorage\.(?:setItem|getItem|removeItem)\([^)]*research_ai_(?:access_token|refresh)/i.test(text)){
     violations.push(rel+": auth token stored/read from browser storage");
   }
 }
@@ -53,7 +49,7 @@ for(const file of files){
 if(unused.length||violations.length){
   console.error("Frontend API connection audit failed.");
   if(unused.length)console.error("Unused route builders:",unused.join(", "));
-  for(const violation of violations)console.error("-",violation);
+NaN
   process.exit(1);
 }
 
