@@ -28,3 +28,17 @@ describe("phase 2 report workflow routes",()=>{
     expect(routes.translationCurrent("r")).toBe("reports/r/translation/current");
   });
 });
+
+describe("phase 2B quality workflow routes",()=>{
+  it("builds citation and academic QA routes",()=>{
+    expect(routes.citationsGenerate("r 1")).toBe("reports/r%201/citations/generate");
+    expect(routes.citationsBibliography("r 1")).toBe("reports/r%201/citations/bibliography");
+    expect(routes.qaGenerate("r 1")).toBe("reports/r%201/academic-qa/generate");
+    expect(routes.qaFindings("r 1")).toBe("reports/r%201/academic-qa/findings");
+  });
+  it("builds classification routes",()=>{
+    expect(routes.classification("p 1")).toBe("projects/p%201/classification");
+    expect(routes.classificationRecompute("p 1")).toBe("projects/p%201/classification/recompute");
+    expect(routes.classificationExplanation("p 1")).toBe("projects/p%201/classification/explanation");
+  });
+});
