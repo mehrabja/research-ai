@@ -170,19 +170,7 @@ def run_m35_persisted(
     if report is None or report.project_id != project_id:
         raise OrchestrationInvalid("report does not belong to project")
 
-    budget = budget_svc.default_budget()
-    budget["max_nodes"] = min(
-        int(budget["max_nodes"]),
-        int(settings.orchestration_max_nodes),
-    )
-    budget["max_retries_per_node"] = min(
-        int(budget["max_retries_per_node"]),
-        int(settings.orchestration_max_retries_per_node),
-    )
-    budget["max_provider_calls"] = min(
-        int(budget["max_provider_calls"]),
-        int(settings.orchestration_max_provider_calls),
-    )
+    budget = budget_svc.effective_budget(settings)
 
     context_hash: str | None = None
     try:
