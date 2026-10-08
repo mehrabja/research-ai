@@ -56,6 +56,18 @@ describe("phase 2C intelligence workflow routes",()=>{
   });
 });
 
+describe("remaining backend route coverage",()=>{
+  it("builds project archive, knowledge graph generation, RAG memory and workspace routes",()=>{
+    expect(routes.projectArchive("p 1","w 1")).toBe("projects/p%201/archive?workspace_id=w+1");
+    expect(routes.knowledgeGraphGenerate("p 1")).toBe("projects/p%201/knowledge-graph/generate");
+    expect(routes.ragMemory("p 1","entity",50)).toBe("projects/p%201/rag/memory?memory_type=entity&limit=50");
+    expect(routes.workspace("w 1")).toBe("workspaces/w%201");
+  });
+  it("builds the post-translation humanization route",()=>{
+    expect(routes.postTranslationHumanization("r 1")).toBe("reports/r%201/post-translation-humanization/enqueue");
+  });
+});
+
 describe("phase 2D publication and orchestration routes",()=>{
   it("builds publication routes",()=>{
     expect(routes.publicationTargets()).toBe("publication-targets");
