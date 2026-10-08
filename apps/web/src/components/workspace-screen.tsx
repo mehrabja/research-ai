@@ -735,6 +735,7 @@ function Knowledge(){
         {query.data&&<div className="table-wrap" style={{marginTop:12}}><table className="table"><thead><tr><th>Node</th><th>Type</th><th>Depth</th></tr></thead><tbody>{query.data.nodes.slice(0,100).map((node,index)=><tr key={String(node.id??index)}><td style={{overflowWrap:"anywhere"}}>{value(node.label??node.node_key??node.id,"Node")}</td><td>{value(node.node_type)}</td><td>{value(node.depth)}</td></tr>)}</tbody></table></div>}
       </Card>
     </>}
+  </>}
   </>;
 }
 
