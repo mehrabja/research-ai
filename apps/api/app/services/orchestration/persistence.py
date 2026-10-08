@@ -73,6 +73,31 @@ def _completed_run(
     ).scalar_one_or_none()
 
 
+def _active_run(
+    db: Session, *, report_id: uuid.UUID, context_hash: str,
+) -> ResearchOrchestrationRun | None:
+    return db.execute(
+        select(ResearchOrchestrationRun)
+        .where(
+            ResearchOrchestrationRun.report_id == report_id,
+            ResearchOrchestrationRun.context_hash == context_hash,
+            ResearchOrchestrationRun.orchestration_version == M35_VERSION,
+            ResearchOrchestrationRun.status.not_in(
+                (
+                    RunStatus.COMPLETED.value,
+                    RunStatus.FAILED.value,
+                    RunStatus.CANCELLED.value,
+                )
+            ),
+        )
+        .order_by(
+            ResearchOrchestrationRun.created_at.desc(),
+            ResearchOrchestrationRun.id.desc(),
+        )
+        .limit(1)
+    ).scalar_one_or_none()
+
+
 def _persist_failed_run(
     *,
     project_id: uuid.UUID,
@@ -197,6 +222,12 @@ def run_m35_persisted(
         )
         if existing is not None:
             return PersistedRun(run=existing, skipped=True)
+
+        active = _active_run(
+            db, report_id=report_id, context_hash=context_hash,
+        )
+        if active is not None:
+            return PersistedRun(run=active, skipped=True)
 
         now = datetime.now(UTC)
         run = ResearchOrchestrationRun(
