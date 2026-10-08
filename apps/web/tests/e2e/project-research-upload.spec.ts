@@ -100,7 +100,7 @@ test("creates project/report and uploads a research file through the browser",as
     if(!response.ok)return false;
     const body=await response.json().catch(()=>null) as {items?:Array<{original_filename?:string}>}|null;
     return body?.items?.some(item=>item.original_filename===fileName)===true;
-  },{projectId,fileName}),{timeout:30_000,interval:1_000}).toBe(true);
+  },{projectId,fileName}),{timeout:30_000,intervals:[1_000]}).toBe(true);
   await expect(page.getByText(fileName,{exact:true}).first()).toBeVisible({timeout:30_000});
   await page.reload();
   await expect(page.getByText(fileName,{exact:true}).first()).toBeVisible({timeout:30_000});
