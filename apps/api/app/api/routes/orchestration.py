@@ -39,6 +39,8 @@ from app.schemas.orchestration import (
     OrchestrationToolListResponse,
     OrchestrationToolRead,
     OrchestrationValidationRead,
+    OrchestrationStrategyListResponse,
+    OrchestrationStrategyRead,
 )
 from app.services.orchestration import jobs as orch_jobs
 from app.services.orchestration import persistence as orch_persist
@@ -46,9 +48,28 @@ from app.services.orchestration.registry import (
     get_tool,
     list_tools,
 )
+from app.services.orchestration.planner import available_orchestration_strategies
 from app.services.reports import get_report
 
 router = APIRouter(prefix="/reports", tags=["orchestration"])
+
+
+@router.get(
+    "/{report_id}/orchestration/strategies",
+    response_model=OrchestrationStrategyListResponse,
+)
+def list_orchestration_strategies(
+    report_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> OrchestrationStrategyListResponse:
+    get_report(db, user_id=current_user.id, report_id=report_id)
+    return OrchestrationStrategyListResponse(
+        items=[
+            OrchestrationStrategyRead(key=key, description=description)
+            for key, description in available_orchestration_strategies()
+        ]
+    )
 
 
 def _load_run(
