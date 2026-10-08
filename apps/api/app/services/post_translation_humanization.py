@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import secrets
+from functools import partial
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -778,7 +779,8 @@ def run_post_translation_humanization(
             db.commit()
 
             result = execute_metered_provider_call(
-                lambda: provider.generate(
+                partial(
+                    provider.generate,
                     system_prompt=system_prompt,
                     user_prompt=user_prompt,
                     temperature=policy.temperature,
