@@ -41,6 +41,39 @@ def _response(
     )
 
 
+def test_openrouter_preserves_routed_model_identifier() -> None:
+    from unittest.mock import patch
+
+    with patch(
+        "app.integrations.embeddings.openai.get_settings",
+        return_value=type(
+            "S",
+            (),
+            {
+                "embedding_openai_base_url": "https://api.openai.com/v1",
+                "embedding_openai_api_key": "",
+            },
+        )(),
+    ):
+        p = OpenAIEmbeddingProvider(
+            profile=_profile(),
+            api_key="k",
+            base_url="https://openrouter.ai/api/v1",
+            provider_name="openrouter",
+        )
+    assert p.model_name == "text-embedding-3-small"
+
+
+def test_direct_openai_strips_openrouter_namespace() -> None:
+    p = OpenAIEmbeddingProvider(
+        profile=_profile(),
+        api_key="k",
+        provider_name="openai",
+        base_url="https://api.openai.com/v1",
+    )
+    assert p.model_name == "text-embedding-3-small"
+
+
 def test_basic_success(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     _patch_post(
         monkeypatch,
