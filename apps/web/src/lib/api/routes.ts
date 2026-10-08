@@ -103,6 +103,7 @@ export const routes={
   resolveComment:(reportId:string,commentId:string)=>"reports/"+segment(reportId)+"/comments/"+segment(commentId)+"/resolve",
   reopenComment:(reportId:string,commentId:string)=>"reports/"+segment(reportId)+"/comments/"+segment(commentId)+"/reopen",
   reviewTasks:(reportId:string,versionId:string)=>"reports/"+segment(reportId)+"/manuscript-versions/"+segment(versionId)+"/reviews",
+  updateReviewTask:(reportId:string,reviewTaskId:string)=>"reports/"+segment(reportId)+"/reviews/"+segment(reviewTaskId),
 
   member:(workspaceId:string,userId:string)=>"workspaces/"+segment(workspaceId)+"/members/"+segment(userId),
   invitations:(workspaceId:string)=>"workspaces/"+segment(workspaceId)+"/members/invitations",
