@@ -79,6 +79,7 @@ def get_detection(
     meta = row.detection_meta or {}
     label_value = meta.get("label", "unknown")
     return DetectionResultResponse(
+        run_id=row.id,
         report_id=row.report_id,
         version_id=row.version_id or version_id,
         profile_id=meta.get("profile_id", ""),
