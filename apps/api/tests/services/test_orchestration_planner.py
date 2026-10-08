@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.services.orchestration.registry import list_tools
 from app.services.orchestration.planner import (
     available_orchestration_strategies,
     plan_orchestration,
@@ -52,3 +53,23 @@ def test_resolve_qa_blockers_has_unique_node_keys() -> None:
         max_nodes=20,
     )
     assert len(plan.node_keys()) == len(set(plan.node_keys()))
+
+
+def test_all_planner_nodes_exist_in_tool_registry() -> None:
+    catalog = {
+        key
+        for key, _description in available_orchestration_strategies()
+    }
+    assert catalog
+    plans = set()
+    for strategy in catalog:
+        plans.update(
+            plan_orchestration(
+                goal="audit",
+                strategy=strategy,
+                payload={},
+                max_nodes=50,
+            ).node_keys()
+        )
+    registered = set(list_tools())
+    assert plans <= registered
