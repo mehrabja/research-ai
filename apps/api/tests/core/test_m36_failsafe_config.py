@@ -23,6 +23,18 @@ def test_production_rejects_debug() -> None:
             **_base(
                 app_env="production",
                 jwt_secret_key="x" * 64,
+                two_factor_encryption_key="x" * 32,
+                auth_cookie_secure=True,
+                auth_require_email_verification=True,
+                email_provider="smtp",
+                smtp_host="smtp.example.com",
+                smtp_sender="no-reply@example.com",
+                frontend_base_url="https://example.com",
+                file_storage_backend="s3",
+                file_storage_s3_bucket="test-bucket",
+                file_storage_s3_region="us-east-1",
+                file_storage_s3_access_key_id="test-key",
+                file_storage_s3_secret_access_key="test-secret",
                 debug=True,
             )
         )
@@ -34,6 +46,18 @@ def test_production_rejects_wildcard_cors() -> None:
             **_base(
                 app_env="production",
                 jwt_secret_key="x" * 64,
+                two_factor_encryption_key="x" * 32,
+                auth_cookie_secure=True,
+                auth_require_email_verification=True,
+                email_provider="smtp",
+                smtp_host="smtp.example.com",
+                smtp_sender="no-reply@example.com",
+                frontend_base_url="https://example.com",
+                file_storage_backend="s3",
+                file_storage_s3_bucket="test-bucket",
+                file_storage_s3_region="us-east-1",
+                file_storage_s3_access_key_id="test-key",
+                file_storage_s3_secret_access_key="test-secret",
                 cors_allowed_origins="*",
             )
         )
@@ -45,6 +69,18 @@ def test_production_rejects_short_jwt() -> None:
             **_base(
                 app_env="production",
                 jwt_secret_key="short",
+                two_factor_encryption_key="x" * 32,
+                auth_cookie_secure=True,
+                auth_require_email_verification=True,
+                email_provider="smtp",
+                smtp_host="smtp.example.com",
+                smtp_sender="no-reply@example.com",
+                frontend_base_url="https://example.com",
+                file_storage_backend="s3",
+                file_storage_s3_bucket="test-bucket",
+                file_storage_s3_region="us-east-1",
+                file_storage_s3_access_key_id="test-key",
+                file_storage_s3_secret_access_key="test-secret",
             )
         )
 
@@ -57,6 +93,18 @@ def test_production_rejects_default_jwt() -> None:
             **_base(
                 app_env="production",
                 jwt_secret_key=DEV_JWT_SECRET,
+                two_factor_encryption_key="x" * 32,
+                auth_cookie_secure=True,
+                auth_require_email_verification=True,
+                email_provider="smtp",
+                smtp_host="smtp.example.com",
+                smtp_sender="no-reply@example.com",
+                frontend_base_url="https://example.com",
+                file_storage_backend="s3",
+                file_storage_s3_bucket="test-bucket",
+                file_storage_s3_region="us-east-1",
+                file_storage_s3_access_key_id="test-key",
+                file_storage_s3_secret_access_key="test-secret",
             )
         )
 
@@ -67,6 +115,18 @@ def test_production_accepts_valid_config() -> None:
             app_env="production",
             jwt_secret_key="x" * 64,
             cors_allowed_origins="https://example.com",
+            two_factor_encryption_key="x" * 32,
+            auth_cookie_secure=True,
+            auth_require_email_verification=True,
+            email_provider="smtp",
+            smtp_host="smtp.example.com",
+            smtp_sender="no-reply@example.com",
+            frontend_base_url="https://example.com",
+            file_storage_backend="s3",
+            file_storage_s3_bucket="test-bucket",
+            file_storage_s3_region="us-east-1",
+            file_storage_s3_access_key_id="test-key",
+            file_storage_s3_secret_access_key="test-secret",
         )
     )
     assert s.app_env == "production"
