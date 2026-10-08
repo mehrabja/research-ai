@@ -166,6 +166,7 @@ export const routes={
   publicationComplianceValidate:(reportId:string)=>"reports/"+segment(reportId)+"/publication-compliance/validate",
   orchestrationRun:(reportId:string)=>"reports/"+segment(reportId)+"/orchestration/run",
   orchestrationCurrent:(reportId:string)=>"reports/"+segment(reportId)+"/orchestration/current",
+  orchestrationStrategies:(reportId:string)=>"reports/"+segment(reportId)+"/orchestration/strategies",
   orchestrationRuns:(reportId:string)=>"reports/"+segment(reportId)+"/orchestration/runs",
   orchestrationRunDetail:(reportId:string,runId:string)=>"reports/"+segment(reportId)+"/orchestration/runs/"+segment(runId),
   orchestrationNodes:(reportId:string,runId:string)=>"reports/"+segment(reportId)+"/orchestration/runs/"+segment(runId)+"/nodes",
