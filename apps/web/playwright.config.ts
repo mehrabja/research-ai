@@ -19,6 +19,7 @@ export default defineConfig({
       command:"npm run dev",
       url:"http://127.0.0.1:3000",
       reuseExistingServer:false,
+      env:{BACKEND_API_URL:"http://127.0.0.1:8000"},
     },
   ],
   projects:[{name:"chromium",use:{...devices["Desktop Chrome"]}}],
