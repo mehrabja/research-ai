@@ -7,13 +7,6 @@ import {useRouter,useSearchParams} from "next/navigation";
 import {api} from "@/lib/api/client";
 import {useWorkspace} from "@/components/app-shell";
 
-const LANGUAGES=[
-  ["en","English"],
-  ["fa","Persian"],
-  ["de","German"],
-  ["fr","French"],
-] as const;
-
 export default function ProjectPage({params}:{params:Promise<{projectId:string}>}){
   const {projectId}=use(params);
   const {workspaceId}=useWorkspace();
@@ -238,9 +231,7 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
         </div>
         <div className="mt-4 grid md:grid-cols-[1fr_180px_auto] gap-2">
           <input className="input" aria-label="Report topic" placeholder="Report topic" value={topic} onChange={e=>setTopic(e.target.value)}/>
-          <select className="input" aria-label="Output language" value={language} onChange={e=>setLanguage(e.target.value as typeof language)}>
-            {LANGUAGES.map(([code,label])=><option key={code} value={code}>{label}</option>)}
-          </select>
+          <input className="input" aria-label="Output language" placeholder="Output language code (e.g. en, fa, de)" value={language} onChange={e=>setLanguage(e.target.value)}/>
           <button className="btn btn-primary" disabled={!topic.trim()||createReport.isPending} onClick={()=>createReport.mutate()}>{createReport.isPending?"Creating…":"Create report"}</button>
         </div>
         {createReport.isError&&<div className="notice error" style={{marginTop:12}}>{createReport.error instanceof Error?createReport.error.message:"Report creation failed."}</div>}
