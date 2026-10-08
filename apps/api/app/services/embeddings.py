@@ -348,8 +348,8 @@ def embed_source(
         for batch in batches:
             try:
                 result = execute_metered_provider_call(
-                    lambda batch=batch: provider.embed_documents(
-                        [chunk.content for chunk in batch]
+                    lambda batch=batch: _embed_documents_for_batch(
+                        provider, batch
                     ),
                     workspace_id=workspace_id,
                     user_id=user_id,
