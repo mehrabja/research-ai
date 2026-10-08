@@ -18,6 +18,7 @@ def test_research_pipeline_contains_full_preparation_flow() -> None:
     )
     assert plan.node_keys() == [
         "build_plan",
+        "manuscript_generate",
         "technical_intelligence",
         "manuscript_prose_generate",
         "generate_citations",
