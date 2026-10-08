@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from sqlalchemy.orm import Session
 
 from app.domain.manuscript_prose import (
+    PROSE_PROMPT_VERSION,
     ProseGenerationMode,
 )
 from app.services.ai_metering import execute_metered_provider_call
@@ -317,7 +318,7 @@ def _provider_polish(
         model=settings.manuscript_prose_model,
         temperature=settings.manuscript_prose_temperature,
         max_output_tokens=settings.manuscript_prose_max_output_tokens,
-        profile_version=settings.manuscript_prose_profile_version,
+        profile_version=PROSE_PROMPT_VERSION,
     )
     provider = build_generation_provider(profile)
     prompt = _build_provider_prompt(
