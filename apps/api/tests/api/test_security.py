@@ -326,6 +326,8 @@ def test_production_accepts_strong_secret() -> None:
         app_env="production",
         jwt_secret_key="x" * 64,
         two_factor_encryption_key="x" * 32,
+        debug=False,
+        cors_allowed_origins="",
         _env_file=None,
         database_url="postgresql+psycopg://test:test@localhost/test",
     )
