@@ -205,6 +205,7 @@ function Jobs(){
   const q=useQuery({queryKey:["jobs",ws.workspaceId],queryFn:()=>api.jobs(ws.workspaceId??undefined),enabled:Boolean(ws.workspaceId),refetchInterval:5000});
   const retry=useMutation({mutationFn:(id:string)=>api.retryJob(id),onSuccess:()=>qc.invalidateQueries({queryKey:["jobs",ws.workspaceId]})});
   const cancel=useMutation({mutationFn:(id:string)=>api.cancelJob(id),onSuccess:()=>qc.invalidateQueries({queryKey:["jobs",ws.workspaceId]})});
+  const operationError=retry.error??cancel.error;
   return <><Head route="jobs"/>
     <Card>
       {q.isError&&<State title="Jobs unavailable" description={q.error instanceof Error?q.error.message:"The job service could not be reached."} error/>}
@@ -214,7 +215,7 @@ function Jobs(){
         const retrying=retry.isPending&&retry.variables===job.id;const cancelling=cancel.isPending&&cancel.variables===job.id;
         return <tr key={job.id}><td><div className="strong">{job.job_type}</div><div className="meta">{job.report_id?"Report "+job.report_id:"Project/workspace job"}</div></td><td>{job.status}</td><td>{job.attempt_count}/{job.max_attempts}</td><td><div>{job.created_at?new Date(job.created_at).toLocaleString():"—"}</div><div className="meta">{job.completed_at?new Date(job.completed_at).toLocaleString():job.started_at?"Started "+new Date(job.started_at).toLocaleString():"Queued"}</div></td><td style={{overflowWrap:"anywhere"}}>{job.last_error_message??job.last_error_code??"—"}</td><td>{job.status==="failed"?<button className="btn" disabled={retry.isPending} onClick={()=>retry.mutate(job.id)}>{retrying?"Retrying…":"Retry"}</button>:["queued","processing","retrying"].includes(job.status)?<button className="btn" disabled={cancel.isPending} onClick={()=>cancel.mutate(job.id)}>{cancelling?"Cancelling…":"Cancel"}</button>:<span className="tag">Done</span>}</td></tr>;
       })}</tbody></table></div>}
-      {(retry.isError||cancel.isError)&&<div className="notice error" style={{marginTop:12}}>{(retry.error??cancel.error) instanceof Error?(retry.error??cancel.error).message:"Job operation failed. Retry the action."}</div>}
+      {operationError&&<div className="notice error" style={{marginTop:12}}>{operationError instanceof Error?operationError.message:"Job operation failed. Retry the action."}</div>}
     </Card>
   </>;
 }
@@ -322,6 +323,7 @@ function Billing(){
   const cancel=useMutation({mutationFn:()=>api.billingCancel(ws.workspaceId!),onSuccess:()=>void qc.invalidateQueries({queryKey:["subscription",ws.workspaceId]}),});
   const resume=useMutation({mutationFn:()=>api.billingResume(ws.workspaceId!),onSuccess:()=>void qc.invalidateQueries({queryKey:["subscription",ws.workspaceId]}),});
   const usageItems=u.data?.items??[];
+  const subscriptionError=changePlan.error??cancel.error??resume.error;
   return <><Head route="usage-billing"/>
     {(p.isError||s.isError||u.isError||i.isError)&&<div className="notice error" style={{marginBottom:14}}>{p.isError?(p.error instanceof Error?p.error.message:"Plan data could not be loaded."):s.isError?(s.error instanceof Error?s.error.message:"Subscription data could not be loaded."):u.isError?(u.error instanceof Error?u.error.message:"Usage data could not be loaded."):i.error instanceof Error?i.error.message:"Invoice data could not be loaded."}</div>}
     <div className="grid grid-4">
@@ -342,7 +344,7 @@ function Billing(){
           {s.data?.cancel_at_period_end?<button className="btn" onClick={()=>resume.mutate()} disabled={resume.isPending}>{resume.isPending?"Resuming…":"Resume subscription"}</button>:<button className="btn" onClick={()=>cancel.mutate()} disabled={cancel.isPending}>{cancel.isPending?"Cancelling…":"Cancel at period end"}</button>}
         </div>
         {checkout.isError&&<div className="notice error" style={{marginTop:10}}>{checkout.error instanceof Error?checkout.error.message:"Checkout failed."}</div>}
-        {(changePlan.isError||cancel.isError||resume.isError)&&<div className="notice error" style={{marginTop:10}}>{(changePlan.error??cancel.error??resume.error) instanceof Error?(changePlan.error??cancel.error??resume.error).message:"Subscription update failed. Retry the action."}</div>}
+        {subscriptionError&&<div className="notice error" style={{marginTop:10}}>{subscriptionError instanceof Error?subscriptionError.message:"Subscription update failed. Retry the action."}</div>}
         {checkout.data&&<div className="notice success" style={{marginTop:10}}>Checkout session created. <a href={checkout.data.checkout_url} target="_blank" rel="noreferrer">Continue to payment ↗</a></div>}
       </Card>
       <Card><h3>Invoices</h3>{i.data?.items.length===0&&!i.isPending?<State title="No invoices" description="Invoices will appear after billing activity is recorded."/>:<div className="table-wrap" style={{marginTop:10}}><table className="table"><thead><tr><th>Status</th><th>Amount</th><th>Created</th><th>Open</th></tr></thead><tbody>{i.data?.items.map(inv=><tr key={inv.id??inv.provider_invoice_id}><td>{inv.status}</td><td>{inv.amount_due===null?"—":String(inv.amount_due)+" "+(inv.currency??"")}</td><td>{inv.provider_created_at?new Date(inv.provider_created_at).toLocaleDateString():"—"}</td><td>{inv.hosted_invoice_url?<a href={inv.hosted_invoice_url} target="_blank" rel="noreferrer">Invoice ↗</a>:inv.invoice_pdf_url?<a href={inv.invoice_pdf_url} target="_blank" rel="noreferrer">PDF ↗</a>:"—"}</td></tr>)}</tbody></table></div>}</Card>
@@ -351,11 +353,12 @@ function Billing(){
 }
 function Settings(){
   const {ws}=useCtx();
+  const workspaceId=ws.workspaceId??undefined;
   const qc=useQueryClient();
   const sessions=useQuery({queryKey:["sessions"],queryFn:api.sessions});
   const tokens=useQuery({queryKey:["tokens"],queryFn:api.apiTokens});
   const tf=useQuery({queryKey:["2fa"],queryFn:api.twoFactor});
-  const preferences=useQuery({queryKey:["notification-preferences",ws.workspaceId],queryFn:()=>api.notificationPreferences(ws.workspaceId),enabled:Boolean(ws.workspaceId)});
+  const preferences=useQuery({queryKey:["notification-preferences",ws.workspaceId],queryFn:()=>api.notificationPreferences(workspaceId),enabled:Boolean(workspaceId)});
   const [tokenName,setTokenName]=useState("");
   const [tokenScopes,setTokenScopes]=useState("read");
   const [createdToken,setCreatedToken]=useState("");
@@ -376,7 +379,7 @@ function Settings(){
   const confirm2fa=useMutation({mutationFn:()=>api.confirmTwoFactor(twoFaCode),onSuccess:()=>{setTwoFaSetup(null);setTwoFaCode("");void qc.invalidateQueries({queryKey:["2fa"]});}});
   const disable2fa=useMutation({mutationFn:()=>api.disableTwoFactor(twoFaCode),onSuccess:()=>{setTwoFaCode("");void qc.invalidateQueries({queryKey:["2fa"]});}});
   const savePreferences=useMutation({
-    mutationFn:()=>api.updateNotificationPreferences({channel:preferences.data?.channel??"in_app",preferences:prefValues},ws.workspaceId),
+    mutationFn:()=>api.updateNotificationPreferences({channel:preferences.data?.channel??"in_app",preferences:prefValues},workspaceId),
     onSuccess:r=>{setPrefValues(r.preferences);setPrefError("");void qc.invalidateQueries({queryKey:["notification-preferences",ws.workspaceId]});},
     onError:e=>setPrefError(e instanceof Error?e.message:"Notification preferences could not be saved."),
   });
@@ -388,7 +391,7 @@ function Settings(){
         {!tf.data?.enabled&&!twoFaSetup&&<button className="btn primary" style={{marginTop:12}} disabled={begin2fa.isPending} onClick={()=>begin2fa.mutate()}>{begin2fa.isPending?"Preparing…":"Set up 2FA"}</button>}
         {twoFaSetup&&<div className="notice" style={{marginTop:12}}><div><b>Authenticator setup</b></div><div className="tiny" style={{marginTop:6}}>Secret: <span className="mono" style={{overflowWrap:"anywhere"}}>{twoFaSetup.secret}</span></div><div className="tiny" style={{marginTop:4}}>Provisioning URI: <span className="mono" style={{overflowWrap:"anywhere"}}>{twoFaSetup.provisioning_uri}</span></div><div className="tiny" style={{marginTop:4}}>Recovery codes: {twoFaSetup.recovery_codes.join(", ")}</div><div className="row" style={{marginTop:10}}><input className="input" aria-label="2FA confirmation code" inputMode="numeric" maxLength={6} value={twoFaCode} onChange={e=>setTwoFaCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code"/><button className="btn" disabled={twoFaCode.length!==6||confirm2fa.isPending} onClick={()=>confirm2fa.mutate()}>{confirm2fa.isPending?"Confirming…":"Confirm"}</button></div></div>}
         {tf.data?.enabled&&<div className="row" style={{marginTop:12}}><input className="input" aria-label="2FA disable code" inputMode="numeric" maxLength={6} value={twoFaCode} onChange={e=>setTwoFaCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code"/><button className="btn" disabled={twoFaCode.length!==6||disable2fa.isPending} onClick={()=>disable2fa.mutate()}>{disable2fa.isPending?"Disabling…":"Disable 2FA"}</button></div>}
-        {(begin2fa.isError||confirm2fa.isError||disable2fa.isError)&&<div className="notice error" style={{marginTop:10}}>{(begin2fa.error??confirm2fa.error??disable2fa.error) instanceof Error?(begin2fa.error??confirm2fa.error??disable2fa.error).message:"2FA operation failed."}</div>}
+        {(() => { const twoFaError=begin2fa.error??confirm2fa.error??disable2fa.error; return twoFaError&&<div className="notice error" style={{marginTop:10}}>{twoFaError instanceof Error?twoFaError.message:"2FA operation failed."}</div>; })()}
       </Card>
       <Card><div className="row"><div><h3>Sessions</h3><div className="muted small">Revoke access from individual sessions or all other sessions.</div></div><button className="btn" disabled={revokeOthers.isPending} onClick={()=>revokeOthers.mutate()}>{revokeOthers.isPending?"Revoking…":"Revoke others"}</button></div>
         <div className="list" style={{marginTop:10}}>{sessions.isError?<State title="Sessions unavailable" description={sessions.error instanceof Error?sessions.error.message:"Session list could not be loaded."} error/>:sessions.data?.items.map(s=><div className="list-item" key={s.id}><div className="row"><div><div className="title">{s.user_agent||"Unknown client"}</div><div className="meta">Created {new Date(s.created_at).toLocaleString()} · Expires {new Date(s.expires_at).toLocaleString()}</div></div><button className="btn" disabled={revokeSession.isPending} onClick={()=>revokeSession.mutate(s.id)}>Revoke</button></div></div>)}</div>
@@ -877,7 +880,7 @@ function Files(){
   }
 
   const bytes=(n:number)=>n<1024?String(n)+" B":n<1024*1024?(n/1024).toFixed(1)+" KB":(n/1024/1024).toFixed(1)+" MB";
-  const files=rows(q.data?.items);
+  const files=q.data?.items??[];
 
   return <><Head route="files"/>
     <div className="grid grid-3">
