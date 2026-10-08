@@ -93,3 +93,24 @@ export type ClassificationEvidenceList={items:ClassificationEvidence[];total:num
 export type ClassificationRun={id:UUID;project_id:UUID;classification_id:UUID|null;context_hash:string|null;classifier_version:string;taxonomy_version:string;status:string;domain_code:string|null;paper_type_code:string|null;research_design_code:string|null;confidence_summary:Record<string,unknown>|null;explanation:Record<string,unknown>|null;error_message:string|null;duration_ms:number|null;created_at:DateTime};
 export type ClassificationHistory={items:ClassificationRun[];total:number;limit:number;offset:number};
 export type ClassificationExplanation={classification_id:UUID|null;context_hash:string|null;status:string;created_at:DateTime|null;explanation:Record<string,unknown>|null};
+
+export type TechnicalFact={id:UUID;technical_intelligence_run_id:UUID;project_id:UUID;project_file_id:UUID;code_analysis_id:UUID|null;data_profile_id:UUID|null;fact_type:string;fact_key:string;fact_value:string|null;normalized_value:string|null;unit:string|null;confidence:number;status:string;created_at:DateTime};
+export type ExperimentResult={id:UUID;technical_intelligence_run_id:UUID;project_id:UUID;project_file_id:UUID;technical_fact_id:UUID|null;result_type:string;name:string;description:string|null;value:Record<string,unknown>|null;unit:string|null;experiment_key:string|null;status:string;created_at:DateTime};
+export type TechnicalMetric={id:UUID;technical_intelligence_run_id:UUID;project_id:UUID;experiment_result_id:UUID;name:string;normalized_name:string;value_numeric:number|null;value_text:string|null;unit:string|null;split:string|null;direction:string|null;baseline_value:number|null;delta_value:number|null;is_primary:boolean;status:string;created_at:DateTime};
+export type TechnicalIntelligenceRun={id:UUID;project_id:UUID;report_id:UUID|null;context_hash:string;m29_version:string;status:string;fact_count:number;result_count:number;metric_count:number;warnings:unknown[]|null;error_message:string|null;duration_ms:number|null;created_at:DateTime;completed_at:DateTime|null};
+export type TechnicalIntelligenceCurrent={run:TechnicalIntelligenceRun;fact_count:number;result_count:number;metric_count:number};
+export type TechnicalIntelligenceRunList={items:TechnicalIntelligenceRun[];total:number;limit:number;offset:number};
+export type TechnicalFactList={items:TechnicalFact[];total:number;limit:number;offset:number};
+export type ExperimentResultList={items:ExperimentResult[];total:number;limit:number;offset:number};
+export type TechnicalMetricList={items:TechnicalMetric[];total:number;limit:number;offset:number};
+export type TechnicalIntelligenceValidation={validation_status:string;validation_errors:string[];warnings:string[]};
+export type TechnicalIntelligenceGenerateResponse={status:string;job_id:UUID|null;run_id:UUID|null;context_hash:string|null;fact_count:number|null;result_count:number|null;metric_count:number|null};
+
+export type SectionResearchEvidence={id:UUID;source_id:UUID;chunk_id:UUID|null;rank:number;final_score:number;retrieval_stage:string;retrieval_reason:unknown[];evidence_role:string;matched_requirement_keys:string[];citation_label:string|null;excerpt:string|null};
+export type SectionResearchRequirementCoverage={requirement_key:string;status:string;matched_source_count:number;matched_evidence_count:number;coverage_score:number;reason:string};
+export type SectionResearchCoverage={coverage_version:string;coverage_target:number;coverage_score:number;coverage_state:string;per_requirement:SectionResearchRequirementCoverage[];warnings:string[]};
+export type SectionResearchRun={id:UUID;project_id:UUID;report_id:UUID;manuscript_id:UUID;manuscript_version_id:UUID;manuscript_section_id:UUID;context_hash:string;contract_hash:string;m28_version:string;status:string;primary_query:string;query_plan:Record<string,unknown>;retrieval_config:Record<string,unknown>;retrieval_run_id:UUID|null;candidate_count:number;selected_evidence_count:number;coverage_score:number;coverage_state:string;coverage_summary:Record<string,unknown>|null;warnings:unknown[]|null;error_message:string|null;duration_ms:number|null;created_at:DateTime;completed_at:DateTime|null};
+export type SectionResearchCurrent={run:SectionResearchRun;evidence:SectionResearchEvidence[];coverage:SectionResearchCoverage|null};
+export type SectionResearchGenerateResponse={status:string;job_id:UUID|null;run_id:UUID|null;context_hash:string|null;contract_hash:string|null;evidence_count:number|null;coverage_score:number|null;coverage_state:string|null};
+export type SectionResearchRunList={items:SectionResearchRun[];total:number;limit:number;offset:number};
+export type SectionResearchValidation={validation_status:string;validation_errors:string[];warnings:string[]};
