@@ -11,8 +11,8 @@ if(!res.ok)throw new Error("OpenAPI fetch failed: "+res.status+" "+url);
 await fs.writeFile(tmp,await res.text(),"utf8");
 
 if(process.platform==="win32"){
-  const command=[ "npx", "openapi-typescript", tmp, "-o", out ].map(value=>'"'+value.replaceAll('"','\\"')+'"').join(" ");
-  await exec(process.env.ComSpec??"cmd.exe",["/d","/s","/c",command]);
+  const q=(value:string)=>"\""+value.replaceAll('"','\\"')+"\"";
+  await exec(process.env.ComSpec??"cmd.exe",["/d","/s","/c","npx.cmd openapi-typescript "+q(tmp)+" -o "+q(out)]);
 }else{
   await exec("npx",["openapi-typescript",tmp,"-o",out]);
 }
