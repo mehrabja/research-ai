@@ -18,12 +18,12 @@ from app.db.models.humanization import (
     HumanizationRun,
 )
 from app.db.models.knowledge import TerminologyGlossary
-from app.db.models.project import Project
 from app.db.models.pipeline import (
     DetectionSegment,
     TranslationRun,
     TranslationVersion,
 )
+from app.db.models.project import Project
 from app.db.models.report import Report, ReportVersion
 from app.domain.humanization import (
     HumanizationAlreadyCompletedError,
