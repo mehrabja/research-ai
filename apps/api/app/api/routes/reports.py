@@ -19,6 +19,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
