@@ -151,3 +151,5 @@ export type OrchestrationStrategyListResponse={items:OrchestrationStrategy[]};
 export type OrchestrationApprovalResponse={status:string;run_id:UUID;node_id:UUID};
 
 export type OrchestrationResumeResponse={status:string;run_id:UUID};
+
+export type GenerationCurrent={report_id:UUID;run_id:UUID|null;status:string|null;prompt_version:string|null;provider:string|null;model:string|null;input_tokens:number|null;output_tokens:number|null;language:string|null;text:string|null;context_hash:string|null;evidence:unknown[];cited_markers:string[];created_at:DateTime|null;completed_at:DateTime|null};
