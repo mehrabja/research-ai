@@ -3,19 +3,9 @@ from __future__ import annotations
 
 from app.services.provider_registry import (
     EmbeddingProviderFallback,
-    GenerationProviderFallback,
     ProviderRegistry,
     ProviderDefinition,
 )
-
-
-class _RateLimitedGeneration:
-    provider_name = "openrouter"
-    model_name = "openai/gpt-4o-mini"
-
-    def generate(self, **_kwargs):
-        from app.integrations.generation.base import GenerationRateLimitError
-        raise GenerationRateLimitError("429")
 
 
 class _UnavailableEmbedding:
@@ -39,7 +29,7 @@ class _UnavailableEmbedding:
 
 
 class _WorkingEmbedding(_UnavailableEmbedding):
-    provider_name = "openai"
+    provider_name = "secondary"
 
     def embed_documents(self, texts):
         from app.domain.embeddings import EmbeddingBatchResult, EmbeddingUsage
@@ -50,6 +40,14 @@ class _WorkingEmbedding(_UnavailableEmbedding):
 
     def embed_query(self, text: str) -> list[float]:
         return [0.1, 0.2, 0.3]
+
+
+class _FakeGeneration:
+    provider_name = "secondary"
+    model_name = "secondary-model"
+
+    def generate(self, **_kwargs):
+        return object()
 
 
 def test_registry_openrouter_provider_is_preferred_by_default(monkeypatch) -> None:
@@ -67,16 +65,16 @@ def test_embedding_fallback_advances_on_provider_unavailable() -> None:
     )
     result = router.embed_documents(["x"])
     assert result.vectors == [[0.1, 0.2, 0.3]]
-    assert router.attempted_providers == ["openrouter", "openai"]
+    assert router.attempted_providers == ["openrouter", "secondary"]
 
 
 def test_registry_candidate_order_preserves_requested_provider() -> None:
     registry = ProviderRegistry()
     def router_provider(_config):
-        return _RateLimitedGeneration()
+        return object()
 
     def direct_provider(_config):
-        return _WorkingGeneration()
+        return object()
 
     def disabled_provider(_config):
         return _WorkingGeneration()
