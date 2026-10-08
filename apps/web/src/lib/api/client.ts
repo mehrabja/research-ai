@@ -1,4 +1,4 @@
-import type {APIToken,APITokenCreateResponse,BillingInvoice,DetectionResult,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,Job,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,ManuscriptVersion,Member,NotificationPreference,Session,Plan,PreTranslationReview,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace,TechnicalFact,ExperimentResult,TechnicalMetric,TechnicalIntelligenceCurrent,TechnicalIntelligenceRunList,TechnicalFactList,ExperimentResultList,TechnicalMetricList,TechnicalIntelligenceValidation,TechnicalIntelligenceGenerateResponse,SectionResearchCurrent,SectionResearchGenerateResponse,SectionResearchRunList,SectionResearchValidation,CitationCurrent,CitationGenerateResponse,CitationValidation,CitationRunList,Bibliography,AcademicQACurrent,AcademicQAGenerateResponse,AcademicQAValidation,AcademicQARunList,AcademicQAFindingList,Classification,ClassificationEvidenceList,ClassificationHistory,ClassificationExplanation} from "./generated";
+import type {APIToken,APITokenCreateResponse,BillingInvoice,DetectionResult,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,Job,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,ManuscriptVersion,Member,NotificationPreference,Session,Plan,PreTranslationReview,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace,TechnicalFact,ExperimentResult,TechnicalMetric,TechnicalIntelligenceCurrent,TechnicalIntelligenceRunList,TechnicalFactList,ExperimentResultList,TechnicalMetricList,TechnicalIntelligenceValidation,TechnicalIntelligenceGenerateResponse,SectionResearchCurrent,SectionResearchGenerateResponse,SectionResearchRunList,SectionResearchValidation,PublicationTarget,PublicationTargetList,PublicationTargetSelection,PublicationComplianceCurrent,PublicationComplianceRunList,PublicationComplianceFindingList,PublicationChecklist,PublicationComplianceValidation,PublicationComplianceResponse,OrchestrationRunDetail,OrchestrationRunList,OrchestrationNodeList,OrchestrationRunResponse,OrchestrationPauseResponse,OrchestrationCancelResponse,OrchestrationToolList,OrchestrationValidation,CitationCurrent,CitationGenerateResponse,CitationValidation,CitationRunList,Bibliography,AcademicQACurrent,AcademicQAGenerateResponse,AcademicQAValidation,AcademicQARunList,AcademicQAFindingList,Classification,ClassificationEvidenceList,ClassificationHistory,ClassificationExplanation} from "./generated";
 import {routes} from "./routes";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
@@ -379,4 +379,29 @@ export const api={
   sectionResearchGenerate:(r:string,s:string,b:{force?:boolean;async?:boolean})=>request<SectionResearchGenerateResponse>(routes.sectionResearchGenerate(r,s),{method:"POST",body:JSON.stringify({...b,async:b.async??true})}),
   sectionResearchRuns:(r:string,s:string)=>request<SectionResearchRunList>(routes.sectionResearchRuns(r,s)),
   sectionResearchValidate:(r:string,s:string)=>request<SectionResearchValidation>(routes.sectionResearchValidate(r,s),{method:"POST"}),
+  publicationTargets:(activeOnly=true)=>request<PublicationTargetList>(routes.publicationTargets()+"?active_only="+String(activeOnly)),
+  publicationTarget:(id:string)=>request<PublicationTarget>(routes.publicationTarget(id)),
+  publicationSelect:(r:string,b:{target_id:string;selection_note?:string|null})=>request<PublicationTargetSelection>(routes.publicationSelect(r),{method:"POST",body:JSON.stringify(b)}),
+  publicationCurrent:(r:string)=>request<PublicationTargetSelection>(routes.publicationCurrent(r)),
+  publicationComplianceGenerate:(r:string,b:{manuscript_version_id:string;target_id:string;force?:boolean;async?:boolean})=>request<PublicationComplianceResponse>(routes.publicationComplianceGenerate(r),{method:"POST",body:JSON.stringify({...b,async:b.async??true})}),
+  publicationComplianceCurrent:(r:string)=>request<PublicationComplianceCurrent>(routes.publicationComplianceCurrent(r)),
+  publicationComplianceRuns:(r:string)=>request<PublicationComplianceRunList>(routes.publicationComplianceRuns(r)),
+  publicationComplianceFindings:(r:string,b?:{category?:string;severity?:string})=>{
+    const q=new URLSearchParams();
+    if(b?.category)q.set("category",b.category);
+    if(b?.severity)q.set("severity",b.severity);
+    const suffix=q.toString()?"?"+q.toString():"";
+    return request<PublicationComplianceFindingList>(routes.publicationComplianceFindings(r)+suffix);
+  },
+  publicationComplianceChecklist:(r:string)=>request<PublicationChecklist>(routes.publicationComplianceChecklist(r)),
+  publicationComplianceValidate:(r:string)=>request<PublicationComplianceValidation>(routes.publicationComplianceValidate(r),{method:"POST"}),
+  orchestrationRun:(r:string,b:{goal:string;strategy:string;payload?:Record<string,unknown>|null;force?:boolean;async?:boolean})=>request<OrchestrationRunResponse>(routes.orchestrationRun(r),{method:"POST",body:JSON.stringify({...b,async:b.async??true})}),
+  orchestrationCurrent:(r:string)=>request<OrchestrationRunDetail>(routes.orchestrationCurrent(r)),
+  orchestrationRuns:(r:string)=>request<OrchestrationRunList>(routes.orchestrationRuns(r)),
+  orchestrationRunDetail:(r:string,id:string)=>request<OrchestrationRunDetail>(routes.orchestrationRunDetail(r,id)),
+  orchestrationNodes:(r:string,id:string)=>request<OrchestrationNodeList>(routes.orchestrationNodes(r,id)),
+  orchestrationPause:(r:string,id:string)=>request<OrchestrationPauseResponse>(routes.orchestrationPause(r,id),{method:"POST"}),
+  orchestrationCancel:(r:string,id:string)=>request<OrchestrationCancelResponse>(routes.orchestrationCancel(r,id),{method:"POST"}),
+  orchestrationTools:(r:string)=>request<OrchestrationToolList>(routes.orchestrationTools(r)),
+  orchestrationValidate:(r:string,id:string)=>request<OrchestrationValidation>(routes.orchestrationValidate(r,id),{method:"POST"}),
 };
