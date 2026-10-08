@@ -1104,7 +1104,7 @@ function Manuscript(){
   </>;
 }
 function Generate(){
-  const {reportId}=useCtx();const [brief,setBrief]=useState("");const m=useMutation({mutationFn:()=>api.enqueueJob("generate_report",{report_id:reportId,brief},reportId)});
+  const {reportId}=useCtx();const [brief,setBrief]=useState("");const m=useMutation({mutationFn:()=>api.generate(reportId!,{brief:brief.trim()||undefined})});
   return <><Head route="generate"/><div className="grid grid-2"><Card><div className="field"><label>Generation brief</label><textarea className="input textarea" value={brief} onChange={e=>setBrief(e.target.value)} placeholder="Draft Methods, Discussion, Abstract or Reviewer Response…"/></div><div className="pillbar" style={{marginTop:12}}><span className="tag primary">Evidence grounded</span><span className="tag">Verified evidence</span><span className="tag">Unsupported claim flag</span></div><button className="btn primary" style={{marginTop:14}} disabled={!reportId||m.isPending} onClick={()=>m.mutate()}>{m.isPending?"Queueing…":"Generate"}</button>{m.isError&&<div className="notice error" style={{marginTop:12}}>Generation request failed.</div>}{Boolean(m.data)&&<div className="notice success" style={{marginTop:12}}>Job queued: {value((m.data as Obj).id??(m.data as Obj).job_id)}</div>}</Card><Card><h3>Context</h3><div className="list"><div className="list-item">Evidence matrix</div><div className="list-item">Research plan</div><div className="list-item">Current report</div><div className="list-item">Durable job state</div></div></Card></div></>;
 }
 
