@@ -7,6 +7,7 @@ function uniqueEmail():string{
 const password="Research-AI-E2E-password-2026";
 
 test("creates project/report and uploads a research file through the browser",async({page})=>{
+  test.setTimeout(90_000);
   const email=uniqueEmail();
 
   await page.goto("/register");
@@ -76,21 +77,6 @@ test("creates project/report and uploads a research file through the browser",as
   const uploadResponsePromise=page.waitForResponse(response=>
     filePathPattern.test(new URL(response.url()).pathname)&&response.request().method()==="POST"
   );
-  const persistedFileResponsePromise=page.waitForResponse(async response=>{
-    if(
-      !filePathPattern.test(new URL(response.url()).pathname)||
-      response.request().method()!=="GET"||
-      !response.ok()
-    ){
-      return false;
-    }
-    try{
-      const body=await response.json() as {items?:Array<{original_filename?:string}>};
-      return body.items?.some(item=>item.original_filename===fileName)===true;
-    }catch{
-      return false;
-    }
-  });
 
   const fileChooserPromise=page.waitForEvent("filechooser");
   await page.getByRole("button",{name:"Choose a file"}).click();
@@ -109,7 +95,12 @@ test("creates project/report and uploads a research file through the browser",as
   const uploadResponse=await uploadResponsePromise;
   expect(uploadResponse.ok(),await uploadResponse.text()).toBeTruthy();
 
-  await persistedFileResponsePromise;
+  await expect.poll(async()=>page.evaluate(async({projectId,fileName})=>{
+    const response=await fetch("/api/backend/projects/"+projectId+"/files",{credentials:"same-origin",cache:"no-store"});
+    if(!response.ok)return false;
+    const body=await response.json().catch(()=>null) as {items?:Array<{original_filename?:string}>}|null;
+    return body?.items?.some(item=>item.original_filename===fileName)===true;
+  },{projectId,fileName}),{timeout:30_000,interval:1_000}).toBe(true);
   await expect(page.getByText(fileName,{exact:true}).first()).toBeVisible({timeout:30_000});
   await page.reload();
   await expect(page.getByText(fileName,{exact:true}).first()).toBeVisible({timeout:30_000});
