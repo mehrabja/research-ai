@@ -219,3 +219,26 @@ describe("phase 2B quality transport",()=>{
     spy.mockRestore();
   });
 });
+
+describe("phase 2C intelligence transport",()=>{
+  it("generates and reads technical intelligence",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({status:"queued",job_id:"job-ti",run_id:null,context_hash:null,fact_count:null,result_count:null,metric_count:null}),{status:202}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({run:{id:"run-ti",project_id:"p1",report_id:null,context_hash:"ch",m29_version:"m29",status:"completed",fact_count:2,result_count:1,metric_count:1,warnings:null,error_message:null,duration_ms:12,created_at:"2026-10-08T00:00:00Z",completed_at:"2026-10-08T00:00:01Z"},fact_count:2,result_count:1,metric_count:1}),{status:200}));
+    expect((await api.technicalIntelligenceGenerate("p1",{force:true,async:true})).job_id).toBe("job-ti");
+    expect((await api.technicalIntelligence("p1")).fact_count).toBe(2);
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/projects/p1/technical-intelligence/generate");
+    expect(spy.mock.calls[1]?.[0]).toBe("/api/backend/projects/p1/technical-intelligence");
+    spy.mockRestore();
+  });
+  it("generates and reads section research",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({status:"completed",job_id:null,run_id:"sr1",context_hash:"ch",contract_hash:"ct",evidence_count:1,coverage_score:0.8,coverage_state:"partial"}),{status:200}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({run:{id:"sr1",project_id:"p1",report_id:"r1",manuscript_id:"m1",manuscript_version_id:"v1",manuscript_section_id:"s1",context_hash:"ch",contract_hash:"ct",m28_version:"m28",status:"completed",primary_query:"query",query_plan:{},retrieval_config:{},retrieval_run_id:null,candidate_count:2,selected_evidence_count:1,coverage_score:0.8,coverage_state:"partial",coverage_summary:null,warnings:null,error_message:null,duration_ms:8,created_at:"2026-10-08T00:00:00Z",completed_at:"2026-10-08T00:00:01Z"},evidence:[],coverage:null}),{status:200}));
+    expect((await api.sectionResearchGenerate("r1","s1",{force:true,async:false})).run_id).toBe("sr1");
+    expect((await api.sectionResearch("r1","s1")).run.id).toBe("sr1");
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/reports/r1/manuscript/sections/s1/research");
+    expect(spy.mock.calls[1]?.[0]).toBe("/api/backend/reports/r1/manuscript/sections/s1/research");
+    spy.mockRestore();
+  });
+});
