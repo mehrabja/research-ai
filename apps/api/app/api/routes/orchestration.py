@@ -42,6 +42,7 @@ from app.schemas.orchestration import (
     OrchestrationStrategyListResponse,
     OrchestrationStrategyRead,
     OrchestrationApprovalResponse,
+    OrchestrationResumeResponse,
 )
 from app.services.orchestration import jobs as orch_jobs
 from app.services.orchestration import persistence as orch_persist
@@ -323,6 +324,32 @@ def approve_orchestration_node(
         status=persisted.run.status,
         run_id=run_id,
         node_id=node_id,
+    )
+
+
+@router.post(
+    "/{report_id}/orchestration/runs/{run_id}/resume",
+    response_model=OrchestrationResumeResponse,
+)
+def resume_orchestration(
+    report_id: uuid.UUID,
+    run_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> OrchestrationResumeResponse:
+    get_report(db, user_id=current_user.id, report_id=report_id)
+    run = _load_run(db, report_id=report_id, run_id=run_id)
+    if run.user_id not in (None, current_user.id):
+        raise OrchestrationNotFound()
+    persisted = orch_persist.resume_paused_m35_persisted(
+        db,
+        run_id=run_id,
+        user_id=current_user.id,
+        commit=True,
+    )
+    return OrchestrationResumeResponse(
+        status=persisted.run.status,
+        run_id=run_id,
     )
 
 
