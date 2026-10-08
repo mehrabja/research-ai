@@ -53,11 +53,16 @@ test("creates project/report and uploads a research file through the browser",as
   await expect(page.getByRole("heading",{name:"Upload"})).toBeVisible();
 
   const fileName="research-upload-"+Date.now()+".txt";
+  const uploadResponsePromise=page.waitForResponse(response=>
+    response.url().includes("/api/backend/projects/")&&response.url().includes("/files")&&response.request().method()==="POST"
+  );
   await page.locator('input[type="file"]').setInputFiles({
     name:fileName,
     mimeType:"text/plain",
     buffer:Buffer.from("A browser-uploaded research source for end-to-end validation.\n"),
   });
+  const uploadResponse=await uploadResponsePromise;
+  expect(uploadResponse.ok(),await uploadResponse.text()).toBeTruthy();
 
   await expect(page.getByText(new RegExp(`Uploaded "${fileName}"`)).first()).toBeVisible({timeout:30_000});
   await expect(page.getByText(fileName,{exact:true}).first()).toBeVisible({timeout:30_000});
