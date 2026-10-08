@@ -13,13 +13,23 @@ test("renders completed protected capability surfaces",async({page})=>{
   await page.getByLabel("Password").fill(password);
   await page.getByLabel("Workspace name").fill("Surface E2E Workspace");
   await page.getByRole("checkbox").check();
+  const registerResponsePromise=page.waitForResponse(response=>
+    response.url().endsWith("/api/auth/register")&&response.request().method()==="POST"
+  );
   await page.getByRole("button",{name:/Create workspace/}).click();
+  const registerResponse=await registerResponsePromise;
+  expect(registerResponse.ok(),await registerResponse.text()).toBeTruthy();
 
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
+  const loginResponsePromise=page.waitForResponse(response=>
+    response.url().endsWith("/api/auth/login")&&response.request().method()==="POST"
+  );
   await page.getByRole("button",{name:"Log in"}).click();
-  await expect(page).toHaveURL(/\/dashboard/);
+  const loginResponse=await loginResponsePromise;
+  expect(loginResponse.ok(),await loginResponse.text()).toBeTruthy();
+  await expect(page).toHaveURL(/\/dashboard/,{timeout:30_000});
 
   const routes=[
     ["/manuscript","Manuscript"],
