@@ -990,27 +990,33 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "TRUSTED_HOSTS must be explicitly configured in production."
                 )
-            configured_chains = (
-                self.provider_generation_chain,
-                self.provider_embedding_chain,
-                self.provider_translation_chain,
-            )
+            generation_chain = self.provider_generation_chain.lower().split(",")
+            embedding_chain = self.provider_embedding_chain.lower().split(",")
+            translation_chain = self.provider_translation_chain.lower().split(",")
             uses_openrouter = any(
-                "openrouter" in chain.lower().split(",")
-                for chain in configured_chains
+                "openrouter" in chain
+                for chain in (generation_chain, embedding_chain, translation_chain)
             )
             if uses_openrouter and self._is_placeholder_secret(self.openrouter_api_key):
                 raise ValueError(
                     "OPENROUTER_API_KEY must be configured when OpenRouter is enabled."
                 )
-            for name, key in (
-                ("GENERATION_OPENAI_API_KEY", self.generation_openai_api_key),
-                ("EMBEDDING_OPENAI_API_KEY", self.embedding_openai_api_key),
+            if (
+                ("openai" in generation_chain or "openai" in translation_chain)
+                and self._is_placeholder_secret(self.generation_openai_api_key)
             ):
-                if name in ():
-                    continue
-                if "openai" in ",".join(configured_chains).lower() and self._is_placeholder_secret(key):
-                    raise ValueError(f"{name} must be configured when OpenAI is enabled.")
+                raise ValueError(
+                    "GENERATION_OPENAI_API_KEY must be configured when OpenAI generation/translation is enabled."
+                )
+            if (
+                "openai" in embedding_chain
+                and self._is_placeholder_secret(self.embedding_openai_api_key)
+            ):
+                raise ValueError(
+                    "EMBEDDING_OPENAI_API_KEY must be configured when OpenAI embeddings are enabled."
+                )
+            if uses_openrouter and not self.openrouter_base_url.startswith("https://"):
+                raise ValueError("OPENROUTER_BASE_URL must use https:// in production.")
             if self.auth_cookie_samesite == "none" and not self.auth_cookie_secure:
                 raise ValueError(
                     "SameSite=None requires secure auth cookies."
