@@ -87,15 +87,28 @@ def test_embedding_fallback_advances_on_provider_unavailable() -> None:
 
 def test_registry_candidate_order_preserves_requested_provider() -> None:
     registry = ProviderRegistry()
+    def router_provider(_config):
+        return _RateLimitedGeneration()
+
+    def direct_provider(_config):
+        return _WorkingGeneration()
+
+    def disabled_provider(_config):
+        return _WorkingGeneration()
+
     registry.register(
-        ProviderDefinition("openrouter", "generation", lambda _config: _RateLimitedGeneration())
+        ProviderDefinition("openrouter", "generation", router_provider)
     )
     registry.register(
-        ProviderDefinition("openai", "generation", lambda _config: _WorkingGeneration())
+        ProviderDefinition("openai", "generation", direct_provider)
     )
     registry.register(
-        ProviderDefinition("unused", "generation", lambda _config: _WorkingGeneration(), enabled=False)
+        ProviderDefinition("unused", "generation", disabled_provider, enabled=False)
     )
-    registry.configured_chain = lambda capability: ("openrouter", "openai")  # type: ignore[method-assign]
+
+    def configured_chain(_capability):
+        return ("openrouter", "openai")
+
+    registry.configured_chain = configured_chain  # type: ignore[method-assign]
     defs = registry.candidates("generation", requested="openai")
     assert [item.name for item in defs] == ["openai", "openrouter"]
