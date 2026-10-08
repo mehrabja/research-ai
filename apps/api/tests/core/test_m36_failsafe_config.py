@@ -9,6 +9,7 @@ from app.core.config import Settings
 
 def _base(**overrides) -> dict:
     base = {
+        "_env_file": None,
         "database_url": (
             "postgresql+psycopg://t:t@localhost/t"
         ),
@@ -67,6 +68,7 @@ def test_production_accepts_valid_config() -> None:
             app_env="production",
             jwt_secret_key="x" * 64,
             cors_allowed_origins="https://example.com",
+            two_factor_encryption_key="x" * 32,
         )
     )
     assert s.app_env == "production"
