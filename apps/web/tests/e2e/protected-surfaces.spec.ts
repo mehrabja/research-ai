@@ -33,6 +33,14 @@ test("renders completed protected capability surfaces",async({page})=>{
   await expect(page).toHaveURL(/\/dashboard/,{timeout:30_000});
 
   const routes=[
+    ["/workspace","Research workspace"],
+    ["/research","Research discovery"],
+    ["/sources","Source library"],
+    ["/literature","Literature intelligence"],
+    ["/files","Project files"],
+    ["/plan","Research plan"],
+    ["/generate","Generate"],
+    ["/jobs","Jobs"],
     ["/manuscript","Manuscript"],
     ["/evidence","Evidence matrix"],
     ["/rag","Research retrieval"],
