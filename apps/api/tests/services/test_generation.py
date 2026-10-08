@@ -100,7 +100,7 @@ def test_empty_output_rejected(monkeypatch) -> None:
     )
     with SessionLocal() as db, pytest.raises(EmptyGenerationError):
         generate_report(
-            db, job_id=uuid.uuid4(), user_id=uid, report_id=rid,
+            db, job_id=_mk_job(uid=uid, rid=rid), user_id=uid, report_id=rid,
             provider=_FakeProvider(text="   "),
         )
 
