@@ -64,7 +64,7 @@ jobs:
     name: E2E
     services:
       postgres:
-        image: pgvector/pg16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
