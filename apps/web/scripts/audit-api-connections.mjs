@@ -51,7 +51,8 @@ for(const file of files){
   if(
     rel==="src/lib/server/backend-url.ts"||
     rel==="src/lib/api/generated.openapi.ts"||
-    rel.startsWith("src/app/api/")
+    rel==="src/app/api/backend/[...path]/route.ts"||
+    rel.startsWith("src/app/api/auth/")
   )continue;
   const text=await fs.readFile(file,"utf8");
   if(text.includes("https://api.openai.com")||text.includes("https://openrouter.ai")){
