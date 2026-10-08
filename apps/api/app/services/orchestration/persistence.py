@@ -145,8 +145,8 @@ def _materialize_nodes(
             input_snapshot=planned.payload,
             context_hash=node_ctx_hash,
             attempt=0,
-            max_attempts=3,
-            deterministic=True,
+            max_attempts=tool_spec.max_attempts,
+            deterministic=tool_spec.deterministic,
         )
         db.add(node)
         rows.append(node)
