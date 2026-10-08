@@ -1,4 +1,4 @@
-import {expect,test} from "vitest";
+import {describe,expect,it,test} from "vitest";
 import {routes} from "./routes";
 
 test("centralized routes preserve backend API paths",()=>{
