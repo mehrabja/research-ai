@@ -50,6 +50,13 @@ def test_production_rejects_wildcard_cors() -> None:
         Settings(**_production_base(cors_allowed_origins="*"))
 
 
+def test_production_rejects_insecure_auth_cookie() -> None:
+    with pytest.raises(
+        ValidationError, match="AUTH_COOKIE_SECURE must be True"
+    ):
+        Settings(**_production_base(auth_cookie_secure=False))
+
+
 def test_production_rejects_short_jwt() -> None:
     with pytest.raises(ValidationError):
         Settings(**_production_base(jwt_secret_key="short"))
