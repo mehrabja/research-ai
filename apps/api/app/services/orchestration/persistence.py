@@ -120,6 +120,12 @@ def _materialize_nodes(
             raise OrchestrationInvalid(
                 f"unknown tool in plan: {planned.node_key}"
             )
+        tool_spec, _tool_fn = plan_svc.get_tool(planned.node_key)
+        node_type = (
+            NodeType.DETERMINISTIC.value
+            if tool_spec.deterministic
+            else NodeType.MODEL_ASSISTED.value
+        )
         node_ctx_hash = ctx_svc.compute_node_context_hash(
             run_context_hash=run.context_hash,
             node_key=planned.node_key,
@@ -132,7 +138,7 @@ def _materialize_nodes(
             report_id=run.report_id,
             node_key=planned.node_key,
             node_version=ORCHESTRATION_TOOL_REGISTRY_VERSION,
-            node_type=NodeType.DETERMINISTIC.value,
+            node_type=node_type,
             sequence=planned.sequence,
             depends_on=list(planned.depends_on),
             status=NodeStatus.PENDING.value,
