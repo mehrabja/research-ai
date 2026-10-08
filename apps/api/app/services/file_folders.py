@@ -7,13 +7,16 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ProjectNotFound
+from app.core.exceptions import AppError, ProjectNotFound
 from app.db.models.file_folder import ProjectFileFolder
 from app.db.models.project import Project
 from app.db.models.project_file import ProjectFile
 
 
-class FileFolderError(Exception): ...
+class FileFolderError(AppError):
+    code = "FILE_FOLDER_INVALID"
+    status_code = 400
+    message = "Invalid project file folder."
 
 def _require_project(
     db: Session,
