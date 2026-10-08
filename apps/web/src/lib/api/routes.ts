@@ -99,6 +99,11 @@ export const routes={
   twoFactorDisable:()=> "auth/2fa/disable",
 
   members:(workspaceId:string)=>"workspaces/"+segment(workspaceId)+"/members",
+  manuscriptComments:(reportId:string,versionId:string)=>"reports/"+segment(reportId)+"/manuscript-versions/"+segment(versionId)+"/comments",
+  resolveComment:(reportId:string,commentId:string)=>"reports/"+segment(reportId)+"/comments/"+segment(commentId)+"/resolve",
+  reopenComment:(reportId:string,commentId:string)=>"reports/"+segment(reportId)+"/comments/"+segment(commentId)+"/reopen",
+  reviewTasks:(reportId:string,versionId:string)=>"reports/"+segment(reportId)+"/manuscript-versions/"+segment(versionId)+"/reviews",
+
   member:(workspaceId:string,userId:string)=>"workspaces/"+segment(workspaceId)+"/members/"+segment(userId),
   invitations:(workspaceId:string)=>"workspaces/"+segment(workspaceId)+"/members/invitations",
   invitation:(workspaceId:string,invitationId:string)=>"workspaces/"+segment(workspaceId)+"/members/invitations/"+segment(invitationId),
