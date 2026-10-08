@@ -230,8 +230,14 @@ def run_m28_5_persisted(
             )
 
             generated = gen_svc.generate_section(
-                db, contract=contract, packet=packet,
+                db,
+                contract=contract,
+                packet=packet,
                 mode=effective_mode,
+                workspace_id=project.workspace_id,
+                user_id=report.user_id,
+                project_id=report.project_id,
+                report_id=report_id,
             )
 
             known_ev = {str(x.evidence_id) for x in packet.m28_items}
