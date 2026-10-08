@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models.ai_operation import AIOperation
+from app.db.models.jobs import Job
 
 
 def start_operation(
@@ -26,6 +27,11 @@ def start_operation(
     idempotency_key: str | None = None,
     metadata: dict | None = None,
 ) -> AIOperation:
+    if job_id is not None and db.get(Job, job_id) is None:
+        # Keep the audit row writable for direct service calls that carry
+        # a correlation id without a persisted durable job.
+        job_id = None
+
     if idempotency_key:
         existing = db.execute(
             select(AIOperation).where(
