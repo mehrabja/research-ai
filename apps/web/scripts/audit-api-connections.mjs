@@ -25,10 +25,25 @@ const [routesSource,clientSource,files]=await Promise.all([
   walk(srcRoot),
 ]);
 
+const appShellSource=await fs.readFile(path.join(srcRoot,"components","app-shell.tsx"),"utf8");
+const protectedRoot=path.join(srcRoot,"app","(protected)");
+
+
 const routeNames=[...routesSource.matchAll(/^\s{2}([A-Za-z0-9_]+)\s*:/gm)].map(m=>m[1]);
 const uniqueRouteNames=[...new Set(routeNames)];
 const referenced=new Set([...clientSource.matchAll(/\broutes\.([A-Za-z0-9_]+)\b/g)].map(m=>m[1]));
 const unused=uniqueRouteNames.filter(name=>!referenced.has(name));
+const navPaths=[...appShellSource.matchAll(/\["(\/[^"]+)","[^"]*","[^"]+"\]/g)].map(m=>m[1]);
+const missingPages=[];
+for(const route of navPaths){
+  const segment=route.slice(1);
+  if(!segment||segment.includes("["))continue;
+  try{
+    await fs.access(path.join(protectedRoot,segment,"page.tsx"));
+  }catch{
+    missingPages.push(route);
+  }
+}
 
 const violations=[];
 for(const file of files){
@@ -46,9 +61,10 @@ for(const file of files){
   }
 }
 
-if(unused.length||violations.length){
+if(unused.length||violations.length||missingPages.length){
   console.error("Frontend API connection audit failed.");
   if(unused.length)console.error("Unused route builders:",unused.join(", "));
+  if(missingPages.length)console.error("Protected nav routes without page.tsx:",missingPages.join(", "));
 NaN
   process.exit(1);
 }
