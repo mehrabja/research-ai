@@ -48,10 +48,10 @@ describe("upload transport",()=>{
       upload={
         loaded:0,
         total:0,
-        addEventListener:(_:string,handler:()=>void)=>{this.progressHandler=handler;},
-        removeEventListener:(_:string,_handler:()=>void)=>{},
+        addEventListener:(_:string,handler:(event:ProgressEvent<XMLHttpRequestEventTarget>)=>void)=>{this.progressHandler=handler;},
+        removeEventListener:(_:string,_handler:(event:ProgressEvent<XMLHttpRequestEventTarget>)=>void)=>{},
       };
-      progressHandler=()=>{};
+      progressHandler=(_event:ProgressEvent<XMLHttpRequestEventTarget>)=>{};
       status=201;
       responseText=JSON.stringify({
         id:"f1",
@@ -95,7 +95,11 @@ describe("upload transport",()=>{
         expect(body.get("file")).toBeInstanceOf(File);
         this.upload.total=7;
         this.upload.loaded=7;
-        this.progressHandler();
+        const progressEvent = {
+          total: this.upload.total,
+          loaded: this.upload.loaded,
+        } as ProgressEvent<XMLHttpRequestEventTarget>;
+        this.progressHandler(progressEvent);
         this.listeners.get("load")?.();
       }
       abort(){this.listeners.get("abort")?.();}
