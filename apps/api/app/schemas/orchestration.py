@@ -156,3 +156,9 @@ class OrchestrationApprovalResponse(BaseModel):
     status: str
     run_id: uuid.UUID
     node_id: uuid.UUID
+
+
+class OrchestrationResumeResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: str
+    run_id: uuid.UUID
