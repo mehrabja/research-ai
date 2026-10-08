@@ -33,6 +33,16 @@ def test_prompt_contains_all_config_fields() -> None:
     assert "Template: IMRaD" in p
 
 
+def test_prompt_includes_user_generation_brief() -> None:
+    p = build_user_prompt(
+        topic="T", output_language="en", domain=None, audience_level=None,
+        tone=None, length=None, structure_template=None, evidence=_ev(),
+        brief="Focus the draft on the limitations and comparison with prior work.",
+    )
+    assert "=== USER GENERATION BRIEF ===" in p
+    assert "Focus the draft on the limitations" in p
+
+
 def test_prompt_omits_missing_config() -> None:
     p = build_user_prompt(
         topic="T", output_language="en", domain=None, audience_level=None,
