@@ -403,6 +403,7 @@ export const api={
   publicationComplianceValidate:(r:string)=>request<PublicationComplianceValidation>(routes.publicationComplianceValidate(r),{method:"POST"}),
   orchestrationRun:(r:string,b:{goal:string;strategy:string;payload?:Record<string,unknown>|null;force?:boolean;async?:boolean})=>request<OrchestrationRunResponse>(routes.orchestrationRun(r),{method:"POST",body:JSON.stringify({...b,async:b.async??true})}),
   orchestrationCurrent:(r:string)=>request<OrchestrationRunDetail>(routes.orchestrationCurrent(r)),
+  orchestrationStrategies:(r:string)=>request<import("./generated").OrchestrationStrategyListResponse>(routes.orchestrationStrategies(r)),
   orchestrationRuns:(r:string)=>request<OrchestrationRunList>(routes.orchestrationRuns(r)),
   orchestrationRunDetail:(r:string,id:string)=>request<OrchestrationRunDetail>(routes.orchestrationRunDetail(r,id)),
   orchestrationNodes:(r:string,id:string)=>request<OrchestrationNodeList>(routes.orchestrationNodes(r,id)),
