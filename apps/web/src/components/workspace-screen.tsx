@@ -1104,8 +1104,9 @@ function Manuscript(){
   },[draft.data,prose.data]);
 
   const saveDraft=useMutation({
-    mutationFn:()=>api.autosaveManuscript(reportId!,{revision,content:{sections:sectionDrafts},base_version_id:baseVersionId}),
-    onSuccess:res=>{
+    mutationFn:(snapshot:{revision:number;content:{sections:Record<string,string>};base_version_id:string|undefined})=>
+      api.autosaveManuscript(reportId!,snapshot),
+    onSuccess:(res,snapshot)=>{
       if(res.conflict){
         setConflictDraft(res.draft);
         setSavingError("Draft changed elsewhere. Your local edits were not accepted.");
@@ -1113,7 +1114,9 @@ function Manuscript(){
       }
       setRevision(res.draft.revision);
       setBaseVersionId(res.draft.base_version_id??undefined);
-      setDirty(false);
+      const currentSnapshot={sections:sectionDrafts};
+      const unchanged=JSON.stringify(currentSnapshot)===JSON.stringify(snapshot.content);
+      setDirty(!unchanged);
       setSavingError("");
       setConflictDraft(null);
       void qc.invalidateQueries({queryKey:["draft",reportId]});
@@ -1122,10 +1125,15 @@ function Manuscript(){
   });
 
   useEffect(()=>{
-    if(!dirty||!reportId)return;
-    const timer=window.setTimeout(()=>{void saveDraft.mutateAsync();},700);
+    if(!dirty||!reportId||saveDraft.isPending)return;
+    const snapshot={
+      revision,
+      content:{sections:{...sectionDrafts}},
+      base_version_id:baseVersionId,
+    };
+    const timer=window.setTimeout(()=>{void saveDraft.mutateAsync(snapshot);},700);
     return()=>window.clearTimeout(timer);
-  },[dirty,reportId,sectionDrafts]);
+  },[dirty,reportId,revision,baseVersionId,sectionDrafts,saveDraft.isPending]);
 
   const saveVersion=useMutation({
     mutationFn:()=>api.saveManuscriptVersion(reportId!,{expected_revision:revision}),
