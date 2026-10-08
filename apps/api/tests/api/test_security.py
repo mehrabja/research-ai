@@ -321,9 +321,13 @@ def test_production_rejects_short_secret() -> None:
 
 def test_production_accepts_strong_secret() -> None:
     s = Settings(
+        _env_file=None,
         app_env="production",
+        debug=False,
         jwt_secret_key="x" * 64,
         database_url="postgresql+psycopg://test:test@localhost/test",
+        cors_allowed_origins="https://example.com",
+        trusted_hosts="api.example.com",
         two_factor_encryption_key="x" * 32,
         auth_cookie_secure=True,
         auth_require_email_verification=True,
@@ -331,6 +335,11 @@ def test_production_accepts_strong_secret() -> None:
         smtp_host="smtp.example.com",
         smtp_sender="no-reply@example.com",
         frontend_base_url="https://example.com",
+        provider_generation_chain="openrouter",
+        provider_embedding_chain="openrouter",
+        provider_translation_chain="openrouter",
+        openrouter_api_key="test-openrouter-key",
+        openrouter_base_url="https://openrouter.ai/api/v1",
         file_storage_backend="s3",
         file_storage_s3_bucket="test-bucket",
         file_storage_s3_region="us-east-1",
