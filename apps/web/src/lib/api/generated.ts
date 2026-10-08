@@ -114,3 +114,27 @@ export type SectionResearchCurrent={run:SectionResearchRun;evidence:SectionResea
 export type SectionResearchGenerateResponse={status:string;job_id:UUID|null;run_id:UUID|null;context_hash:string|null;contract_hash:string|null;evidence_count:number|null;coverage_score:number|null;coverage_state:string|null};
 export type SectionResearchRunList={items:SectionResearchRun[];total:number;limit:number;offset:number};
 export type SectionResearchValidation={validation_status:string;validation_errors:string[];warnings:string[]};
+
+export type PublicationTarget={id:UUID;target_code:string;profile_version:string;publisher:string|null;venue:string;venue_type:string;citation_style:string;active:boolean;profile_schema_version:string;effective_from:DateTime|null;effective_to:DateTime|null;created_at:DateTime;updated_at:DateTime};
+export type PublicationTargetList={items:PublicationTarget[];total:number;limit:number;offset:number};
+export type PublicationTargetSelection={id:UUID;report_id:UUID;target_id:UUID;selected_by:UUID|null;selection_note:string|null;created_at:DateTime};
+export type PublicationComplianceRun={id:UUID;project_id:UUID;report_id:UUID;manuscript_id:UUID|null;manuscript_version_id:UUID;target_id:UUID;context_hash:string;m33_version:string;rules_version:string;target_profile_version:string;status:string;finding_count:number;blocking_count:number;error_count:number;warning_count:number;info_count:number;gate:string|null;checklist_state:Record<string,unknown>|null;formatting_summary:Record<string,unknown>|null;warnings:unknown[]|null;error_message:string|null;duration_ms:number|null;created_at:DateTime;completed_at:DateTime|null};
+export type PublicationComplianceCurrent={run:PublicationComplianceRun};
+export type PublicationComplianceRunList={items:PublicationComplianceRun[];total:number;limit:number;offset:number};
+export type PublicationComplianceFinding={id:UUID;compliance_run_id:UUID;rule_id:string;category:string;severity:string;title:string;message:string;location:Record<string,unknown>|null;evidence:Record<string,unknown>|null;remediation:Record<string,unknown>|null;created_at:DateTime};
+export type PublicationComplianceFindingList={items:PublicationComplianceFinding[];total:number;limit:number;offset:number};
+export type PublicationChecklist={run_id:UUID;target_id:UUID;target_profile_version:string;gate:string|null;checklist_state:Record<string,unknown>|null};
+export type PublicationComplianceValidation={validation_status:string;validation_errors:string[];warnings:string[];gate:string|null};
+export type PublicationComplianceResponse={status:string;job_id:UUID|null;run_id:UUID|null;context_hash:string|null;gate:string|null;finding_count:number|null;blocking_count:number|null};
+
+export type OrchestrationNode={id:UUID;run_id:UUID;project_id:UUID;report_id:UUID;node_key:string;node_version:string;node_type:string;sequence:number;depends_on:unknown[]|null;status:string;attempt:number;max_attempts:number;deterministic:boolean;error_class:string|null;error_message:string|null;duration_ms:number|null;started_at:DateTime|null;completed_at:DateTime|null;created_at:DateTime};
+export type OrchestrationRun={id:UUID;project_id:UUID;report_id:UUID;user_id:UUID|null;goal:string;context_hash:string;orchestration_version:string;planner_version:string;tool_registry_version:string;strategy:string;status:string;current_node_key:string|null;budget:Record<string,unknown>;budget_used:Record<string,unknown>|null;approvals_required:unknown[]|null;approvals_received:unknown[]|null;summary:Record<string,unknown>|null;errors:unknown[]|null;checkpoint_state:Record<string,unknown>|null;last_checkpoint_at:DateTime|null;node_count:number;completed_node_count:number;failed_node_count:number;error_message:string|null;duration_ms:number|null;started_at:DateTime|null;completed_at:DateTime|null;failed_at:DateTime|null;cancelled_at:DateTime|null;created_at:DateTime};
+export type OrchestrationRunDetail={run:OrchestrationRun;nodes:OrchestrationNode[]};
+export type OrchestrationRunList={items:OrchestrationRun[];total:number;limit:number;offset:number};
+export type OrchestrationNodeList={items:OrchestrationNode[];total:number;limit:number;offset:number};
+export type OrchestrationRunResponse={status:string;job_id:UUID|null;run_id:UUID|null;context_hash:string|null;node_count:number|null;completed_node_count:number|null;failed_node_count:number|null};
+export type OrchestrationPauseResponse={status:string;run_id:UUID};
+export type OrchestrationCancelResponse={status:string;run_id:UUID};
+export type OrchestrationTool={key:string;version:string;description:string;permission:string;deterministic:boolean};
+export type OrchestrationToolList={items:OrchestrationTool[]};
+export type OrchestrationValidation={validation_status:string;validation_errors:string[];warnings:string[]};
