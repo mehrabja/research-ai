@@ -37,6 +37,7 @@ export default function RegisterPage(){
       if(!res.ok)throw new Error(
         typeof body?.detail==="string"?body.detail:
         typeof body?.message==="string"?body.message:
+        typeof body?.error?.message==="string"?body.error.message:
         "Registration failed."
       );
       router.replace("/verify-email?pending=1");
