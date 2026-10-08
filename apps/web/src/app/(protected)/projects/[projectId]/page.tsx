@@ -106,6 +106,17 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
     },
   });
 
+  const archive=useMutation({
+    mutationFn:()=>api.archiveProject(projectId,workspaceId!),
+    onSuccess:async()=>{
+      await Promise.all([
+        qc.invalidateQueries({queryKey:["project",projectId,workspaceId]}),
+        qc.invalidateQueries({queryKey:["projects",workspaceId]}),
+      ]);
+      router.push("/projects");
+    },
+  });
+
   const activeReport=useMemo(
     ()=>reports.data?.items?.find(x=>x.id===activeReportId)??reports.data?.items?.[0],
     [reports.data,activeReportId],
@@ -139,9 +150,15 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
           <div className="actions">
             <span className={"tag"+(project.data.status==="active"?" primary":"")}>{project.data.status}</span>
             <button className="btn" onClick={()=>setEditing(x=>!x)}>{editing?"Close editor":"Edit project"}</button>
+            {project.data.status==="active"&&<button
+              className="btn"
+              disabled={archive.isPending}
+              onClick={()=>{if(window.confirm("Archive this project?"))archive.mutate();}}
+            >{archive.isPending?"Archiving…":"Archive project"}</button>}
           </div>
         </div>
       </div>
+      {archive.isError&&<div className="notice error" style={{marginTop:12}}>{archive.error instanceof Error?archive.error.message:"Project archive failed."}</div>}
 
       <section className="card p-5">
         <div className="row">
