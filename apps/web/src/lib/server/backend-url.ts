@@ -1,4 +1,4 @@
-const DEV_BACKEND_API_URL="http://localhost:8000";
+const DEV_BACKEND_API_URL="http://127.0.0.1:8000";
 
 export function getBackendApiUrl():string{
   const configured=process.env.BACKEND_API_URL?.trim();
