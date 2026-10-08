@@ -55,3 +55,19 @@ describe("phase 2C intelligence workflow routes",()=>{
     expect(routes.sectionResearchValidate("r 1","s/1")).toBe("reports/r%201/manuscript/sections/s%2F1/research/validate");
   });
 });
+
+describe("phase 2D publication and orchestration routes",()=>{
+  it("builds publication routes",()=>{
+    expect(routes.publicationTargets()).toBe("publication-targets");
+    expect(routes.publicationSelect("r 1")).toBe("reports/r%201/publication-target/select");
+    expect(routes.publicationComplianceCurrent("r 1")).toBe("reports/r%201/publication-compliance/current");
+    expect(routes.publicationComplianceFindings("r 1")).toBe("reports/r%201/publication-compliance/findings");
+    expect(routes.publicationComplianceValidate("r 1")).toBe("reports/r%201/publication-compliance/validate");
+  });
+  it("builds orchestration control routes",()=>{
+    expect(routes.orchestrationRun("r 1")).toBe("reports/r%201/orchestration/run");
+    expect(routes.orchestrationCurrent("r 1")).toBe("reports/r%201/orchestration/current");
+    expect(routes.orchestrationCancel("r 1","run/1")).toBe("reports/r%201/orchestration/runs/run%2F1/cancel");
+    expect(routes.orchestrationValidate("r 1","run/1")).toBe("reports/r%201/orchestration/runs/run%2F1/validate");
+  });
+});
