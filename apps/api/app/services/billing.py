@@ -124,7 +124,7 @@ def change_plan(
             subscription_id=sub.provider_subscription_id,
             price_id=price_id,
             idempotency_key=_subscription_action_idempotency_key(
-                f"plan-change:{new_plan_id}", sub.id
+                "plan-change", sub.id, new_plan_id
             ),
         )
     sub.plan_id = new_plan_id
@@ -144,9 +144,11 @@ def change_plan(
 def _subscription_action_idempotency_key(
     action: str,
     subscription_id: uuid.UUID,
+    *parts: object,
 ) -> str:
     """Build one stable key per mutating provider action."""
-    return f"{action}:{subscription_id}"
+    values = (action, str(subscription_id), *(str(part) for part in parts))
+    return ":".join(values)
 
 
 # --------------------------------------------------------------------------
