@@ -379,6 +379,7 @@ def generate_report(
             cited=cited,
             profile_id=profile_id,
             workspace_id=workspace_id,
+            context_hash=context_hash,
         )
     except GenerationAlreadySucceeded:
         raise
@@ -408,6 +409,7 @@ def _persist_success_atomic(
     cited: tuple[str, ...],
     profile_id: str,
     workspace_id: uuid.UUID,
+    context_hash: str,
 ) -> None:
     marker_map = context.evidence.marker_map()
     claims_evidence = [
@@ -423,6 +425,7 @@ def _persist_success_atomic(
         "job_id": str(job_id),
         "attempt_status": "success",
         "profile_id": profile_id,
+        "context_hash": context_hash,
         "text": provider_result.text,
         "language": context.output_language,
         "evidence": [
