@@ -29,6 +29,15 @@ class Plan:
 
 
 _GOAL_PRESETS: dict[str, list[str]] = {
+    "research_pipeline": [
+        "build_plan",
+        "technical_intelligence",
+        "manuscript_prose_generate",
+        "generate_citations",
+        "academic_qa",
+        "humanize",
+        "target_compliance",
+    ],
     "complete_pre_submission": [
         "build_plan",
         "technical_intelligence",
@@ -64,12 +73,13 @@ def plan_orchestration(
     payload: dict[str, Any] | None = None,
     max_nodes: int,
 ) -> Plan:
-    preset = _GOAL_PRESETS.get(strategy, [])
+    preset = _GOAL_PRESETS.get(strategy)
     if not preset:
-        # Fallback: minimal evidence-first pipeline.
-        preset = [
-            "academic_qa",
-        ]
+        available = ", ".join(sorted(_GOAL_PRESETS))
+        raise ValueError(
+            f"unknown orchestration strategy {strategy!r}; "
+            f"available strategies: {available}"
+        )
     node_payload = dict(payload or {})
     nodes: list[PlannedNode] = []
     prior: list[str] = []
@@ -87,3 +97,15 @@ def plan_orchestration(
 
 
 __all__ = ["PlannedNode", "Plan", "plan_orchestration"]
+
+
+def available_orchestration_strategies() -> list[tuple[str, str]]:
+    descriptions = {
+        "research_pipeline": "Evidence-first end-to-end research preparation pipeline.",
+        "complete_pre_submission": "Prepare a manuscript for submission with quality and compliance gates.",
+        "prepare_for_submission": "Run citation, academic QA, and publication compliance checks.",
+        "resolve_qa_blockers": "Re-run QA around humanization and remediation.",
+        "improve_citation_completeness": "Improve evidence coverage and citation completeness.",
+        "reviewer_revision_plan": "Rebuild the academic QA view for reviewer revisions.",
+    }
+    return [(key, descriptions.get(key, key)) for key in sorted(_GOAL_PRESETS)]
