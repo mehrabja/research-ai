@@ -13,7 +13,7 @@ export default defineConfig({
       command:`${backendPython} -m uvicorn app.main:app --host 127.0.0.1 --port 8000`,
       cwd:"../api",
       url:"http://127.0.0.1:8000/api/v1/health/live",
-      reuseExistingServer:false,
+      reuseExistingServer:!process.env.CI,
       env:{
         ...process.env,
         APP_ENV:"test",
@@ -23,7 +23,7 @@ export default defineConfig({
     {
       command:"npm run dev",
       url:"http://127.0.0.1:3000",
-      reuseExistingServer:false,
+      reuseExistingServer:!process.env.CI,
       env:{
         ...process.env,
         BACKEND_API_URL:"http://127.0.0.1:8000",
