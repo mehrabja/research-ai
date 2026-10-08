@@ -18,6 +18,7 @@ class DetectionEnqueueResponse(BaseModel):
 class DetectionResultResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    run_id: uuid.UUID
     report_id: uuid.UUID
     version_id: uuid.UUID
     profile_id: str
