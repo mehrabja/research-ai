@@ -144,7 +144,7 @@ def test_search_limit_clamped_to_max() -> None:
             user_id=uid,
             report_id=rid,
             query="q",
-            limit=999,
+            limit=9999,
             provider=prov,
         )
     assert prov.calls[0]["limit"] == get_settings().source_search_limit_max
