@@ -60,3 +60,21 @@ class ReportResponse(BaseModel):
     project_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
+
+
+class GenerationCurrentRead(BaseModel):
+    report_id: uuid.UUID
+    run_id: uuid.UUID | None = None
+    status: str | None = None
+    prompt_version: str | None = None
+    provider: str | None = None
+    model: str | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    language: str | None = None
+    text: str | None = None
+    context_hash: str | None = None
+    evidence: list[dict] = Field(default_factory=list)
+    cited_markers: list[str] = Field(default_factory=list)
+    created_at: datetime | None = None
+    completed_at: datetime | None = None
