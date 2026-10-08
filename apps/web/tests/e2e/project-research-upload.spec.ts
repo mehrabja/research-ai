@@ -1,7 +1,7 @@
 import {expect,test} from "@playwright/test";
 
 function uniqueEmail():string{
-  return "e2e+"+Date.now()+"@example.test";
+  return "e2e+"+Date.now()+"@example.com";
 }
 
 const password="Research-AI-E2E-password-2026";
