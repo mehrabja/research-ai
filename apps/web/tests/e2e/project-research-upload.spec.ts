@@ -39,9 +39,14 @@ test("creates project/report and uploads a research file through the browser",as
   await page.getByLabel("Research objective").fill("Validate the end-to-end research intake workflow.");
   await page.getByRole("button",{name:"Continue"}).click();
   await page.getByLabel(/Research questions/).fill("Does browser upload persist?");
+  const projectCreateResponsePromise=page.waitForResponse(response=>
+    new URL(response.url()).pathname==="/api/backend/projects"&&response.request().method()==="POST"
+  );
   await page.getByRole("button",{name:"Create project"}).click();
+  const projectCreateResponse=await projectCreateResponsePromise;
+  expect(projectCreateResponse.status(),await projectCreateResponse.text()).toBe(201);
 
-  await expect(page).toHaveURL(/\/projects\/[0-9a-f-]+/i);
+  await expect(page).toHaveURL(/\/projects\/[0-9a-f-]+/i,{timeout:30_000});
   const projectId=(await page.url()).match(/\/projects\/([^?]+)/i)?.[1];
   expect(projectId).toBeTruthy();
 
