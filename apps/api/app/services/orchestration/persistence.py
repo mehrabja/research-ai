@@ -313,9 +313,10 @@ def run_m35_persisted(
                     persisted_run = s.get(
                         ResearchOrchestrationRun, run.id,
                     )
-                    if persisted_run is not None and not (
-                        persisted_run.status
-                        in (
+                    if (
+                        persisted_run is not None
+                        and persisted_run.status
+                        not in (
                             RunStatus.CANCELLED.value,
                             RunStatus.COMPLETED.value,
                             RunStatus.FAILED.value,
