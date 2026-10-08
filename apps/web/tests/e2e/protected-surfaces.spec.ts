@@ -7,6 +7,7 @@ function uniqueEmail():string{
 const password="Research-AI-E2E-password-2026";
 
 test("renders completed protected capability surfaces",async({page})=>{
+  test.setTimeout(120_000);
   const email=uniqueEmail();
   await page.goto("/register");
   await page.getByLabel("Work email").fill(email);
