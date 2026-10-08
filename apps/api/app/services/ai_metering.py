@@ -8,6 +8,7 @@ policy decision and are not recorded by this helper.
 from __future__ import annotations
 
 import uuid
+import json
 from collections.abc import Callable
 from datetime import datetime
 from time import monotonic
@@ -94,6 +95,7 @@ def execute_metered_provider_call(
     request_id: str | None = None,
     input_units: Callable[[T], int | None] | None = None,
     output_units: Callable[[T], int | None] | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> T:
     """Execute an external provider call and persist success/failure.
 
@@ -125,6 +127,7 @@ def execute_metered_provider_call(
             report_id=report_id,
             job_id=job_id,
             request_id=request_id,
+            metadata=metadata,
         )
         operation_id = op.id
         db.commit()
@@ -141,6 +144,7 @@ def execute_metered_provider_call(
                 duration_ms=max(0, int((monotonic() - started) * 1000)),
                 error_code=_error_code(exc),
                 metadata={
+                    **(metadata or {}),
                     "capability": capability,
                     "attempted_providers": list(
                         getattr(provider, "attempted_providers", [])
@@ -164,6 +168,7 @@ def execute_metered_provider_call(
             provider=getattr(result, "provider", None),
             model=getattr(result, "model", None),
             metadata={
+                **(metadata or {}),
                 "capability": capability,
                 "attempted_providers": list(
                     getattr(provider, "attempted_providers", [])
