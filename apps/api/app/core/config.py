@@ -26,7 +26,7 @@ _MIN_JWT_SECRET_BYTES: int = 32
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=REPO_ROOT / ".env",
+        env_file=None,
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
@@ -1018,4 +1018,4 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    return Settings()  # type: ignore[call-arg]
+    return Settings(_env_file=REPO_ROOT / ".env")  # type: ignore[call-arg]
