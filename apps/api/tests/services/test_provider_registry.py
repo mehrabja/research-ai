@@ -95,3 +95,18 @@ def test_registry_candidate_order_preserves_requested_provider() -> None:
     registry.configured_chain = configured_chain  # type: ignore[method-assign]
     defs = registry.candidates("generation", requested="openai")
     assert [item.name for item in defs] == ["openai", "openrouter"]
+
+
+class _TimeoutEmbedding(_UnavailableEmbedding):
+    def embed_documents(self, texts):
+        from app.integrations.embeddings.base import EmbeddingTimeoutError
+        raise EmbeddingTimeoutError("timeout")
+
+
+def test_embedding_fallback_advances_on_timeout() -> None:
+    router = EmbeddingProviderFallback(
+        (_TimeoutEmbedding(), _WorkingEmbedding())
+    )
+    result = router.embed_documents(["x"])
+    assert result.vectors == [[0.1, 0.2, 0.3]]
+    assert router.attempted_providers == ["openrouter", "openai"]
