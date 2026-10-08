@@ -17,9 +17,9 @@ import hashlib
 import logging
 import uuid
 from collections.abc import Callable, Sequence
-from functools import partial
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from functools import partial
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
