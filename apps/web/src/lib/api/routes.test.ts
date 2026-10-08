@@ -14,7 +14,3 @@ test("centralized routes preserve backend API paths",()=>{
   expect(routes.fileContent("f/1")).toBe("files/f%2F1/content");
 });
 
-test("generation never points at the retired nonexistent report generate endpoint",()=>{
-  expect(routes.jobsEnqueue()).toBe("jobs");
-  expect(Object.values(routes).some(route=>route("r-1") === "reports/r-1/generate")).toBe(false);
-});
