@@ -42,7 +42,7 @@ from app.services.orchestration import executor as exec_svc
 from app.services.orchestration import graph as graph_svc
 from app.services.orchestration import planner as plan_svc
 from app.services.orchestration import policy as policy_svc
-from app.services.orchestration.registry import tool_exists
+from app.services.orchestration.registry import get_tool, tool_exists
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +120,7 @@ def _materialize_nodes(
             raise OrchestrationInvalid(
                 f"unknown tool in plan: {planned.node_key}"
             )
-        tool_spec, _tool_fn = plan_svc.get_tool(planned.node_key)
+        tool_spec, _tool_fn = get_tool(planned.node_key)
         node_type = (
             NodeType.DETERMINISTIC.value
             if tool_spec.deterministic
