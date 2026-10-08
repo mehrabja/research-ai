@@ -16,7 +16,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -374,8 +374,14 @@ def embed_source(
 
         for batch in batches:
             try:
+                embed_call: Callable[[], EmbeddingBatchResult] = (
+                    lambda batch=batch: _embed_documents_for_batch(provider, batch)
+                )
+                input_units: Callable[[EmbeddingBatchResult], int] = (
+                    lambda value: value.usage.input_tokens
+                )
                 result = execute_metered_provider_call(
-                    lambda batch=batch: _embed_documents_for_batch(provider, batch),
+                    embed_call,
                     workspace_id=workspace_id,
                     user_id=user_id,
                     operation="source.embedding.provider_call",
@@ -384,7 +390,7 @@ def embed_source(
                     model=profile.model,
                     project_id=report.project_id,
                     report_id=report_id,
-                    input_units=lambda value: value.usage.input_tokens,
+                    input_units=input_units,
                 )
             except EmbeddingInputTooLargeError as exc:
                 _mark_failed(db, batch, "input_too_large")
