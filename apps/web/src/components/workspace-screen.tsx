@@ -1190,13 +1190,28 @@ function Generate(){
     if(status==="completed"||status==="failed"||status==="cancelled"){
       setJobId("");
       void qc.invalidateQueries({queryKey:["reports"]});
-      void qc.invalidateQueries({queryKey:["generation-current",reportId]});
       void qc.invalidateQueries({queryKey:["project-reports"]});
+      void qc.invalidateQueries({queryKey:["generation-current",reportId]});
     }
   },[job.data?.status,qc,reportId]);
   const status=job.data?.status;
   const running=Boolean(jobId&&["queued","processing","retrying"].includes(status??""));
-  return <><Head route="generate"/><Card><div className="row"><div><div className="kicker">AI Studio</div><h3>Evidence-grounded generation</h3><div className="muted small">The latest persisted generation result, provider operation state and evidence binding are read from the backend.</div></div>{current.data?.status&&<span className={"tag "+(current.data.status==="success"?"success":"")}>{current.data.status}</span>}</div><div className="grid grid-2" style={{marginTop:12}}><div className="field"><label>Generation brief</label><textarea className="input textarea" value={brief} onChange={e=>setBrief(e.target.value)} placeholder="Draft Methods, Discussion, Abstract or Reviewer Response…"/></div><div className="pillbar" style={{marginTop:12}}><span className="tag primary">Evidence grounded</span><span className="tag">Verified evidence</span><span className="tag">Unsupported claim flag</span></div><button className="btn primary" style={{marginTop:14}} disabled={!reportId||m.isPending||running} onClick={()=>m.mutate()}>{m.isPending||running?"Generating…":"Generate"}</button>{m.isError&&<div className="notice error" style={{marginTop:12}}>{m.error instanceof Error?m.error.message:"Generation request failed."}</div>}{jobId&&<div className={"notice "+(status==="completed"?"success":status==="failed"?"error":"")} style={{marginTop:12}}>Generation job <span className="mono">{jobId}</span>: {status??"queued"}{job.data?.last_error_message&&" · "+job.data.last_error_message}</div>}</Card><Card><h3>Context</h3><div className="list"><div className="list-item">Evidence matrix</div><div className="list-item">Research plan</div><div className="list-item">Current report</div><div className="list-item">Durable job state</div></div></Card></div></>;
+  return <>
+    <Head route="generate"/>
+    <div className="grid grid-2">
+      <Card><div className="row"><div><div className="kicker">AI Studio</div><h3>Evidence-grounded generation</h3><div className="muted small">Generate only from retrieved evidence and inspect the durable result.</div></div>{current.data?.status&&<span className={"tag "+(current.data.status==="success"?"success":"")}>{current.data.status}</span>}</div>
+        <div className="field" style={{marginTop:12}}><label>Generation brief</label><textarea className="input textarea" value={brief} onChange={e=>setBrief(e.target.value)} placeholder="Draft Methods, Discussion, Abstract or Reviewer Response…"/></div>
+        <div className="pillbar" style={{marginTop:12}}><span className="tag primary">Evidence grounded</span><span className="tag">Verified evidence</span><span className="tag">Unsupported claim flag</span></div>
+        <button className="btn primary" style={{marginTop:14}} disabled={!reportId||m.isPending||running} onClick={()=>m.mutate()}>{m.isPending||running?"Generating…":"Generate"}</button>
+        {m.isError&&<div className="notice error" style={{marginTop:12}}>{m.error instanceof Error?m.error.message:"Generation request failed."}</div>}
+        {jobId&&<div className={"notice "+(status==="completed"?"success":status==="failed"?"error":"")} style={{marginTop:12}}>Generation job <span className="mono">{jobId}</span>: {status??"queued"}{job.data?.last_error_message&&" · "+job.data.last_error_message}</div>}
+      </Card>
+      <Card><h3>Persisted result</h3>
+        {current.isError?<State title="Generation result unavailable" description={current.error instanceof Error?current.error.message:"The generation result could not be loaded."} error/>:
+        current.data?.text?<><div className="grid grid-3"><Metric label="Provider" value={current.data.provider}/><Metric label="Model" value={current.data.model}/><Metric label="Evidence markers" value={current.data.cited_markers.length}/></div><div className="notice" style={{marginTop:10}}>Context fingerprint: <span className="mono">{current.data.context_hash??"—"}</span></div><pre className="code" style={{whiteSpace:"pre-wrap",fontSize:12,marginTop:12}}>{current.data.text}</pre><div className="muted tiny" style={{marginTop:8}}>Bound evidence records: {current.data.evidence.length}</div></>:<State title="No persisted generation yet" description="Submit a brief to create the first durable generation job."/>}
+      </Card>
+    </div>
+  </>;
 }
 function Humanize(){
   const {reportId,activeReport}=useCtx();
