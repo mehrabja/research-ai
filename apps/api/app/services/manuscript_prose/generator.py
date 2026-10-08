@@ -13,11 +13,13 @@ from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.domain.manuscript_prose import (
     PROSE_PROMPT_VERSION,
     ProseGenerationMode,
 )
 from app.services.ai_metering import execute_metered_provider_call
+from app.services.generation_profile import build_generation_provider
 from app.services.manuscript_prose.contracts import SectionContract
 from app.services.manuscript_prose.evidence import EvidencePacket
 from app.services.manuscript_prose.serialization import (
@@ -308,9 +310,7 @@ def _provider_polish(
     if not packet.has_any_evidence:
         return None, ["provider_skipped_no_evidence"]
 
-    from app.core.config import get_settings
     from app.domain.generation import GenerationProfile
-    from app.services.generation_profile import build_generation_provider
 
     settings = get_settings()
     profile = GenerationProfile(
