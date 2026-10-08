@@ -1,4 +1,5 @@
 import {NextResponse} from "next/server";
+import {getBackendApiUrl} from "@/lib/server/backend-url";
 import {setAccessCookie,copySetCookies} from "@/lib/server/auth";
 
 export async function GET(req:Request){
