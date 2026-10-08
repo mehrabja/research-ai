@@ -82,6 +82,10 @@ def _embed_documents_for_batch(
     return provider.embed_documents([chunk.content for chunk in batch])
 
 
+def _embedding_input_tokens(result: EmbeddingBatchResult) -> int:
+    return result.usage.input_tokens
+
+
 def _sha256_hex(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -205,16 +209,16 @@ def _build_batches(
 
     if not tokenizer_works:
         hard_max = _compute_safe_item_cap(provider, max_items)
-        batches: list[list[Chunk]] = []
-        current: list[Chunk] = []
+        fallback_batches: list[list[Chunk]] = []
+        fallback_current: list[Chunk] = []
         for chunk in chunks:
-            if len(current) >= hard_max:
-                batches.append(current)
-                current = []
-            current.append(chunk)
-        if current:
-            batches.append(current)
-        return batches
+            if len(fallback_current) >= hard_max:
+                fallback_batches.append(fallback_current)
+                fallback_current = []
+            fallback_current.append(chunk)
+        if fallback_current:
+            fallback_batches.append(fallback_current)
+        return fallback_batches
 
     hard_max_items = min(max_items, provider.max_batch_size)
     batches: list[list[Chunk]] = []
@@ -359,7 +363,7 @@ def embed_source(
                     model=profile.model,
                     project_id=report.project_id,
                     report_id=report_id,
-                    input_units=lambda value: value.usage.input_tokens,
+                    input_units=_embedding_input_tokens,
                 )
             except EmbeddingInputTooLargeError as exc:
                 _mark_failed(db, batch, "input_too_large")
