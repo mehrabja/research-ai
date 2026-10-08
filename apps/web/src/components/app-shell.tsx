@@ -20,6 +20,8 @@ const nav=[
   ["/classification","⊙","Classification"],
   ["/knowledge","✦","Knowledge graph"],
   ["/files","□","Files & intelligence"],
+  ["/technical-intelligence","⌬","Technical intelligence"],
+  ["/section-research","◍","Section research"],
   ["/plan","☷","Research plan"],
   ["/manuscript","▥","Manuscript"],
   ["/generate","✧","AI Studio"],
