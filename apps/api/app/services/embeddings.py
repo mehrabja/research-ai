@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
+from functools import partial
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -374,8 +375,8 @@ def embed_source(
 
         for batch in batches:
             try:
-                embed_call: Callable[[], EmbeddingBatchResult] = (
-                    lambda batch=batch: _embed_documents_for_batch(provider, batch)
+                embed_call: Callable[[], EmbeddingBatchResult] = partial(
+                    _embed_documents_for_batch, provider, batch
                 )
                 input_units: Callable[[EmbeddingBatchResult], int] = (
                     lambda value: value.usage.input_tokens
