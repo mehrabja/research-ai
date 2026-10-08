@@ -378,7 +378,7 @@ def _build_translation(provider_name: str, config: TranslationProfile | None) ->
         )
         return OpenAITranslationProvider(
             generation_provider=generation,
-            model_name=profile.model,
+            model_name=_normalize_openai_compatible_model(profile.model),
             provider_name="openai",
         )
     raise ProviderNotConfiguredError(
