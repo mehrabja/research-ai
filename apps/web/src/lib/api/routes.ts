@@ -27,6 +27,7 @@ export const routes={
   reports:(workspaceId:string)=>withQuery("reports",{workspace_id:workspaceId}),
   report:(reportId:string)=>"reports/"+segment(reportId),
   reportVersion:(reportId:string,versionId:string)=>"reports/"+segment(reportId)+"/versions/"+segment(versionId),
+  generationCurrent:(reportId:string)=>"reports/"+segment(reportId)+"/generation/current",
   preTranslationReview:(reportId:string)=>"reports/"+segment(reportId)+"/review/pre-translation",
 
   sources:(reportId:string)=>"reports/"+segment(reportId)+"/sources",
