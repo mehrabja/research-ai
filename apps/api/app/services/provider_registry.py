@@ -8,6 +8,7 @@ cycles and to keep provider SDK/network initialization out of module import.
 from __future__ import annotations
 
 from collections.abc import Callable
+from functools import partial
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -269,7 +270,11 @@ class ProviderRegistry:
         return router_types[capability](providers)
 
 
-def _build_generation(config: GenerationProfile | None) -> Any:
+def _normalize_openai_compatible_model(model: str) -> str:
+    return model.split("/", 1)[1] if model.startswith("openai/") else model
+
+
+def _build_generation(provider_name: str, config: GenerationProfile | None) -> Any:
     from app.integrations.generation.openai import OpenAIGenerationProvider
 
     profile = config or __import__(
@@ -277,7 +282,7 @@ def _build_generation(config: GenerationProfile | None) -> Any:
         fromlist=["get_current_generation_profile"],
     ).get_current_generation_profile()
     s = get_settings()
-    if profile.provider == "openrouter":
+    if provider_name == "openrouter":
         return OpenAIGenerationProvider(
             model=profile.model,
             base_url=s.openrouter_base_url,
@@ -289,9 +294,9 @@ def _build_generation(config: GenerationProfile | None) -> Any:
             retry_max_seconds=s.generation_retry_max_seconds,
             retry_jitter_fraction=s.generation_retry_jitter_fraction,
         )
-    if profile.provider == "openai":
+    if provider_name == "openai":
         return OpenAIGenerationProvider(
-            model=profile.model,
+            model=_normalize_openai_compatible_model(profile.model),
             base_url=s.generation_openai_base_url or None,
             api_key=s.generation_openai_api_key or None,
             provider_name="openai",
@@ -306,7 +311,7 @@ def _build_generation(config: GenerationProfile | None) -> Any:
     )
 
 
-def _build_embedding(config: EmbeddingProfile | None) -> Any:
+def _build_embedding(provider_name: str, config: EmbeddingProfile | None) -> Any:
     from app.integrations.embeddings.openai import OpenAIEmbeddingProvider
 
     profile = config or __import__(
@@ -314,14 +319,14 @@ def _build_embedding(config: EmbeddingProfile | None) -> Any:
         fromlist=["get_current_embedding_profile"],
     ).get_current_embedding_profile()
     s = get_settings()
-    if profile.provider == "openrouter":
+    if provider_name == "openrouter":
         return OpenAIEmbeddingProvider(
             profile=profile,
             api_key=s.openrouter_api_key,
             base_url=s.openrouter_base_url,
             provider_name="openrouter",
         )
-    if profile.provider == "openai":
+    if provider_name == "openai":
         return OpenAIEmbeddingProvider(
             profile=profile,
             api_key=s.embedding_openai_api_key or None,
@@ -333,7 +338,7 @@ def _build_embedding(config: EmbeddingProfile | None) -> Any:
     )
 
 
-def _build_translation(config: TranslationProfile | None) -> Any:
+def _build_translation(provider_name: str, config: TranslationProfile | None) -> Any:
     from app.integrations.generation.openai import OpenAIGenerationProvider
     from app.integrations.translation.openai import OpenAITranslationProvider
 
@@ -342,7 +347,7 @@ def _build_translation(config: TranslationProfile | None) -> Any:
         fromlist=["get_current_translation_profile"],
     ).get_current_translation_profile()
     s = get_settings()
-    if profile.provider == "openrouter":
+    if provider_name == "openrouter":
         generation = OpenAIGenerationProvider(
             model=profile.model,
             base_url=s.openrouter_base_url,
@@ -359,9 +364,9 @@ def _build_translation(config: TranslationProfile | None) -> Any:
             model_name=profile.model,
             provider_name="openrouter",
         )
-    if profile.provider == "openai":
+    if provider_name == "openai":
         generation = OpenAIGenerationProvider(
-            model=profile.model,
+            model=_normalize_openai_compatible_model(profile.model),
             base_url=s.generation_openai_base_url or None,
             api_key=s.generation_openai_api_key or None,
             provider_name="openai",
@@ -388,22 +393,22 @@ def build_provider_registry() -> ProviderRegistry:
             ProviderDefinition(
                 name="openrouter",
                 capability=capability,
-                factory={
+                factory=partial({
                     "generation": _build_generation,
                     "embedding": _build_embedding,
                     "translation": _build_translation,
-                }[capability],
+                }[capability], "openrouter"),
             )
         )
         registry.register(
             ProviderDefinition(
                 name="openai",
                 capability=capability,
-                factory={
+                factory=partial({
                     "generation": _build_generation,
                     "embedding": _build_embedding,
                     "translation": _build_translation,
-                }[capability],
+                }[capability], "openai"),
             )
         )
     return registry
