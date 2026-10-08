@@ -362,7 +362,7 @@ def _provider_polish(
 
     rebuilt: list[ParagraphUnit] = []
     for p_index, (source_paragraph, output_paragraph) in enumerate(
-        zip(deterministic_unit.paragraphs, paragraphs_data)
+        zip(deterministic_unit.paragraphs, paragraphs_data, strict=True)
     ):
         if not isinstance(output_paragraph, dict):
             raise ValueError("provider paragraph must be an object")
@@ -373,7 +373,7 @@ def _provider_polish(
             raise ValueError("provider changed sentence count")
         rebuilt_sentences: list[SentenceUnit] = []
         for s_index, (source_sentence, output_sentence) in enumerate(
-            zip(source_paragraph.sentences, sentences_data)
+            zip(source_paragraph.sentences, sentences_data, strict=True)
         ):
             if not isinstance(output_sentence, dict):
                 raise ValueError("provider sentence must be an object")
