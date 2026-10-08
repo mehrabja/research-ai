@@ -193,6 +193,20 @@ describe("rag and collaboration transport",()=>{
   });
 });
 
+describe("AI Studio generation transport",()=>{
+  it("reads the persisted generation result and provenance",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({report_id:"r1",run_id:"g1",status:"success",prompt_version:"m12.1",provider:"openrouter",model:"openai/gpt-4o-mini",input_tokens:12,output_tokens:8,language:"en",text:"Grounded result [E1].",context_hash:"a".repeat(64),evidence:[{marker:"[E1]",evidence_id:"e1"}],cited_markers:["[E1]"],created_at:"2026-10-08T00:00:00Z",completed_at:"2026-10-08T00:00:02Z"}),{status:200})
+    );
+    const current=await api.generationCurrent("r1");
+    expect(current.status).toBe("success");
+    expect(current.provider).toBe("openrouter");
+    expect(current.cited_markers).toEqual(["[E1]"]);
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/reports/r1/generation/current");
+    spy.mockRestore();
+  });
+});
+
 describe("phase 2B quality transport",()=>{
   it("generates and reads persisted citations",async()=>{
     const spy=vi.spyOn(globalThis,"fetch")
