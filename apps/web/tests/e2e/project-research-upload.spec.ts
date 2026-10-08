@@ -14,14 +14,24 @@ test("creates project/report and uploads a research file through the browser",as
   await page.getByLabel("Password").fill(password);
   await page.getByLabel("Workspace name").fill("E2E Research Workspace");
   await page.getByRole("checkbox").check();
+  const registerResponsePromise=page.waitForResponse(response=>
+    response.url().endsWith("/api/auth/register")&&response.request().method()==="POST"
+  );
   await page.getByRole("button",{name:/Create workspace/}).click();
-  await expect(page).toHaveURL(/\/verify-email\?pending=1/);
+  const registerResponse=await registerResponsePromise;
+  expect(registerResponse.ok(),await registerResponse.text()).toBeTruthy();
+  await expect(page).toHaveURL(/\/verify-email\?pending=1/,{timeout:30_000});
 
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
+  const loginResponsePromise=page.waitForResponse(response=>
+    response.url().endsWith("/api/auth/login")&&response.request().method()==="POST"
+  );
   await page.getByRole("button",{name:"Log in"}).click();
-  await expect(page).toHaveURL(/\/dashboard/);
+  const loginResponse=await loginResponsePromise;
+  expect(loginResponse.ok(),await loginResponse.text()).toBeTruthy();
+  await expect(page).toHaveURL(/\/dashboard/,{timeout:30_000});
 
   await page.goto("/projects");
   await page.getByLabel("Project name").fill("Browser research upload");
