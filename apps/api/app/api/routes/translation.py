@@ -18,10 +18,10 @@ from app.schemas.translation import (
     TranslationVersionRead,
 )
 from app.services import translation_jobs as translation_jobs_service
+from app.services.reports import get_report
 from app.services.translation_profile import (
     get_current_translation_profile_id,
 )
-from app.services.reports import get_report
 
 router = APIRouter(prefix="/reports", tags=["translation"])
 
