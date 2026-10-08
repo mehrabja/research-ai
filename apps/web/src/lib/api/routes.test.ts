@@ -83,5 +83,6 @@ describe("phase 2D publication and orchestration routes",()=>{
     expect(routes.orchestrationValidate("r 1","run/1")).toBe("reports/r%201/orchestration/runs/run%2F1/validate");
     expect(routes.orchestrationStrategies("r 1")).toBe("reports/r%201/orchestration/strategies");
     expect(routes.orchestrationApproveNode("r 1","run/1","node/1")).toBe("reports/r%201/orchestration/runs/run%2F1/nodes/node%2F1/approve");
+    expect(routes.orchestrationResume("r 1","run/1")).toBe("reports/r%201/orchestration/runs/run%2F1/resume");
   });
 });
