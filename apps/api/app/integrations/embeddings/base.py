@@ -70,4 +70,5 @@ __all__ = [
     "EmbeddingProviderError",
     "EmbeddingProviderUnavailableError",
     "EmbeddingRateLimitError",
+    "EmbeddingTimeoutError",
 ]
