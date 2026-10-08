@@ -321,9 +321,12 @@ def test_production_rejects_short_secret() -> None:
 
 def test_production_accepts_strong_secret() -> None:
     s = Settings(
+        _env_file=None,
         app_env="production",
+        debug=False,
         jwt_secret_key="x" * 64,
         database_url="postgresql+psycopg://test:test@localhost/test",
+        cors_allowed_origins="https://example.com",
         two_factor_encryption_key="x" * 32,
         auth_cookie_secure=True,
         auth_require_email_verification=True,
