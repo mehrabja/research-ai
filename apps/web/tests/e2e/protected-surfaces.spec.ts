@@ -40,6 +40,15 @@ test("renders completed protected capability surfaces",async({page})=>{
     ["/team","Workspace team"],
     ["/usage-billing","Usage & billing"],
     ["/settings","Workspace settings"],
+    ["/citations","Citations"],
+    ["/academic-qa","Academic QA"],
+    ["/classification","Classification"],
+    ["/technical-intelligence","Technical Intelligence"],
+    ["/section-research","Section Research"],
+    ["/publication","Publication Target & Compliance"],
+    ["/orchestration","Research Orchestration"],
+    ["/humanize","Humanize"],
+    ["/translate","Translate"],
   ] as const;
 
   for(const [path,heading] of routes){
