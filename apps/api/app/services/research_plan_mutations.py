@@ -232,7 +232,7 @@ def save_research_plan(
     for section_data in section_writes:
         row = ResearchPlanSection(
             plan_id=plan.id,
-            section_key=req_data.section_key,
+            section_key=section_data.section_key,
             title=section_data.title,
             purpose=section_data.purpose,
             section_type=section_data.section_type,
