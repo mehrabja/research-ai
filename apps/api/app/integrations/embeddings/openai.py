@@ -100,7 +100,7 @@ class OpenAIEmbeddingProvider:
         )
         self._sleep = _sleep
         self._random = _random
-        self._encoding = _load_tiktoken_encoding(profile.model)
+        self._encoding = _load_tiktoken_encoding(_tokenizer_model(profile.model))
 
     # ------------------------------------------------------------------
     def estimate_input_tokens(self, text: str) -> int | None:
@@ -171,7 +171,7 @@ class OpenAIEmbeddingProvider:
             "model": self._profile.model,
             "encoding_format": "float",
         }
-        if self._profile.model.startswith("text-embedding-3"):
+        if _tokenizer_model(self._profile.model).startswith("text-embedding-3"):
             payload["dimensions"] = self._profile.dimensions
 
         try:
@@ -263,6 +263,10 @@ class OpenAIEmbeddingProvider:
             usage=usage,
             provider_request_id=response.headers.get("x-request-id"),
         )
+
+
+def _tokenizer_model(model: str) -> str:
+    return model.split("/", 1)[1] if "/" in model else model
 
 
 def _load_tiktoken_encoding(model: str) -> Encoding | None:
