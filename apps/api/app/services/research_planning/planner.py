@@ -338,7 +338,11 @@ def generate_research_plan(
                     ],
                 )
                 raw = refine_svc.call_refinement_provider(
-                    provider, prompt
+                    provider,
+                    prompt,
+                    workspace_id=project.workspace_id,
+                    user_id=user_id,
+                    project_id=project_id,
                 )
                 allowed_sections = set(section_keys)
                 allowed_reqs = {d.requirement_key for d in req_drafts}
@@ -368,10 +372,11 @@ def generate_research_plan(
                         )
                     planning_mode = PlanningMode.HYBRID.value
                     llm_provider = getattr(
-                        settings, "generation_provider", None
+                        provider, "last_used_provider_name",
+                        getattr(provider, "provider_name", None),
                     )
                     llm_model = getattr(
-                        settings, "generation_model", None
+                        provider, "model_name", None
                     )
             except Exception:  # noqa: BLE001
                 logger.exception(
