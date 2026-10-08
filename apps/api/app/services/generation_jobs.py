@@ -1,6 +1,7 @@
 """Enqueue helpers for report-generation jobs."""
 from __future__ import annotations
 
+import hashlib
 import uuid
 
 from sqlalchemy.orm import Session
@@ -21,11 +22,15 @@ def build_generation_job_idempotency_key(
     report_id: uuid.UUID,
     generation_profile_id: str,
     embedding_profile_id: str,
+    brief: str | None = None,
 ) -> str:
+    brief_hash = hashlib.sha256(
+        (brief.strip() if brief else "").encode("utf-8")
+    ).hexdigest()[:16]
     return (
         f"generate_report:{report_id}:"
         f"{generation_profile_id}:"
-        f"{embedding_profile_id}"
+        f"{embedding_profile_id}:{brief_hash}"
     )
 
 
@@ -37,6 +42,7 @@ def enqueue_report_generation_job(
     idempotency_key: str | None = None,
     priority: int = 0,
     max_attempts: int | None = None,
+    brief: str | None = None,
 ) -> jobs_service.EnqueueResult:
     get_report(db, user_id=user_id, report_id=report_id)
 
@@ -49,13 +55,17 @@ def enqueue_report_generation_job(
             report_id=report_id,
             generation_profile_id=gen_profile_id,
             embedding_profile_id=emb_profile_id,
+            brief=brief,
         )
     )
 
     return jobs_service.enqueue_job(
         db,
         job_type=JobTypes.GENERATE_REPORT,
-        payload={"report_id": str(report_id)},
+        payload={
+            "report_id": str(report_id),
+            **({"brief": brief.strip()} if brief and brief.strip() else {}),
+        },
         idempotency_key=effective_key,
         report_id=report_id,
         user_id=user_id,
