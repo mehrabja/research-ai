@@ -4,8 +4,8 @@ from __future__ import annotations
 import logging
 import uuid
 
-from app.db.session import SessionLocal
 from app.core.config import get_settings
+from app.db.session import SessionLocal
 from app.domain.orchestration import M35_VERSION
 from app.services.orchestration import budgets as budget_svc
 from app.services.orchestration import context as ctx_svc
