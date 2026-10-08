@@ -56,9 +56,11 @@ class OpenAITranslationProvider:
         *,
         generation_provider: GenerationProvider,
         model_name: str,
+        provider_name: str = "openai",
     ) -> None:
         self._gen = generation_provider
         self.model_name = model_name
+        self.provider_name = provider_name
 
     def translate(
         self,
