@@ -67,3 +67,29 @@ export type DetectionResult={run_id:UUID;report_id:UUID;version_id:UUID;profile_
 export type PreTranslationReview={report_id:UUID;status:string;version_id:UUID;version_number:number;language:string;content:string;change_type:string|null;source_version_id:UUID|null;review_stage:string;review_events:Array<{id:UUID;action:string;user_id:UUID;version_id:UUID|null;notes:string|null;created_at:DateTime}>};
 export type HumanizationCurrent={run:{id:UUID;report_id:UUID;stage:string;language:string;status:string;detection_score_before:number|null;detection_score_after:number|null;cost_usd:number|null;tokens_used:number|null;source_version_id:UUID|null;detection_run_id:UUID|null;output_version_id:UUID|null;policy_version:string|null;diff_summary:Record<string,unknown>|null;skipped_oversize:string[];skipped_preservation:Array<Record<string,unknown>>;completed_at:DateTime|null;created_at:DateTime};output_version:{id:UUID;report_id:UUID;version_number:number;language:string;content:string;change_type:string|null;source_version_id:UUID|null;created_at:DateTime}|null};
 export type TranslationCurrent={run:{id:UUID;report_id:UUID;source_version_id:UUID|null;source_lang:string;target_lang:string;profile_id:string|null;provider:string;status:string;created_at:DateTime;completed_at:DateTime|null};version:{id:UUID;translation_run_id:UUID;content:string;preservation_check_status:string;preservation_details:Record<string,unknown>|null}};
+
+export type CitationRun={id:UUID;report_id:UUID;manuscript_id:UUID|null;manuscript_version_id:UUID;context_hash:string;m30_version:string;citation_style:string;status:string;claim_count:number;citation_count:number;unsupported_count:number;mixed_support_count:number;duplicate_reference_count:number;coverage_score:number;warnings:unknown[]|null;error_message:string|null;duration_ms:number|null;created_at:DateTime;completed_at:DateTime|null};
+export type CitationClaim={id:UUID;citation_run_id:UUID;manuscript_version_id:UUID;manuscript_section_id:UUID|null;claim_hash:string;claim_text:string;claim_type:string;status:string;created_at:DateTime};
+export type CitationCurrent={run:CitationRun;claims:CitationClaim[]};
+export type CitationRunList={items:CitationRun[];total:number;limit:number;offset:number};
+export type BibliographyEntry={citation_id:string;source_id:string;label:string;rendered:string;order:number;display_key:string};
+export type Bibliography={style:string;entries:BibliographyEntry[];unresolved_identity_ids:string[]};
+export type CitationValidation={validation_status:string;validation_errors:string[];warnings:string[]};
+export type CitationGenerateResponse={status:string;job_id:UUID|null;run_id:UUID|null;context_hash:string|null;claim_count:number|null;citation_count:number|null;unsupported_count:number|null;coverage_score:number|null};
+
+export type AcademicQAFinding={id:UUID;qa_run_id:UUID;project_id:UUID;report_id:UUID;manuscript_version_id:UUID;manuscript_section_id:UUID|null;claim_id:UUID|null;citation_id:UUID|null;rule_id:string;category:string;severity:string;title:string;message:string;classification:string;confidence:number|null;status:string;created_at:DateTime};
+export type AcademicQARun={id:UUID;project_id:UUID;report_id:UUID;manuscript_id:UUID|null;manuscript_version_id:UUID;context_hash:string;m31_version:string;rules_version:string;status:string;execution_mode:string;finding_count:number;blocking_count:number;error_count:number;warning_count:number;info_count:number;gate:string|null;dimension_scores:Record<string,unknown>|null;summary:Record<string,unknown>|null;warnings:unknown[]|null;error_message:string|null;duration_ms:number|null;created_at:DateTime;completed_at:DateTime|null};
+export type AcademicQACurrent={run:AcademicQARun};
+export type AcademicQARunList={items:AcademicQARun[];total:number;limit:number;offset:number};
+export type AcademicQAFindingList={items:AcademicQAFinding[];total:number;limit:number;offset:number};
+export type AcademicQAValidation={validation_status:string;validation_errors:string[];warnings:string[];gate:string|null};
+export type AcademicQAGenerateResponse={status:string;job_id:UUID|null;run_id:UUID|null;context_hash:string|null;gate:string|null;finding_count:number|null;blocking_count:number|null};
+
+export type ClassificationAlternative={code:string|null;name:string|null;confidence:number|null};
+export type ClassificationDimension={code:string|null;name:string|null;confidence:number|null;source:string|null;method:string|null;reason:string|null;alternatives:ClassificationAlternative[];secondary?:string[]};
+export type Classification={id:UUID;project_id:UUID;domain:ClassificationDimension;paper_type:ClassificationDimension;research_design:ClassificationDimension;status:string;needs_review:boolean;error_message:string|null;classifier_version:string;taxonomy_version:string;context_meta:Record<string,unknown>|null;created_at:DateTime;updated_at:DateTime};
+export type ClassificationEvidence={id:UUID;target:string;signal_type:string;source_location:string;matched_text:string;weight:number;target_code:string|null};
+export type ClassificationEvidenceList={items:ClassificationEvidence[];total:number;limit:number;offset:number};
+export type ClassificationRun={id:UUID;project_id:UUID;classification_id:UUID|null;context_hash:string|null;classifier_version:string;taxonomy_version:string;status:string;domain_code:string|null;paper_type_code:string|null;research_design_code:string|null;confidence_summary:Record<string,unknown>|null;explanation:Record<string,unknown>|null;error_message:string|null;duration_ms:number|null;created_at:DateTime};
+export type ClassificationHistory={items:ClassificationRun[];total:number;limit:number;offset:number};
+export type ClassificationExplanation={classification_id:UUID|null;context_hash:string|null;status:string;created_at:DateTime|null;explanation:Record<string,unknown>|null};
