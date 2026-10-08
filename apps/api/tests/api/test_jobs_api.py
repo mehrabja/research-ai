@@ -199,8 +199,11 @@ def test_list_jobs_only_own(
     b_items = client.get(
         "/api/v1/jobs", headers=_auth(token_b)
     ).json()
-    assert len(a_items) == 2
-    assert len(b_items) == 1
+    # Registration may enqueue an email-verification job for each user.
+    # The contract under test is ownership isolation of user-created jobs.
+    assert [item["job_type"] for item in a_items].count("test_noop") == 2
+    assert [item["job_type"] for item in b_items].count("test_noop") == 1
+
 
 
 def test_cancel_queued_job(
