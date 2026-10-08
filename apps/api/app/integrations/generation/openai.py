@@ -32,6 +32,7 @@ class OpenAIGenerationProvider:
         *,
         model: str,
         base_url: str | None = None,
+        provider_name: str = "openai",
         api_key: str | None = None,
         timeout_seconds: float | None = None,
         max_retries: int | None = None,
@@ -43,6 +44,7 @@ class OpenAIGenerationProvider:
     ) -> None:
         s = get_settings()
         self.model_name = model
+        self.provider_name = provider_name
         self._base_url = (
             base_url or s.generation_openai_base_url
         ).rstrip("/")
@@ -119,7 +121,7 @@ class OpenAIGenerationProvider:
     ) -> GenerationProviderResult:
         if not self._api_key:
             raise GenerationAuthenticationError(
-                "OpenAI API key is not configured"
+                f"{self.provider_name} API key is not configured"
             )
 
         payload: dict[str, Any] = {
