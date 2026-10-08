@@ -500,7 +500,6 @@ function Workspace(){
       <div style={{marginTop:10}}><Table data={rows(projects.data?.items)}/></div>
       {!projects.isPending&&!(projects.data?.items?.length)&&<div className="notice" style={{marginTop:12}}>No projects yet. <Link href="/projects" style={{color:"var(--primary)",fontWeight:700}}>Create the first project.</Link></div>}
     </Card>
-  </Card>}
   </>;
 }
 
