@@ -409,6 +409,7 @@ export const api={
   orchestrationNodes:(r:string,id:string)=>request<OrchestrationNodeList>(routes.orchestrationNodes(r,id)),
   orchestrationPause:(r:string,id:string)=>request<OrchestrationPauseResponse>(routes.orchestrationPause(r,id),{method:"POST"}),
   orchestrationCancel:(r:string,id:string)=>request<OrchestrationCancelResponse>(routes.orchestrationCancel(r,id),{method:"POST"}),
+  orchestrationApproveNode:(r:string,runId:string,nodeId:string)=>request<import("./generated").OrchestrationApprovalResponse>(routes.orchestrationApproveNode(r,runId,nodeId),{method:"POST"}),
   orchestrationTools:(r:string)=>request<OrchestrationToolList>(routes.orchestrationTools(r)),
   orchestrationValidate:(r:string,id:string)=>request<OrchestrationValidation>(routes.orchestrationValidate(r,id),{method:"POST"}),
 };
