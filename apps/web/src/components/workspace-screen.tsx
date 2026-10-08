@@ -1234,7 +1234,7 @@ function Translate(){
     </Card>
     {current.isSuccess&&<Card style={{marginTop:16}}>
       <div className="row"><div><h3>Latest persisted translation</h3><div className="muted small">{current.data.run.source_lang} → {current.data.run.target_lang} · {current.data.run.provider}</div></div><span className={"tag "+(preservationPassed?"success":"")}>{current.data.version.preservation_check_status}</span></div>
-      <div className="field" style={{marginTop:12}}><label>Translated content</label><textarea className="input textarea" value={translated.content} readOnly style={{minHeight:320}}/></div>
+      <div className="field" style={{marginTop:12}}><label>Translated content</label><textarea className="input textarea" value={current.data?.version.content ?? ""} readOnly style={{minHeight:320}}/></div>
     </Card>}
     {current.isError&&current.error instanceof Error&&/404|not found/i.test(current.error.message)&&<Card style={{marginTop:16}}><State title="No completed translation" description="The latest successful translation will appear here after the worker finishes."/></Card>}
     </>}
