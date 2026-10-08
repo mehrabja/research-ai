@@ -53,7 +53,7 @@ export const routes={
   ragRetrieve:(projectId:string)=>"projects/"+segment(projectId)+"/rag/retrieve",
   ragRuns:(projectId:string,limit=25,offset=0)=>withQuery("projects/"+segment(projectId)+"/rag/runs",{limit,offset}),
   ragRun:(projectId:string,runId:string)=>"projects/"+segment(projectId)+"/rag/runs/"+segment(runId),
-  ragMemory:(projectId:string)=>"projects/"+segment(projectId)+"/rag/memory",
+  ragMemory:(projectId:string,memoryType?:string,limit=100)=>withQuery("projects/"+segment(projectId)+"/rag/memory",{memory_type:memoryType,limit}),
 
   evidenceMatrix:(reportId:string)=>"reports/"+segment(reportId)+"/evidence-matrix",
   evidenceClaims:(reportId:string)=>"reports/"+segment(reportId)+"/evidence/claims",
