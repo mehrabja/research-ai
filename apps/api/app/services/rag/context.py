@@ -51,8 +51,8 @@ class LexicalOnlyEmbeddingProvider:
     max_batch_size = 1
 
     def __init__(self, profile: EmbeddingProfile) -> None:
-        self.model_name = profile.model
-        self.dimensions = profile.dimensions
+        object.__setattr__(self, "model_name", profile.model)
+        object.__setattr__(self, "dimensions", profile.dimensions)
 
     def estimate_input_tokens(self, text: str) -> int | None:
         return None
