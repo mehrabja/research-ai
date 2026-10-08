@@ -13,6 +13,8 @@ from app.core.config import (
 def _dev(**overrides) -> Settings:
     base = {
         "_env_file": None,
+        "debug": False,
+        "cors_allowed_origins": "",
         "database_url": (
             "postgresql+psycopg://t:t@localhost/t"
         ),
