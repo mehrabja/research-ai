@@ -301,7 +301,7 @@ export const api={
   saveManuscriptVersion:(r:string,b:object)=>request<unknown>("reports/"+r+"/manuscript/save-version",{method:"POST",body:JSON.stringify(b)}),
   restoreManuscriptVersion:(r:string,v:string,b:{expected_revision:number})=>request<{saved:boolean;conflict:boolean;draft:{revision:number;base_version_id:string|null;content:unknown}}>("reports/"+r+"/manuscript/versions/"+v+"/restore",{method:"POST",body:JSON.stringify(b)}),
 
-  generate:(r:string,b:object)=>request<unknown>("reports/"+r+"/generate",{method:"POST",body:JSON.stringify(b)}),
+  generate:(r:string,b:{brief?:string})=>request<Job>("jobs",{method:"POST",body:JSON.stringify({job_type:"generate_report",payload:{report_id:r,...b},report_id:r})}),
   humanize:(r:string,b:object)=>request<unknown>("reports/"+r+"/humanization/enqueue",{method:"POST",body:JSON.stringify(b)}),
   translate:(r:string,b:object)=>request<unknown>("reports/"+r+"/translation/enqueue",{method:"POST",body:JSON.stringify(b)}),
 
