@@ -41,3 +41,13 @@ def test_strategy_catalog_matches_presets() -> None:
     keys = [key for key, _description in available_orchestration_strategies()]
     assert "research_pipeline" in keys
     assert "complete_pre_submission" in keys
+
+
+def test_resolve_qa_blockers_has_unique_node_keys() -> None:
+    plan = plan_orchestration(
+        goal="resolve quality blockers",
+        strategy="resolve_qa_blockers",
+        payload={},
+        max_nodes=20,
+    )
+    assert len(plan.node_keys()) == len(set(plan.node_keys()))
