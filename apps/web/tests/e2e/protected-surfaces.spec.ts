@@ -34,7 +34,7 @@ test("renders completed protected capability surfaces",async({page})=>{
 
   for(const [path,heading] of routes){
     await page.goto(path);
-    await expect(page.getByRole("heading",{name:heading})).toBeVisible();
+    await expect(page.getByRole("heading",{name:heading,level:1})).toBeVisible();
   }
 
   await page.goto("/accept-invitation");
