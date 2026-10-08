@@ -172,6 +172,7 @@ export const routes={
   orchestrationNodes:(reportId:string,runId:string)=>"reports/"+segment(reportId)+"/orchestration/runs/"+segment(runId)+"/nodes",
   orchestrationPause:(reportId:string,runId:string)=>"reports/"+segment(reportId)+"/orchestration/runs/"+segment(runId)+"/pause",
   orchestrationCancel:(reportId:string,runId:string)=>"reports/"+segment(reportId)+"/orchestration/runs/"+segment(runId)+"/cancel",
+  orchestrationApproveNode:(reportId:string,runId:string,nodeId:string)=>"reports/"+segment(reportId)+"/orchestration/runs/"+segment(runId)+"/nodes/"+segment(nodeId)+"/approve",
   orchestrationTools:(reportId:string)=>"reports/"+segment(reportId)+"/orchestration/tools",
   orchestrationValidate:(reportId:string,runId:string)=>"reports/"+segment(reportId)+"/orchestration/runs/"+segment(runId)+"/validate",
   postTranslationHumanization:(reportId:string)=>"reports/"+segment(reportId)+"/post-translation-humanization/enqueue",
