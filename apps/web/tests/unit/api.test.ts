@@ -48,10 +48,10 @@ describe("upload transport",()=>{
       upload={
         loaded:0,
         total:0,
-        addEventListener:(_:string,handler:()=>void)=>{this.progressHandler=handler;},
-        removeEventListener:(_:string,_handler:()=>void)=>{},
+        addEventListener:(_:string,handler:(event:ProgressEvent<XMLHttpRequestEventTarget>)=>void)=>{this.progressHandler=handler;},
+        removeEventListener:(_:string,_handler:(event:ProgressEvent<XMLHttpRequestEventTarget>)=>void)=>{},
       };
-      progressHandler=()=>{};
+      progressHandler=(_event:ProgressEvent<XMLHttpRequestEventTarget>)=>{};
       status=201;
       responseText=JSON.stringify({
         id:"f1",
