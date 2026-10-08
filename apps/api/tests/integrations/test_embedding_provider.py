@@ -215,3 +215,35 @@ def test_unknown_model_token_count_none() -> None:
         api_key="k",
     )
     assert p.estimate_input_tokens("x") is None
+
+
+def test_openrouter_prefixed_embedding_model_uses_tiktoken_family(monkeypatch) -> None:
+    import app.integrations.embeddings.openai as module
+
+    class _FakeEncoding:
+        def encode(self, text: str) -> list[int]:
+            return list(range(len(text)))
+
+    monkeypatch.setattr(module, "_load_tiktoken_encoding", lambda model: _FakeEncoding())
+    monkeypatch.setattr(module, "get_settings", lambda: type(
+        "S", (), {
+            "embedding_openai_base_url": "https://api.openai.com/v1",
+            "embedding_openai_api_key": "key",
+            "embedding_timeout_seconds": 30.0,
+            "embedding_max_retries": 0,
+            "embedding_retry_base_seconds": 1.0,
+            "embedding_retry_max_seconds": 30.0,
+            "embedding_retry_jitter_fraction": 0.0,
+            "openrouter_http_referer": "",
+            "openrouter_app_title": "Research AI",
+        }
+    )())
+    profile = module.EmbeddingProfile(
+        provider="openrouter",
+        model="openai/text-embedding-3-small",
+        dimensions=1536,
+        distance_metric="cosine",
+        profile_version="test",
+    )
+    provider = module.OpenAIEmbeddingProvider(profile=profile, api_key="key", base_url="https://openrouter.ai/api/v1", provider_name="openrouter")
+    assert provider.estimate_input_tokens("abcd") == 4
