@@ -89,7 +89,7 @@ describe("upload transport",()=>{
       getResponseHeader(name:string){
         return name==="content-type"?"application/json":name==="X-Request-ID"?"rid-upload":null;
       }
-      addEventListener(name:string,handler:()=>void){this.listeners.set(name,handler);}
+      addEventListener(name:string,handler:(event:ProgressEvent<XMLHttpRequestEventTarget>)=>void){this.progressHandler=handler;this.listeners.set(name,()=>{});}
       send(body:FormData){
         sentBody=body;
         expect(body.get("file")).toBeInstanceOf(File);
