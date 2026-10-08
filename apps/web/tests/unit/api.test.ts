@@ -95,7 +95,7 @@ describe("upload transport",()=>{
         expect(body.get("file")).toBeInstanceOf(File);
         this.upload.total=7;
         this.upload.loaded=7;
-        this.progressHandler();
+        this.progressHandler({total:7,loaded:7} as ProgressEvent<XMLHttpRequestEventTarget>);
         this.listeners.get("load")?.();
       }
       abort(){this.listeners.get("abort")?.();}
