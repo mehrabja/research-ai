@@ -26,6 +26,8 @@ export const routes={
   projectArchive:(projectId:string,workspaceId?:string)=>withQuery("projects/"+segment(projectId)+"/archive",{workspace_id:workspaceId}),
   reports:(workspaceId:string)=>withQuery("reports",{workspace_id:workspaceId}),
   report:(reportId:string)=>"reports/"+segment(reportId),
+  reportVersion:(reportId:string,versionId:string)=>"reports/"+segment(reportId)+"/versions/"+segment(versionId),
+  preTranslationReview:(reportId:string)=>"reports/"+segment(reportId)+"/review/pre-translation",
 
   sources:(reportId:string)=>"reports/"+segment(reportId)+"/sources",
   searchSources:(reportId:string,q:string,limit=25,year?:number,openAccess=false)=>withQuery("reports/"+segment(reportId)+"/sources/search",{q,limit:Math.max(1,Math.min(1000,Math.floor(limit))),year,open_access:openAccess||undefined}),
@@ -85,8 +87,12 @@ export const routes={
   jobsCancel:(jobId:string)=>"jobs/"+segment(jobId)+"/cancel",
   jobsEnqueue:()=> "jobs",
 
+  detection:(reportId:string,versionId:string)=>"reports/"+segment(reportId)+"/versions/"+segment(versionId)+"/detection",
+  detectionGenerate:(reportId:string,versionId:string)=>"reports/"+segment(reportId)+"/versions/"+segment(versionId)+"/detect",
   humanizationEnqueue:(reportId:string)=>"reports/"+segment(reportId)+"/humanization/enqueue",
+  humanizationCurrent:(reportId:string)=>"reports/"+segment(reportId)+"/humanization/current",
   translationEnqueue:(reportId:string)=>"reports/"+segment(reportId)+"/translation/enqueue",
+  translationCurrent:(reportId:string)=>"reports/"+segment(reportId)+"/translation/current",
 
   sessions:()=> "auth/sessions",
   session:(id:string)=>"auth/sessions/"+segment(id),
