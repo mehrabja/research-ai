@@ -274,6 +274,10 @@ def _normalize_openai_compatible_model(model: str) -> str:
     return model.split("/", 1)[1] if model.startswith("openai/") else model
 
 
+def _normalize_openrouter_model(model: str) -> str:
+    return model if "/" in model else "openai/" + model
+
+
 def _build_generation(provider_name: str, config: GenerationProfile | None) -> Any:
     from app.integrations.generation.openai import OpenAIGenerationProvider
 
@@ -284,7 +288,7 @@ def _build_generation(provider_name: str, config: GenerationProfile | None) -> A
     s = get_settings()
     if provider_name == "openrouter":
         return OpenAIGenerationProvider(
-            model=profile.model,
+            model=_normalize_openrouter_model(profile.model),
             base_url=s.openrouter_base_url,
             api_key=s.openrouter_api_key,
             provider_name="openrouter",
@@ -349,7 +353,7 @@ def _build_translation(provider_name: str, config: TranslationProfile | None) ->
     s = get_settings()
     if provider_name == "openrouter":
         generation = OpenAIGenerationProvider(
-            model=profile.model,
+            model=_normalize_openrouter_model(profile.model),
             base_url=s.openrouter_base_url,
             api_key=s.openrouter_api_key,
             provider_name="openrouter",
