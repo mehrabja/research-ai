@@ -16,8 +16,8 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from functools import partial
 from collections.abc import Callable, Sequence
+from functools import partial
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -378,9 +378,8 @@ def embed_source(
                 embed_call: Callable[[], EmbeddingBatchResult] = partial(
                     _embed_documents_for_batch, provider, batch
                 )
-                input_units: Callable[[EmbeddingBatchResult], int] = (
-                    lambda value: value.usage.input_tokens
-                )
+                def input_units(value: EmbeddingBatchResult) -> int:
+                    return value.usage.input_tokens
                 result = execute_metered_provider_call(
                     embed_call,
                     workspace_id=workspace_id,
