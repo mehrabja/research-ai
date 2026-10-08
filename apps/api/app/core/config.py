@@ -474,8 +474,8 @@ class Settings(BaseSettings):
         default=3, ge=1, le=10
     )
     manuscript_prose_default_mode: str = "hybrid"
-    manuscript_prose_provider: str = "openai"
-    manuscript_prose_model: str = "gpt-4o-mini"
+    manuscript_prose_provider: str = "openrouter"
+    manuscript_prose_model: str = "openai/gpt-4o-mini"
     manuscript_prose_temperature: float = Field(
         default=0.2, ge=0.0, le=2.0
     )
