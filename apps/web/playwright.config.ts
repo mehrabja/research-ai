@@ -14,15 +14,19 @@ export default defineConfig({
       cwd:"../api",
       url:"http://127.0.0.1:8000/api/v1/health/live",
       reuseExistingServer:false,
+      env:{
+        ...process.env,
+        APP_ENV:"test",
+        AUTH_REQUIRE_EMAIL_VERIFICATION:"false",
+      },
     },
     {
       command:"npm run dev",
       url:"http://127.0.0.1:3000",
       reuseExistingServer:false,
       env:{
+        ...process.env,
         BACKEND_API_URL:"http://127.0.0.1:8000",
-        APP_ENV:"test",
-        AUTH_REQUIRE_EMAIL_VERIFICATION:"false",
       },
     },
   ],
