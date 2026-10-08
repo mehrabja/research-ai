@@ -139,7 +139,8 @@ export type OrchestrationTool={key:string;version:string;description:string;perm
 export type OrchestrationToolList={items:OrchestrationTool[]};
 export type OrchestrationValidation={validation_status:string;validation_errors:string[];warnings:string[]};
 
-export type KnowledgeGraphBuildResponse={status:string;job_id:UUID|null;graph:import("./generated").KnowledgeGraphSummary|null};
+export type KnowledgeGraph={id:UUID;project_id:UUID;version:number;status:string;graph_version:string;context_hash:string;source_literature_run_id:UUID|null;research_plan_id:UUID|null;node_count:number;edge_count:number;graph_meta:Record<string,unknown>|null;created_by:UUID|null;created_at:DateTime;updated_at:DateTime};
+export type KnowledgeGraphBuildResponse={status:string;job_id:UUID|null;graph:KnowledgeGraph|null};
 export type ResearchMemory={id:UUID;project_id:UUID;memory_type:string;status:string;canonical_entity_type:string|null;canonical_entity_id:UUID|null;summary:string;importance:number;confidence:number;reuse_count:number;created_at:DateTime};
 export type ResearchMemoryList={items:ResearchMemory[];total:number};
 export type PostTranslationHumanizationResponse={job_id:UUID|null;status:string};
