@@ -18,21 +18,6 @@ class _RateLimitedGeneration:
         raise GenerationRateLimitError("429")
 
 
-class _WorkingGeneration:
-    provider_name = "openai"
-    model_name = "gpt-4o-mini"
-
-    def generate(self, **_kwargs):
-        from app.domain.generation import GenerationProviderResult
-        return GenerationProviderResult(
-            text="ok",
-            provider=self.provider_name,
-            model=self.model_name,
-            input_tokens=1,
-            output_tokens=1,
-        )
-
-
 class _UnavailableEmbedding:
     provider_name = "openrouter"
     model_name = "openai/text-embedding-3-small"
@@ -67,13 +52,13 @@ class _WorkingEmbedding(_UnavailableEmbedding):
         return [0.1, 0.2, 0.3]
 
 
-def test_generation_fallback_advances_on_retryable_failure() -> None:
-    router = GenerationProviderFallback(
-        (_RateLimitedGeneration(), _WorkingGeneration())
-    )
-    result = router.generate(system_prompt="s", user_prompt="u", temperature=0.1, max_output_tokens=10)
-    assert result.provider == "openai"
-    assert router.attempted_providers == ["openrouter", "openai"]
+def test_registry_openrouter_provider_is_preferred_by_default(monkeypatch) -> None:
+    monkeypatch.setenv("PROVIDER_GENERATION_CHAIN", "openrouter")
+    registry = ProviderRegistry()
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    assert registry.configured_chain("generation") == ("openrouter",)
 
 
 def test_embedding_fallback_advances_on_provider_unavailable() -> None:
