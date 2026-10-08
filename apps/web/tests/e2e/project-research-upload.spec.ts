@@ -53,14 +53,33 @@ test("creates project/report and uploads a research file through the browser",as
   await expect(page.getByRole("heading",{name:"Upload"})).toBeVisible();
 
   const fileName="research-upload-"+Date.now()+".txt";
-  const uploadResponsePromise=page.waitForResponse(response=>
-    response.url().includes("/api/backend/projects/")&&response.url().includes("/files")&&response.request().method()==="POST"
+  const uploadPathPattern=/\/api\/backend\/projects\/[^/]+\/files(?:\?|$)/;
+  page.on("requestfailed",request=>{
+    if(uploadPathPattern.test(new URL(request.url()).pathname)){
+      console.log(`[E2E] upload request failed: ${request.failure()?.errorText??"unknown"} ${request.url()}`);
+    }
+  });
+  page.on("response",response=>{
+    if(uploadPathPattern.test(new URL(response.url()).pathname)){
+      console.log(`[E2E] upload response: ${response.status()} ${response.url()}`);
+    }
+  });
+  const uploadRequestPromise=page.waitForRequest(request=>
+    uploadPathPattern.test(new URL(request.url()).pathname)&&request.method()==="POST"
   );
-  await page.locator('input[type="file"]').setInputFiles({
+  const uploadResponsePromise=page.waitForResponse(response=>
+    uploadPathPattern.test(new URL(response.url()).pathname)&&response.request().method()==="POST"
+  );
+  const fileInput=page.locator('input[type="file"]');
+  await fileInput.setInputFiles({
     name:fileName,
     mimeType:"text/plain",
     buffer:Buffer.from("A browser-uploaded research source for end-to-end validation.\n"),
   });
+  await expect.poll(async()=>fileInput.evaluate(element=>(element as HTMLInputElement).files?.[0]?.name??""))
+    .toBe(fileName);
+  const uploadRequest=await uploadRequestPromise;
+  console.log(`[E2E] upload request started: ${uploadRequest.url()}`);
   const uploadResponse=await uploadResponsePromise;
   expect(uploadResponse.ok(),await uploadResponse.text()).toBeTruthy();
 
