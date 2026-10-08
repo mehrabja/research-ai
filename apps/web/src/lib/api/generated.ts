@@ -149,3 +149,5 @@ export type OrchestrationStrategy={key:string;description:string};
 export type OrchestrationStrategyListResponse={items:OrchestrationStrategy[]};
 
 export type OrchestrationApprovalResponse={status:string;run_id:UUID;node_id:UUID};
+
+export type OrchestrationResumeResponse={status:string;run_id:UUID};
