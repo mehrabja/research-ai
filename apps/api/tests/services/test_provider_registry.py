@@ -110,3 +110,12 @@ def test_embedding_fallback_advances_on_timeout() -> None:
     result = router.embed_documents(["x"])
     assert result.vectors == [[0.1, 0.2, 0.3]]
     assert router.attempted_providers == ["openrouter", "openai"]
+
+
+def test_embedding_query_fallback_advances_on_timeout() -> None:
+    router = EmbeddingProviderFallback(
+        (_TimeoutEmbedding(), _WorkingEmbedding())
+    )
+    result = router.embed_query("x")
+    assert result == [0.1, 0.2, 0.3]
+    assert router.attempted_providers == ["openrouter", "openai"]
