@@ -77,7 +77,7 @@ def test_registry_candidate_order_preserves_requested_provider() -> None:
         return object()
 
     def disabled_provider(_config):
-        return _WorkingGeneration()
+        return _FakeGeneration()
 
     registry.register(
         ProviderDefinition("openrouter", "generation", router_provider)
