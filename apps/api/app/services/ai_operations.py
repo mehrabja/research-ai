@@ -9,7 +9,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models.ai_operation import AIOperation
-from app.db.models.jobs import Job
 
 
 def start_operation(
@@ -37,9 +36,6 @@ def start_operation(
         ).scalar_one_or_none()
         if existing is not None:
             return existing
-    if job_id is not None and db.get(Job, job_id) is None:
-        job_id = None
-
     row = AIOperation(
         workspace_id=workspace_id,
         user_id=user_id,
