@@ -154,6 +154,8 @@ export const api={
   createReport:(w:string,b:object)=>request<Report>(routes.reports(w),{method:"POST",body:JSON.stringify(b)}),
   reports:(w:string)=>request<Report[]>(routes.reports(w)),
   report:(r:string)=>request<Report>(routes.report(r)),
+  reportVersion:(r:string,v:string)=>request<{id:string;report_id:string;version_number:number;language:string;content:string;created_by_user:boolean;change_type:string|null;created_at:string}>(routes.reportVersion(r,v)),
+  preTranslationReview:(r:string)=>request<PreTranslationReview>(routes.preTranslationReview(r)),
 
   sources:(r:string)=>request<{items:Source[]}>(routes.sources(r)),
   searchSources:(r:string,q:string,limit=25,year?:number,openAccess=false)=>request<{query:string;limit:number;candidates:SourceCandidate[]}>(routes.searchSources(r,q,limit,year,openAccess)),
@@ -177,6 +179,8 @@ export const api={
     if(!response.ok)throw new Error("Knowledge graph export failed ("+response.status+").");
     return response.blob();
   },
+  detection:(r:string,v:string)=>request<DetectionResult>(routes.detection(r,v)),
+  enqueueDetection:(r:string,v:string)=>request<{job_id:string;report_id:string;version_id:string;status:"queued"}>(routes.detectionGenerate(r,v),{method:"POST"}),
   ragReadiness:(p:string)=>request<import("./generated").RAGReadiness>(routes.ragReadiness(p)),
   ragRetrieve:(p:string,b:object)=>request<RAGResponse>(routes.ragRetrieve(p),{method:"POST",body:JSON.stringify(b)}),
   ragRuns:(p:string,limit=25,offset=0)=>request<{items:import("./generated").RetrievalRun[];total:number;limit:number;offset:number}>(routes.ragRuns(p,limit,offset)),
@@ -301,8 +305,10 @@ export const api={
   restoreManuscriptVersion:(r:string,v:string,b:{expected_revision:number})=>request<{saved:boolean;conflict:boolean;draft:{revision:number;base_version_id:string|null;content:unknown}}>(routes.manuscriptRestoreVersion(r,v),{method:"POST",body:JSON.stringify(b)}),
 
   generate:(r:string,b:{brief?:string})=>request<Job>(routes.jobsEnqueue(),{method:"POST",body:JSON.stringify({job_type:"generate_report",payload:{report_id:r,...b},report_id:r})}),
-  humanize:(r:string,b:object)=>request<unknown>(routes.humanizationEnqueue(r),{method:"POST",body:JSON.stringify(b)}),
-  translate:(r:string,b:object)=>request<unknown>(routes.translationEnqueue(r),{method:"POST",body:JSON.stringify(b)}),
+  humanize:(r:string,b:{version_id:string;detection_run_id:string;policy_version?:string})=>request<{job_id:string;status:"queued"}>(routes.humanizationEnqueue(r),{method:"POST",body:JSON.stringify(b)}),
+  humanizationCurrent:(r:string)=>request<import("./generated").HumanizationCurrent>(routes.humanizationCurrent(r)),
+  translate:(r:string,b:{source_version_id:string;target_language:string})=>request<{job_id:string;status:"queued"}>(routes.translationEnqueue(r),{method:"POST",body:JSON.stringify(b)}),
+  translationCurrent:(r:string)=>request<import("./generated").TranslationCurrent>(routes.translationCurrent(r)),
 
   jobs:(w?:string)=>request<Job[]>(routes.jobs(w)),
   enqueueJob:(jobType:string,payload:object,reportId?:string)=>request<Job>(routes.jobsEnqueue(),{method:"POST",body:JSON.stringify({job_type:jobType,payload,report_id:reportId})}),
