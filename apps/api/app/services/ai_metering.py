@@ -8,7 +8,6 @@ policy decision and are not recorded by this helper.
 from __future__ import annotations
 
 import uuid
-import json
 from collections.abc import Callable
 from datetime import datetime
 from time import monotonic
