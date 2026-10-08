@@ -136,6 +136,8 @@ export type SearchResponse={query:string;items:Array<{
 export const api={
   me:()=>request<User>(routes.me()),
   workspaces:()=>request<{items:Workspace[];total:number}>(routes.workspaces()),
+  workspace:(w:string)=>request<Workspace>(routes.workspace(w)),
+  updateWorkspace:(w:string,b:{name?:string|null;settings?:Record<string,unknown>|null})=>request<Workspace>(routes.workspace(w),{method:"PATCH",body:JSON.stringify(b)}),
   createWorkspace:(name:string)=>request<Workspace>(routes.createWorkspace(),{method:"POST",body:JSON.stringify({name})}),
   dashboard:(w?:string)=>request<DashboardStats>(routes.dashboard(w)),
   notifications:(w?:string)=>request<NotificationList>(routes.notifications(w)),
@@ -148,6 +150,7 @@ export const api={
 
   projects:(w:string)=>request<ProjectList>(routes.projects(w)),
   project:(p:string,w:string)=>request<Project>(routes.project(p,w)),
+  archiveProject:(p:string,w:string)=>request<Project>(routes.projectArchive(p,w),{method:"POST"}),
   createProject:(w:string,b:object)=>request<Project>(routes.projects(w),{method:"POST",body:JSON.stringify(b)}),
   updateProject:(p:string,w:string,b:object)=>request<Project>(routes.project(p,w),{method:"PATCH",body:JSON.stringify(b)}),
   projectReports:(p:string,w:string)=>request<{items:Array<{id:string;topic:string;status:string;output_language:string;updated_at:string}>;total:number}>(routes.projectReports(p,w)),
@@ -170,6 +173,7 @@ export const api={
   literatureRuns:(p:string)=>request<{items:LiteratureRun[];total:number;limit:number;offset:number}>(routes.literatureRuns(p)),
   updateLiteratureItem:(p:string,id:string,b:{screening_status:"discovered"|"candidate"|"included"|"excluded"|"uncertain";reason?:string|null})=>request<LiteratureItem>(routes.literatureItem(p,id),{method:"PATCH",body:JSON.stringify(b)}),
   knowledgeGraph:(p:string)=>request<{id:string;project_id:string;version:number;status:string;graph_version:string;context_hash:string;source_literature_run_id:string|null;research_plan_id:string|null;node_count:number;edge_count:number;graph_meta:Record<string,unknown>|null;created_by:string|null;created_at:string;updated_at:string}>(routes.knowledgeGraph(p)),
+  knowledgeGraphGenerate:(p:string,b:{force?:boolean;async?:boolean}={})=>request<import("./generated").KnowledgeGraphBuildResponse>(routes.knowledgeGraphGenerate(p),{method:"POST",body:JSON.stringify({...b,async:b.async??true})}),
   knowledgeGraphSummary:(p:string)=>request<KnowledgeGraphSummary>(routes.knowledgeGraphSummary(p)),
   knowledgeGraphNodes:(p:string,search="",nodeType="",limit=100,offset=0)=>request<KnowledgeGraphNodeList>(routes.knowledgeGraphNodes(p)+"?limit="+limit+"&offset="+offset+(search?"&search="+encodeURIComponent(search):"")+(nodeType?"&node_type="+encodeURIComponent(nodeType):"")),
   knowledgeGraphNeighbors:(p:string,nodeId:string)=>request<KnowledgeGraphNeighbor[]>(routes.knowledgeGraphNodeNeighbors(p,nodeId)+"?limit=50"),
@@ -185,6 +189,7 @@ export const api={
   ragRetrieve:(p:string,b:object)=>request<RAGResponse>(routes.ragRetrieve(p),{method:"POST",body:JSON.stringify(b)}),
   ragRuns:(p:string,limit=25,offset=0)=>request<{items:import("./generated").RetrievalRun[];total:number;limit:number;offset:number}>(routes.ragRuns(p,limit,offset)),
   ragRun:(p:string,id:string)=>request<RAGResponse>(routes.ragRun(p,id)),
+  ragMemory:(p:string,memoryType?:string,limit=100)=>request<import("./generated").ResearchMemoryList>(routes.ragMemory(p,memoryType,limit)),
 
   evidenceMatrix:(r:string)=>request<EvidenceMatrixItem[]>(routes.evidenceMatrix(r)),
   createEvidenceClaim:(r:string,b:object)=>request<EvidenceClaim>(routes.evidenceClaims(r),{method:"POST",body:JSON.stringify(b)}),
@@ -309,6 +314,7 @@ export const api={
   humanizationCurrent:(r:string)=>request<import("./generated").HumanizationCurrent>(routes.humanizationCurrent(r)),
   translate:(r:string,b:{source_version_id:string;target_language:string})=>request<{job_id:string;status:"queued"}>(routes.translationEnqueue(r),{method:"POST",body:JSON.stringify(b)}),
   translationCurrent:(r:string)=>request<import("./generated").TranslationCurrent>(routes.translationCurrent(r)),
+  postTranslationHumanization:(r:string,b:{translation_run_id:string;translation_version_id:string})=>request<import("./generated").PostTranslationHumanizationResponse>(routes.postTranslationHumanization(r),{method:"POST",body:JSON.stringify(b)}),
 
   jobs:(w?:string)=>request<Job[]>(routes.jobs(w)),
   job:(id:string)=>request<Job>(routes.job(id)),
