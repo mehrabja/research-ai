@@ -13,6 +13,7 @@ from app.db.models.report import Report
 from app.db.models.subscription import Subscription
 from app.db.session import SessionLocal
 from app.main import app
+from app.services.workspaces import get_default_workspace_for_user
 from tests._m37_cleanup import purge_test_users
 
 client = TestClient(app)
@@ -297,7 +298,13 @@ def test_transfer_ownership_updates_pointer_and_roles() -> None:
 def test_project_and_report_workspace_isolation() -> None:
     uids: list[uuid.UUID] = []
     try:
-        _owner, owner_token, _ = _reg(uids, "m38-tenant-owner")
+        owner_id, owner_token, _ = _reg(uids, "m38-tenant-owner")
+        with SessionLocal() as db:
+            default_workspace = get_default_workspace_for_user(
+                db, user_id=owner_id
+            )
+            assert default_workspace is not None
+            default_workspace_id = default_workspace.id
         workspace_one = _workspace(owner_token)
         workspace_two = _workspace(owner_token)
 
@@ -335,8 +342,7 @@ def test_project_and_report_workspace_isolation() -> None:
             headers=_auth(owner_token),
         )
         assert r.status_code == 200, r.text
-        assert r.json()["total"] == 1
-        assert r.json()["items"][0]["id"] == str(project_one)
+        assert r.json()["total"] == 0
 
         report_one = _report(
             owner_token,
@@ -434,8 +440,13 @@ def test_project_and_report_workspace_isolation() -> None:
 def test_orphan_report_is_restricted_to_default_workspace() -> None:
     uids: list[uuid.UUID] = []
     try:
-        _owner, owner_token, _ = _reg(uids, "m38-orphan-owner")
-        default_workspace = _workspace(owner_token)
+        owner_id, owner_token, _ = _reg(uids, "m38-orphan-owner")
+        with SessionLocal() as db:
+            default_workspace = get_default_workspace_for_user(
+                db, user_id=owner_id
+            )
+            assert default_workspace is not None
+            default_workspace_id = default_workspace.id
         other_workspace = _workspace(owner_token)
 
         r = client.post(
@@ -449,7 +460,7 @@ def test_orphan_report_is_restricted_to_default_workspace() -> None:
         assert r.status_code == 404, r.text
 
         r = client.post(
-            f"/api/v1/reports?workspace_id={default_workspace}",
+            f"/api/v1/reports?workspace_id={default_workspace_id}",
             headers=_auth(owner_token),
             json={
                 "topic": "Default workspace report",
