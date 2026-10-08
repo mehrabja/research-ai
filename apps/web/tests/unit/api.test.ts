@@ -192,3 +192,30 @@ describe("rag and collaboration transport",()=>{
     spy.mockRestore();
   });
 });
+
+describe("phase 2B quality transport",()=>{
+  it("generates and reads persisted citations",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({status:"queued",job_id:"job1",run_id:null,context_hash:null,claim_count:null,citation_count:null,unsupported_count:null,coverage_score:null}),{status:202}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({run:{id:"run1",report_id:"r1",manuscript_id:null,manuscript_version_id:"v1",context_hash:"ch",m30_version:"m30",citation_style:"author_year",status:"completed",claim_count:2,citation_count:2,unsupported_count:0,mixed_support_count:0,duplicate_reference_count:0,coverage_score:1,warnings:null,error_message:null,duration_ms:10,created_at:"2026-10-08T00:00:00Z",completed_at:"2026-10-08T00:00:01Z"},claims:[]}),{status:200}));
+    const queued=await api.citationsGenerate("r1",{manuscript_version_id:"v1",citation_style:"author_year",force:true,async:true});
+    expect(queued.job_id).toBe("job1");
+    const current=await api.citations("r1");
+    expect(current.run.coverage_score).toBe(1);
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/reports/r1/citations/generate");
+    spy.mockRestore();
+  });
+
+  it("runs academic QA and classification through persisted contracts",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({status:"completed",job_id:null,run_id:"qa1",context_hash:"ch",gate:"pass",finding_count:1,blocking_count:0}),{status:200}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({id:"p1",project_id:"p1",domain:{code:"cs",name:"Computer Science",confidence:0.9,source:"inferred",method:"heuristic",reason:"signals",alternatives:[]},paper_type:{code:"empirical",name:"Empirical",confidence:0.8,source:"inferred",method:"heuristic",reason:"signals",alternatives:[],secondary:[]},research_design:{code:"experimental",name:"Experimental",confidence:0.7,source:"inferred",method:"heuristic",reason:"signals",alternatives:[]},status:"completed",needs_review:false,error_message:null,classifier_version:"m1",taxonomy_version:"t1",context_meta:null,created_at:"2026-10-08T00:00:00Z",updated_at:"2026-10-08T00:00:00Z"}),{status:200}));
+    const qa=await api.qaGenerate("r1",{manuscript_version_id:"v1",async:false,force:true});
+    expect(qa.run_id).toBe("qa1");
+    const cls=await api.classification("p1");
+    expect(cls.domain.code).toBe("cs");
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/reports/r1/academic-qa/generate");
+    expect(spy.mock.calls[1]?.[0]).toBe("/api/backend/projects/p1/classification");
+    spy.mockRestore();
+  });
+});
