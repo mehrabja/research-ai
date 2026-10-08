@@ -10,10 +10,8 @@ const res=await fetch(url);
 if(!res.ok)throw new Error("OpenAPI fetch failed: "+res.status+" "+url);
 await fs.writeFile(tmp,await res.text(),"utf8");
 
-const cli=process.platform==="win32"
-  ? path.join(process.cwd(),"node_modules",".bin","openapi-typescript.cmd")
-  : path.join(process.cwd(),"node_modules",".bin","openapi-typescript");
-await exec(cli,[tmp,"-o",out]);
+const cli=path.join(process.cwd(),"node_modules","openapi-typescript","bin","cli.js");
+await exec(process.execPath,[cli,tmp,"-o",out]);
 
 console.log("Generated",out);
 console.log("OpenAPI source",url);
