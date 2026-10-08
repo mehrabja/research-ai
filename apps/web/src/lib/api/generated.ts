@@ -147,3 +147,5 @@ export type PostTranslationHumanizationResponse={job_id:UUID|null;status:string}
 
 export type OrchestrationStrategy={key:string;description:string};
 export type OrchestrationStrategyListResponse={items:OrchestrationStrategy[]};
+
+export type OrchestrationApprovalResponse={status:string;run_id:UUID;node_id:UUID};
