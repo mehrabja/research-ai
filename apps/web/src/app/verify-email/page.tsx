@@ -39,10 +39,10 @@ function VerifyEmailForm(){
   return <div className="auth-page">
     <section className="auth-side"><Link className="brand" href="/"><span className="brand-mark">R</span><span>Research AI</span></Link><div className="eyebrow" style={{marginTop:70}}>Account security</div><h1>Verify your research workspace.</h1><p>Your account uses a single-use verification token and a durable email delivery job.</p></section>
     <section className="auth-main"><div className="auth-card"><h2>Verify email</h2><p className="muted">Open the link from your verification email.</p>{error&&<div className="notice error" style={{marginTop:14}}>{error}</div>}{message&&<div className="notice success" style={{marginTop:14}}>{message}</div>}
-      <div className="field" style={{marginTop:16}}><label>Verification token</label><input className="input" value={token} onChange={e=>setToken(e.target.value)} placeholder="Paste token from email"/></div>
+      <div className="field" style={{marginTop:16}}><label htmlFor="verification-token">Verification token</label><input id="verification-token" className="input" value={token} onChange={e=>setToken(e.target.value)} placeholder="Paste token from email"/></div>
       <button className="btn primary" style={{marginTop:14}} disabled={!token||busy} onClick={()=>void verify()}>{busy?"Verifying…":"Verify email"}</button>
       <div className="divider">or</div>
-      <form className="auth-form" onSubmit={resend}><div className="field"><label>Email for resend</label><input className="input" type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="researcher@lab.edu" required/></div><button className="btn" disabled={resending}>{resending?"Sending…":"Resend verification email"}</button></form>
+      <form className="auth-form" onSubmit={resend}><div className="field"><label htmlFor="resend-email">Email for resend</label><input id="resend-email" className="input" type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="researcher@lab.edu" required/></div><button className="btn" disabled={resending}>{resending?"Sending…":"Resend verification email"}</button></form>
       <div className="actions" style={{marginTop:14}}><Link className="btn" href="/login">Sign in</Link><Link className="btn" href="/forgot-password">Reset password</Link></div>
     </div></section>
   </div>;
