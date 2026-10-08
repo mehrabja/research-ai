@@ -34,7 +34,11 @@ from app.core.exceptions import (
 from app.db.models.ops import UsageLog
 from app.db.models.project import Project
 from app.db.models.source import Chunk
-from app.domain.embeddings import EmbeddingProfile, build_embedding_profile_id
+from app.domain.embeddings import (
+    EmbeddingBatchResult,
+    EmbeddingProfile,
+    build_embedding_profile_id,
+)
 from app.integrations.embeddings.base import (
     EmbeddingAuthenticationError,
     EmbeddingInputTooLargeError,
@@ -69,6 +73,13 @@ class EmbeddingRunResult:
     pending: int
     profile_id: str
     usage_input_tokens: int
+
+
+def _embed_documents_for_batch(
+    provider: EmbeddingProvider, batch: list[Chunk]
+) -> EmbeddingBatchResult:
+    """Invoke the provider with exactly the chunks in the requested batch."""
+    return provider.embed_documents([chunk.content for chunk in batch])
 
 
 def _sha256_hex(text: str) -> str:
