@@ -198,6 +198,7 @@ def generate_report(
     report_id: uuid.UUID,
     provider: GenerationProvider,
     profile: GenerationProfile | None = None,
+    brief: str | None = None,
 ) -> GenerationResult:
     profile = profile or get_current_generation_profile()
     profile_id = build_generation_profile_id(profile)
@@ -271,6 +272,7 @@ def generate_report(
         length=report.length,
         structure_template=report.structure_template,
         evidence=evidence,
+        brief=brief,
     )
     context = GenerationContext(
         report_id=report_id,
