@@ -76,6 +76,16 @@ def _register_and_login(
         json={"email": email, "password": password},
     )
     assert r.status_code == 200, r.text
+    with SessionLocal() as db:
+        db.execute(
+            delete(Job).where(
+                Job.user_id == user_id,
+                Job.job_type.in_((
+                    "send_email_verification", "send_password_reset"
+                )),
+            )
+        )
+        db.commit()
     return user_id, r.json()["access_token"]
 
 
