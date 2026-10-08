@@ -242,3 +242,29 @@ describe("phase 2C intelligence transport",()=>{
     spy.mockRestore();
   });
 });
+
+describe("phase 2D publication and orchestration transport",()=>{
+  it("selects a publication target and reads compliance",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({id:"sel1",report_id:"r1",target_id:"t1",selected_by:"u1",selection_note:null,created_at:"2026-10-08T00:00:00Z"}),{status:200}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({run:{id:"pc1",project_id:"p1",report_id:"r1",manuscript_id:null,manuscript_version_id:"v1",target_id:"t1",context_hash:"ch",m33_version:"m33",rules_version:"r1",target_profile_version:"v1",status:"completed",finding_count:1,blocking_count:0,error_count:0,warning_count:1,info_count:0,gate:"pass",checklist_state:{passed:3},formatting_summary:null,warnings:null,error_message:null,duration_ms:4,created_at:"2026-10-08T00:00:00Z",completed_at:"2026-10-08T00:00:01Z"} }),{status:200}));
+    const selection=await api.publicationSelect("r1",{target_id:"t1"});
+    expect(selection.target_id).toBe("t1");
+    const current=await api.publicationComplianceCurrent("r1");
+    expect(current.run.gate).toBe("pass");
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/reports/r1/publication-target/select");
+    expect(spy.mock.calls[1]?.[0]).toBe("/api/backend/reports/r1/publication-compliance/current");
+    spy.mockRestore();
+  });
+
+  it("starts orchestration and reads the current node graph",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({status:"queued",job_id:"job-o",run_id:null,context_hash:null,node_count:null,completed_node_count:null,failed_node_count:null}),{status:202}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({run:{id:"or1",project_id:"p1",report_id:"r1",user_id:"u1",goal:"Build evidence",context_hash:"ch",orchestration_version:"m35",planner_version:"p1",tool_registry_version:"t1",strategy:"research_pipeline",status:"running",current_node_key:"research",budget:{},budget_used:null,approvals_required:null,approvals_received:null,summary:null,errors:null,checkpoint_state:null,last_checkpoint_at:null,node_count:2,completed_node_count:1,failed_node_count:0,error_message:null,duration_ms:null,started_at:"2026-10-08T00:00:00Z",completed_at:null,failed_at:null,cancelled_at:null,created_at:"2026-10-08T00:00:00Z"},nodes:[]}),{status:200}));
+    expect((await api.orchestrationRun("r1",{goal:"Build evidence",strategy:"research_pipeline",async:true})).job_id).toBe("job-o");
+    expect((await api.orchestrationCurrent("r1")).run.current_node_key).toBe("research");
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/reports/r1/orchestration/run");
+    expect(spy.mock.calls[1]?.[0]).toBe("/api/backend/reports/r1/orchestration/current");
+    spy.mockRestore();
+  });
+});
