@@ -54,6 +54,29 @@ def _call_build_plan(
     }
 
 
+def _call_manuscript_generate(
+    db: Session, ctx: Any,
+) -> dict[str, Any]:
+    if ctx.user_id is None:
+        raise ValueError("manuscript_generate requires user_id")
+
+    from app.services.manuscript import builder as ms_builder
+
+    persisted = ms_builder.generate_manuscript(
+        db,
+        user_id=ctx.user_id,
+        report_id=ctx.report_id,
+        force=bool(ctx.payload.get("force", False)),
+        commit=False,
+    )
+    return {
+        "run_id": str(persisted.run.id),
+        "manuscript_id": str(persisted.manuscript.id) if persisted.manuscript else "",
+        "version_id": str(persisted.version.id) if persisted.version else "",
+        "section_count": len(persisted.sections),
+    }
+
+
 def _call_technical_intelligence(
     db: Session, ctx: Any,
 ) -> dict[str, Any]:
@@ -208,6 +231,34 @@ def _register_all() -> None:
             idempotent=True,
         ),
         _call_build_plan,
+    )
+    register_tool(
+        ToolSpec(
+            key="manuscript_generate",
+            version=_TOOL_VERSION,
+            description="Build the evidence-ready manuscript architecture.",
+            permission="write",
+            deterministic=True,
+            timeout_seconds=180,
+            max_attempts=2,
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "force": {"type": "boolean"},
+                },
+            },
+            output_schema={
+                "type": "object",
+                "properties": {
+                    "run_id": {"type": "string"},
+                    "manuscript_id": {"type": "string"},
+                    "version_id": {"type": "string"},
+                    "section_count": {"type": "integer"},
+                },
+            },
+            idempotent=True,
+        ),
+        _call_manuscript_generate,
     )
     register_tool(
         ToolSpec(
