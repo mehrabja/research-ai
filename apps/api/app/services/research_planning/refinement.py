@@ -7,6 +7,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from app.services.ai_metering import execute_metered_provider_call
+
 logger = logging.getLogger(__name__)
 
 SAFETY_INSTRUCTION = (
@@ -72,14 +74,44 @@ def build_refinement_prompt(
     )
 
 
-def call_refinement_provider(provider, prompt: str) -> str | dict:
+def call_refinement_provider(
+    provider,
+    prompt: str,
+    *,
+    workspace_id=None,
+    user_id=None,
+    project_id=None,
+) -> str | dict:
     if hasattr(provider, "complete_json"):
         return provider.complete_json(prompt)
     if hasattr(provider, "generate"):
-        out = provider.generate(prompt)
-        if hasattr(out, "text"):
-            return out.text
-        return out
+        def call():
+            return provider.generate(
+                system_prompt=SAFETY_INSTRUCTION,
+                user_prompt=prompt,
+                temperature=0.0,
+                max_output_tokens=1200,
+            )
+
+        if workspace_id is not None and user_id is not None:
+            result = execute_metered_provider_call(
+                call,
+                workspace_id=workspace_id,
+                user_id=user_id,
+                operation="research_plan.refinement.provider_call",
+                capability="research_plan",
+                provider=provider,
+                model=getattr(provider, "model_name", None),
+                project_id=project_id,
+                input_units=lambda value: getattr(value, "input_tokens", None),
+                output_units=lambda value: getattr(value, "output_tokens", None),
+            )
+        else:
+            result = call()
+
+        if hasattr(result, "text"):
+            return result.text
+        return result
     raise RuntimeError("no compatible method on provider")
 
 
