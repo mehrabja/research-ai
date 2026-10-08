@@ -67,7 +67,11 @@ class OpenAIEmbeddingProvider:
         settings = get_settings()
         self._profile = profile
         self.provider_name = provider_name
-        self.model_name = profile.model
+        self.model_name = (
+            profile.model.split("/", 1)[1]
+            if provider_name == "openai" and profile.model.startswith("openai/")
+            else profile.model
+        )
         self.dimensions = profile.dimensions
         self._base_url = (
             base_url or settings.embedding_openai_base_url
@@ -168,7 +172,7 @@ class OpenAIEmbeddingProvider:
 
         payload: dict[str, Any] = {
             "input": texts,
-            "model": self._profile.model,
+            "model": self.model_name,
             "encoding_format": "float",
         }
         if _tokenizer_model(self._profile.model).startswith("text-embedding-3"):
