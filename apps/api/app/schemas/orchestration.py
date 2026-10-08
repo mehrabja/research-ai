@@ -149,3 +149,10 @@ class OrchestrationStrategyRead(BaseModel):
 class OrchestrationStrategyListResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     items: list[OrchestrationStrategyRead] = Field(default_factory=list)
+
+
+class OrchestrationApprovalResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: str
+    run_id: uuid.UUID
+    node_id: uuid.UUID
