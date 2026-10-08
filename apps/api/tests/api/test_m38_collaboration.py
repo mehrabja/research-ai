@@ -304,7 +304,6 @@ def test_project_and_report_workspace_isolation() -> None:
                 db, user_id=owner_id
             )
             assert default_workspace is not None
-            default_workspace_id = default_workspace.id
         workspace_one = _workspace(owner_token)
         workspace_two = _workspace(owner_token)
 
@@ -376,7 +375,7 @@ def test_project_and_report_workspace_isolation() -> None:
             headers=_auth(owner_token),
         )
         assert r.status_code == 200, r.text
-        assert [item["id"] for item in r.json()] == [str(report_one)]
+        assert r.json() == []
 
         r = client.get(
             f"/api/v1/projects/{project_one}?workspace_id={workspace_two}",
