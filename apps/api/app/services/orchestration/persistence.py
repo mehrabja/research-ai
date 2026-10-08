@@ -246,6 +246,14 @@ def run_m35_persisted(
 
         _execute_all(db, run=run, nodes=nodes)
 
+        if run.status == RunStatus.AWAITING_APPROVAL.value:
+            if commit:
+                db.commit()
+                db.refresh(run)
+            else:
+                db.flush()
+            return PersistedRun(run=run, skipped=False)
+
         run.status = RunStatus.COMPLETED.value
         run.completed_at = datetime.now(UTC)
         run.duration_ms = int(
@@ -286,7 +294,10 @@ def _execute_all(
     run: ResearchOrchestrationRun,
     nodes: list[ResearchOrchestrationNode],
 ) -> None:
-    completed: set[str] = set()
+    completed: set[str] = {
+        n.node_key for n in nodes
+        if n.status == NodeStatus.COMPLETED.value
+    }
     ordered: list[tuple[str, list[str]]] = [
         (n.node_key, list(n.depends_on or [])) for n in nodes
     ]
@@ -308,9 +319,27 @@ def _execute_all(
         key = eligible[0]
         node = node_by_key[key]
         _execute_one(db, run=run, node=node)
+        if node.status == NodeStatus.AWAITING_APPROVAL.value:
+            validate_run_transition(
+                run.status, RunStatus.AWAITING_APPROVAL.value,
+            )
+            run.status = RunStatus.AWAITING_APPROVAL.value
+            run.current_node_key = key
+            required = list(run.approvals_required or [])
+            if key not in required:
+                required.append(key)
+            run.approvals_required = required
+            run.checkpoint_state = {
+                "completed": sorted(completed),
+                "awaiting_approval": key,
+            }
+            run.last_checkpoint_at = datetime.now(UTC)
+            db.flush()
+            return
         if node.status == NodeStatus.COMPLETED.value:
-            completed.add(key)
-            run.completed_node_count += 1
+            if key not in completed:
+                completed.add(key)
+                run.completed_node_count += 1
         elif node.status == NodeStatus.FAILED.value:
             run.failed_node_count += 1
             run.errors = list(run.errors or []) + [{
@@ -339,25 +368,26 @@ def _execute_one(
     *,
     run: ResearchOrchestrationRun,
     node: ResearchOrchestrationNode,
+    approval_granted: bool = False,
 ) -> None:
-    decision = policy_svc.evaluate_node_policy(
-        node_key=node.node_key,
-        node_type=node.node_type,
-        deterministic=node.deterministic,
-    )
-    if decision.approval_required:
-        # Approval gate is recorded; runtime waits for the caller to
-        # explicitly approve before the node is retried.
-        validate_node_transition(
-            node.status, NodeStatus.AWAITING_APPROVAL.value,
-        )
-        node.status = NodeStatus.AWAITING_APPROVAL.value
-        db.flush()
+    if approval_granted:
         validate_node_transition(
             node.status, NodeStatus.RUNNING.value,
         )
         node.status = NodeStatus.RUNNING.value
     else:
+        decision = policy_svc.evaluate_node_policy(
+            node_key=node.node_key,
+            node_type=node.node_type,
+            deterministic=node.deterministic,
+        )
+        if decision.approval_required:
+            validate_node_transition(
+                node.status, NodeStatus.AWAITING_APPROVAL.value,
+            )
+            node.status = NodeStatus.AWAITING_APPROVAL.value
+            db.flush()
+            return
         validate_node_transition(
             node.status, NodeStatus.RUNNING.value,
         )
@@ -403,4 +433,150 @@ def _execute_one(
     db.flush()
 
 
-__all__ = ["PersistedRun", "run_m35_persisted"]
+def resume_m35_persisted(
+    db: Session,
+    *,
+    run_id: uuid.UUID,
+    user_id: uuid.UUID,
+    node_id: uuid.UUID,
+    commit: bool = True,
+) -> PersistedRun:
+    run = db.execute(
+        select(ResearchOrchestrationRun)
+        .where(
+            ResearchOrchestrationRun.id == run_id,
+            ResearchOrchestrationRun.user_id == user_id,
+        )
+        .with_for_update()
+    ).scalar_one_or_none()
+    if run is None:
+        raise OrchestrationInvalid("orchestration run not found")
+    if run.status != RunStatus.AWAITING_APPROVAL.value:
+        raise OrchestrationInvalid(
+            f"run is not awaiting approval: {run.status!r}"
+        )
+
+    _lock_report(db, report_id=run.report_id)
+    node = db.execute(
+        select(ResearchOrchestrationNode)
+        .where(
+            ResearchOrchestrationNode.id == node_id,
+            ResearchOrchestrationNode.run_id == run.id,
+        )
+        .with_for_update()
+    ).scalar_one_or_none()
+    if node is None:
+        raise OrchestrationInvalid("orchestration node not found")
+    if node.status != NodeStatus.AWAITING_APPROVAL.value:
+        raise OrchestrationInvalid(
+            f"node is not awaiting approval: {node.status!r}"
+        )
+
+    validate_run_transition(
+        run.status, RunStatus.EXECUTING.value,
+    )
+    run.status = RunStatus.EXECUTING.value
+
+    required = list(run.approvals_required or [])
+    received = list(run.approvals_received or [])
+    if node.node_key not in received:
+        received.append(node.node_key)
+    run.approvals_received = received
+    if node.node_key in required:
+        required.remove(node.node_key)
+    run.approvals_required = required
+
+    nodes = list(
+        db.execute(
+            select(ResearchOrchestrationNode)
+            .where(ResearchOrchestrationNode.run_id == run.id)
+            .order_by(ResearchOrchestrationNode.sequence.asc())
+        ).scalars().all()
+    )
+    completed_before = {
+        n.node_key for n in nodes if n.status == NodeStatus.COMPLETED.value
+    }
+    approved_key = node.node_key
+
+    ordered = [(n.node_key, list(n.depends_on or [])) for n in nodes]
+    node_by_key = {n.node_key: n for n in nodes}
+    guard = 0
+    max_guard = max(1, len(nodes)) * 4
+
+    while len(completed_before) < len(nodes):
+        guard += 1
+        if guard > max_guard:
+            raise OrchestrationInvalid(
+                "orchestration scheduler did not make progress during resume"
+            )
+        eligible = graph_svc.successors_of(
+            all_nodes=ordered, completed=completed_before,
+        )
+        if not eligible:
+            raise OrchestrationInvalid(
+                "orchestration has no eligible node during resume"
+            )
+        key = eligible[0]
+        current = node_by_key[key]
+        _execute_one(
+            db,
+            run=run,
+            node=current,
+            approval_granted=(key == approved_key),
+        )
+        if current.status == NodeStatus.AWAITING_APPROVAL.value:
+            run.status = RunStatus.AWAITING_APPROVAL.value
+            run.current_node_key = key
+            required = list(run.approvals_required or [])
+            if key not in required:
+                required.append(key)
+            run.approvals_required = required
+            run.checkpoint_state = {
+                "completed": sorted(completed_before),
+                "awaiting_approval": key,
+            }
+            run.last_checkpoint_at = datetime.now(UTC)
+            break
+        if current.status == NodeStatus.FAILED.value:
+            run.failed_node_count += 1
+            run.errors = list(run.errors or []) + [{
+                "node_key": current.node_key,
+                "error_class": current.error_class,
+                "error_message": current.error_message,
+            }]
+            validate_run_transition(
+                run.status, RunStatus.FAILED.value,
+            )
+            run.status = RunStatus.FAILED.value
+            run.failed_at = datetime.now(UTC)
+            break
+        if key not in completed_before:
+            completed_before.add(key)
+            run.completed_node_count += 1
+        run.current_node_key = key
+        run.checkpoint_state = {
+            "completed": sorted(completed_before),
+            "current": key,
+        }
+        run.last_checkpoint_at = datetime.now(UTC)
+
+    if len(completed_before) == len(nodes):
+        validate_run_transition(
+            run.status, RunStatus.COMPLETED.value,
+        )
+        run.status = RunStatus.COMPLETED.value
+        run.completed_at = datetime.now(UTC)
+        if run.started_at is not None:
+            run.duration_ms = int(
+                (run.completed_at - run.started_at).total_seconds() * 1000
+            )
+
+    if commit:
+        db.commit()
+        db.refresh(run)
+    else:
+        db.flush()
+    return PersistedRun(run=run, skipped=False)
+
+
+__all__ = ["PersistedRun", "resume_m35_persisted", "run_m35_persisted"]
