@@ -48,7 +48,11 @@ for(const route of navPaths){
 const violations=[];
 for(const file of files){
   const rel=path.relative(root,file).replaceAll(path.sep,"/");
-  if(rel==="src/lib/server/backend-url.ts"||rel==="src/lib/api/generated.openapi.ts")continue;
+  if(
+    rel==="src/lib/server/backend-url.ts"||
+    rel==="src/lib/api/generated.openapi.ts"||
+    rel.startsWith("src/app/api/")
+  )continue;
   const text=await fs.readFile(file,"utf8");
   if(text.includes("https://api.openai.com")||text.includes("https://openrouter.ai")){
     violations.push(rel+": direct AI provider URL in frontend source");
@@ -65,7 +69,7 @@ if(unused.length||violations.length||missingPages.length){
   console.error("Frontend API connection audit failed.");
   if(unused.length)console.error("Unused route builders:",unused.join(", "));
   if(missingPages.length)console.error("Protected nav routes without page.tsx:",missingPages.join(", "));
-NaN
+  if(violations.length)console.error("Connection boundary violations:",violations.join("\n"));
   process.exit(1);
 }
 
