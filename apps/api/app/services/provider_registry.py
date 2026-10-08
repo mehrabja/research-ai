@@ -265,12 +265,10 @@ class ProviderRegistry:
     ) -> Any:
         definitions = self.candidates(capability, requested=requested)
         providers_list: list[Any] = []
-        unavailable: list[str] = []
         for definition in definitions:
             try:
                 providers_list.append(definition.factory(config))
             except ProviderNotConfiguredError:
-                unavailable.append(definition.name)
                 continue
         if not providers_list:
             raise ProviderNotConfiguredError(
