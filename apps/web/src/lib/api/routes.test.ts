@@ -17,6 +17,9 @@ test("centralized routes preserve backend API paths",()=>{
 
 
 describe("phase 2 report workflow routes",()=>{
+  it("builds the persisted generation current route",()=>{
+    expect(routes.generationCurrent("r 1")).toBe("reports/r%201/generation/current");
+  });
   it("builds approved-review and report-version routes",()=>{
     expect(routes.preTranslationReview("r 1")).toBe("reports/r%201/review/pre-translation");
     expect(routes.reportVersion("r 1","v/2")).toBe("reports/r%201/versions/v%2F2");
