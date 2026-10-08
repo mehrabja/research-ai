@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from functools import partial
 import logging
 import secrets
-from functools import partial
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
