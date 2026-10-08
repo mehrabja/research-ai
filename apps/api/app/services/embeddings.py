@@ -16,9 +16,10 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from functools import partial
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -277,6 +278,10 @@ def _embed_documents_for_batch(
 ) -> EmbeddingBatchResult:
     return provider.embed_documents([chunk.content for chunk in batch])
 
+
+def _embedding_input_units(result: EmbeddingBatchResult) -> int:
+    return result.usage.input_tokens
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -374,8 +379,11 @@ def embed_source(
 
         for batch in batches:
             try:
+                embed_call: Callable[[], EmbeddingBatchResult] = partial(
+                    _embed_documents_for_batch, provider, batch
+                )
                 result = execute_metered_provider_call(
-                    lambda batch=batch: _embed_documents_for_batch(provider, batch),
+                    embed_call,
                     workspace_id=workspace_id,
                     user_id=user_id,
                     operation="source.embedding.provider_call",
@@ -384,7 +392,7 @@ def embed_source(
                     model=profile.model,
                     project_id=report.project_id,
                     report_id=report_id,
-                    input_units=lambda value: value.usage.input_tokens,
+                    input_units=_embedding_input_units,
                 )
             except EmbeddingInputTooLargeError as exc:
                 _mark_failed(db, batch, "input_too_large")
