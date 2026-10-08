@@ -1109,14 +1109,136 @@ function Generate(){
 }
 
 function Humanize(){
-  const {reportId}=useCtx();const [versionId,setVersionId]=useState("");const [detectionRunId,setDetectionRunId]=useState("");const [policyVersion,setPolicyVersion]=useState("");
-  const m=useMutation({mutationFn:()=>api.humanize(reportId!,{version_id:versionId,detection_run_id:detectionRunId,...(policyVersion.trim()?{policy_version:policyVersion.trim()}: {})})});
-  return <><Head route="humanize"/><div className="grid grid-2"><Card><div className="field"><label>Report version UUID</label><input className="input" value={versionId} onChange={e=>setVersionId(e.target.value)} placeholder="Approved version"/></div><div className="field" style={{marginTop:12}}><label>Detection run UUID</label><input className="input" value={detectionRunId} onChange={e=>setDetectionRunId(e.target.value)} placeholder="Completed detection run"/></div><div className="field" style={{marginTop:12}}><label>Policy version</label><input className="input" value={policyVersion} onChange={e=>setPolicyVersion(e.target.value)}/></div><button className="btn primary" style={{marginTop:14}} disabled={!reportId||!versionId||!detectionRunId||m.isPending} onClick={()=>m.mutate()}>{m.isPending?"Queueing…":"Rewrite"}</button></Card><Card><h3>Preservation controls</h3>{["Claim integrity","Evidence markers","Citations","URLs / DOIs","Numbers"].map(x=><div className="row list-item" key={x}><span>{x}</span><span className="tag success">Protected</span></div>)}</Card></div></>;
+  const {reportId,activeReport}=useCtx();
+  const qc=useQueryClient();
+  const review=useQuery({
+    queryKey:["pre-translation-review",reportId],
+    queryFn:()=>api.preTranslationReview(reportId!),
+    enabled:Boolean(reportId),
+  });
+  const versionId=review.data?.version_id;
+  const detection=useQuery({
+    queryKey:["detection",reportId,versionId],
+    queryFn:()=>api.detection(reportId!,versionId!),
+    enabled:Boolean(reportId&&versionId),
+    retry:false,
+  });
+  const [jobId,setJobId]=useState("");
+  const job=useQuery({
+    queryKey:["humanize-job",jobId],
+    queryFn:()=>api.job(jobId),
+    enabled:Boolean(jobId),
+    refetchInterval:jobId?3000:false,
+  });
+  const current=useQuery({
+    queryKey:["humanization-current",reportId],
+    queryFn:()=>api.humanizationCurrent(reportId!),
+    enabled:Boolean(reportId),
+    retry:false,
+  });
+  const detect=useMutation({
+    mutationFn:()=>api.enqueueDetection(reportId!,versionId!),
+    onSuccess:data=>setJobId(data.job_id),
+  });
+  const m=useMutation({
+    mutationFn:()=>api.humanize(reportId!,{version_id:versionId!,detection_run_id:detection.data!.run_id}),
+    onSuccess:data=>setJobId(data.job_id),
+  });
+  useEffect(()=>{
+    if(job.data?.status==="completed"||job.data?.status==="failed"||job.data?.status==="cancelled"){
+      void qc.invalidateQueries({queryKey:["detection",reportId,versionId]});
+      void qc.invalidateQueries({queryKey:["humanization-current",reportId]});
+    }
+  },[job.data?.status,qc,reportId,versionId]);
+  const run=current.data?.run;
+  const output=current.data?.output_version;
+  const statusReady=activeReport?.status==="humanizing";
+  const controls=[
+    ["Claim integrity",Boolean(run&&run.status==="success"&&!run.skipped_preservation.length)],
+    ["Evidence markers",Boolean(run&&run.status==="success"&&!run.skipped_preservation.length)],
+    ["Citations",Boolean(run&&run.status==="success"&&!run.skipped_preservation.length)],
+    ["URLs / DOIs",Boolean(run&&run.status==="success"&&!run.skipped_preservation.length)],
+    ["Numbers",Boolean(run&&run.status==="success"&&!run.skipped_preservation.length)],
+  ] as const;
+  return <><Head route="humanize"/>
+    {!reportId&&<Card><State title="No active report" description="Humanization is scoped to a report."/></Card>}
+    {reportId&&<><Card>
+      <div className="row"><div><h3>Approved source</h3><div className="muted small">The M15-approved report version is resolved from the backend review state. No UUID entry is required.</div></div><span className="tag">{review.data?.status??activeReport?.status??"—"}</span></div>
+      {review.isPending?<State title="Loading approved version" description="Reading the authoritative pre-translation review context."/>:review.isError?<State title="Approved version unavailable" description={review.error instanceof Error?review.error.message:"Complete pre-translation review before humanization."} error/>:review.data&&<div className="grid grid-2" style={{marginTop:12}}><div className="list-item"><div className="meta">Version</div><div className="strong">v{review.data.version_number} · {review.data.language}</div><div className="mono tiny">{review.data.version_id}</div></div><div className="list-item"><div className="meta">Content</div><div>{review.data.content.length.toLocaleString()} characters</div><div className="muted tiny" style={{marginTop:4}}>{review.data.change_type??"No change type recorded"}</div></div></div>}
+      {versionId&&<div className="actions" style={{marginTop:12}}>
+        {detection.isError&&<button className="btn" disabled={detect.isPending} onClick={()=>detect.mutate()}>{detect.isPending?"Queueing detection…":"Run detection"}</button>}
+        {detection.data&&<span className="tag primary">Detection: {detection.data.label} · {(detection.data.probability===null?"—":Math.round(detection.data.probability*100)+"%")}</span>}
+        {detect.isSuccess&&<span className="tag">Detection job: {job.data?.status??"queued"}</span>}
+      </div>}
+    </Card>
+    {versionId&&detection.data&&<Card style={{marginTop:16}}>
+      <div className="row"><div><h3>Humanization</h3><div className="muted small">Uses the detected approved version and the persisted humanization pipeline.</div></div><span className="tag">{run?.status??"Not run"}</span></div>
+      {!statusReady&&<div className="notice" style={{marginTop:12}}>Backend gate: report status is <b>{activeReport?.status??"unknown"}</b>. Humanization can only be enqueued while the report is in <b>humanizing</b>.</div>}
+      <button className="btn primary" style={{marginTop:12}} disabled={!statusReady||m.isPending||Boolean(jobId&&job.data?.status==="processing")||Boolean(jobId&&job.data?.status==="queued")} onClick={()=>m.mutate()}>{m.isPending||job.data?.status==="processing"||job.data?.status==="queued"?"Processing…":"Rewrite approved version"}</button>
+      {m.isError&&<div className="notice error" style={{marginTop:12}}>{m.error instanceof Error?m.error.message:"Humanization request failed."}</div>}
+      {output&&<div className="notice success" style={{marginTop:12}}>Humanized version v{output.version_number} is persisted. Source version: {output.source_version_id??"—"}.</div>}
+      {output&&<div className="field" style={{marginTop:12}}><label>Persisted humanized content</label><textarea className="input textarea" value={output.content} readOnly style={{minHeight:260}}/></div>}
+    </Card>}
+    <Card style={{marginTop:16}}><div className="row"><div><h3>Preservation controls</h3><div className="muted small">Status below is derived from the persisted humanization run, not a static UI promise.</div></div><span className="tag">{run?.status??"Not run"}</span></div>
+      {controls.map(([label,passed])=><div className="row list-item" key={label}><span>{label}</span><span className={"tag "+(passed?"success":"")}>{run?"Passed":"Pending"}</span></div>)}
+      {run?.skipped_preservation.length?<div className="notice error" style={{marginTop:10}}>Preservation exceptions: {run.skipped_preservation.map(item=>value(row(item).segment_id)+" / "+value(row(item).layer)).join(", ")}</div>:null}
+    </Card></>}
+  </>;
 }
 
 function Translate(){
-  const {reportId}=useCtx();const [version,setVersion]=useState("");const [lang,setLang]=useState("fa");const m=useMutation({mutationFn:()=>api.translate(reportId!,{source_version_id:version,target_language:lang})});
-  return <><Head route="translate"/><Card><div className="grid grid-3"><div className="field"><label>Approved source version</label><input className="input" value={version} onChange={e=>setVersion(e.target.value)} placeholder="Version UUID"/></div><div className="field"><label>Target language</label><select className="input" value={lang} onChange={e=>setLang(e.target.value)}><option value="fa">Persian</option><option value="en">English</option><option value="de">German</option><option value="fr">French</option></select></div><div className="actions" style={{alignItems:"end"}}><button className="btn primary" disabled={!reportId||!version||m.isPending} onClick={()=>m.mutate()}>{m.isPending?"Queueing…":"Translate"}</button></div></div>{m.isError&&<div className="notice error" style={{marginTop:12}}>Translation request failed; verify the source version is the approved version.</div>}</Card></>;
+  const {reportId,activeReport}=useCtx();
+  const qc=useQueryClient();
+  const review=useQuery({
+    queryKey:["pre-translation-review",reportId],
+    queryFn:()=>api.preTranslationReview(reportId!),
+    enabled:Boolean(reportId),
+  });
+  const sourceVersionId=review.data?.version_id;
+  const [lang,setLang]=useState("");
+  useEffect(()=>{if(!lang&&activeReport?.output_language)setLang(activeReport.output_language);},[activeReport?.output_language,lang]);
+  const [jobId,setJobId]=useState("");
+  const job=useQuery({
+    queryKey:["translation-job",jobId],
+    queryFn:()=>api.job(jobId),
+    enabled:Boolean(jobId),
+    refetchInterval:jobId?3000:false,
+  });
+  const current=useQuery({
+    queryKey:["translation-current",reportId],
+    queryFn:()=>api.translationCurrent(reportId!),
+    enabled:Boolean(reportId),
+    retry:false,
+  });
+  const m=useMutation({
+    mutationFn:()=>api.translate(reportId!,{source_version_id:sourceVersionId!,target_language:lang.trim()}),
+    onSuccess:data=>setJobId(data.job_id),
+  });
+  useEffect(()=>{
+    if(job.data?.status==="completed"||job.data?.status==="failed"||job.data?.status==="cancelled"){
+      void qc.invalidateQueries({queryKey:["translation-current",reportId]});
+    }
+  },[job.data?.status,qc,reportId]);
+  const translated=current.data?.version;
+  const statusReady=activeReport?.status==="translating";
+  const preservationPassed=current.data?.version.preservation_check_status==="passed";
+  return <><Head route="translate"/>
+    {!reportId&&<Card><State title="No active report" description="Translation is scoped to a report."/></Card>}
+    {reportId&&<><Card>
+      <div className="row"><div><h3>Approved source</h3><div className="muted small">Source version is resolved from the backend pre-translation approval state.</div></div><span className="tag">{review.data?.status??activeReport?.status??"—"}</span></div>
+      {review.isPending?<State title="Loading approved version" description="Reading the authoritative review context."/>:review.isError?<State title="Approved version unavailable" description={review.error instanceof Error?review.error.message:"Complete pre-translation review before translation."} error/>:review.data&&<div className="grid grid-2" style={{marginTop:12}}><div className="list-item"><div className="meta">Source version</div><div className="strong">v{review.data.version_number} · {review.data.language}</div><div className="mono tiny">{review.data.version_id}</div></div><div className="field"><label>Target language</label><input className="input" value={lang} onChange={e=>setLang(e.target.value)} placeholder="e.g. fa, en-US, de"/></div></div>}
+      {!statusReady&&<div className="notice" style={{marginTop:12}}>Backend gate: report status is <b>{activeReport?.status??"unknown"}</b>. Translation can only be enqueued while the report is in <b>translating</b>.</div>}
+      <button className="btn primary" style={{marginTop:12}} disabled={!sourceVersionId||!lang.trim()||!statusReady||m.isPending||Boolean(jobId&&(job.data?.status==="queued"||job.data?.status==="processing"))} onClick={()=>m.mutate()}>{m.isPending||job.data?.status==="queued"||job.data?.status==="processing"?"Translating…":"Translate approved version"}</button>
+      {m.isError&&<div className="notice error" style={{marginTop:12}}>{m.error instanceof Error?m.error.message:"Translation request failed."}</div>}
+      {job.data?.status==="failed"&&<div className="notice error" style={{marginTop:12}}>Translation job failed: {job.data.last_error_message??job.data.last_error_code??"unknown error"}.</div>}
+    </Card>
+    {current.isSuccess&&<Card style={{marginTop:16}}>
+      <div className="row"><div><h3>Latest persisted translation</h3><div className="muted small">{current.data.run.source_lang} → {current.data.run.target_lang} · {current.data.run.provider}</div></div><span className={"tag "+(preservationPassed?"success":"")}>{current.data.version.preservation_check_status}</span></div>
+      <div className="field" style={{marginTop:12}}><label>Translated content</label><textarea className="input textarea" value={translated.content} readOnly style={{minHeight:320}}/></div>
+    </Card>}
+    {current.isError&&current.error instanceof Error&&/404|not found/i.test(current.error.message)&&<Card style={{marginTop:16}}><State title="No completed translation" description="The latest successful translation will appear here after the worker finishes."/></Card>}
+    </>}
+  </>;
 }
 
 function Collaboration(){
