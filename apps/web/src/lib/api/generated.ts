@@ -144,3 +144,6 @@ export type KnowledgeGraphBuildResponse={status:string;job_id:UUID|null;graph:Kn
 export type ResearchMemory={id:UUID;project_id:UUID;memory_type:string;status:string;canonical_entity_type:string|null;canonical_entity_id:UUID|null;summary:string;importance:number;confidence:number;reuse_count:number;created_at:DateTime};
 export type ResearchMemoryList={items:ResearchMemory[];total:number};
 export type PostTranslationHumanizationResponse={job_id:UUID|null;status:string};
+
+export type OrchestrationStrategy={key:string;description:string};
+export type OrchestrationStrategyListResponse={items:OrchestrationStrategy[]};
