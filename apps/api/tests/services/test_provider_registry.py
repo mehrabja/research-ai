@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from app.services.provider_registry import (
     EmbeddingProviderFallback,
-    ProviderRegistry,
     ProviderDefinition,
+    ProviderRegistry,
 )
 
 
