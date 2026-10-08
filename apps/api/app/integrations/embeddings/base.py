@@ -19,6 +19,10 @@ class EmbeddingProviderUnavailableError(EmbeddingProviderError):
     """Provider returned 5xx / network error (retryable)."""
 
 
+class EmbeddingTimeoutError(EmbeddingProviderError):
+    """Provider request timed out (retryable)."""
+
+
 class EmbeddingAuthenticationError(EmbeddingProviderError):
     """Invalid API key / forbidden (non-retryable)."""
 
