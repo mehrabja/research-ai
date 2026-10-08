@@ -31,6 +31,7 @@ class Plan:
 _GOAL_PRESETS: dict[str, list[str]] = {
     "research_pipeline": [
         "build_plan",
+        "manuscript_generate",
         "technical_intelligence",
         "manuscript_prose_generate",
         "generate_citations",
@@ -40,6 +41,7 @@ _GOAL_PRESETS: dict[str, list[str]] = {
     ],
     "complete_pre_submission": [
         "build_plan",
+        "manuscript_generate",
         "technical_intelligence",
         "generate_citations",
         "academic_qa",
