@@ -738,6 +738,7 @@ function Knowledge(){
   </>;
 }
 
+// File/folder controls are kept in a separate component to isolate mutations.
 function FolderTools({projectId,folders,onChanged}:{projectId:string|undefined;folders:FileFolder[];onChanged:()=>void}){
   const [name,setName]=useState("");const [error,setError]=useState("");const [busyId,setBusyId]=useState("");
   const create=useMutation({mutationFn:()=>api.createFolder(projectId!,{name}),onSuccess:()=>{setName("");setError("");onChanged();},onError:e=>setError(e instanceof Error?e.message:"Folder creation failed.")});
