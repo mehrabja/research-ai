@@ -138,8 +138,6 @@ export const routes={
   qaFindings:(reportId:string)=>"reports/"+segment(reportId)+"/academic-qa/findings",
   qaValidate:(reportId:string)=>"reports/"+segment(reportId)+"/academic-qa/validate",
 
-  detection:(reportId:string,versionId:string)=>"reports/"+segment(reportId)+"/versions/"+segment(versionId)+"/detection",
-  detectionGenerate:(reportId:string,versionId:string)=>"reports/"+segment(reportId)+"/versions/"+segment(versionId)+"/detect",
   classification:(projectId:string)=>"projects/"+segment(projectId)+"/classification",
   classificationRecompute:(projectId:string)=>"projects/"+segment(projectId)+"/classification/recompute",
   classificationEvidence:(projectId:string)=>"projects/"+segment(projectId)+"/classification/evidence",
