@@ -271,91 +271,141 @@ class ProviderRegistry:
 
 def _build_generation(config: GenerationProfile | None) -> Any:
     from app.integrations.generation.openai import OpenAIGenerationProvider
+
     profile = config or __import__(
         "app.services.generation_profile",
         fromlist=["get_current_generation_profile"],
     ).get_current_generation_profile()
     s = get_settings()
-    if profile.provider != "openai":
-        raise ProviderNotConfiguredError(
-            f"generation provider {profile.provider!r} is not registered"
+    if profile.provider == "openrouter":
+        return OpenAIGenerationProvider(
+            model=profile.model,
+            base_url=s.openrouter_base_url,
+            api_key=s.openrouter_api_key,
+            provider_name="openrouter",
+            timeout_seconds=s.generation_timeout_seconds,
+            max_retries=s.generation_max_retries,
+            retry_base_seconds=s.generation_retry_base_seconds,
+            retry_max_seconds=s.generation_retry_max_seconds,
+            retry_jitter_fraction=s.generation_retry_jitter_fraction,
         )
-    return OpenAIGenerationProvider(
-        model=profile.model,
-        base_url=s.generation_openai_base_url or None,
-        api_key=s.generation_openai_api_key or None,
-        timeout_seconds=s.generation_timeout_seconds,
-        max_retries=s.generation_max_retries,
-        retry_base_seconds=s.generation_retry_base_seconds,
-        retry_max_seconds=s.generation_retry_max_seconds,
-        retry_jitter_fraction=s.generation_retry_jitter_fraction,
+    if profile.provider == "openai":
+        return OpenAIGenerationProvider(
+            model=profile.model,
+            base_url=s.generation_openai_base_url or None,
+            api_key=s.generation_openai_api_key or None,
+            provider_name="openai",
+            timeout_seconds=s.generation_timeout_seconds,
+            max_retries=s.generation_max_retries,
+            retry_base_seconds=s.generation_retry_base_seconds,
+            retry_max_seconds=s.generation_retry_max_seconds,
+            retry_jitter_fraction=s.generation_retry_jitter_fraction,
+        )
+    raise ProviderNotConfiguredError(
+        f"generation provider {profile.provider!r} is not registered"
     )
 
 
 def _build_embedding(config: EmbeddingProfile | None) -> Any:
     from app.integrations.embeddings.openai import OpenAIEmbeddingProvider
+
     profile = config or __import__(
         "app.services.embedding_profile",
         fromlist=["get_current_embedding_profile"],
     ).get_current_embedding_profile()
-    if profile.provider != "openai":
-        raise ProviderNotConfiguredError(
-            f"embedding provider {profile.provider!r} is not registered"
+    s = get_settings()
+    if profile.provider == "openrouter":
+        return OpenAIEmbeddingProvider(
+            profile=profile,
+            api_key=s.openrouter_api_key,
+            base_url=s.openrouter_base_url,
+            provider_name="openrouter",
         )
-    return OpenAIEmbeddingProvider(profile=profile)
+    if profile.provider == "openai":
+        return OpenAIEmbeddingProvider(
+            profile=profile,
+            api_key=s.embedding_openai_api_key or None,
+            base_url=s.embedding_openai_base_url or None,
+            provider_name="openai",
+        )
+    raise ProviderNotConfiguredError(
+        f"embedding provider {profile.provider!r} is not registered"
+    )
 
 
 def _build_translation(config: TranslationProfile | None) -> Any:
     from app.integrations.generation.openai import OpenAIGenerationProvider
     from app.integrations.translation.openai import OpenAITranslationProvider
+
     profile = config or __import__(
         "app.services.translation_profile",
         fromlist=["get_current_translation_profile"],
     ).get_current_translation_profile()
     s = get_settings()
-    if profile.provider != "openai":
-        raise ProviderNotConfiguredError(
-            f"translation provider {profile.provider!r} is not registered"
+    if profile.provider == "openrouter":
+        generation = OpenAIGenerationProvider(
+            model=profile.model,
+            base_url=s.openrouter_base_url,
+            api_key=s.openrouter_api_key,
+            provider_name="openrouter",
+            timeout_seconds=profile.timeout_seconds,
+            max_retries=profile.max_retries,
+            retry_base_seconds=profile.retry_base_seconds,
+            retry_max_seconds=profile.retry_max_seconds,
+            retry_jitter_fraction=profile.retry_jitter_fraction,
         )
-    generation = OpenAIGenerationProvider(
-        model=profile.model,
-        base_url=s.generation_openai_base_url or None,
-        api_key=s.generation_openai_api_key or None,
-        timeout_seconds=profile.timeout_seconds,
-        max_retries=profile.max_retries,
-        retry_base_seconds=profile.retry_base_seconds,
-        retry_max_seconds=profile.retry_max_seconds,
-        retry_jitter_fraction=profile.retry_jitter_fraction,
-    )
-    return OpenAITranslationProvider(
-        generation_provider=generation,
-        model_name=profile.model,
+        return OpenAITranslationProvider(
+            generation_provider=generation,
+            model_name=profile.model,
+            provider_name="openrouter",
+        )
+    if profile.provider == "openai":
+        generation = OpenAIGenerationProvider(
+            model=profile.model,
+            base_url=s.generation_openai_base_url or None,
+            api_key=s.generation_openai_api_key or None,
+            provider_name="openai",
+            timeout_seconds=profile.timeout_seconds,
+            max_retries=profile.max_retries,
+            retry_base_seconds=profile.retry_base_seconds,
+            retry_max_seconds=profile.retry_max_seconds,
+            retry_jitter_fraction=profile.retry_jitter_fraction,
+        )
+        return OpenAITranslationProvider(
+            generation_provider=generation,
+            model_name=profile.model,
+            provider_name="openai",
+        )
+    raise ProviderNotConfiguredError(
+        f"translation provider {profile.provider!r} is not registered"
     )
 
 
 def build_provider_registry() -> ProviderRegistry:
     registry = ProviderRegistry()
-    registry.register(
-        ProviderDefinition(
-            name="openai",
-            capability="generation",
-            factory=_build_generation,
+    for capability in ("generation", "embedding", "translation"):
+        registry.register(
+            ProviderDefinition(
+                name="openrouter",
+                capability=capability,
+                factory={
+                    "generation": _build_generation,
+                    "embedding": _build_embedding,
+                    "translation": _build_translation,
+                }[capability],
+            )
         )
-    )
-    registry.register(
-        ProviderDefinition(
-            name="openai",
-            capability="embedding",
-            factory=_build_embedding,
+        registry.register(
+            ProviderDefinition(
+                name="openai",
+                capability=capability,
+                factory={
+                    "generation": _build_generation,
+                    "embedding": _build_embedding,
+                    "translation": _build_translation,
+                }[capability],
+            )
         )
-    )
-    registry.register(
-        ProviderDefinition(
-            name="openai",
-            capability="translation",
-            factory=_build_translation,
-        )
-    )
     return registry
 
 
