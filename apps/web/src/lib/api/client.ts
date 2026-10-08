@@ -311,6 +311,7 @@ export const api={
   translationCurrent:(r:string)=>request<import("./generated").TranslationCurrent>(routes.translationCurrent(r)),
 
   jobs:(w?:string)=>request<Job[]>(routes.jobs(w)),
+  job:(id:string)=>request<Job>(routes.job(id)),
   enqueueJob:(jobType:string,payload:object,reportId?:string)=>request<Job>(routes.jobsEnqueue(),{method:"POST",body:JSON.stringify({job_type:jobType,payload,report_id:reportId})}),
 
   retryJob:(id:string)=>request<Job>(routes.jobsRetry(id),{method:"POST"}),
