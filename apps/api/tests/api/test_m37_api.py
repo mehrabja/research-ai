@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 
 from app.db.models.project import Project, ProjectEvent
+from app.db.models.project_file import ProjectFile, ProjectFileEvent
 from app.db.models.report import Report
 from app.db.session import SessionLocal
 from app.main import app
@@ -26,6 +27,10 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
     with SessionLocal() as db:
         pids = select(Project.id).where(Project.user_id.in_(uids))
         db.execute(delete(ProjectEvent).where(ProjectEvent.project_id.in_(pids)))
+        pfids = select(ProjectFile.id).where(ProjectFile.project_id.in_(pids))
+        db.execute(
+            delete(ProjectFileEvent).where(ProjectFileEvent.project_file_id.in_(pfids))
+        )
         db.execute(delete(Report).where(Report.user_id.in_(uids)))
         db.execute(delete(Project).where(Project.user_id.in_(uids)))
         purge_test_users(db, uids)
