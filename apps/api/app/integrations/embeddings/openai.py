@@ -175,13 +175,20 @@ class OpenAIEmbeddingProvider:
             payload["dimensions"] = self._profile.dimensions
 
         try:
+            headers = {
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json",
+            }
+            settings = get_settings()
+            if self.provider_name == "openrouter":
+                if settings.openrouter_http_referer.strip():
+                    headers["HTTP-Referer"] = settings.openrouter_http_referer.strip()
+                if settings.openrouter_app_title.strip():
+                    headers["X-Title"] = settings.openrouter_app_title.strip()
             response = httpx.post(
                 f"{self._base_url}/embeddings",
                 json=payload,
-                headers={
-                    "Authorization": f"Bearer {self._api_key}",
-                    "Content-Type": "application/json",
-                },
+                headers=headers,
                 timeout=self._timeout,
             )
         except httpx.TimeoutException as exc:
