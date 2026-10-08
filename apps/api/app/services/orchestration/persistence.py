@@ -179,6 +179,7 @@ def run_m35_persisted(
     budget = budget_svc.effective_budget(settings)
 
     context_hash: str | None = None
+    run: ResearchOrchestrationRun | None = None
     try:
         _lock_report(db, report_id=report_id)
 
@@ -238,7 +239,19 @@ def run_m35_persisted(
         run.status = RunStatus.EXECUTING.value
         db.flush()
 
-        _execute_all(db, run=run, nodes=nodes)
+        if commit:
+            # Make the run and its pending nodes visible before the first
+            # provider call. This allows pause/cancel/approval controls to
+            # operate against a durable run while work is executing.
+            db.commit()
+            db.refresh(run)
+
+        _execute_all(
+            db,
+            run=run,
+            nodes=nodes,
+            checkpoint_commit=commit,
+        )
 
         if run.status != RunStatus.EXECUTING.value:
             if commit:
@@ -263,6 +276,26 @@ def run_m35_persisted(
 
     except Exception as exc:
         logger.exception("orchestration_persist_failed")
+        if commit and run is not None and run.id:
+            try:
+                with SessionLocal() as s:
+                    persisted_run = s.get(
+                        ResearchOrchestrationRun, run.id,
+                    )
+                    if persisted_run is not None and not (
+                        persisted_run.status
+                        in (
+                            RunStatus.CANCELLED.value,
+                            RunStatus.COMPLETED.value,
+                            RunStatus.FAILED.value,
+                        )
+                    ):
+                        persisted_run.status = RunStatus.FAILED.value
+                        persisted_run.error_message = str(exc)[:500]
+                        persisted_run.failed_at = datetime.now(UTC)
+                        s.commit()
+            except Exception:
+                logger.exception("m35_existing_failure_persist_failed")
         if commit:
             try:
                 db.rollback()
@@ -282,11 +315,25 @@ def run_m35_persisted(
         raise
 
 
+def _checkpoint(
+    db: Session,
+    *,
+    run: ResearchOrchestrationRun,
+    commit: bool,
+) -> None:
+    if commit:
+        db.commit()
+        db.refresh(run)
+    else:
+        db.flush()
+
+
 def _execute_all(
     db: Session,
     *,
     run: ResearchOrchestrationRun,
     nodes: list[ResearchOrchestrationNode],
+    checkpoint_commit: bool = False,
 ) -> None:
     completed: set[str] = {
         n.node_key for n in nodes
@@ -303,19 +350,44 @@ def _execute_all(
         db.refresh(run)
         if run.status != RunStatus.EXECUTING.value:
             return
+
         guard += 1
         if guard > max_guard:
             raise OrchestrationInvalid(
                 "orchestration scheduler did not make progress"
             )
+
         eligible = graph_svc.successors_of(
-            all_nodes=ordered, completed=completed,
+            all_nodes=ordered,
+            completed=completed,
         )
         if not eligible:
-            break
+            raise OrchestrationInvalid(
+                "orchestration has no eligible node"
+            )
+
         key = eligible[0]
         node = node_by_key[key]
-        _execute_one(db, run=run, node=node)
+
+        try:
+            _execute_one(db, run=run, node=node)
+        except OrchestrationBudgetExceeded as exc:
+            validate_run_transition(
+                run.status, RunStatus.BLOCKED.value,
+            )
+            run.status = RunStatus.BLOCKED.value
+            run.current_node_key = key
+            run.error_message = str(exc)[:500]
+            run.checkpoint_state = {
+                "completed": sorted(completed),
+                "blocked": key,
+            }
+            run.last_checkpoint_at = datetime.now(UTC)
+            _checkpoint(
+                db, run=run, commit=checkpoint_commit,
+            )
+            return
+
         if node.status == NodeStatus.AWAITING_APPROVAL.value:
             validate_run_transition(
                 run.status, RunStatus.AWAITING_APPROVAL.value,
@@ -331,8 +403,11 @@ def _execute_all(
                 "awaiting_approval": key,
             }
             run.last_checkpoint_at = datetime.now(UTC)
-            db.flush()
+            _checkpoint(
+                db, run=run, commit=checkpoint_commit,
+            )
             return
+
         if node.status == NodeStatus.COMPLETED.value:
             if key not in completed:
                 completed.add(key)
@@ -344,20 +419,38 @@ def _execute_all(
                 "error_class": node.error_class,
                 "error_message": node.error_message,
             }]
-            raise OrchestrationBudgetExceeded(
-                f"node failed: {node.node_key}"
+            validate_run_transition(
+                run.status, RunStatus.FAILED.value,
             )
-        else:
-            raise OrchestrationInvalid(
-                f"unexpected node status: {node.status}"
+            run.status = RunStatus.FAILED.value
+            run.failed_at = datetime.now(UTC)
+            run.current_node_key = key
+            run.checkpoint_state = {
+                "completed": sorted(completed),
+                "failed": key,
+            }
+            _checkpoint(
+                db, run=run, commit=checkpoint_commit,
             )
+            return
+
+        # A control route may have paused/cancelled the durable run while
+        # the provider call was in flight. Persist this node, but never
+        # overwrite the externally requested terminal/control state.
+        db.refresh(run)
         run.current_node_key = key
         run.checkpoint_state = {
             "completed": sorted(completed),
             "current": key,
         }
         run.last_checkpoint_at = datetime.now(UTC)
-        db.flush()
+        _checkpoint(
+            db, run=run, commit=checkpoint_commit,
+        )
+
+        if run.status != RunStatus.EXECUTING.value:
+            return
+
 
 
 def _execute_one(
