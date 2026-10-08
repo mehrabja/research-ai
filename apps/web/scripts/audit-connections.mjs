@@ -21,7 +21,7 @@ const walk = (dir) => {
       if (relative !== "src/lib/api/client.ts" && /\bfetch\s*\(/.test(source)) {
         failures.push(`${relative}: direct fetch() outside the central API client`);
       }
-      if (/https?:\/\/localhost:\\d+|https?:\/\/127\.0\.0\.1:\\d+/.test(source)) {
+      if (/https?:\/\/localhost:\d+|https?:\/\/127\.0\.0\.1:\d+/.test(source)) {
         failures.push(`${relative}: hard-coded local backend URL`);
       }
     }
