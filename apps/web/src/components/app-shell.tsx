@@ -22,6 +22,8 @@ const nav=[
   ["/files","□","Files & intelligence"],
   ["/technical-intelligence","⌬","Technical intelligence"],
   ["/section-research","◍","Section research"],
+  ["/publication","▣","Publication"],
+  ["/orchestration","⚙","Orchestration"],
   ["/plan","☷","Research plan"],
   ["/manuscript","▥","Manuscript"],
   ["/generate","✧","AI Studio"],
