@@ -42,3 +42,16 @@ describe("phase 2B quality workflow routes",()=>{
     expect(routes.classificationExplanation("p 1")).toBe("projects/p%201/classification/explanation");
   });
 });
+
+describe("phase 2C intelligence workflow routes",()=>{
+  it("builds technical intelligence routes",()=>{
+    expect(routes.technicalIntelligenceGenerate("p 1")).toBe("projects/p%201/technical-intelligence/generate");
+    expect(routes.technicalIntelligenceValidate("p 1")).toBe("projects/p%201/technical-intelligence/validate");
+    expect(routes.technicalIntelligenceMetrics("p 1")).toBe("projects/p%201/technical-intelligence/metrics");
+  });
+  it("builds section research routes",()=>{
+    expect(routes.sectionResearchGenerate("r 1","s/1")).toBe("reports/r%201/manuscript/sections/s%2F1/research");
+    expect(routes.sectionResearchRuns("r 1","s/1")).toBe("reports/r%201/manuscript/sections/s%2F1/research/runs");
+    expect(routes.sectionResearchValidate("r 1","s/1")).toBe("reports/r%201/manuscript/sections/s%2F1/research/validate");
+  });
+});
