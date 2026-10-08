@@ -41,7 +41,7 @@ export default function Projects(){
       research_questions:splitLines(questions),
     }),
     onSuccess:async project=>{
-      await qc.invalidateQueries({queryKey:["projects",workspaceId]});
+      void qc.invalidateQueries({queryKey:["projects",workspaceId]});
       setName("");
       setDomain("");
       setObjective("");
