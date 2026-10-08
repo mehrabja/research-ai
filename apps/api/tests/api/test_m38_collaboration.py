@@ -335,8 +335,8 @@ def test_project_and_report_workspace_isolation() -> None:
             headers=_auth(owner_token),
         )
         assert r.status_code == 200, r.text
-        assert r.json()["total"] == 1
-        assert r.json()["items"][0]["id"] == str(project_one)
+        assert r.json()["total"] == 0
+        assert r.json()["items"] == []
 
         report_one = _report(
             owner_token,
@@ -434,8 +434,12 @@ def test_project_and_report_workspace_isolation() -> None:
 def test_orphan_report_is_restricted_to_default_workspace() -> None:
     uids: list[uuid.UUID] = []
     try:
-        _owner, owner_token, _ = _reg(uids, "m38-orphan-owner")
-        default_workspace = _workspace(owner_token)
+        owner_id, owner_token, _ = _reg(uids, "m38-orphan-owner")
+        with SessionLocal() as db:
+            from app.services.workspaces import get_default_workspace_for_user
+            ws = get_default_workspace_for_user(db, user_id=owner_id)
+            assert ws is not None
+            default_workspace = ws.id
         other_workspace = _workspace(owner_token)
 
         r = client.post(
