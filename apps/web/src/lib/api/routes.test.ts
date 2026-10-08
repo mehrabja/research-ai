@@ -14,3 +14,17 @@ test("centralized routes preserve backend API paths",()=>{
   expect(routes.fileContent("f/1")).toBe("files/f%2F1/content");
 });
 
+
+
+describe("phase 2 report workflow routes",()=>{
+  it("builds approved-review and report-version routes",()=>{
+    expect(routes.preTranslationReview("r 1")).toBe("reports/r%201/review/pre-translation");
+    expect(routes.reportVersion("r 1","v/2")).toBe("reports/r%201/versions/v%2F2");
+  });
+  it("builds detection, humanization and translation result routes",()=>{
+    expect(routes.detection("r","v")).toBe("reports/r/versions/v/detection");
+    expect(routes.detectionGenerate("r","v")).toBe("reports/r/versions/v/detect");
+    expect(routes.humanizationCurrent("r")).toBe("reports/r/humanization/current");
+    expect(routes.translationCurrent("r")).toBe("reports/r/translation/current");
+  });
+});
