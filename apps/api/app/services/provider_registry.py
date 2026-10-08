@@ -229,6 +229,11 @@ class ProviderRegistry:
         configured = self.configured_chain(capability)
         if requested and requested.strip():
             preferred = requested.strip().lower()
+            if preferred not in configured:
+                raise ProviderNotConfiguredError(
+                    f"requested provider {preferred!r} is not enabled "
+                    f"for {capability!r}; configured={configured!r}"
+                )
             ordered_names = (
                 preferred,
                 *tuple(name for name in configured if name != preferred),
@@ -259,7 +264,20 @@ class ProviderRegistry:
         config: Any = None,
     ) -> Any:
         definitions = self.candidates(capability, requested=requested)
-        providers = tuple(d.factory(config) for d in definitions)
+        providers_list: list[Any] = []
+        unavailable: list[str] = []
+        for definition in definitions:
+            try:
+                providers_list.append(definition.factory(config))
+            except ProviderNotConfiguredError:
+                unavailable.append(definition.name)
+                continue
+        if not providers_list:
+            raise ProviderNotConfiguredError(
+                f"no configured provider implementation for {capability!r}; "
+                f"candidates={tuple(d.name for d in definitions)!r}"
+            )
+        providers = tuple(providers_list)
         if len(providers) == 1:
             return providers[0]
         router_types = {
@@ -299,6 +317,8 @@ def _build_generation(provider_name: str, config: GenerationProfile | None) -> A
             retry_jitter_fraction=s.generation_retry_jitter_fraction,
         )
     if provider_name == "openai":
+        if not s.generation_openai_api_key.strip():
+            raise ProviderNotConfiguredError("GENERATION_OPENAI_API_KEY is not configured")
         return OpenAIGenerationProvider(
             model=_normalize_openai_compatible_model(profile.model),
             base_url=s.generation_openai_base_url or None,
@@ -324,6 +344,8 @@ def _build_embedding(provider_name: str, config: EmbeddingProfile | None) -> Any
     ).get_current_embedding_profile()
     s = get_settings()
     if provider_name == "openrouter":
+        if not s.openrouter_api_key.strip():
+            raise ProviderNotConfiguredError("OPENROUTER_API_KEY is not configured")
         return OpenAIEmbeddingProvider(
             profile=profile,
             api_key=s.openrouter_api_key,
@@ -331,6 +353,8 @@ def _build_embedding(provider_name: str, config: EmbeddingProfile | None) -> Any
             provider_name="openrouter",
         )
     if provider_name == "openai":
+        if not s.embedding_openai_api_key.strip():
+            raise ProviderNotConfiguredError("EMBEDDING_OPENAI_API_KEY is not configured")
         return OpenAIEmbeddingProvider(
             profile=profile,
             api_key=s.embedding_openai_api_key or None,
@@ -369,6 +393,8 @@ def _build_translation(provider_name: str, config: TranslationProfile | None) ->
             provider_name="openrouter",
         )
     if provider_name == "openai":
+        if not s.generation_openai_api_key.strip():
+            raise ProviderNotConfiguredError("GENERATION_OPENAI_API_KEY is not configured")
         generation = OpenAIGenerationProvider(
             model=_normalize_openai_compatible_model(profile.model),
             base_url=s.generation_openai_base_url or None,
