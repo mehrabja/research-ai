@@ -949,6 +949,21 @@ class Settings(BaseSettings):
             )
         return self
 
+    @staticmethod
+    def _is_placeholder_secret(value: str) -> bool:
+        normalized = value.strip().lower()
+        return normalized in {
+            "",
+            "change_me",
+            "change-me",
+            "changeme",
+            "replace_me",
+            "replace-me",
+            "placeholder",
+            "your-secret-here",
+            "your-api-key-here",
+        }
+
     @model_validator(mode="after")
     def _validate_m36_security(self) -> Settings:
         """Fail-closed guards that only apply to production."""
