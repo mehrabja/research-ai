@@ -1,4 +1,4 @@
-import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,DetectionResult,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,Job,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,ManuscriptVersion,Member,NotificationPreference,Session,Plan,PreTranslationReview,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
+import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,DetectionResult,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,Job,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,ManuscriptVersion,Member,NotificationPreference,Session,Plan,PreTranslationReview,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace,CitationCurrent,CitationGenerateResponse,CitationValidation,CitationRunList,Bibliography,AcademicQACurrent,AcademicQAGenerateResponse,AcademicQAValidation,AcademicQARunList,AcademicQAFindingList,Classification,ClassificationEvidenceList,ClassificationHistory,ClassificationExplanation} from "./generated";
 import {routes} from "./routes";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
@@ -352,6 +352,20 @@ export const api={
   billingCancel:(w:string)=>request<Subscription>(routes.billingCancel(w),{method:"POST"}),
   billingResume:(w:string)=>request<Subscription>(routes.billingResume(w),{method:"POST"}),
 
-  citations:(r:string)=>request<Citation>(routes.citationsCurrent(r)),
-  qa:(r:string)=>request<QA>(routes.qaCurrent(r)),
+  citations:(r:string)=>request<CitationCurrent>(routes.citationsCurrent(r)),
+  citationsGenerate:(r:string,b:{manuscript_version_id:string;citation_style:"numeric"|"author_year";force?:boolean;async?:boolean})=>request<CitationGenerateResponse>(routes.citationsGenerate(r),{method:"POST",body:JSON.stringify({...b,async:b.async??true})}),
+  citationsHistory:(r:string)=>request<CitationRunList>(routes.citationsHistory(r)),
+  citationsBibliography:(r:string,style:"numeric"|"author_year")=>request<Bibliography>(routes.citationsBibliography(r)+"?citation_style="+encodeURIComponent(style)),
+  citationsValidate:(r:string)=>request<CitationValidation>(routes.citationsValidate(r)),
+  qa:(r:string)=>request<AcademicQACurrent>(routes.qaCurrent(r)),
+  qaGenerate:(r:string,b:{manuscript_version_id:string;force?:boolean;async?:boolean})=>request<AcademicQAGenerateResponse>(routes.qaGenerate(r),{method:"POST",body:JSON.stringify({...b,async:b.async??true})}),
+  qaRuns:(r:string)=>request<AcademicQARunList>(routes.qaRuns(r)),
+  qaFindings:(r:string,b?:{category?:string;severity?:string})=>{const q=new URLSearchParams();if(b?.category)q.set("category",b.category);if(b?.severity)q.set("severity",b.severity);const suffix=q.toString()?("?"+q.toString()):"";return request<AcademicQAFindingList>(routes.qaFindings(r)+suffix);},
+  qaValidate:(r:string)=>request<AcademicQAValidation>(routes.qaValidate(r)),
+  classification:(p:string)=>request<Classification>(routes.classification(p)),
+  classificationRecompute:(p:string)=>request<Classification>(routes.classificationRecompute(p),{method:"POST"}),
+  classificationEvidence:(p:string)=>request<ClassificationEvidenceList>(routes.classificationEvidence(p)),
+  classificationHistory:(p:string)=>request<ClassificationHistory>(routes.classificationHistory(p)),
+  classificationExplanation:(p:string)=>request<ClassificationExplanation>(routes.classificationExplanation(p)),
+  classificationOverride:(p:string,b:{domain_code?:string|null;paper_type_code?:string|null;research_design_code?:string|null})=>request<Classification>(routes.classification(p),{method:"PATCH",body:JSON.stringify(b)}),
 };
