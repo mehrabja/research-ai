@@ -146,6 +146,7 @@ class EmbeddingProviderFallback:
         from app.integrations.embeddings.base import (
             EmbeddingProviderUnavailableError,
             EmbeddingRateLimitError,
+            EmbeddingTimeoutError,
         )
         last: Exception | None = None
         for provider in self._providers:
@@ -157,6 +158,7 @@ class EmbeddingProviderFallback:
                 return vector
             except (
                 EmbeddingRateLimitError,
+                EmbeddingTimeoutError,
                 EmbeddingProviderUnavailableError,
             ) as exc:
                 last = exc
