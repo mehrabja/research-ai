@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from functools import partial
 import logging
 import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from functools import partial
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
