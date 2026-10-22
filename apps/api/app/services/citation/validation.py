@@ -127,9 +127,9 @@ def validate_citation_run(
                 for evidence in matching_evidence
             )
         ):
-                errors.append(
-                    f"claim_citation_source_mismatch:{citation.id}"
-                )
+            errors.append(
+                f"claim_citation_source_mismatch:{citation.id}"
+            )
 
     if run.unsupported_count > 0:
         warnings.append(
