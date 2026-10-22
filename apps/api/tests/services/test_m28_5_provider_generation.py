@@ -18,7 +18,9 @@ class _FakeProvider:
         return GenerationProviderResult(
             text=(
                 '{"paragraphs":[{"paragraph":0,"sentences":[{"index":0,'
-                f'"text":"Evidence-backed wording.","evidence_refs":["{self.evidence_id}"]}]}]}'
+                '"text":"Evidence-backed wording.","evidence_refs":["'
+                + self.evidence_id
+                + '"]}]}]}'
             ),
             provider=self.provider_name,
             model=self.model_name,
