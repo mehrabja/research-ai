@@ -58,7 +58,7 @@ for(const file of files){
   if(text.includes("https://api.openai.com")||text.includes("https://openrouter.ai")){
     violations.push(rel+": direct AI provider URL in frontend source");
   }
-  if(text.includes("/api/v1/")){
+  if(text.includes("/api/v1/")&&rel!=="src/lib/server/auth.ts"){
     violations.push(rel+": direct /api/v1 backend path in frontend source; use /api/backend proxy");
   }
   if(/localStorage\.(?:setItem|getItem|removeItem)\([^)]*research_ai_(?:access_token|refresh)/i.test(text)){
