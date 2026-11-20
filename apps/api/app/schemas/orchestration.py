@@ -32,14 +32,19 @@ _OUTPUT_PREVIEW_SENSITIVE_KEYS = frozenset(
 
 
 def _preview_key_is_sensitive(key: str) -> bool:
+    is_internal = key.startswith("_")
     normalized = re.sub(r"[^a-z0-9_]+", "_", key.casefold()).strip("_")
     return (
-        normalized.startswith("_")
+        is_internal
         or normalized in _OUTPUT_PREVIEW_SENSITIVE_KEYS
+        or normalized == "token"
+        or normalized.endswith("_token")
+        or normalized.startswith("token_")
         or any(
             marker in normalized
             for marker in (
                 "api_key",
+                "apikey",
                 "access_token",
                 "refresh_token",
                 "password",
