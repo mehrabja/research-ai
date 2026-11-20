@@ -8,10 +8,10 @@ from app.integrations.sources.base import (
     SourceProviderUnavailableError,
     SourceSearchProvider,
 )
+from app.integrations.sources.pubmed import PubMedProvider
 from app.integrations.sources.semantic_scholar import (
     SemanticScholarProvider,
 )
-from app.integrations.sources.pubmed import PubMedProvider
 
 __all__ = [
     "PubMedProvider",

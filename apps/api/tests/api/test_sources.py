@@ -9,13 +9,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 
 from app.api.routes.sources import _default_provider
-from app.integrations.sources import PubMedProvider
 from app.db.models.report import Report, ReportEvent
 from app.db.models.source import Chunk, Source
 from app.db.models.user import User
 from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
 from app.domain.source import SourceCandidate
+from app.integrations.sources import PubMedProvider
 from app.main import app
 from app.services.rate_limit import set_login_rate_limiter
 
