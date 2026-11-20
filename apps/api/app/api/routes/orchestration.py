@@ -28,6 +28,7 @@ from app.domain.orchestration import (
 )
 from app.schemas.orchestration import (
     OrchestrationApprovalResponse,
+    build_orchestration_output_preview,
     OrchestrationCancelResponse,
     OrchestrationNodeListResponse,
     OrchestrationNodeRead,
@@ -54,6 +55,18 @@ from app.services.orchestration.registry import (
 from app.services.reports import get_report
 
 router = APIRouter(prefix="/reports", tags=["orchestration"])
+
+
+def _read_node(node: ResearchOrchestrationNode) -> OrchestrationNodeRead:
+    """Serialize node metadata plus a bounded output preview, never raw snapshots."""
+    result = OrchestrationNodeRead.model_validate(node)
+    return result.model_copy(
+        update={
+            "output_preview": build_orchestration_output_preview(
+                node.output_snapshot
+            )
+        }
+    )
 
 
 @router.get(
@@ -182,7 +195,7 @@ def get_current_orchestration(
     return OrchestrationRunDetailRead(
         run=OrchestrationRunRead.model_validate(run),
         nodes=[
-            OrchestrationNodeRead.model_validate(n) for n in nodes
+            _read_node(n) for n in nodes
         ],
     )
 
@@ -237,7 +250,7 @@ def get_orchestration_run(
     return OrchestrationRunDetailRead(
         run=OrchestrationRunRead.model_validate(run),
         nodes=[
-            OrchestrationNodeRead.model_validate(n) for n in nodes
+            _read_node(n) for n in nodes
         ],
     )
 
@@ -268,7 +281,7 @@ def list_orchestration_nodes(
     ).scalars().all())
     return OrchestrationNodeListResponse(
         items=[
-            OrchestrationNodeRead.model_validate(n) for n in rows
+            _read_node(n) for n in rows
         ],
         total=total, limit=limit, offset=offset,
     )
