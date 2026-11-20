@@ -346,7 +346,7 @@ def run_roundtable_review(db: Session, context: Any) -> dict[str, Any]:
 
     reviews: list[dict[str, Any]] = []
     synthesis_inputs: list[dict[str, Any]] = []
-    calls = 0
+    initial_provider_calls = int((run.budget_used or {}).get("provider_calls", 0) or 0)
     tokens = 0
     budget_stop: str | None = None
 
@@ -380,7 +380,6 @@ def run_roundtable_review(db: Session, context: Any) -> dict[str, Any]:
                 budget_stop = "provider_or_token_budget_exhausted"
                 break
             result, usage = called
-            calls += 1
             tokens += int(usage["accounted_tokens"] or 0)
             normalized = normalize_reviewer_response(result.text, allowed_refs)
             reviews.append({
@@ -437,7 +436,6 @@ def run_roundtable_review(db: Session, context: Any) -> dict[str, Any]:
                 budget_stop = "provider_or_token_budget_exhausted_before_synthesis"
             else:
                 result, usage = called
-                calls += 1
                 tokens += int(usage["accounted_tokens"] or 0)
                 synthesis = normalize_synthesis_response(result.text, allowed_refs)
                 synthesis.update({
@@ -459,7 +457,16 @@ def run_roundtable_review(db: Session, context: Any) -> dict[str, Any]:
         and synthesis is not None
         and synthesis["format_status"] == "structured"
         and budget_stop is None
-        and all(item["status"] == "completed" for item in reviews)
+        and all(
+            item["status"] == "completed"
+            and item["format_status"] == "structured"
+            for item in reviews
+        )
+    )
+    actual_provider_calls = max(
+        0,
+        int((run.budget_used or {}).get("provider_calls", 0) or 0)
+        - initial_provider_calls,
     )
     model_profile = get_current_generation_profile()
     return {
@@ -479,7 +486,7 @@ def run_roundtable_review(db: Session, context: Any) -> dict[str, Any]:
             "successful_reviewers": len(synthesis_inputs),
         },
         "usage": {
-            "provider_calls": calls,
+            "provider_calls": actual_provider_calls,
             "accounted_tokens": tokens,
             "configured_provider": model_profile.provider,
             "configured_model": model_profile.model,
