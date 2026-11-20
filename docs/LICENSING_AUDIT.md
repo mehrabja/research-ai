@@ -15,7 +15,7 @@ Rationale:
 
 - It is a short, widely used, OSI-approved permissive license.
 - It permits use, modification, distribution, sublicensing, and sale, subject to including the copyright and permission notice.
-- Unlike MIT, MIT does not include an express patent-license grant. The project owner should choose MIT with that distinction understood.
+- MIT does not include an express patent-license grant comparable to the patent provisions in Apache-2.0. The project owner should choose MIT with that distinction understood.
 
 The root LICENSE file and the API package license file are set to MIT on the preparation branch. The API package metadata uses the SPDX expression MIT.
 
@@ -25,7 +25,7 @@ Before merging, confirm that all project-owned code and documentation may be rel
 
 ### PyMuPDF
 
-The base branch declared PyMuPDF 1.28.2 and imported it in the source and uploaded-file PDF extraction paths. PyMuPDF is offered under AGPL-3.0 or a separate commercial license. An Apache-2.0 project should not silently ship an AGPL-linked dependency as though the whole dependency set were permissive.
+The base branch declared PyMuPDF 1.28.2 and imported it in the source and uploaded-file PDF extraction paths. PyMuPDF is offered under AGPL-3.0 or a separate commercial license. A project intended for distribution under a permissive license should not silently ship an AGPL-linked dependency as though the whole dependency set were permissive.
 
 The preparation branch replaces PyMuPDF with **pypdf 7.1.1**, whose published PyPI license expression is BSD-3-Clause. Both PDF extraction paths are updated to use PdfReader. The old PyMuPDF dependency is removed from the API dependency declarations and requirements snapshot.
 
