@@ -69,10 +69,6 @@ def test_uploaded_pdf_extractor_returns_page_count_and_text(monkeypatch) -> None
         def extract_text(self) -> str:
             return "Hello Research AI"
 
-    class FakeMetadata:
-        def get(self, key: str) -> str | None:
-            return {" /Title": "Research", "/Author": "Test"}.get(key)
-
     class FakeReader:
         is_encrypted = False
         pages = [FakePage()]
@@ -106,3 +102,26 @@ def test_uploaded_pdf_extractor_rejects_encrypted_pdf() -> None:
     assert result.supported is True
     assert result.text == ""
     assert result.error == "encrypted_pdf"
+
+
+def test_uploaded_pdf_extractor_rejects_corrupt_pdf() -> None:
+    result = extract_bytes(
+        content=b"%PDF-1.4\nnot a valid PDF body",
+        kind=FileKind.PDF,
+        mime="application/pdf",
+    )
+
+    assert result.supported is True
+    assert result.text == ""
+    assert result.error == "pdf_parse_failed"
+
+
+def test_source_pdf_extractor_rejects_corrupt_pdf() -> None:
+    try:
+        PdfExtractor().extract(
+            content=b"%PDF-1.4\nnot a valid PDF body",
+            content_type="application/pdf",
+        )
+    except ParseFetcherError:
+        return
+    raise AssertionError("corrupt PDFs must be rejected")
