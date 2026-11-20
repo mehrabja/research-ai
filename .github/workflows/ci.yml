@@ -4,6 +4,10 @@ on:
     branches: ["**"]
   pull_request:
     branches: ["**"]
+
+permissions:
+  contents: read
+
 jobs:
   quality:
     name: Backend
@@ -44,6 +48,7 @@ jobs:
       - run: python -c "from app.main import app; print('OK app')"
       - run: python scripts/smoke_test.py
       - run: pytest tests -q
+
   web:
     name: Frontend
     runs-on: ubuntu-latest
@@ -61,9 +66,10 @@ jobs:
 
   e2e:
     name: E2E
+    runs-on: ubuntu-latest
     services:
       postgres:
-        image: pgvector/pg16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -75,7 +81,6 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20
-    runs-on: ubuntu-latest
     env:
       APP_ENV: test
       DATABASE_URL: postgresql+psycopg://postgres:postgres@127.0.0.1:5432/research_ai_test
