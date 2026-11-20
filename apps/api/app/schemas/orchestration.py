@@ -77,13 +77,13 @@ def _preview_value(value: Any, *, depth: int, budget: list[int]) -> Any:
             )
         return result
     if isinstance(value, (list, tuple)):
-        result = [
+        preview_items = [
             _preview_value(item, depth=depth + 1, budget=budget)
             for item in value[:_OUTPUT_PREVIEW_MAX_ITEMS]
         ]
         if len(value) > _OUTPUT_PREVIEW_MAX_ITEMS:
-            result.append("[additional items omitted]")
-        return result
+            preview_items.append("[additional items omitted]")
+        return preview_items
     return f"[unsupported value: {type(value).__name__}]"
 
 
