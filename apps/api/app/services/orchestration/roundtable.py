@@ -56,12 +56,16 @@ def parse_model_json(raw: str) -> dict[str, Any] | None:
         text = "\n".join(lines).strip()
     decoder = json.JSONDecoder()
     for index, char in enumerate(text):
-        if char != "{":
+        if char not in "{[":
             continue
         try:
             value, _ = decoder.raw_decode(text[index:])
         except json.JSONDecodeError:
             continue
+        # If the first valid JSON value is an array, do not mine an object
+        # nested inside that array and misclassify it as a top-level object.
+        if isinstance(value, list):
+            return None
         if isinstance(value, dict):
             return value
     return None
