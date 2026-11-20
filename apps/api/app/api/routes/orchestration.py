@@ -28,7 +28,6 @@ from app.domain.orchestration import (
 )
 from app.schemas.orchestration import (
     OrchestrationApprovalResponse,
-    build_orchestration_output_preview,
     OrchestrationCancelResponse,
     OrchestrationNodeListResponse,
     OrchestrationNodeRead,
@@ -44,6 +43,7 @@ from app.schemas.orchestration import (
     OrchestrationToolListResponse,
     OrchestrationToolRead,
     OrchestrationValidationRead,
+    build_orchestration_output_preview,
 )
 from app.services.orchestration import jobs as orch_jobs
 from app.services.orchestration import persistence as orch_persist
