@@ -64,6 +64,8 @@ For the frontend, create and commit package-lock.json, then run npm audit and a 
 
 A recursive tree review of the base branch found no obvious standalone datasets, PDF samples, notebooks, image files, videos, fonts, archives, or database dumps based on tracked paths and file extensions. The source tree did contain code, migrations, tests, environment templates, and documentation.
 
+The backend includes a Semantic Scholar integration and source/document ingestion paths. Those integrations do not mean that external papers or datasets are licensed for redistribution. Provider API terms, rate limits, attribution requirements, and the copyright/licensing terms of material fetched or uploaded at runtime must be reviewed separately. Do not bundle downloaded papers, datasets, or user-provided documents in the public repository unless their licenses or explicit permissions allow redistribution.
+
 This is not a complete content provenance review. It does not establish the license of:
 - Small snippets, copied code, comments, or text embedded in source files.
 - Any sample data constructed in Python or TypeScript fixtures.
