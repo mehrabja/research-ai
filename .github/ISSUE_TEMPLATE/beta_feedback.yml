@@ -1,7 +1,6 @@
 name: Beta tester feedback
 description: Share structured feedback from an approved Research AI test
 title: "[Beta feedback]: "
-labels: ["beta-feedback", "triage"]
 body:
   - type: markdown
     attributes:
