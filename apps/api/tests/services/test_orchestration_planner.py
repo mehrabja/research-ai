@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import pytest
 
-from app.services.orchestration.registry import list_tools
 from app.services.orchestration.planner import (
     available_orchestration_strategies,
     plan_orchestration,
 )
+from app.services.orchestration.registry import list_tools
 
 
 def test_research_pipeline_contains_full_preparation_flow() -> None:

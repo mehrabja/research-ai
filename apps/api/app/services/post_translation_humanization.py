@@ -778,7 +778,7 @@ def run_post_translation_humanization(
             db.commit()
 
             result = execute_metered_provider_call(
-                lambda: provider.generate(
+                lambda system_prompt=system_prompt, user_prompt=user_prompt: provider.generate(
                     system_prompt=system_prompt,
                     user_prompt=user_prompt,
                     temperature=policy.temperature,

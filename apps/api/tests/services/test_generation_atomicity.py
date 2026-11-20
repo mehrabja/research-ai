@@ -7,7 +7,6 @@ import pytest
 from sqlalchemy import text
 
 from app.db.models.jobs import Job
-
 from app.db.session import SessionLocal
 from app.domain.generation import GenerationProviderResult
 from app.services.generation import generate_report
