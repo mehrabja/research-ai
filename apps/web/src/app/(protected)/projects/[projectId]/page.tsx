@@ -44,7 +44,7 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
   const [constraints,setConstraints]=useState("");
   const [questions,setQuestions]=useState("");
   const [topic,setTopic]=useState("");
-  const [language,setLanguage]=useState<"en"|"fa"|"de"|"fr">("en");
+  const [language,setLanguage]=useState<string>("en");
 
   useEffect(()=>{
     if(!project.data)return;
