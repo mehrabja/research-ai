@@ -32,7 +32,9 @@ def _current_manuscript(
     report_id: uuid.UUID,
 ) -> Manuscript:
     ms = db.execute(
-        select(Manuscript).where(Manuscript.report_id == report_id)
+        select(Manuscript)
+        .where(Manuscript.report_id == report_id)
+        .with_for_update()
     ).scalar_one_or_none()
     if ms is None or ms.current_version_id is None:
         raise ManuscriptNotFound()

@@ -372,6 +372,9 @@ def test_project_and_report_workspace_isolation() -> None:
         assert r.status_code == 200, r.text
         # Unscoped report listings must not cross workspace boundaries.
         assert r.json() == []
+        # Workspace is an explicit isolation boundary; unscoped listings
+        # must never leak reports from any workspace.
+        assert not r.json()
 
         r = client.get(
             f"/api/v1/projects/{project_one}?workspace_id={workspace_two}",

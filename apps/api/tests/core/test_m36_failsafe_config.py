@@ -18,11 +18,14 @@ def _base(**overrides) -> dict:
 
 
 def _production_base(**overrides) -> dict:
+def _production_base(**overrides: object) -> dict[str, object]:
     base = _base(
         app_env="production",
         debug=False,
         jwt_secret_key="x" * 64,
         cors_allowed_origins="https://example.com",
+        cors_allowed_origins="",
+        trusted_hosts="api.example.com",
         two_factor_encryption_key="x" * 32,
         auth_cookie_secure=True,
         auth_require_email_verification=True,
@@ -30,6 +33,11 @@ def _production_base(**overrides) -> dict:
         smtp_host="smtp.example.com",
         smtp_sender="no-reply@example.com",
         frontend_base_url="https://example.com",
+        provider_generation_chain="openrouter",
+        provider_embedding_chain="openrouter",
+        provider_translation_chain="openrouter",
+        openrouter_api_key="test-openrouter-key",
+        openrouter_base_url="https://openrouter.ai/api/v1",
         file_storage_backend="s3",
         file_storage_s3_bucket="test-bucket",
         file_storage_s3_region="us-east-1",
@@ -71,6 +79,9 @@ def test_production_rejects_default_jwt() -> None:
 
 def test_production_accepts_valid_config() -> None:
     s = Settings(**_production_base(cors_allowed_origins="https://example.com"))
+    s = Settings(
+        **_production_base(cors_allowed_origins="https://example.com")
+    )
     assert s.app_env == "production"
 
 

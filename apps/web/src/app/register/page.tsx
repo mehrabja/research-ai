@@ -37,6 +37,7 @@ export default function RegisterPage(){
       if(!res.ok)throw new Error(
         typeof body?.detail==="string"?body.detail:
         typeof body?.message==="string"?body.message:
+        typeof body?.error?.message==="string"?body.error.message:
         "Registration failed."
       );
       router.replace("/verify-email?pending=1");
@@ -69,9 +70,9 @@ export default function RegisterPage(){
             <div className="field"><label>First name</label><input className="input" value={firstName} onChange={e=>setFirstName(e.target.value)} autoComplete="given-name"/></div>
             <div className="field"><label>Last name</label><input className="input" value={lastName} onChange={e=>setLastName(e.target.value)} autoComplete="family-name"/></div>
           </div>
-          <div className="field"><label>Work email</label><input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" required/></div>
-          <div className="field"><label>Password</label><input className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="new-password" minLength={15} required/><div className="muted tiny">Minimum 15 characters.</div></div>
-          <div className="field"><label>Workspace name</label><input className="input" value={workspaceName} onChange={e=>setWorkspaceName(e.target.value)} placeholder="Neural Research Lab" required/></div>
+          <div className="field"><label htmlFor="work-email">Work email</label><input id="work-email" className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" required/></div>
+          <div className="field"><label htmlFor="register-password">Password</label><input id="register-password" className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="new-password" minLength={15} required/><div className="muted tiny">Minimum 15 characters.</div></div>
+          <div className="field"><label htmlFor="workspace-name">Workspace name</label><input id="workspace-name" className="input" value={workspaceName} onChange={e=>setWorkspaceName(e.target.value)} placeholder="Neural Research Lab" required/></div>
           <label className="checkbox"><input type="checkbox" checked={agree} onChange={e=>setAgree(e.target.checked)}/> I agree to the workspace terms and data processing policy.</label>
           <button className="btn primary" disabled={busy}>{busy?"Creating…":"Create workspace →"}</button>
           <div className="hint">Already have an account? <Link href="/login">Log in</Link></div>

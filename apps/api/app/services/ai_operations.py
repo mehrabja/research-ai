@@ -27,10 +27,16 @@ def start_operation(
     idempotency_key: str | None = None,
     metadata: dict | None = None,
 ) -> AIOperation:
-    if job_id is not None and db.get(Job, job_id) is None:
-        # Keep the audit row writable for direct service calls that carry
-        # a correlation id without a persisted durable job.
-        job_id = None
+    if job_id is not None:
+        try:
+            normalized_job_id = uuid.UUID(str(job_id))
+        except (TypeError, ValueError, AttributeError):
+            normalized_job_id = None
+        job_id = (
+            normalized_job_id
+            if normalized_job_id is not None and db.get(Job, normalized_job_id) is not None
+            else None
+        )
 
     if idempotency_key:
         existing = db.execute(

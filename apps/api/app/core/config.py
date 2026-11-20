@@ -22,6 +22,7 @@ def _resolve_repo_root() -> Path:
 REPO_ROOT: Path = _resolve_repo_root()
 DEV_JWT_SECRET: str = "dev-insecure-secret-change-me-before-production"
 _MIN_JWT_SECRET_BYTES: int = 32
+_SUPPORTED_FILE_STORAGE_BACKENDS: tuple[str, str] = ("local", "s3")
 
 
 class Settings(BaseSettings):
@@ -146,9 +147,9 @@ class Settings(BaseSettings):
     stripe_cancel_url: str = ""
     stripe_price_map_json: str = ""
     # M39 provider routing: comma-separated ordered provider chains.
-    provider_generation_chain: str = "openai"
-    provider_embedding_chain: str = "openai"
-    provider_translation_chain: str = "openai"
+    provider_generation_chain: str = "openrouter"
+    provider_embedding_chain: str = "openrouter"
+    provider_translation_chain: str = "openrouter"
     # --- Advanced Humanization (Milestone 32) -------------------------
     manuscript_humanization_enabled: bool = True
     manuscript_humanization_async_jobs: bool = False
@@ -214,8 +215,8 @@ class Settings(BaseSettings):
     chunk_overlap_words: int = Field(default=150, ge=0, le=1000)
 
     # --- Embedding profile (Milestone 9) ----------------------------------
-    embedding_provider: str = "openai"
-    embedding_model: str = "text-embedding-3-small"
+    embedding_provider: str = "openrouter"
+    embedding_model: str = "openai/text-embedding-3-small"
     embedding_dimensions: int = Field(default=1536, ge=1, le=4096)
     embedding_distance_metric: str = "cosine"
     embedding_profile_version: str = "m9.1"
@@ -474,8 +475,8 @@ class Settings(BaseSettings):
         default=3, ge=1, le=10
     )
     manuscript_prose_default_mode: str = "hybrid"
-    manuscript_prose_provider: str = "openai"
-    manuscript_prose_model: str = "gpt-4o-mini"
+    manuscript_prose_provider: str = "openrouter"
+    manuscript_prose_model: str = "openai/gpt-4o-mini"
     manuscript_prose_temperature: float = Field(
         default=0.2, ge=0.0, le=2.0
     )
@@ -550,8 +551,8 @@ class Settings(BaseSettings):
     academic_qa_advisory_llm_enabled: bool = False
 
     # --- Generation (Milestone 12) ----------------------------------------
-    generation_provider: str = "openai"
-    generation_model: str = "gpt-4o-mini"
+    generation_provider: str = "openrouter"
+    generation_model: str = "openai/gpt-4o-mini"
     generation_temperature: float = Field(
         default=0.2, ge=0.0, le=2.0
     )
@@ -564,6 +565,10 @@ class Settings(BaseSettings):
     generation_profile_version: str = "m12.1"
     generation_openai_api_key: str = Field(default="", repr=False)
     generation_openai_base_url: str = "https://api.openai.com/v1"
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_api_key: str = Field(default="", repr=False)
+    openrouter_http_referer: str = ""
+    openrouter_app_title: str = "Research AI"
     generation_timeout_seconds: float = Field(
         default=60.0, ge=5.0, le=600.0
     )
@@ -637,8 +642,8 @@ class Settings(BaseSettings):
 
     # --- Translation (Milestone 16) ---------------------------------------
     translation_enabled: bool = True
-    translation_provider: str = "openai"
-    translation_model: str = "gpt-4o-mini"
+    translation_provider: str = "openrouter"
+    translation_model: str = "openai/gpt-4o-mini"
     translation_temperature: float = Field(
         default=0.1, ge=0.0, le=2.0
     )
@@ -878,6 +883,10 @@ class Settings(BaseSettings):
     def _validate_file_config(self) -> Settings:
         if self.file_storage_backend not in ("local", "s3"):
             raise ValueError("file_storage_backend must be 'local' or 's3'")
+        if self.file_storage_backend not in _SUPPORTED_FILE_STORAGE_BACKENDS:
+            raise ValueError(
+                "file_storage_backend must be 'local' or 's3'"
+            )
         if not self.file_storage_local_root.strip():
             raise ValueError("file_storage_local_root must not be empty")
         if self.file_chunk_stream_size > self.document_max_bytes:
@@ -942,6 +951,21 @@ class Settings(BaseSettings):
             )
         return self
 
+    @staticmethod
+    def _is_placeholder_secret(value: str) -> bool:
+        normalized = value.strip().lower()
+        return normalized in {
+            "",
+            "change_me",
+            "change-me",
+            "changeme",
+            "replace_me",
+            "replace-me",
+            "placeholder",
+            "your-secret-here",
+            "your-api-key-here",
+        }
+
     @model_validator(mode="after")
     def _validate_m36_security(self) -> Settings:
         """Fail-closed guards that only apply to production."""
@@ -982,6 +1006,37 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "The development JWT secret is not allowed in production."
                 )
+            if self.trusted_hosts.strip() == "*":
+                raise ValueError(
+                    "TRUSTED_HOSTS must be explicitly configured in production."
+                )
+            generation_chain = self.provider_generation_chain.lower().split(",")
+            embedding_chain = self.provider_embedding_chain.lower().split(",")
+            translation_chain = self.provider_translation_chain.lower().split(",")
+            uses_openrouter = any(
+                "openrouter" in chain
+                for chain in (generation_chain, embedding_chain, translation_chain)
+            )
+            if uses_openrouter and self._is_placeholder_secret(self.openrouter_api_key):
+                raise ValueError(
+                    "OPENROUTER_API_KEY must be configured when OpenRouter is enabled."
+                )
+            if (
+                ("openai" in generation_chain or "openai" in translation_chain)
+                and self._is_placeholder_secret(self.generation_openai_api_key)
+            ):
+                raise ValueError(
+                    "GENERATION_OPENAI_API_KEY must be configured when OpenAI generation/translation is enabled."
+                )
+            if (
+                "openai" in embedding_chain
+                and self._is_placeholder_secret(self.embedding_openai_api_key)
+            ):
+                raise ValueError(
+                    "EMBEDDING_OPENAI_API_KEY must be configured when OpenAI embeddings are enabled."
+                )
+            if uses_openrouter and not self.openrouter_base_url.startswith("https://"):
+                raise ValueError("OPENROUTER_BASE_URL must use https:// in production.")
             if self.auth_cookie_samesite == "none" and not self.auth_cookie_secure:
                 raise ValueError(
                     "SameSite=None requires secure auth cookies."

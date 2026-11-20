@@ -8,6 +8,9 @@ const CSRF_COOKIE="research_ai_csrf";
 
 async function proxy(req:Request,ctx:{params:Promise<{path:string[]}>}){
   const {path}=await ctx.params;
+  if(!path.length||path.some(segment=>segment==="."||segment==="..")){
+    return NextResponse.json({detail:"Invalid backend path."},{status:400});
+  }
   const base=getBackendApiUrl();
   const incoming=new URL(req.url);
   const target=base.replace(/\/$/,"")+"/api/v1/"+path.join("/")+incoming.search;
@@ -15,6 +18,9 @@ async function proxy(req:Request,ctx:{params:Promise<{path:string[]}>}){
   const headers=new Headers(req.headers);
   headers.delete("host");
   headers.delete("content-length");
+  // Never trust browser-supplied auth/cookie headers at the proxy boundary.
+  headers.delete("authorization");
+  headers.delete("cookie");
   const access=jar.get(ACCESS_COOKIE)?.value;
   const refresh=jar.get(REFRESH_COOKIE)?.value;
   const csrf=jar.get(CSRF_COOKIE)?.value;

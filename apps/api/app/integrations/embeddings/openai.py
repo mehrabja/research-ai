@@ -29,6 +29,7 @@ from app.integrations.embeddings.base import (
     EmbeddingInvalidResponseError,
     EmbeddingProviderUnavailableError,
     EmbeddingRateLimitError,
+    EmbeddingTimeoutError,
 )
 
 if TYPE_CHECKING:
@@ -55,6 +56,7 @@ class OpenAIEmbeddingProvider:
         profile: EmbeddingProfile,
         api_key: str | None = None,
         base_url: str | None = None,
+        provider_name: str = "openai",
         timeout_seconds: float | None = None,
         max_retries: int | None = None,
         retry_base_seconds: float | None = None,
@@ -65,7 +67,12 @@ class OpenAIEmbeddingProvider:
     ) -> None:
         settings = get_settings()
         self._profile = profile
-        self.model_name = profile.model
+        self.provider_name = provider_name
+        self.model_name = (
+            profile.model.split("/", 1)[1]
+            if provider_name == "openai" and profile.model.startswith("openai/")
+            else profile.model
+        )
         self.dimensions = profile.dimensions
         self._base_url = (
             base_url or settings.embedding_openai_base_url
@@ -98,7 +105,7 @@ class OpenAIEmbeddingProvider:
         )
         self._sleep = _sleep
         self._random = _random
-        self._encoding = _load_tiktoken_encoding(profile.model)
+        self._encoding = _load_tiktoken_encoding(_tokenizer_model(profile.model))
 
     # ------------------------------------------------------------------
     def estimate_input_tokens(self, text: str) -> int | None:
@@ -139,6 +146,7 @@ class OpenAIEmbeddingProvider:
             except (
                 EmbeddingRateLimitError,
                 EmbeddingProviderUnavailableError,
+                EmbeddingTimeoutError,
             ) as exc:
                 last_error = exc
                 if attempt >= self._max_retries:
@@ -161,29 +169,36 @@ class OpenAIEmbeddingProvider:
     def _embed_once(self, texts: list[str]) -> EmbeddingBatchResult:
         if not self._api_key:
             raise EmbeddingAuthenticationError(
-                "OpenAI API key is not configured"
+                f"{self.provider_name} API key is not configured"
             )
 
         payload: dict[str, Any] = {
             "input": texts,
-            "model": self._profile.model,
+            "model": self.model_name,
             "encoding_format": "float",
         }
-        if self._profile.model.startswith("text-embedding-3"):
+        if _tokenizer_model(self._profile.model).startswith("text-embedding-3"):
             payload["dimensions"] = self._profile.dimensions
 
         try:
+            headers = {
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json",
+            }
+            settings = get_settings()
+            if self.provider_name == "openrouter":
+                if settings.openrouter_http_referer.strip():
+                    headers["HTTP-Referer"] = settings.openrouter_http_referer.strip()
+                if settings.openrouter_app_title.strip():
+                    headers["X-Title"] = settings.openrouter_app_title.strip()
             response = httpx.post(
                 f"{self._base_url}/embeddings",
                 json=payload,
-                headers={
-                    "Authorization": f"Bearer {self._api_key}",
-                    "Content-Type": "application/json",
-                },
+                headers=headers,
                 timeout=self._timeout,
             )
         except httpx.TimeoutException as exc:
-            raise EmbeddingProviderUnavailableError("timeout") from exc
+            raise EmbeddingTimeoutError("timeout") from exc
         except httpx.HTTPError as exc:
             raise EmbeddingProviderUnavailableError(
                 f"transport: {type(exc).__name__}"
@@ -254,6 +269,10 @@ class OpenAIEmbeddingProvider:
             usage=usage,
             provider_request_id=response.headers.get("x-request-id"),
         )
+
+
+def _tokenizer_model(model: str) -> str:
+    return model.split("/", 1)[1] if "/" in model else model
 
 
 def _load_tiktoken_encoding(model: str) -> Encoding | None:

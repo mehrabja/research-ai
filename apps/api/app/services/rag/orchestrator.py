@@ -35,6 +35,7 @@ from app.domain.embeddings import (
     EmbeddingProfile,
     build_embedding_profile_id,
 )
+from app.domain.generation import GenerationProviderResult
 from app.domain.retrieval import RetrievalAlgorithm, RetrievalMode
 from app.domain.retrieval_advanced import (
     ADVANCED_RAG_VERSION,
@@ -43,6 +44,7 @@ from app.domain.retrieval_advanced import (
 )
 from app.integrations.embeddings.base import EmbeddingProvider
 from app.integrations.generation.base import GenerationProvider
+from app.services.ai_metering import execute_metered_provider_call
 from app.services.generation_profile import build_generation_provider
 from app.services.projects import get_project
 from app.services.rag import candidates as cand_svc
@@ -64,6 +66,64 @@ from app.services.rag.context import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class _MeteredRAGGenerationProvider:
+    def __init__(
+        self,
+        provider: GenerationProvider,
+        *,
+        workspace_id: uuid.UUID,
+        user_id: uuid.UUID,
+        project_id: uuid.UUID,
+        report_id: uuid.UUID | None,
+        operation: str,
+    ) -> None:
+        self._provider = provider
+        self.workspace_id = workspace_id
+        self.user_id = user_id
+        self.project_id = project_id
+        self.report_id = report_id
+        self.operation = operation
+
+    @property
+    def provider_name(self) -> str:
+        return self._provider.provider_name
+
+    @property
+    def model_name(self) -> str:
+        return self._provider.model_name
+
+    @property
+    def attempted_providers(self) -> list[str]:
+        return list(getattr(self._provider, "attempted_providers", []))
+
+    def generate(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float,
+        max_output_tokens: int,
+    ) -> GenerationProviderResult:
+        return execute_metered_provider_call(
+            lambda: self._provider.generate(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=temperature,
+                max_output_tokens=max_output_tokens,
+            ),
+            workspace_id=self.workspace_id,
+            user_id=self.user_id,
+            operation=self.operation,
+            capability="rag_llm",
+            provider=self._provider,
+            model=self._provider.model_name,
+            project_id=self.project_id,
+            report_id=self.report_id,
+            input_units=lambda result: result.input_tokens,
+            output_units=lambda result: result.output_tokens,
+        )
 
 
 @dataclass
@@ -392,15 +452,26 @@ def retrieve_research_context(
         requested_intents = [d.intent for d in decomposition]
 
         # ---- Optional LLM provider ----
-        llm_provider: GenerationProvider | None = None
+        llm_provider: _MeteredRAGGenerationProvider | None = None
         if (
             settings.rag_llm_decomposition_enabled
             or settings.rag_llm_rerank_enabled
         ):
-            llm_provider = (
+            base_llm_provider = (
                 generation_provider
                 or request.generation_provider
                 or build_generation_provider()
+            )
+            project = get_project(
+                db, user_id=request.user_id, project_id=request.project_id
+            )
+            llm_provider = _MeteredRAGGenerationProvider(
+                base_llm_provider,
+                workspace_id=project.workspace_id,
+                user_id=request.user_id,
+                project_id=request.project_id,
+                report_id=request.report_id,
+                operation="rag.llm.provider_call",
             )
 
         # ---- Optional LLM decomposition ----

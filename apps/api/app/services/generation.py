@@ -1,6 +1,8 @@
 """Generation orchestration with durable at-least-once attempt lifecycle."""
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import uuid
 from datetime import UTC, datetime
@@ -20,6 +22,7 @@ from app.db.models.report import Report
 from app.domain.generation import (
     AttemptState,
     EmptyGenerationError,
+    EvidenceSet,
     GenerationAlreadySucceeded,
     GenerationAttemptLease,
     GenerationContext,
@@ -79,6 +82,38 @@ _RETRYABLE_GENERATION_ERRORS: tuple[type[BaseException], ...] = (
     GenerationTimeoutError,
     GenerationProviderUnavailableError,
 )
+
+
+def _generation_context_hash(
+    *,
+    report: Report,
+    profile_id: str,
+    system_prompt: str,
+    user_prompt: str,
+    brief: str | None,
+    evidence: EvidenceSet,
+) -> str:
+    payload = {
+        "report_id": str(report.id),
+        "profile_id": profile_id,
+        "system_prompt": system_prompt,
+        "user_prompt": user_prompt,
+        "brief": brief or "",
+        "evidence": [
+            {
+                "marker": item.marker,
+                "evidence_id": item.evidence_id,
+                "source_id": str(item.source_id),
+                "chunk_id": str(item.chunk_id),
+                "fusion_score": item.fusion_score,
+            }
+            for item in evidence.items
+        ],
+    }
+    canonical = json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _is_permanent_generation_error(exc: BaseException) -> bool:
@@ -198,6 +233,7 @@ def generate_report(
     report_id: uuid.UUID,
     provider: GenerationProvider,
     profile: GenerationProfile | None = None,
+    brief: str | None = None,
 ) -> GenerationResult:
     profile = profile or get_current_generation_profile()
     profile_id = build_generation_profile_id(profile)
@@ -271,6 +307,15 @@ def generate_report(
         length=report.length,
         structure_template=report.structure_template,
         evidence=evidence,
+        brief=brief,
+    )
+    context_hash = _generation_context_hash(
+        report=report,
+        profile_id=profile_id,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        brief=brief,
+        evidence=evidence,
     )
     context = GenerationContext(
         report_id=report_id,
@@ -307,6 +352,7 @@ def generate_report(
             job_id=job_id,
             input_units=lambda result: result.input_tokens,
             output_units=lambda result: result.output_tokens,
+            metadata={"context_hash": context_hash, "profile_id": profile_id},
         )
         cited = validate_generation_output(
             text=provider_result.text, evidence=evidence
@@ -334,6 +380,7 @@ def generate_report(
             cited=cited,
             profile_id=profile_id,
             workspace_id=workspace_id,
+            context_hash=context_hash,
         )
     except GenerationAlreadySucceeded:
         raise
@@ -363,6 +410,7 @@ def _persist_success_atomic(
     cited: tuple[str, ...],
     profile_id: str,
     workspace_id: uuid.UUID,
+    context_hash: str,
 ) -> None:
     marker_map = context.evidence.marker_map()
     claims_evidence = [
@@ -378,6 +426,7 @@ def _persist_success_atomic(
         "job_id": str(job_id),
         "attempt_status": "success",
         "profile_id": profile_id,
+        "context_hash": context_hash,
         "text": provider_result.text,
         "language": context.output_language,
         "evidence": [

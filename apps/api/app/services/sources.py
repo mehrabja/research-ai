@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from app.core import exceptions as app_exceptions
 from app.core.config import get_settings
 from app.core.exceptions import SourceNotFound
+from app.db.models.project import Project
 from app.db.models.source import Source
 from app.domain.source import SourceCandidate
 from app.integrations.sources.base import (
@@ -29,6 +30,7 @@ from app.integrations.sources.base import (
     SourceProviderUnavailableError,
     SourceSearchProvider,
 )
+from app.services.ai_metering import execute_metered_provider_call
 from app.services.report_events import create_source_added_event
 from app.services.reports import get_report
 
@@ -98,7 +100,7 @@ def search_source_candidates(
     Validates ownership and inputs, calls the provider, maps
     provider-level errors to typed AppErrors.
     """
-    get_report(db, user_id=user_id, report_id=report_id)
+    report = get_report(db, user_id=user_id, report_id=report_id)
 
     q = (query or "").strip()
     if not q:
@@ -119,12 +121,34 @@ def search_source_candidates(
     if effective_limit > settings.source_search_limit_max:
         effective_limit = settings.source_search_limit_max
 
+    if report.project_id is not None:
+        project = db.get(Project, report.project_id)
+        if project is None:
+            raise app_exceptions.SourceProviderUnavailable()
+        workspace_id = project.workspace_id
+    else:
+        from app.services.workspaces import get_default_workspace_for_user
+
+        workspace = get_default_workspace_for_user(db, user_id=user_id)
+        if workspace is None:
+            raise app_exceptions.SourceProviderUnavailable()
+        workspace_id = workspace.id
+
     try:
-        return provider.search(
-            query=q,
-            limit=effective_limit,
-            year=year,
-            open_access_only=open_access_only,
+        return execute_metered_provider_call(
+            lambda: provider.search(
+                query=q,
+                limit=effective_limit,
+                year=year,
+                open_access_only=open_access_only,
+            ),
+            workspace_id=workspace_id,
+            user_id=user_id,
+            operation="source.search.provider_call",
+            capability="source_search",
+            provider=provider,
+            project_id=report.project_id,
+            report_id=report_id,
         )
     except SourceProviderTimeoutError as exc:
         raise app_exceptions.SourceProviderUnavailable() from exc

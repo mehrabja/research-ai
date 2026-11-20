@@ -25,6 +25,7 @@ from app.db.models.manuscript_prose import (
     ManuscriptProseSection,
     ManuscriptProseSentence,
 )
+from app.db.models.project import Project
 from app.db.models.report import Report
 from app.db.session import SessionLocal
 from app.domain.manuscript_prose import (
@@ -136,6 +137,9 @@ def run_m28_5_persisted(
     report = db.get(Report, report_id)
     if report is None or report.project_id is None:
         raise ManuscriptProseInvalid("report has no project")
+    project = db.get(Project, report.project_id)
+    if project is None:
+        raise ManuscriptProseInvalid("project not found")
     version = db.get(ManuscriptVersion, base_manuscript_version_id)
     if version is None:
         raise ManuscriptProseInvalid("manuscript version not found")
@@ -230,8 +234,14 @@ def run_m28_5_persisted(
             )
 
             generated = gen_svc.generate_section(
-                db, contract=contract, packet=packet,
+                db,
+                contract=contract,
+                packet=packet,
                 mode=effective_mode,
+                workspace_id=project.workspace_id,
+                user_id=report.user_id,
+                project_id=report.project_id,
+                report_id=report_id,
             )
 
             known_ev = {str(x.evidence_id) for x in packet.m28_items}

@@ -19,9 +19,11 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
+from app.db.models.pipeline import GenerationRun
 from app.db.models.report import Report, ReportEvent, ReportVersion
 from app.db.models.user import User
 from app.db.session import get_db
@@ -32,6 +34,7 @@ from app.schemas.report_versions import (
     ReportVersionResponse,
 )
 from app.schemas.reports import (
+    GenerationCurrentRead,
     ReportCreate,
     ReportResponse,
     ReportUpdate,
@@ -81,6 +84,49 @@ def list_reports(
         db,
         user_id=current_user.id,
         workspace_id=workspace_id,
+    )
+
+
+@router.get(
+    "/{report_id}/generation/current",
+    response_model=GenerationCurrentRead,
+    summary="Get current persisted generation output",
+)
+def get_current_generation(
+    report_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> GenerationCurrentRead:
+    report = reports_service.get_report(
+        db,
+        user_id=current_user.id,
+        report_id=report_id,
+    )
+    run = db.execute(
+        select(GenerationRun)
+        .where(GenerationRun.report_id == report.id)
+        .order_by(GenerationRun.created_at.desc(), GenerationRun.id.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    if run is None:
+        return GenerationCurrentRead(report_id=report_id)
+    output = dict(run.output_json or {})
+    return GenerationCurrentRead(
+        report_id=report_id,
+        run_id=run.id,
+        status=run.status,
+        prompt_version=run.prompt_version,
+        provider=run.model_provider,
+        model=run.model_version,
+        input_tokens=run.input_token_count,
+        output_tokens=run.output_token_count,
+        language=output.get("language"),
+        text=output.get("text"),
+        context_hash=output.get("context_hash"),
+        evidence=output.get("evidence") or [],
+        cited_markers=output.get("cited_markers") or [],
+        created_at=run.created_at,
+        completed_at=run.completed_at,
     )
 
 
