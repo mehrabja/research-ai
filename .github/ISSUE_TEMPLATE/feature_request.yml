@@ -1,7 +1,6 @@
 name: Feature request
 description: Propose an improvement to Research AI
 title: "[Feature]: "
-labels: ["enhancement", "triage"]
 body:
   - type: markdown
     attributes:
