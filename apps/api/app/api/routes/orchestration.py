@@ -37,6 +37,7 @@ from app.schemas.orchestration import (
     OrchestrationRunRead,
     OrchestrationRunRequest,
     OrchestrationRunResponse,
+    OrchestrationResumeResponse,
     OrchestrationStrategyListResponse,
     OrchestrationStrategyRead,
     OrchestrationToolListResponse,
