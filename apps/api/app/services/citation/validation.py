@@ -53,12 +53,14 @@ def validate_citation_run(
 
     # Every cited identity must resolve to a real source.
     citation_ids = {cc.citation_id for cc in citations}
+    by_id: dict[uuid.UUID, CitationIdentity] = {}
     if citation_ids:
         idents = list(db.execute(
             select(CitationIdentity).where(
                 CitationIdentity.id.in_(citation_ids)
             )
         ).scalars().all())
+        by_id = {identity.id: identity for identity in idents}
         src_ids = [
             i.source_id for i in idents if i.source_id is not None
         ]
@@ -89,7 +91,6 @@ def validate_citation_run(
         if not e.provenance:
             errors.append(f"claim_evidence_missing_provenance:{e.id}")
 
-    by_id = {i.id: i for i in idents} if citation_ids else {}
     claim_by_id = {claim.id: claim for claim in claims}
     evidence_by_claim: dict[uuid.UUID, list[ClaimEvidence]] = {}
     for evidence in evs:
@@ -116,14 +117,17 @@ def validate_citation_run(
             continue
 
         identity = by_id.get(citation.citation_id) if citation_ids else None
-        if identity is not None and identity.source_id is not None:
-            if not any(
+        if (
+            identity is not None
+            and identity.source_id is not None
+            and not any(
                 evidence.source_id == identity.source_id
                 for evidence in matching_evidence
-            ):
-                errors.append(
-                    f"claim_citation_source_mismatch:{citation.id}"
-                )
+            )
+        ):
+            errors.append(
+                f"claim_citation_source_mismatch:{citation.id}"
+            )
 
     if run.unsupported_count > 0:
         warnings.append(

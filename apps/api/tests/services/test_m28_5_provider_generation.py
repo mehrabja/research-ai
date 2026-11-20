@@ -16,7 +16,7 @@ class _FakeProvider:
 
     def generate(self, *, system_prompt, user_prompt, temperature, max_output_tokens):
         return GenerationProviderResult(
-            text='{"paragraphs":[{"paragraph":0,"sentences":[{"index":0,"text":"Evidence-backed wording.","evidence_refs":["%s"]}]}]}' % self.evidence_id,
+            text=f'{{"paragraphs":[{{"paragraph":0,"sentences":[{{"index":0,"text":"Evidence-backed wording.","evidence_refs":["{self.evidence_id}"]}}]}}]}}',
             provider=self.provider_name,
             model=self.model_name,
             input_tokens=12,

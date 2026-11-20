@@ -13,9 +13,8 @@ import uuid
 import pytest
 from sqlalchemy import text
 
-from app.db.models.jobs import Job
-
 from app.core.exceptions import NoEvidenceAvailableError
+from app.db.models.jobs import Job
 from app.db.models.pipeline import GenerationRun
 from app.db.session import SessionLocal
 from app.domain.generation import GenerationProviderResult

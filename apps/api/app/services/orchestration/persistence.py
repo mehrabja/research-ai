@@ -313,13 +313,10 @@ def run_m35_persisted(
                     persisted_run = s.get(
                         ResearchOrchestrationRun, run.id,
                     )
-                    if persisted_run is not None and not (
-                        persisted_run.status
-                        in (
-                            RunStatus.CANCELLED.value,
-                            RunStatus.COMPLETED.value,
-                            RunStatus.FAILED.value,
-                        )
+                    if persisted_run is not None and persisted_run.status not in (
+                        RunStatus.CANCELLED.value,
+                        RunStatus.COMPLETED.value,
+                        RunStatus.FAILED.value,
                     ):
                         persisted_run.status = RunStatus.FAILED.value
                         persisted_run.error_message = str(exc)[:500]
