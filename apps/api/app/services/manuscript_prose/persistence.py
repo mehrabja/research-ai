@@ -19,13 +19,13 @@ from app.db.models.manuscript import (
     ManuscriptSection,
     ManuscriptVersion,
 )
-from app.db.models.project import Project
 from app.db.models.manuscript_prose import (
     ManuscriptProseParagraph,
     ManuscriptProseRun,
     ManuscriptProseSection,
     ManuscriptProseSentence,
 )
+from app.db.models.project import Project
 from app.db.models.report import Report
 from app.db.session import SessionLocal
 from app.domain.manuscript_prose import (
