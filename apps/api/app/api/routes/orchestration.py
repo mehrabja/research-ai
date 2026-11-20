@@ -32,6 +32,7 @@ from app.schemas.orchestration import (
     OrchestrationNodeListResponse,
     OrchestrationNodeRead,
     OrchestrationPauseResponse,
+    OrchestrationResumeResponse,
     OrchestrationRunDetailRead,
     OrchestrationRunListResponse,
     OrchestrationRunRead,
