@@ -29,6 +29,7 @@ from app.integrations.embeddings.base import (
     EmbeddingInvalidResponseError,
     EmbeddingProviderUnavailableError,
     EmbeddingRateLimitError,
+    EmbeddingTimeoutError,
 )
 
 if TYPE_CHECKING:
@@ -145,6 +146,7 @@ class OpenAIEmbeddingProvider:
             except (
                 EmbeddingRateLimitError,
                 EmbeddingProviderUnavailableError,
+                EmbeddingTimeoutError,
             ) as exc:
                 last_error = exc
                 if attempt >= self._max_retries:
@@ -196,7 +198,7 @@ class OpenAIEmbeddingProvider:
                 timeout=self._timeout,
             )
         except httpx.TimeoutException as exc:
-            raise EmbeddingProviderUnavailableError("timeout") from exc
+            raise EmbeddingTimeoutError("timeout") from exc
         except httpx.HTTPError as exc:
             raise EmbeddingProviderUnavailableError(
                 f"transport: {type(exc).__name__}"

@@ -7,6 +7,7 @@ import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from functools import partial
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -778,7 +779,8 @@ def run_post_translation_humanization(
             db.commit()
 
             result = execute_metered_provider_call(
-                lambda: provider.generate(
+                partial(
+                    provider.generate,
                     system_prompt=system_prompt,
                     user_prompt=user_prompt,
                     temperature=policy.temperature,

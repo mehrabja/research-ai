@@ -231,7 +231,12 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
         </div>
         <div className="mt-4 grid md:grid-cols-[1fr_180px_auto] gap-2">
           <input className="input" aria-label="Report topic" placeholder="Report topic" value={topic} onChange={e=>setTopic(e.target.value)}/>
-          <input className="input" aria-label="Output language" placeholder="Output language code (e.g. en, fa, de)" value={language} onChange={e=>setLanguage(e.target.value)}/>
+          <select className="input" aria-label="Output language" value={language} onChange={e=>setLanguage(e.target.value as typeof language)}>
+            <option value="en">English (en)</option>
+            <option value="fa">Persian (fa)</option>
+            <option value="de">German (de)</option>
+            <option value="fr">French (fr)</option>
+          </select>
           <button className="btn btn-primary" disabled={!topic.trim()||createReport.isPending} onClick={()=>createReport.mutate()}>{createReport.isPending?"Creating…":"Create report"}</button>
         </div>
         {createReport.isError&&<div className="notice error" style={{marginTop:12}}>{createReport.error instanceof Error?createReport.error.message:"Report creation failed."}</div>}

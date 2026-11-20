@@ -22,6 +22,7 @@ def _resolve_repo_root() -> Path:
 REPO_ROOT: Path = _resolve_repo_root()
 DEV_JWT_SECRET: str = "dev-insecure-secret-change-me-before-production"
 _MIN_JWT_SECRET_BYTES: int = 32
+_SUPPORTED_FILE_STORAGE_BACKENDS: tuple[str, str] = ("local", "s3")
 
 
 class Settings(BaseSettings):
@@ -880,8 +881,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate_file_config(self) -> Settings:
-        if self.file_storage_backend not in ("local", "s3"):
-            raise ValueError("file_storage_backend must be 'local' or 's3'")
+        if self.file_storage_backend not in _SUPPORTED_FILE_STORAGE_BACKENDS:
+            raise ValueError(
+                "file_storage_backend must be 'local' or 's3'"
+            )
         if not self.file_storage_local_root.strip():
             raise ValueError("file_storage_local_root must not be empty")
         if self.file_chunk_stream_size > self.document_max_bytes:
@@ -945,6 +948,21 @@ class Settings(BaseSettings):
                 "classification_confidence_threshold"
             )
         return self
+
+    @staticmethod
+    def _is_placeholder_secret(value: str) -> bool:
+        normalized = value.strip().lower()
+        return normalized in {
+            "",
+            "change_me",
+            "change-me",
+            "changeme",
+            "replace_me",
+            "replace-me",
+            "placeholder",
+            "your-secret-here",
+            "your-api-key-here",
+        }
 
     @model_validator(mode="after")
     def _validate_m36_security(self) -> Settings:

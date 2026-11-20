@@ -29,7 +29,12 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
         db.execute(delete(ProjectEvent).where(ProjectEvent.project_id.in_(pids)))
         pfids = select(ProjectFile.id).where(ProjectFile.project_id.in_(pids))
         db.execute(
-            delete(ProjectFileEvent).where(ProjectFileEvent.project_file_id.in_(pfids))
+            delete(ProjectFileEvent).where(
+                ProjectFileEvent.project_file_id.in_(pfids)
+            )
+        )
+        db.execute(
+            delete(ProjectFile).where(ProjectFile.id.in_(pfids))
         )
         db.execute(delete(Report).where(Report.user_id.in_(uids)))
         db.execute(delete(Project).where(Project.user_id.in_(uids)))

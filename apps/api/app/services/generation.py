@@ -22,6 +22,7 @@ from app.db.models.report import Report
 from app.domain.generation import (
     AttemptState,
     EmptyGenerationError,
+    EvidenceSet,
     GenerationAlreadySucceeded,
     GenerationAttemptLease,
     GenerationContext,

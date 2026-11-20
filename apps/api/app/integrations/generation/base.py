@@ -39,8 +39,11 @@ class GenerationInputTooLargeError(GenerationProviderError):
 
 
 class GenerationProvider(Protocol):
-    provider_name: str
-    model_name: str
+    @property
+    def provider_name(self) -> str: ...
+
+    @property
+    def model_name(self) -> str: ...
 
     def generate(
         self,

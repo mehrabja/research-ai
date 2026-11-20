@@ -425,22 +425,26 @@ def build_provider_registry() -> ProviderRegistry:
             ProviderDefinition(
                 name="openrouter",
                 capability=capability,
-                factory=partial({
-                    "generation": _build_generation,
-                    "embedding": _build_embedding,
-                    "translation": _build_translation,
-                }[capability], "openrouter"),
+                factory=(
+                    partial(_build_generation, "openrouter")
+                    if capability == "generation"
+                    else partial(_build_embedding, "openrouter")
+                    if capability == "embedding"
+                    else partial(_build_translation, "openrouter")
+                ),
             )
         )
         registry.register(
             ProviderDefinition(
                 name="openai",
                 capability=capability,
-                factory=partial({
-                    "generation": _build_generation,
-                    "embedding": _build_embedding,
-                    "translation": _build_translation,
-                }[capability], "openai"),
+                factory=(
+                    partial(_build_generation, "openai")
+                    if capability == "generation"
+                    else partial(_build_embedding, "openai")
+                    if capability == "embedding"
+                    else partial(_build_translation, "openai")
+                ),
             )
         )
     return registry

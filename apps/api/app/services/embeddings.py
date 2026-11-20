@@ -278,6 +278,10 @@ def _embed_documents_for_batch(
 ) -> EmbeddingBatchResult:
     return provider.embed_documents([chunk.content for chunk in batch])
 
+
+def _embedding_input_units(result: EmbeddingBatchResult) -> int:
+    return result.usage.input_tokens
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -378,8 +382,6 @@ def embed_source(
                 embed_call: Callable[[], EmbeddingBatchResult] = partial(
                     _embed_documents_for_batch, provider, batch
                 )
-                def input_units(value: EmbeddingBatchResult) -> int:
-                    return value.usage.input_tokens
                 result = execute_metered_provider_call(
                     embed_call,
                     workspace_id=workspace_id,
@@ -390,7 +392,7 @@ def embed_source(
                     model=profile.model,
                     project_id=report.project_id,
                     report_id=report_id,
-                    input_units=input_units,
+                    input_units=_embedding_input_units,
                 )
             except EmbeddingInputTooLargeError as exc:
                 _mark_failed(db, batch, "input_too_large")
