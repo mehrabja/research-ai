@@ -43,6 +43,35 @@ NCBI settings are optional: `PUBMED_API_KEY`, `PUBMED_EMAIL`, `PUBMED_TOOL`, `PU
 
 This is a focused adapter, not a copy of the full Parsian PubMed connector: ID conversion, Europe PMC full-text fetch, JATS parsing and PubTator are not part of this increment. No Electron, npm or XML parser dependency is added to the API.
 
+## Scientific source connector: OpenAlex
+
+Research AI now supports an optional OpenAlex Works provider through the existing report-scoped
+source-search endpoint. Set `SOURCE_SEARCH_PROVIDER=openalex`; `OPENALEX_API_KEY` is optional for
+bounded basic searches. The adapter uses the Works search endpoint, requests only bibliographic and
+abstract-index fields, and maps OpenAlex work IDs, DOI, title, year, authors, publication landing page
+and citation count into the existing `SourceCandidate` contract. It applies publication-year and
+open-access filters at the provider and uses ordinary page-based pagination capped at 1,000 results
+(10 pages maximum at 100 per page); it does not cursor-page or attempt bulk dataset downloads.
+
+The optional key is sent as an Authorization bearer header, not embedded in request URLs. Timeouts,
+bounded retries, `Retry-After` handling, response-size limits and a conservative process-local request
+pacer are enforced. In multi-worker deployments, per-process pacing is not a shared API quota; use a
+provider egress/rate-limit gateway if aggregate traffic can exceed the OpenAlex key/IP allowance.
+A free key increases the daily budget and is required for cursor paging beyond the first page; this
+adapter deliberately stays within the basic page-based result window.
+
+Abstract inverted-index reconstruction is stricter than the OpenAlex `is_oa` flag: the adapter
+returns reconstructed abstract text only where the best/primary location reports an explicitly
+reusable license (CC BY, CC BY-SA, CC0, public domain). Unknown, NC, ND or undeclared licenses yield
+metadata without an abstract. Open access does not imply blanket permission to reproduce abstract
+text. PDF retrieval and full-text extraction remain in Research AI's existing controlled ingestion
+pipeline.
+
+Official references:
+- https://help.openalex.org/api/authentication/
+- https://help.openalex.org/api/paging/
+- https://help.openalex.org/api/errors/
+
 ## Round-table review capability
 
 The `roundtable_review` strategy is exposed by the existing orchestration API and Workbench strategy selector. It retrieves lexical report-scoped chunks, binds source references to existing source/chunk IDs, runs three role-specific reviewer calls, then synthesizes consensus, disagreements, priority actions and evidence gaps. Provider calls are recorded in the existing AI operation/usage ledger. The model-assisted node follows the configured human-approval policy.
