@@ -218,13 +218,6 @@ export const api={
       let lastProgressPercent=-1;
 
       const abort=()=>{if(!settled)xhr.abort();};
-      const handleProgress=(event:ProgressEvent<EventTarget>)=>{
-        const total=event.total;
-        if(total>0){
-          const percent=Math.min(100,(event.loaded/total)*100);
-          if(percent!==lastProgressPercent){
-            lastProgressPercent=percent;
-            options.onProgress?.({loaded:event.loaded,total,percent});
       const handleProgress=(event:ProgressEvent<XMLHttpRequestEventTarget>)=>{
         const total=event.total;
         const loaded=event.loaded;

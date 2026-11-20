@@ -776,11 +776,6 @@ function Knowledge(){
     }catch(e){setExportError(e instanceof Error?e.message:"Knowledge graph export failed. Retry.");}
   }
   const nodeTypes=Object.keys(summary.data?.node_type_counts??{});
-  return <>
-    <Head route="knowledge" actions={<>
-      <button className="btn" disabled={!projectId||ex.isPending} onClick={()=>void exportGraph("json")}>{ex.isPending?"Exporting…":"Export JSON"}</button>
-      <button className="btn" disabled={!projectId||ex.isPending} onClick={()=>void exportGraph("csv")}>Export CSV</button>
-    </>}/>
   useEffect(()=>{
     const status=job.data?.status;
     if(status==="completed"||status==="failed"||status==="cancelled"){
@@ -826,10 +821,6 @@ function Knowledge(){
         </Card>
       </>}
     </>}
-  </>;
-}
-    </>}
-  </>}
   </>;
 }
 
