@@ -152,6 +152,11 @@ export function ScientificWorkbench() {
   const validate=useMutation({mutationFn:()=>api.orchestrationValidate(reportId!,runId!),onSuccess:refresh});
 
   useEffect(()=>{
+    setSelectedRunId(null);
+    setJobId("");
+  },[reportId]);
+
+  useEffect(()=>{
     const items=strategies.data?.items??[];
     if(items.length&&!items.some(item=>item.key===strategy)) setStrategy(items[0].key);
   },[strategies.data?.items,strategy]);
@@ -170,7 +175,7 @@ export function ScientificWorkbench() {
   return <div className="science-workbench">
     <header className="wb-header">
       <div><div className="eyebrow">Research operations / Workbench</div><h1>Scientific Workbench</h1><p>Coordinate research workflows, inspect execution, and keep sources and knowledge in view.</p></div>
-      <div className="wb-header-actions"><span className="wb-live"><i/> Backend-connected</span><Link className="btn" href={reportId?"/orchestration?projectId="+projectId+"&reportId="+reportId:"/orchestration"}>Full orchestration</Link></div>
+      <div className="wb-header-actions"><span className="wb-live"><i/> Research control plane</span><Link className="btn" href={reportId?"/orchestration?projectId="+projectId+"&reportId="+reportId:"/orchestration"}>Full orchestration</Link></div>
     </header>
 
     <section className="wb-context card">
@@ -232,7 +237,7 @@ export function ScientificWorkbench() {
 
         <section className="wb-panel wb-run-panel">
           <Heading title={selectedRunId?"Selected workflow":"Live workflow"} detail={displayed?.run.goal??"No workflow is selected yet"} action={displayed&&<span className={"wb-status "+tone(displayed.run.status)}>{displayed.run.status}</span>}/>
-          {current.isPending?<div className="wb-skeleton"/>:selectedRunId&&selectedRun.isPending?<div className="wb-skeleton"/>:
+          {current.isError&&!selectedRunId?<div className="notice error">Could not load the current orchestration: {current.error instanceof Error?current.error.message:"Unknown error"}</div>:selectedRunId&&selectedRun.isError?<div className="notice error">Could not load the selected run: {selectedRun.error instanceof Error?selectedRun.error.message:"Unknown error"}</div>:current.isPending?<div className="wb-skeleton"/>:selectedRunId&&selectedRun.isPending?<div className="wb-skeleton"/>:
             !displayed?<Empty title="Waiting for the first workflow" description="Start a workflow above. Its persisted steps, approvals and execution state will appear here."/>:
             <>
               <div className="wb-progress-row"><div><strong>{displayed.run.completed_node_count} of {displayed.run.node_count} steps completed</strong><small>{displayed.run.current_node_key??"Workflow status"}</small></div><strong>{progress}%</strong></div>
