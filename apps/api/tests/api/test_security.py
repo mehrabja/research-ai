@@ -325,6 +325,7 @@ def test_production_accepts_strong_secret() -> None:
     s = Settings(
         app_env="production",
         jwt_secret_key="x" * 64,
+        openrouter_api_key="test-openrouter-key",
         two_factor_encryption_key="x" * 32,
         debug=False,
         cors_allowed_origins="",

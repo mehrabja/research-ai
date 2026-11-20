@@ -35,7 +35,7 @@ def test_registry_rejects_missing_registered_provider(monkeypatch) -> None:
 
 
 def test_registry_resolves_requested_provider(monkeypatch) -> None:
-    monkeypatch.setenv("PROVIDER_GENERATION_CHAIN", "one,two")
+    monkeypatch.setenv("PROVIDER_GENERATION_CHAIN", "two")
     get_settings.cache_clear()
     registry = ProviderRegistry()
     registry.register(
