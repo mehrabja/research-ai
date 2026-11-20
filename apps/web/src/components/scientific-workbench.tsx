@@ -246,7 +246,7 @@ export function ScientificWorkbench() {
               {displayed.run.error_message&&<div className="notice error">{displayed.run.error_message}</div>}
               <div className="wb-timeline">{displayed.nodes.map(node=><article className="wb-node" key={node.id}>
                 <div className={"wb-node-marker "+tone(node.status)}>{node.status==="completed"?"✓":node.status==="failed"?"!":node.sequence}</div>
-                <div className="wb-node-main"><div className="wb-node-heading"><strong>{node.node_key.replaceAll("_"," ")}</strong><span className={"wb-status "+tone(node.status)}>{node.status}</span></div><p>{node.node_type} · v{node.node_version} · attempt {node.attempt}/{node.max_attempts}</p>{node.error_message&&<small className="wb-node-error">{node.error_message}</small>}</div>
+                <div className="wb-node-main"><div className="wb-node-heading"><strong>{node.node_key.replaceAll("_"," ")}</strong><span className={"wb-status "+tone(node.status)}>{node.status}</span></div><p>{node.node_type} · v{node.node_version} · attempt {node.attempt}/{node.max_attempts}</p>{node.error_message&&<small className="wb-node-error">{node.error_message}</small>}{node.output_preview&&<details className="wb-node-output"><summary>Inspect saved output</summary><pre>{JSON.stringify(node.output_preview,null,2)}</pre></details>}</div>
                 <small className="wb-node-duration">{node.duration_ms===null?"—":node.duration_ms+" ms"}</small>
               </article>)}</div>
               <div className="wb-run-controls">
