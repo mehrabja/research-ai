@@ -1016,14 +1016,14 @@ class Settings(BaseSettings):
                 )
             if (
                 ("openai" in generation_chain or "openai" in translation_chain)
-                and self._is_placeholder_secret(self.generation_openai_api_key)
+                and _is_placeholder_secret(self.generation_openai_api_key)
             ):
                 raise ValueError(
                     "GENERATION_OPENAI_API_KEY must be configured when OpenAI generation/translation is enabled."
                 )
             if (
                 "openai" in embedding_chain
-                and self._is_placeholder_secret(self.embedding_openai_api_key)
+                and _is_placeholder_secret(self.embedding_openai_api_key)
             ):
                 raise ValueError(
                     "EMBEDDING_OPENAI_API_KEY must be configured when OpenAI embeddings are enabled."

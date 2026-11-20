@@ -80,19 +80,13 @@ class _MeteredRAGGenerationProvider(GenerationProvider):
         operation: str,
     ) -> None:
         self._provider = provider
+        self.provider_name = provider.provider_name
+        self.model_name = provider.model_name
         self.workspace_id = workspace_id
         self.user_id = user_id
         self.project_id = project_id
         self.report_id = report_id
         self.operation = operation
-
-    @property
-    def provider_name(self) -> str:
-        return self._provider.provider_name
-
-    @property
-    def model_name(self) -> str:
-        return self._provider.model_name
 
     @property
     def attempted_providers(self) -> list[str]:
