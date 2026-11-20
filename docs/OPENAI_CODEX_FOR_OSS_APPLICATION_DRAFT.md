@@ -53,7 +53,7 @@ I am the creator and primary maintainer of Research AI. I designed and implement
 
 **Maintenance evidence**
 
-The repository history contains 12 pull requests authored by my GitHub account during September–October 2026. Two were merged, five were still open, and five were closed without merging at the time of the audit. The work spans the frontend/BFF, provider infrastructure, research pipeline, security and authorization, and test/CI hardening. I will provide links to the relevant merged PRs and current maintenance activity after the public release.
+The repository history contains 12 pull requests authored by my GitHub account during September–October 2026. Two were merged, six were still open, and four were closed without merging at the time of the audit. The work spans the frontend/BFF, provider infrastructure, research pipeline, security and authorization, and test/CI hardening. I will provide links to the relevant merged PRs and current maintenance activity after the public release.
 
 **Why support would help**
 
