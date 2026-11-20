@@ -41,8 +41,8 @@ from app.domain.retrieval_advanced import (
     RANKING_MODEL_VERSION,
     RetrievalRunStatus,
 )
-from app.integrations.embeddings.base import EmbeddingProvider
 from app.domain.generation import GenerationProviderResult
+from app.integrations.embeddings.base import EmbeddingProvider
 from app.integrations.generation.base import GenerationProvider
 from app.services.ai_metering import execute_metered_provider_call
 from app.services.generation_profile import build_generation_provider
