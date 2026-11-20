@@ -31,11 +31,11 @@ The preparation branch replaces PyMuPDF with **pypdf 7.1.1**, whose published Py
 
 This is a code change and must pass PDF regression tests before the branch is merged. Compare extraction behavior on representative PDFs, including encrypted, malformed, scanned, and text-based files. pypdf extracts embedded text; it is not an OCR engine.
 
-### Psycopg binary distribution
+### Psycopg 3 and binary extra
 
-The API declares psycopg[binary]. The psycopg-binary distribution declares **LGPL-3.0-only**. This dependency is not removed by the preparation changes.
+The API declares `psycopg[binary]`. PyPI marks both the pure-Python `psycopg` 3.3.5 distribution and the `psycopg-binary` extra distribution as **LGPL-3.0-only**. This dependency remains in the preparation branch.
 
-Before redistributing built containers or binary bundles, verify the applicable LGPL obligations for the exact resolved versions and packaging model. Preserve the dependency's license and notices, and ensure recipients can replace or modify the LGPL component where the license requires it. Do not describe the complete dependency graph as consisting only of MIT/BSD/Apache packages.
+Before redistributing built containers or binary bundles, verify the applicable LGPL obligations for the exact resolved versions and packaging model. Preserve the dependency's license and notices, and ensure recipients retain the rights the LGPL requires, including the ability to replace or modify the library where applicable. Do not describe the complete dependency graph as consisting only of MIT/BSD/Apache packages.
 
 ## Dependency inventory status
 
