@@ -5,7 +5,7 @@ This is an initial notice for known license-sensitive dependencies identified du
 | Dependency | Use in Research AI | Declared license | Notes |
 |---|---|---|---|
 | pypdf 7.1.1 | PDF text extraction | BSD-3-Clause | Replaces PyMuPDF in the OSS preparation branch. Preserve the upstream copyright notice and disclaimer when redistributing the library. |
-| psycopg / psycopg-binary | PostgreSQL driver | LGPL-3.0-only for psycopg-binary | Preserve LGPL notices and review replacement/relinking requirements for the exact packaging and distribution model. |
+| psycopg 3.3.5 / psycopg-binary 3.3.5 | PostgreSQL driver | LGPL-3.0-only | Both the pure-Python psycopg distribution and the binary extra are marked LGPL-3.0-only. Preserve their notices and review the applicable LGPL requirements for the exact packaging and distribution model. |
 
 ## Removed from the proposed dependency set
 
@@ -17,6 +17,7 @@ This is an initial notice for known license-sensitive dependencies identified du
 
 - pypdf: https://pypi.org/project/pypdf/
 - pypdf license: https://github.com/py-pdf/pypdf/blob/main/LICENSE
+- psycopg 3.3.5: https://pypi.org/project/psycopg/3.3.5/
 - psycopg-binary: https://pypi.org/project/psycopg-binary/
 - PyMuPDF licensing: https://pymupdf.io/licensing
 - Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0
