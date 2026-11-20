@@ -12,7 +12,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.domain.generation import GenerationProviderResult
 from app.db.models.humanization import (
     HumanizationIteration,
     HumanizationRewrite,
@@ -26,6 +25,7 @@ from app.db.models.pipeline import (
 )
 from app.db.models.project import Project
 from app.db.models.report import Report, ReportVersion
+from app.domain.generation import GenerationProviderResult
 from app.domain.humanization import (
     HumanizationAlreadyCompletedError,
     HumanizationAlreadyRunningError,
