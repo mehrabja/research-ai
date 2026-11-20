@@ -43,6 +43,31 @@ NCBI settings are optional: `PUBMED_API_KEY`, `PUBMED_EMAIL`, `PUBMED_TOOL`, `PU
 
 This is a focused adapter, not a copy of the full Parsian PubMed connector: ID conversion, Europe PMC full-text fetch, JATS parsing and PubTator are not part of this increment. No Electron, npm or XML parser dependency is added to the API.
 
+## Scientific source connector: arXiv
+
+Research AI supports the official arXiv Atom API through the same report-scoped source-search
+provider contract. Set `SOURCE_SEARCH_PROVIDER=arxiv`; no API key is required. The adapter maps
+arXiv IDs (including legacy archive IDs and versioned IDs), title, authors, publication year, DOI,
+abstract and canonical abstract URL into the existing `SourceCandidate` model. The adapter currently
+requests a conservative maximum of 100 records per API call; the application's search limit is
+clamped to that provider window. It applies an optional publication-year query and uses relevance
+sorting. arXiv's Atom API does not expose a distinct OpenAlex-style open-access filter, so the
+`open_access_only` flag has no filtering effect for this provider.
+
+The adapter uses a standard-library XML parser, rejects DTD/entity declarations and malformed Atom
+feeds, and detects arXiv's HTTP-200 API error feed instead of misclassifying it as a paper. Requests
+are bounded by timeout, response-size, retry and result limits. A process-local request pacer defaults
+to a minimum three-second interval between calls, following arXiv's API guidance; multi-worker
+deployments should still coordinate aggregate egress if multiple workers share one source IP.
+
+The arXiv abstract returned by its metadata API is stored as provider-supplied bibliographic metadata.
+This does not grant a blanket licence to download, redistribute or reuse the full-text PDF. PDF
+retrieval and full-text extraction remain in Research AI's controlled ingestion pipeline and must
+continue to preserve per-paper licence and provenance information.
+
+Official reference:
+- https://info.arxiv.org/help/api/user-manual.html
+
 ## Scientific source connector: OpenAlex
 
 Research AI now supports an optional OpenAlex Works provider through the existing report-scoped

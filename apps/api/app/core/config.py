@@ -720,7 +720,7 @@ class Settings(BaseSettings):
     )
 
     # --- Scientific source discovery ---------------------------------------
-    source_search_provider: Literal["semantic_scholar", "pubmed", "openalex"] = "semantic_scholar"
+    source_search_provider: Literal["semantic_scholar", "pubmed", "openalex", "arxiv"] = "semantic_scholar"
     semantic_scholar_api_key: str = Field(default="", repr=False)
     semantic_scholar_base_url: str = (
         "https://api.semanticscholar.org/graph/v1"
@@ -750,6 +750,12 @@ class Settings(BaseSettings):
     openalex_min_interval_seconds: float = Field(
         default=0.15, ge=0.0, le=5.0
     )
+    arxiv_timeout_seconds: float = Field(
+        default=20.0, ge=1.0, le=120.0
+    )
+    arxiv_max_retries: int = Field(default=2, ge=0, le=10)
+    # The arXiv API recommends a delay of at least three seconds between requests.
+    arxiv_min_interval_seconds: float = Field(default=3.0, ge=3.0, le=30.0)
     source_search_limit_default: int = Field(default=25, ge=1, le=1000)
     source_search_limit_max: int = Field(default=1000, ge=1, le=1000)
 
@@ -915,6 +921,8 @@ class Settings(BaseSettings):
             raise ValueError("pubmed_base_url must start with http(s)://")
         if not self.pubmed_tool.strip():
             raise ValueError("pubmed_tool must not be empty")
+        if self.arxiv_min_interval_seconds < 3.0:
+            raise ValueError("arxiv_min_interval_seconds must be >= 3.0")
         return self
 
     @model_validator(mode="after")
