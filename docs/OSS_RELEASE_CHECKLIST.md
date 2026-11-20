@@ -16,7 +16,7 @@ This checklist is for the first public release. It is intentionally conservative
 
 ## 2. License and supply chain
 
-- [ ] Confirm the project owner intends to license the complete project under MIT.
+- [ ] Confirm the project owner intends to license the complete project under MIT, including acceptance of the fact that MIT has no express patent-license grant.
 - [ ] Check that root LICENSE and apps/api/LICENSE are identical.
 - [ ] Complete the Python and npm direct/transitive license inventory.
 - [ ] Review LGPL requirements for psycopg-binary and any other copyleft dependencies.
