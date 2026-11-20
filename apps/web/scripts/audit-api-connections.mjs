@@ -56,7 +56,7 @@ for(const file of files){
   // Next.js route handlers are server-only adapters. They intentionally call
   // FastAPI's /api/v1 endpoints using the private backend URL; browser modules
   // must continue to use the same-origin /api/backend proxy.
-  const isServerRoute=rel.startsWith("src/app/api/");
+  const isServerRoute=rel.startsWith("src/app/api/")||rel.startsWith("src/lib/server/");
   if(text.includes("/api/v1/")&&!isServerRoute){
     violations.push(rel+": direct /api/v1 backend path in browser-facing frontend source; use /api/backend proxy");
   }
