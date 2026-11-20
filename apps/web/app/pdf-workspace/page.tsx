@@ -1,2 +1,25 @@
-﻿import PDFWorkspace from "@/components/PDFWorkspace";
-export default function Page(){return <main className="container"><PDFWorkspace/></main>}
+import { headers } from "next/headers";
+import { Suspense } from "react";
+import PDFWorkspace from "@/components/PDFWorkspace";
+import { ResearchContextProvider } from "@/lib/research-context";
+
+export default async function Page() {
+  await headers();
+  return (
+    <Suspense
+      fallback={
+        <main className="container">
+          <section className="card pad" aria-busy="true">
+            Loading PDF workspace…
+          </section>
+        </main>
+      }
+    >
+      <ResearchContextProvider>
+        <main className="container">
+          <PDFWorkspace />
+        </main>
+      </ResearchContextProvider>
+    </Suspense>
+  );
+}

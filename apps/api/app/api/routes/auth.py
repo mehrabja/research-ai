@@ -1,23 +1,28 @@
 """Authentication routes."""
 from __future__ import annotations
 
+import json
 import uuid
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Request, Response, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_client_ip, get_current_user
 from app.core.auth_exceptions import RefreshTokenInvalid
 from app.core.exceptions import (
     AuthenticationRateLimited,
+    AuthenticationRequired,
     InvalidCredentials,
 )
 from app.core.mfa_exceptions import MFAInvalid, MFARequired
 from app.core.security import create_access_token
+from app.db.models.audit import AuditEvent
 from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.activity import ActivityItem
 from app.schemas.auth import (
+    AccountDeleteRequest,
     LoginRequest,
     LogoutRequest,
     MessageResponse,
@@ -30,8 +35,10 @@ from app.schemas.auth import (
     UserResponse,
     VerifyEmailRequest,
 )
+from app.services import account_security as account_security_service
 from app.services import activity as activity_service
 from app.services import auth as auth_service
+from app.services.audit import emit_audit
 from app.services import mfa as mfa_service
 from app.services.email import EmailDeliveryService
 from app.services.rate_limit import get_login_rate_limiter
@@ -123,7 +130,7 @@ def login(
             raise MFARequired()
         valid_mfa = bool(
             user.mfa_secret
-            and mfa_service.verify_code(
+            and mfa_service.verify_encrypted_code(
                 user.mfa_secret,
                 payload.mfa_code,
             )
@@ -139,12 +146,23 @@ def login(
             else:
                 raise MFAInvalid()
 
-    token = create_access_token(subject=str(user.id))
+    token = create_access_token(
+        subject=str(user.id),
+        security_version=user.security_version,
+    )
     _session, refresh_token = auth_service.create_refresh_session(
         db,
         user_id=user.id,
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("user-agent"),
+    )
+    emit_audit(
+        "LOGIN_SUCCEEDED",
+        db=db,
+        request=request,
+        user_id=str(user.id),
+        reason="password_and_mfa_verified",
+        category="authentication",
     )
     db.commit()
 
@@ -182,7 +200,10 @@ def refresh(
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("user-agent"),
     )
-    access_token = create_access_token(subject=str(user.id))
+    access_token = create_access_token(
+        subject=str(user.id),
+        security_version=user.security_version,
+    )
     db.commit()
     return TokenResponse(
         access_token=access_token,
@@ -221,6 +242,14 @@ def logout_all(
         db,
         user_id=current_user.id,
     )
+    current_user.security_version += 1
+    emit_audit(
+        "ALL_SESSIONS_REVOKED",
+        db=db,
+        user_id=str(current_user.id),
+        reason="user_requested",
+        category="authentication",
+    )
     db.commit()
     return MessageResponse(message="All sessions have been revoked.")
 
@@ -241,6 +270,15 @@ def revoke_session(
         session_id=session_id,
     ):
         raise RefreshTokenInvalid()
+    emit_audit(
+        "SESSION_REVOKED",
+        db=db,
+        user_id=str(current_user.id),
+        resource_type="auth_session",
+        resource_id=str(session_id),
+        reason="user_requested",
+        category="authentication",
+    )
     db.commit()
     return MessageResponse(message="Session revoked.")
 
@@ -291,6 +329,81 @@ def activity(
             limit=limit,
         )
     ]
+
+
+@router.get("/audit-log", summary="Return durable security audit events")
+def audit_log(
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[dict[str, object]]:
+    safe_limit = max(1, min(limit, 500))
+    rows = db.execute(
+        select(AuditEvent)
+        .where(AuditEvent.actor_user_id == current_user.id)
+        .order_by(AuditEvent.occurred_at.desc())
+        .limit(safe_limit)
+    ).scalars().all()
+    return [
+        {
+            "id": row.id,
+            "event_code": row.event_code,
+            "workspace_id": row.workspace_id,
+            "project_id": row.project_id,
+            "resource_type": row.resource_type,
+            "resource_id": row.resource_id,
+            "outcome": row.outcome,
+            "reason": row.reason,
+            "occurred_at": row.occurred_at,
+        }
+        for row in rows
+    ]
+
+
+@router.get("/data-export", summary="Export portable account data")
+def data_export(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    principal = getattr(request.state, "auth_principal", None)
+    if principal is None or principal.auth_method != "bearer":
+        raise AuthenticationRequired()
+    payload = account_security_service.export_user_data(db, user_id=current_user.id)
+    return Response(
+        content=json.dumps(payload, ensure_ascii=False, default=str),
+        media_type="application/json",
+        headers={"Content-Disposition": 'attachment; filename="research-ai-data-export.json"'},
+    )
+
+
+@router.delete("/account", response_model=MessageResponse)
+def delete_account(
+    body: AccountDeleteRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    principal = getattr(request.state, "auth_principal", None)
+    if principal is None or principal.auth_method != "bearer":
+        raise AuthenticationRequired()
+
+    auth_service.authenticate_user(
+        db,
+        email=current_user.email,
+        password=body.password,
+    )
+    if current_user.mfa_enabled:
+        if not body.mfa_code or not mfa_service.verify_encrypted_code(
+            current_user.mfa_secret, body.mfa_code
+        ):
+            raise MFAInvalid()
+
+    account_security_service.delete_account(db, user_id=current_user.id)
+    db.commit()
+    return MessageResponse(
+        message="Account and personal security credentials have been deleted."
+    )
 
 
 @router.post(
@@ -363,6 +476,13 @@ def confirm_password_reset(
         db,
         token=payload.token,
         new_password=payload.new_password,
+    )
+    emit_audit(
+        "PASSWORD_RESET",
+        db=db,
+        user_id=str(user.id),
+        reason="password_reset_token_consumed",
+        category="authentication",
     )
     db.commit()
     db.refresh(user)

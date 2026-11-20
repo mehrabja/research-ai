@@ -151,6 +151,7 @@ def _make_token(
         int((now + timedelta(minutes=5)).timestamp()) if exp is None else exp
     )
     payload["jti"] = str(uuid.uuid4())
+    payload["sv"] = 1
     return jwt.encode(
         payload,
         settings.jwt_secret_key if secret is None else secret,
@@ -210,6 +211,7 @@ def test_decode_rejects_missing_exp() -> None:
         "aud": settings.jwt_audience,
         "iat": int(now.timestamp()),
         "jti": str(uuid.uuid4()),
+        "sv": 1,
     }
     token = jwt.encode(
         payload,
@@ -230,6 +232,7 @@ def test_decode_rejects_missing_iat() -> None:
         "aud": settings.jwt_audience,
         "exp": int((now + timedelta(minutes=5)).timestamp()),
         "jti": str(uuid.uuid4()),
+        "sv": 1,
     }
     token = jwt.encode(
         payload,
@@ -278,6 +281,7 @@ def test_decode_rejects_alg_none() -> None:
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(minutes=5)).timestamp()),
         "jti": str(uuid.uuid4()),
+        "sv": 1,
     }
 
     def b64(obj: dict) -> str:
@@ -307,6 +311,7 @@ def test_production_rejects_default_secret() -> None:
             app_env="production",
             jwt_secret_key=DEV_JWT_SECRET,
             database_url="postgresql+psycopg://test:test@localhost/test",
+            file_malware_scan_mode="required",
         )
 
 
@@ -316,6 +321,7 @@ def test_production_rejects_short_secret() -> None:
             app_env="production",
             jwt_secret_key="too-short",
             database_url="postgresql+psycopg://test:test@localhost/test",
+            file_malware_scan_mode="required",
         )
 
 
@@ -327,6 +333,7 @@ def test_production_accepts_strong_secret(monkeypatch) -> None:
         app_env="production",
         jwt_secret_key="x" * 64,
         database_url="postgresql+psycopg://test:test@localhost/test",
+        file_malware_scan_mode="required",
     )
     assert s.app_env == "production"
 

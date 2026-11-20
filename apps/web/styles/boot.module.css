@@ -56,9 +56,9 @@
 @keyframes blink{0%,100%{opacity:.5;transform:scale(.85)}50%{opacity:1;transform:scale(1.08)}}
 
 @media(prefers-reduced-motion:reduce){
-  :global(*),
-  :global(*::before),
-  :global(*::after){
+  .wrapper :global(*),
+  .wrapper :global(*::before),
+  .wrapper :global(*::after){
     animation:none!important;
     transition:none!important;
   }

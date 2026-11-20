@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Index, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, CreatedAtMixin, UUIDPKMixin
@@ -27,6 +28,15 @@ class APIToken(Base, UUIDPKMixin, CreatedAtMixin):
     )
     revoked_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+    scopes: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, server_default='["read:*"]'
+    )
+    allowed_workspace_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, server_default='[]'
+    )
+    allowed_project_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, server_default='[]'
     )
 
     __table_args__ = (

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import secrets
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from sqlalchemy import select
@@ -10,6 +11,9 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import AppError
 from app.db.models.api_token import APIToken
+from app.db.models.membership import WorkspaceMembership
+from app.db.models.project import Project
+from app.security.api_scopes import DEFAULT_SCOPES, normalize_scopes
 
 
 class APITokenInvalid(AppError):
@@ -18,8 +22,27 @@ class APITokenInvalid(AppError):
     message = "API token is invalid or expired."
 
 
+class APITokenPayloadInvalid(AppError):
+    code = "API_TOKEN_PAYLOAD_INVALID"
+    status_code = 422
+    message = "API token configuration is invalid."
+
+
+@dataclass(frozen=True)
+class APITokenPrincipal:
+    user_id: uuid.UUID
+    token_id: uuid.UUID
+    scopes: frozenset[str]
+    workspace_ids: frozenset[str]
+    project_ids: frozenset[str]
+
+
 def _hash(raw: str) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _normalize_ids(values: list[uuid.UUID] | None) -> tuple[str, ...]:
+    return tuple(sorted({str(v) for v in (values or [])}))
 
 
 def create_token(
@@ -28,16 +51,75 @@ def create_token(
     user_id: uuid.UUID,
     name: str,
     expires_at,
+    scopes: list[str] | None = None,
+    allowed_workspace_ids: list[uuid.UUID] | None = None,
+    allowed_project_ids: list[uuid.UUID] | None = None,
 ) -> tuple[APIToken, str]:
+    try:
+        normalized_scopes = normalize_scopes(scopes or DEFAULT_SCOPES)
+    except ValueError as exc:
+        raise APITokenPayloadInvalid(str(exc)) from exc
+
+    if expires_at is not None and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=UTC)
+    if expires_at is not None and expires_at <= datetime.now(UTC):
+        raise APITokenPayloadInvalid("expires_at must be in the future")
+
+    workspace_ids = list(_normalize_ids(allowed_workspace_ids))
+    project_ids = list(_normalize_ids(allowed_project_ids))
+
+    if workspace_ids:
+        rows = db.execute(
+            select(WorkspaceMembership.workspace_id).where(
+                WorkspaceMembership.user_id == user_id,
+                WorkspaceMembership.status == "active",
+                WorkspaceMembership.workspace_id.in_(workspace_ids),
+            )
+        ).scalars().all()
+        if {str(x) for x in rows} != set(workspace_ids):
+            raise APITokenPayloadInvalid("token includes a workspace without active membership")
+
+    if project_ids:
+        projects = db.execute(
+            select(Project.id, Project.workspace_id).where(
+                Project.id.in_(project_ids)
+            )
+        ).all()
+        if len(projects) != len(project_ids):
+            raise APITokenPayloadInvalid("token includes an unknown project")
+        accessible_project_ids = {
+            str(pid)
+            for pid, workspace_id in projects
+            if (
+                db.execute(
+                    select(WorkspaceMembership.id).where(
+                        WorkspaceMembership.user_id == user_id,
+                        WorkspaceMembership.workspace_id == workspace_id,
+                        WorkspaceMembership.status == "active",
+                    )
+                ).first()
+                is not None
+            )
+        }
+        if accessible_project_ids != set(project_ids):
+            raise APITokenPayloadInvalid("token includes a project without workspace access")
+        if workspace_ids and any(
+            str(workspace_id) not in set(workspace_ids)
+            for _pid, workspace_id in projects
+        ):
+            raise APITokenPayloadInvalid("project restriction is outside workspace restriction")
+
     raw_secret = secrets.token_urlsafe(40)
     token = f"rai_{raw_secret}"
-    prefix = token[:12]
     row = APIToken(
         user_id=user_id,
         name=name.strip(),
-        token_prefix=prefix,
+        token_prefix=token[:12],
         token_hash=_hash(token),
         expires_at=expires_at,
+        scopes=list(normalized_scopes),
+        allowed_workspace_ids=workspace_ids,
+        allowed_project_ids=project_ids,
     )
     db.add(row)
     db.flush()
@@ -48,11 +130,13 @@ def authenticate_api_token(
     db: Session,
     *,
     raw_token: str,
-) -> uuid.UUID:
-    if not raw_token.startswith("rai_"):
+) -> APITokenPrincipal:
+    if not raw_token.startswith("rai_") or len(raw_token) < 20:
         raise APITokenInvalid()
+
     row = db.execute(
-        select(APIToken).where(
+        select(APIToken)
+        .where(
             APIToken.token_hash == _hash(raw_token),
             APIToken.revoked_at.is_(None),
             (APIToken.expires_at.is_(None) | (APIToken.expires_at > datetime.now(UTC))),
@@ -60,9 +144,22 @@ def authenticate_api_token(
     ).scalar_one_or_none()
     if row is None:
         raise APITokenInvalid()
+
+    try:
+        scopes = frozenset(normalize_scopes(row.scopes or DEFAULT_SCOPES))
+    except ValueError as exc:
+        raise APITokenInvalid() from exc
+
     row.last_used_at = datetime.now(UTC)
     db.flush()
-    return row.user_id
+
+    return APITokenPrincipal(
+        user_id=row.user_id,
+        token_id=row.id,
+        scopes=scopes,
+        workspace_ids=frozenset(str(x) for x in (row.allowed_workspace_ids or [])),
+        project_ids=frozenset(str(x) for x in (row.allowed_project_ids or [])),
+    )
 
 
 def list_tokens(db: Session, *, user_id: uuid.UUID) -> list[APIToken]:

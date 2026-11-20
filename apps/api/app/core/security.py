@@ -39,7 +39,7 @@ def password_needs_rehash(password_hash: str) -> bool:
         return True
 
 
-def create_access_token(subject: str) -> str:
+def create_access_token(subject: str, *, security_version: int = 1) -> str:
     settings = get_settings()
 
     now = datetime.now(UTC)
@@ -54,6 +54,7 @@ def create_access_token(subject: str) -> str:
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
         "jti": str(uuid.uuid4()),
+        "sv": int(security_version),
     }
 
     headers: dict[str, Any] = {
@@ -91,7 +92,7 @@ def decode_access_token(token: str) -> dict[str, Any]:
         audience=settings.jwt_audience,
         leeway=settings.jwt_clock_skew_seconds,  # اضافه شد
         options={
-            "require": ["exp", "iat", "sub", "iss", "aud"],
+            "require": ["exp", "iat", "sub", "iss", "aud", "sv"],
             "verify_signature": True,
             "verify_exp": True,
             "verify_iat": True,

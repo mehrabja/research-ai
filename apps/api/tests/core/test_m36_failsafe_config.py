@@ -25,6 +25,7 @@ def test_production_rejects_debug() -> None:
                 app_env="production",
                 jwt_secret_key="x" * 64,
                 debug=True,
+                file_malware_scan_mode="required",
             )
         )
 
@@ -36,6 +37,7 @@ def test_production_rejects_wildcard_cors() -> None:
                 app_env="production",
                 jwt_secret_key="x" * 64,
                 cors_allowed_origins="*",
+                file_malware_scan_mode="required",
             )
         )
 
@@ -46,6 +48,7 @@ def test_production_rejects_short_jwt() -> None:
             **_base(
                 app_env="production",
                 jwt_secret_key="short",
+                file_malware_scan_mode="required",
             )
         )
 
@@ -58,6 +61,7 @@ def test_production_rejects_default_jwt() -> None:
             **_base(
                 app_env="production",
                 jwt_secret_key=DEV_JWT_SECRET,
+                file_malware_scan_mode="required",
             )
         )
 
@@ -68,6 +72,7 @@ def test_production_accepts_valid_config() -> None:
             app_env="production",
             jwt_secret_key="x" * 64,
             cors_allowed_origins="https://example.com",
+            file_malware_scan_mode="required",
         )
     )
     assert s.app_env == "production"

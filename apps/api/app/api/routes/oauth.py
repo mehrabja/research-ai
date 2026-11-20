@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_client_ip, get_current_user
+from app.core.exceptions import OAuthLastAuthMethod
 from app.db.models.oauth_account import OAuthAccount
 from app.db.session import get_db
+from app.services.audit import emit_audit
+from app.services.auth import revoke_all_sessions
 from app.schemas.auth import TokenResponse
 from app.schemas.oauth import OAuthCallbackRequest, OAuthStartResponse
 from app.services import oauth as oauth_service
@@ -101,11 +104,33 @@ def disconnect_oauth(
     current_user=Depends(get_current_user),
     db: Session=Depends(get_db),
 ):
-    from sqlalchemy import delete
+    provider = provider.strip().lower()
+    account_count = int(
+        db.execute(
+            select(func.count())
+            .select_from(OAuthAccount)
+            .where(OAuthAccount.user_id == current_user.id)
+        ).scalar_one()
+    )
+    if account_count <= 1:
+        raise OAuthLastAuthMethod()
 
-    from app.db.models.oauth_account import OAuthAccount
-    db.execute(delete(OAuthAccount).where(
+    result = db.execute(delete(OAuthAccount).where(
         OAuthAccount.user_id == current_user.id,
-        OAuthAccount.provider == provider.strip().lower(),
+        OAuthAccount.provider == provider,
     ))
+    if result.rowcount == 0:
+        raise OAuthLastAuthMethod()
+
+    current_user.security_version += 1
+    revoke_all_sessions(db, user_id=current_user.id)
+    emit_audit(
+        "OAUTH_DISCONNECTED",
+        db=db,
+        user_id=str(current_user.id),
+        resource_type="oauth_account",
+        resource_id=provider,
+        reason="user_requested",
+        category="authentication",
+    )
     db.commit()

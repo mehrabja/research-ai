@@ -32,6 +32,7 @@ const nextConfig: NextConfig = {
             key: "X-Permitted-Cross-Domain-Policies",
             value: "none",
           },
+
         ],
       },
     ];

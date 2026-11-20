@@ -13,6 +13,11 @@ from app.core.security import decode_access_token
 from app.db.models.user import User
 from app.db.session import get_db
 from app.services.api_tokens import APITokenInvalid, authenticate_api_token
+from app.security.authorization import (
+    AuthPrincipal,
+    enforce_api_token_request,
+    ensure_bearer_security_version,
+)
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -27,12 +32,22 @@ def get_current_user(
     raw_api_key = request.headers.get("X-API-Key")
     if raw_api_key:
         try:
-            user_id = authenticate_api_token(db, raw_token=raw_api_key)
+            token_principal = authenticate_api_token(db, raw_token=raw_api_key)
         except APITokenInvalid:
             raise AuthenticationRequired()
-        user = db.get(User, user_id)
-        if user is None or not user.is_active:
+        user = db.get(User, token_principal.user_id)
+        if user is None or not user.is_active or user.deleted_at is not None:
             raise AuthenticationRequired()
+        principal = AuthPrincipal(
+            user_id=user.id,
+            auth_method="api_token",
+            token_id=token_principal.token_id,
+            scopes=token_principal.scopes,
+            workspace_ids=token_principal.workspace_ids,
+            project_ids=token_principal.project_ids,
+        )
+        request.state.auth_principal = principal
+        enforce_api_token_request(request, db, principal)
         return user
 
     if credentials is None:
@@ -49,6 +64,8 @@ def get_current_user(
     except jwt.PyJWTError:
         raise AuthenticationRequired()
 
+    request.state.jwt_payload = payload
+
     sub = payload.get("sub")
     if not isinstance(sub, str) or not sub:
         raise AuthenticationRequired()
@@ -59,8 +76,13 @@ def get_current_user(
         raise AuthenticationRequired()
 
     user = db.get(User, user_id)
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or user.deleted_at is not None:
         raise AuthenticationRequired()
+    ensure_bearer_security_version(request, user)
+    request.state.auth_principal = AuthPrincipal(
+        user_id=user.id,
+        auth_method="bearer",
+    )
     return user
 
 

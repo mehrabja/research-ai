@@ -101,6 +101,13 @@ def _cands(n: int):
     ]
 
 
+def test_rerank_prompt_marks_evidence_as_untrusted_data():
+    cands = _cands(1)
+    prompt = rerank_svc._build_user_prompt("q", cands)
+    assert "BEGIN_UNTRUSTED_DATA" in prompt
+    assert "END_UNTRUSTED_DATA" in prompt
+
+
 def test_rerank_valid_order_accepted():
     cands = _cands(3)
     order = [cands[2]["chunk_id"], cands[0]["chunk_id"],

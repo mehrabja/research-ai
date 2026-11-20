@@ -175,6 +175,39 @@ def test_double_accept_second_is_409_or_ok(
     assert r2.json()["user_id"] == r1.json()["user_id"]
 
 
+def test_account_deletion_revokes_outstanding_invitation(
+    cleanup_users: list[uuid.UUID],
+) -> None:
+    owner_id, owner_token = _reg()
+    cleanup_users.append(owner_id)
+    wid = create_workspace(owner_token, "Delete invitation")
+    upgrade_to_pro(wid)
+    _token, inv_id = _make_invitation(
+        owner_token,
+        wid,
+        f"pending-{uuid.uuid4().hex[:8]}@example.com",
+    )
+
+    response = client.request(
+        "DELETE",
+        "/api/v1/auth/account",
+        headers=auth(owner_token),
+        json={"password": "Correct Horse Battery Staple!"},
+    )
+    assert response.status_code == 200, response.text
+
+    with SessionLocal() as db:
+        row = db.execute(
+            text(
+                "SELECT accepted_at, revoked_at "
+                "FROM workspace_invitations WHERE id = :id"
+            ),
+            {"id": uuid.UUID(inv_id)},
+        ).one()
+        assert row.accepted_at is None
+        assert row.revoked_at is not None
+
+
 def test_token_not_leaked_in_db(cleanup_users: list[uuid.UUID]) -> None:
     """Raw token must never appear in DB."""
     ua, ta = _reg()

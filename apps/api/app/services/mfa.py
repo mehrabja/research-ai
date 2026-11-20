@@ -73,5 +73,12 @@ def consume_recovery_code(
     return True, remaining
 
 
+def verify_encrypted_code(encrypted_secret: str | None, code: str) -> bool:
+    if not encrypted_secret:
+        return False
+    secret = decrypt_secret(encrypted_secret)
+    return bool(secret and verify_code(secret, code))
+
+
 def utcnow() -> datetime:
     return datetime.now(UTC)

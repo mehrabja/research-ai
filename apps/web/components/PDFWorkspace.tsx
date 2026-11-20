@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listProjects } from "@/lib/api/projects";
-import { listWorkspaces } from "@/lib/api/workspaces";
+import { useResearchContext } from "@/lib/research-context";
 import { projectFileContentUrl } from "@/lib/api/files";
 import {
   createPdfAnnotation,
@@ -14,8 +13,6 @@ import {
 } from "@/lib/api/pdf-workspace";
 
 export default function PDFWorkspace() {
-  const [workspaceId, setWorkspaceId] = useState<string>();
-  const [projectId, setProjectId] = useState<string>();
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [zoom, setZoom] = useState(1);
@@ -25,25 +22,14 @@ export default function PDFWorkspace() {
   const [feedback, setFeedback] = useState("");
   const queryClient = useQueryClient();
 
-  const workspaces = useQuery({
-    queryKey: ["workspaces"],
-    queryFn: listWorkspaces,
-    staleTime: 30_000,
-  });
-
-  const activeWorkspaceId = workspaceId ?? workspaces.data?.[0]?.id;
-
-  const projects = useQuery({
-    queryKey: ["projects", activeWorkspaceId],
-    queryFn: () => {
-      if (!activeWorkspaceId) throw new Error("No workspace is selected.");
-      return listProjects(activeWorkspaceId);
-    },
-    enabled: Boolean(activeWorkspaceId),
-    staleTime: 15_000,
-  });
-
-  const activeProjectId = projectId ?? projects.data?.[0]?.id;
+  const {
+    workspaceId: activeWorkspaceId,
+    projectId: activeProjectId,
+    workspacesQuery: workspaces,
+    projectsQuery: projects,
+    setWorkspace,
+    setProject,
+  } = useResearchContext();
 
   const workspace = useQuery({
     queryKey: ["pdf-workspace", activeProjectId],
@@ -190,8 +176,10 @@ export default function PDFWorkspace() {
               className="input"
               value={activeWorkspaceId ?? ""}
               onChange={(event) => {
-                setWorkspaceId(event.target.value);
-                setProjectId(undefined);
+                setWorkspace(event.target.value || null);
+                setActiveFileId(null);
+                setPageNumber(1);
+                setZoom(1);
               }}
             >
               {(workspaces.data ?? []).map((item) => (
@@ -209,7 +197,7 @@ export default function PDFWorkspace() {
               className="input"
               value={activeProjectId ?? ""}
               onChange={(event) => {
-                setProjectId(event.target.value);
+                setProject(event.target.value || null);
                 setActiveFileId(null);
                 setPageNumber(1);
                 setZoom(1);

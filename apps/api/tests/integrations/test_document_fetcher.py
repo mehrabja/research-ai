@@ -30,7 +30,11 @@ class _FakeStream:
 
 def _patch_get(monkeypatch, responder):  # type: ignore[no-untyped-def]
     import app.integrations.documents.fetcher as mod
-    monkeypatch.setattr(mod.httpx, "stream", lambda *a, **k: responder())
+    monkeypatch.setattr(
+        mod.httpx,
+        "stream",
+        lambda *a, **k: responder(),
+    )
 
 
 def test_unsafe_localhost_rejected() -> None:

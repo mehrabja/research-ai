@@ -1,3 +1,4 @@
+"""User identity and security state."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -36,6 +37,17 @@ class User(Base, UUIDPKMixin, TimestampMixin):
     mfa_recovery_code_hashes: Mapped[list[str] | None] = mapped_column(
         JSONB,
         nullable=True,
+    )
+    # Incremented on critical identity changes to invalidate all access JWTs.
+    security_version: Mapped[int] = mapped_column(
+        nullable=False,
+        server_default=text("1"),
+    )
+    deletion_requested_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     __table_args__ = (

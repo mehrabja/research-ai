@@ -346,6 +346,7 @@ export default function ManuscriptView() {
 
     return () => window.clearTimeout(timer);
   }, [
+    activeReportId,
     baseVersionId,
     draft.data,
     draft.isPending,
