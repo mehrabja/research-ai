@@ -55,7 +55,7 @@ Use clear commit messages such as feat(area): add capability or fix(area): corre
 
 ## Licensing of contributions
 
-By submitting a contribution, you agree that it may be distributed under the repository's Apache-2.0 license. You must have the right to submit the code, documentation, and other material, and must identify third-party material and its license. Do not submit copied proprietary code or content without permission.
+By submitting a contribution, you agree that it may be distributed under the repository's MIT License. You must have the right to submit the code, documentation, and other material, and must identify third-party material and its license. Do not submit copied proprietary code or content without permission.
 
 ## Security reports
 
