@@ -199,7 +199,7 @@ def upload_file(
             if not chunk:
                 continue
             total += len(chunk)
-            if total > settings.file_upload_max_bytes:
+            if total > settings.document_max_bytes:
                 raise FileTooLarge()
             hasher.update(chunk)
             yield chunk

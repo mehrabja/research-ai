@@ -138,3 +138,27 @@ class OrchestrationValidationRead(BaseModel):
     validation_status: str
     validation_errors: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+
+
+class OrchestrationStrategyRead(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    key: str
+    description: str
+
+
+class OrchestrationStrategyListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[OrchestrationStrategyRead] = Field(default_factory=list)
+
+
+class OrchestrationApprovalResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: str
+    run_id: uuid.UUID
+    node_id: uuid.UUID
+
+
+class OrchestrationResumeResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: str
+    run_id: uuid.UUID

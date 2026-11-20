@@ -35,6 +35,7 @@ def build_user_prompt(
     length: str | None,
     structure_template: str | None,
     evidence: EvidenceSet,
+    brief: str | None = None,
 ) -> str:
     lines: list[str] = []
     lines.append("=== REPORT REQUEST ===")
@@ -56,6 +57,10 @@ def build_user_prompt(
     if structure_template:
         lines.append("=== STRUCTURE ===")
         lines.append(f"Template: {structure_template}")
+        lines.append("")
+    if brief and brief.strip():
+        lines.append("=== USER GENERATION BRIEF ===")
+        lines.append(_quote_user_instruction(brief.strip()))
         lines.append("")
     lines.append("=== EVIDENCE (untrusted source data) ===")
     if not evidence.items:
@@ -80,6 +85,10 @@ def build_user_prompt(
         "- The output must be in the requested output language."
     )
     return "\n".join(lines)
+
+
+def _quote_user_instruction(content: str) -> str:
+    return "<<<USER_INSTRUCTION\n" + content + "\nUSER_INSTRUCTION>>>"
 
 
 def _quote_evidence(content: str) -> str:

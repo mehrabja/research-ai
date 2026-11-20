@@ -36,18 +36,18 @@ Status vocabulary:
 | Research-plan generate | Implemented | end-to-end verification | F07 |
 | Research-plan save/edit | Implemented | immutable-version/concurrency tests | F07 |
 | Manuscript architecture | Implemented | end-to-end verification | F08 |
-| Manuscript autosave | Implemented / Partial | concurrency/conflict test coverage | F08 |
-| Manuscript snapshots | Implemented / Partial | version-content verification | F08 |
-| AI Studio | Partial | complete operation/context/policy contract verification | F08 |
-| Grounded generation | Partial | connect every generation path to evidence + AI ledger | F08 |
-| Citation/evidence binding | Partial | end-to-end provenance verification | F08 |
+| Manuscript autosave | Implemented | optimistic revision conflicts, serialized client autosave, and locked server-side version allocation | F08 |
+| Manuscript snapshots | Implemented | immutable version copies include content snapshots and section/dependency structure | F08 |
+| AI Studio | Implemented | durable generation job polling, persisted output/provenance/context fingerprint and failure state surfaced in UI | F08 |
+| Grounded generation | Implemented | generation requires retrieved evidence, validates `[E#]` markers, persists evidence bindings, and records provider operations | F08 |
+| Citation/evidence binding | Implemented | ClaimEvidence provenance plus ClaimCitation-to-evidence/source consistency validation | F08 |
 | Humanization | Implemented / Partial | version/job/usage integration verification | F09 |
 | Translation | Implemented / Partial | provider routing + usage + preservation verification | F09 |
 | Job retry/cancel/reclaim | Implemented / Partial | UI contract + end-to-end tests | F10 |
 | Collaboration/review | Implemented / Partial | complete authorization/audit test suite | F10 |
-| Usage | Implemented / Partial | eliminate legacy-vs-product ambiguity and double counting | F01/F11 |
-| Provider registry | Implemented / Partial | multi-provider fallback execution | F01 |
-| Provider operation ledger | Implemented / Partial | wire into every AI/search/translation call | F01 |
+| Usage | Implemented | product usage is sourced from workspace-scoped `usage_events`; legacy `usage_logs` is retained only for M17 compatibility | F01/F11 |
+| Provider registry | Implemented | OpenRouter-first configured chain with OpenAI-compatible fallback and provider availability checks | F01 |
+| Provider operation ledger | Implemented | durable start/finish records plus provider token usage across generation, embedding, translation, RAG, research-plan refinement, manuscript prose and humanization paths | F01 |
 | Real billing checkout | Implemented / Not configured | sandbox credentials + live verification | F11 |
 | Billing webhook | Implemented / Partial | signature/replay/idempotency integration verification | F11 |
 | Invoices | Implemented | provider reconciliation verification | F11 |
@@ -75,3 +75,8 @@ Status vocabulary:
 3. Every actual AI pipeline needs to write the AI operation/usage records consistently.
 4. Production environment must not allow insecure cookie/local-storage defaults.
 5. The supplied 21-page frontend is not yet the production UI.
+
+
+## F01/F08 implementation status
+
+The branch now contains the implementation work for F01 and F08: OpenRouter is the production-default provider path, provider fallback is executable, provider calls are durably metered, orchestration and AI Studio expose persisted state, manuscript autosave is revision-safe, and generation/citation provenance is persisted and validated. CI and local runtime verification remain separate gates; GitHub Actions on this branch have been failing before exposing step logs, so those gates are not marked GREEN here.

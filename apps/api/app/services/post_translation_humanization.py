@@ -23,6 +23,7 @@ from app.db.models.pipeline import (
     TranslationRun,
     TranslationVersion,
 )
+from app.db.models.project import Project
 from app.db.models.report import Report, ReportVersion
 from app.domain.humanization import (
     HumanizationAlreadyCompletedError,
@@ -45,6 +46,7 @@ from app.domain.humanization_preservation import (
     extract_protected_tokens,
     validate_preservation,
 )
+from app.services.ai_metering import execute_metered_provider_call
 from app.services.post_translation_detection import (
     run_post_translation_detection,
 )
@@ -546,6 +548,16 @@ def run_post_translation_humanization(
     if report.user_id != user_id:
         raise HumanizationError("report ownership mismatch")
 
+    project = db.get(Project, report.project_id) if report.project_id else None
+    if project is not None:
+        workspace_id = project.workspace_id
+    else:
+        from app.services.workspaces import get_default_workspace_for_user
+        workspace = get_default_workspace_for_user(db, user_id=user_id)
+        if workspace is None:
+            raise HumanizationError("report has no workspace context")
+        workspace_id = workspace.id
+
     trun = db.execute(
         select(TranslationRun).where(
             TranslationRun.id == translation_run_id,
@@ -765,10 +777,24 @@ def run_post_translation_humanization(
             _touch_owned_run(db=db, run_id=run.id, token=token)
             db.commit()
 
-            result = provider.generate(
-                system_prompt=system_prompt, user_prompt=user_prompt,
-                temperature=policy.temperature,
-                max_output_tokens=policy.max_output_tokens,
+            result = execute_metered_provider_call(
+                lambda: provider.generate(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    temperature=policy.temperature,
+                    max_output_tokens=policy.max_output_tokens,
+                ),
+                workspace_id=workspace_id,
+                user_id=user_id,
+                operation="report.post_translation_humanization.provider_call",
+                capability="generation",
+                provider=provider,
+                model=getattr(policy, "model", None),
+                project_id=report.project_id,
+                report_id=report_id,
+                job_id=getattr(policy, "job_id", None),
+                input_units=lambda value: getattr(value, "input_tokens", None),
+                output_units=lambda value: getattr(value, "output_tokens", None),
             )
             last_result = result
             in_tok = getattr(result, "input_tokens", 0) or 0

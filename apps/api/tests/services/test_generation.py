@@ -6,6 +6,7 @@ import uuid
 import pytest
 from sqlalchemy import text
 
+from app.db.models.pipeline import GenerationRun
 from app.db.session import SessionLocal
 from app.domain.generation import (
     EmptyGenerationError,
@@ -73,6 +74,15 @@ def test_success_no_markers(monkeypatch) -> None:
         )
     assert r.text == "A short draft."
     assert r.cited_markers == ()
+
+    with SessionLocal() as db:
+        run = db.query(GenerationRun).filter(
+            GenerationRun.report_id == rid
+        ).order_by(GenerationRun.created_at.desc()).first()
+        assert run is not None
+        assert run.status == "success"
+        assert isinstance(run.output_json.get("context_hash"), str)
+        assert len(run.output_json["context_hash"]) == 64
 
 
 def test_empty_output_rejected(monkeypatch) -> None:

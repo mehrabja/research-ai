@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Iterator
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,7 @@ from app.schemas.project_file import (
     ProjectFileUpdate,
 )
 from app.services import files as files_service
+from app.services.file_folders import FileFolderError
 
 router = APIRouter(prefix="/projects", tags=["files"])
 files_router = APIRouter(prefix="/files", tags=["files"])
@@ -149,12 +150,15 @@ def update_file(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ProjectFileRead:
-    pf = files_service.move_file(
-        db,
-        user_id=current_user.id,
-        file_id=file_id,
-        folder_id=payload.folder_id,
-    )
+    try:
+        pf = files_service.move_file(
+            db,
+            user_id=current_user.id,
+            file_id=file_id,
+            folder_id=payload.folder_id,
+        )
+    except FileFolderError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ProjectFileRead.model_validate(pf)
 
 

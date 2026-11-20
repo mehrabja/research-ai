@@ -43,7 +43,7 @@ def _ctx(job_id: uuid.UUID, report_id: uuid.UUID) -> JobContext:
     return JobContext(
         job_id=job_id, job_type="generate_report",
         attempt_count=1, worker_id="w-test",
-        payload={"report_id": str(report_id)},
+        payload={"report_id": str(report_id), "brief": "focus on limitations"},
     )
 
 
@@ -82,3 +82,4 @@ def test_valid_payload_calls_service() -> None:
     ) as m:
         _generate_report(ctx)
     assert m.call_count == 1
+    assert m.call_args.kwargs["brief"] == "focus on limitations"

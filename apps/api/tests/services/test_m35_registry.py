@@ -15,6 +15,7 @@ def test_registry_has_required_tools() -> None:
     keys = list_tools()
     for key in (
         "build_plan",
+        "manuscript_generate",
         "technical_intelligence",
         "generate_citations",
         "academic_qa",
@@ -31,6 +32,8 @@ def test_unknown_tool_rejected() -> None:
 
 def test_tool_exists() -> None:
     assert tool_exists("academic_qa")
+    humanize_spec, _ = get_tool("humanize")
+    assert humanize_spec.deterministic is False
     assert not tool_exists("nope")
 
 

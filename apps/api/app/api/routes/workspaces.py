@@ -152,7 +152,7 @@ def list_members(
                 WorkspaceMembership.workspace_id == workspace_id,
                 WorkspaceMembership.status == "active",
             )
-        ).scalars()
+        ).all()
     )
     items = [
         MemberRead(

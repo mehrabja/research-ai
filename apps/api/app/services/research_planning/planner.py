@@ -129,28 +129,36 @@ def _emit_event(
 def _llm_available(settings) -> bool:
     if not getattr(settings, "research_plan_enabled", True):
         return False
+    provider_chain = [
+        item.strip().lower()
+        for item in getattr(
+            settings, "provider_generation_chain", ""
+        ).split(",")
+        if item.strip()
+    ]
+    if not provider_chain:
+        provider_chain = [
+            getattr(settings, "generation_provider", "openrouter").lower()
+        ]
     if getattr(settings, "research_plan_llm_required", False):
         return True
-    provider = getattr(settings, "generation_provider", "openai")
-    if provider == "openai":
-        return bool(getattr(settings, "generation_openai_api_key", ""))
+    for provider in provider_chain:
+        if provider == "openrouter" and getattr(settings, "openrouter_api_key", ""):
+            return True
+        if provider == "openai" and getattr(settings, "generation_openai_api_key", ""):
+            return True
     return False
 
 
 def _make_llm_provider(settings):
-    """Build the LLM provider used for plan refinement.
+    """Build the first configured generation provider in the active chain."""
+    from app.services.generation_profile import get_current_generation_profile
+    from app.services.provider_registry import get_provider_registry
 
-    The OpenAI provider requires an explicit model + api_key. We
-    reuse M12 settings; if the class signature changes, this is the
-    single place to adjust.
-    """
-    from app.integrations.generation.openai import (
-        OpenAIGenerationProvider,
-    )
-    return OpenAIGenerationProvider(
-        api_key=settings.generation_openai_api_key,
-        model=settings.generation_model,
-    )
+    profile = get_current_generation_profile()
+    registry = get_provider_registry()
+    provider = registry.resolve("generation", requested=profile.provider)
+    return provider
 
 
 class _SectionView:
@@ -330,7 +338,11 @@ def generate_research_plan(
                     ],
                 )
                 raw = refine_svc.call_refinement_provider(
-                    provider, prompt
+                    provider,
+                    prompt,
+                    workspace_id=project.workspace_id,
+                    user_id=user_id,
+                    project_id=project_id,
                 )
                 allowed_sections = set(section_keys)
                 allowed_reqs = {d.requirement_key for d in req_drafts}
@@ -360,10 +372,11 @@ def generate_research_plan(
                         )
                     planning_mode = PlanningMode.HYBRID.value
                     llm_provider = getattr(
-                        settings, "generation_provider", None
+                        provider, "last_used_provider_name",
+                        getattr(provider, "provider_name", None),
                     )
                     llm_model = getattr(
-                        settings, "generation_model", None
+                        provider, "model_name", None
                     )
             except Exception:  # noqa: BLE001
                 logger.exception(
