@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models.ai_operation import AIOperation
+from app.db.models.jobs import Job
 
 
 def start_operation(
@@ -26,6 +27,17 @@ def start_operation(
     idempotency_key: str | None = None,
     metadata: dict | None = None,
 ) -> AIOperation:
+    if job_id is not None:
+        try:
+            normalized_job_id = uuid.UUID(str(job_id))
+        except (TypeError, ValueError, AttributeError):
+            normalized_job_id = None
+        job_id = (
+            normalized_job_id
+            if normalized_job_id is not None and db.get(Job, normalized_job_id) is not None
+            else None
+        )
+
     if idempotency_key:
         existing = db.execute(
             select(AIOperation).where(

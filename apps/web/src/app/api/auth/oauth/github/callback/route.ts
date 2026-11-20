@@ -1,5 +1,7 @@
 import {NextResponse} from "next/server";
+import {getBackendApiUrl} from "@/lib/server/backend-url";
 import {setAccessCookie,copySetCookies} from "@/lib/server/auth";
+import {getBackendApiUrl} from "@/lib/server/backend-url";
 
 export async function GET(req:Request){
   const url=new URL(req.url);
@@ -9,7 +11,7 @@ export async function GET(req:Request){
   if(error)return NextResponse.redirect(new URL("/login?oauth_error="+encodeURIComponent(error),url.origin));
   if(!code||!state)return NextResponse.redirect(new URL("/login?oauth_error=missing_callback",url.origin));
 
-  const base=process.env.BACKEND_API_URL??"http://localhost:8000";
+  const base=getBackendApiUrl();
   const upstream=await fetch(
     base+"/api/v1/auth/oauth/github/callback?code="+encodeURIComponent(code)+"&state="+encodeURIComponent(state),
     {cache:"no-store",redirect:"manual"},

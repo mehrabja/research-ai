@@ -12,16 +12,21 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection, Engine
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-load_dotenv(REPO_ROOT / ".env", override=False)
+_DOTENV_VALUES = dotenv_values(REPO_ROOT / ".env")
 
 
 def _db_url() -> str:
-    url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+    url = (
+        os.getenv("TEST_DATABASE_URL")
+        or os.getenv("DATABASE_URL")
+        or _DOTENV_VALUES.get("TEST_DATABASE_URL")
+        or _DOTENV_VALUES.get("DATABASE_URL")
+    )
     if not url:
         pytest.skip("TEST_DATABASE_URL / DATABASE_URL not configured")
     return url

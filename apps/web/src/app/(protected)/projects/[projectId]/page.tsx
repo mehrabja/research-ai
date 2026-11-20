@@ -7,13 +7,6 @@ import {useRouter,useSearchParams} from "next/navigation";
 import {api} from "@/lib/api/client";
 import {useWorkspace} from "@/components/app-shell";
 
-const LANGUAGES=[
-  ["en","English"],
-  ["fa","Persian"],
-  ["de","German"],
-  ["fr","French"],
-] as const;
-
 export default function ProjectPage({params}:{params:Promise<{projectId:string}>}){
   const {projectId}=use(params);
   const {workspaceId}=useWorkspace();
@@ -106,6 +99,17 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
     },
   });
 
+  const archive=useMutation({
+    mutationFn:()=>api.archiveProject(projectId,workspaceId!),
+    onSuccess:async()=>{
+      await Promise.all([
+        qc.invalidateQueries({queryKey:["project",projectId,workspaceId]}),
+        qc.invalidateQueries({queryKey:["projects",workspaceId]}),
+      ]);
+      router.push("/projects");
+    },
+  });
+
   const activeReport=useMemo(
     ()=>reports.data?.items?.find(x=>x.id===activeReportId)??reports.data?.items?.[0],
     [reports.data,activeReportId],
@@ -139,9 +143,15 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
           <div className="actions">
             <span className={"tag"+(project.data.status==="active"?" primary":"")}>{project.data.status}</span>
             <button className="btn" onClick={()=>setEditing(x=>!x)}>{editing?"Close editor":"Edit project"}</button>
+            {project.data.status==="active"&&<button
+              className="btn"
+              disabled={archive.isPending}
+              onClick={()=>{if(window.confirm("Archive this project?"))archive.mutate();}}
+            >{archive.isPending?"Archiving…":"Archive project"}</button>}
           </div>
         </div>
       </div>
+      {archive.isError&&<div className="notice error" style={{marginTop:12}}>{archive.error instanceof Error?archive.error.message:"Project archive failed."}</div>}
 
       <section className="card p-5">
         <div className="row">
@@ -221,9 +231,7 @@ export default function ProjectPage({params}:{params:Promise<{projectId:string}>
         </div>
         <div className="mt-4 grid md:grid-cols-[1fr_180px_auto] gap-2">
           <input className="input" aria-label="Report topic" placeholder="Report topic" value={topic} onChange={e=>setTopic(e.target.value)}/>
-          <select className="input" aria-label="Output language" value={language} onChange={e=>setLanguage(e.target.value as typeof language)}>
-            {LANGUAGES.map(([code,label])=><option key={code} value={code}>{label}</option>)}
-          </select>
+          <input className="input" aria-label="Output language" placeholder="Output language code (e.g. en, fa, de)" value={language} onChange={e=>setLanguage(e.target.value)}/>
           <button className="btn btn-primary" disabled={!topic.trim()||createReport.isPending} onClick={()=>createReport.mutate()}>{createReport.isPending?"Creating…":"Create report"}</button>
         </div>
         {createReport.isError&&<div className="notice error" style={{marginTop:12}}>{createReport.error instanceof Error?createReport.error.message:"Report creation failed."}</div>}

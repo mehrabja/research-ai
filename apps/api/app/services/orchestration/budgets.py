@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from app.core.config import Settings
 from app.domain.orchestration import DEFAULT_BUDGET
 
 
@@ -90,9 +91,34 @@ def default_budget() -> dict[str, int]:
 
 
 __all__ = [
+    "effective_budget",
     "BudgetCheck",
     "check_before_node",
     "check_provider_call",
     "accumulate",
     "default_budget",
 ]
+
+
+def effective_budget(settings: Settings) -> dict[str, int]:
+    budget = default_budget()
+    budget["max_nodes"] = min(budget["max_nodes"], int(settings.orchestration_max_nodes))
+    budget["max_retries_per_node"] = min(
+        budget["max_retries_per_node"], int(settings.orchestration_max_retries_per_node)
+    )
+    budget["max_provider_calls"] = min(
+        budget["max_provider_calls"], int(settings.orchestration_max_provider_calls)
+    )
+    budget["max_wall_clock_seconds"] = min(
+        budget["max_wall_clock_seconds"], int(settings.orchestration_max_wall_clock_seconds)
+    )
+    budget["max_total_tokens"] = min(
+        budget["max_total_tokens"], int(settings.orchestration_max_total_tokens)
+    )
+    budget["max_evidence_volume"] = min(
+        budget["max_evidence_volume"], int(settings.orchestration_max_evidence_volume)
+    )
+    budget["max_generated_chars"] = min(
+        budget["max_generated_chars"], int(settings.orchestration_max_generated_chars)
+    )
+    return budget

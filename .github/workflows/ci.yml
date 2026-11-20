@@ -1,4 +1,6 @@
 name: CI
+permissions:
+  contents: read
 on:
   push:
     branches: ["**"]
@@ -62,6 +64,7 @@ jobs:
       - run: npm install
       - run: npm run typecheck
       - run: npm run test:unit
+      - run: npm run audit:connections
       - run: npm run build
 
   e2e:
@@ -117,6 +120,7 @@ jobs:
               raise SystemExit("backend health endpoint did not become ready")
           PY
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: actions/setup-node@v6
         with:
           node-version: "20.9.0"
       - name: Install frontend
@@ -125,31 +129,9 @@ jobs:
       - name: Install Playwright browser
         working-directory: apps/web
         run: npx playwright install --with-deps chromium
-      - name: Start frontend
-        working-directory: apps/web
-        run: |
-          nohup npm run dev > /tmp/research-ai-web.log 2>&1 &
-          python - <<'PY'
-          import time
-          import urllib.request
-          for _ in range(60):
-              try:
-                  with urllib.request.urlopen("http://127.0.0.1:3000", timeout=2) as response:
-                      if response.status < 500:
-                          break
-              except Exception:
-                  time.sleep(1)
-          else:
-              raise SystemExit("frontend did not become ready")
-          PY
       - name: Run E2E
         working-directory: apps/web
         run: npm run test:e2e
-      - name: Logs on failure
-        if: failure()
-        run: |
-          cat /tmp/research-ai-api.log || true
-          cat /tmp/research-ai-web.log || true
 
   docker:
     name: Docker

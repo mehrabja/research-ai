@@ -19,6 +19,24 @@ logger = logging.getLogger(__name__)
 _TOOL_VERSION = "m35-tools-v1"
 
 
+def _current_manuscript_version_id(db: Session, report_id: _uuid.UUID) -> _uuid.UUID:
+    from app.db.models.manuscript import Manuscript
+
+    manuscript = db.query(Manuscript).filter(Manuscript.report_id == report_id).one_or_none()
+    if manuscript is None or manuscript.current_version_id is None:
+        raise ValueError("orchestration requires a current manuscript version")
+    return manuscript.current_version_id
+
+
+def _current_target_id(db: Session, report_id: _uuid.UUID) -> _uuid.UUID:
+    from app.services.publication.profiles import get_current_selection
+
+    selection = get_current_selection(db, report_id=report_id)
+    if selection is None:
+        raise ValueError("orchestration requires a selected publication target")
+    return selection.target_id
+
+
 def _call_build_plan(
     db: Session, ctx: Any,
 ) -> dict[str, Any]:
@@ -33,6 +51,29 @@ def _call_build_plan(
     )
     return {
         "plan_id": str(getattr(result, "plan_id", None) or ""),
+    }
+
+
+def _call_manuscript_generate(
+    db: Session, ctx: Any,
+) -> dict[str, Any]:
+    if ctx.user_id is None:
+        raise ValueError("manuscript_generate requires user_id")
+
+    from app.services.manuscript import builder as ms_builder
+
+    persisted = ms_builder.generate_manuscript(
+        db,
+        user_id=ctx.user_id,
+        report_id=ctx.report_id,
+        force=bool(ctx.payload.get("force", False)),
+        commit=False,
+    )
+    return {
+        "run_id": str(persisted.run.id),
+        "manuscript_id": str(persisted.manuscript.id) if persisted.manuscript else "",
+        "version_id": str(persisted.version.id) if persisted.version else "",
+        "section_count": len(persisted.sections),
     }
 
 
@@ -60,10 +101,7 @@ def _call_generate_citations(
     from app.services.citation import persistence as cit_persist
 
     manuscript_version_id = ctx.payload.get("manuscript_version_id")
-    if manuscript_version_id is None:
-        raise ValueError(
-            "generate_citations requires manuscript_version_id"
-        )
+    manuscript_version_id = manuscript_version_id or str(_current_manuscript_version_id(db, ctx.report_id))
     persisted = cit_persist.run_citation_persisted(
         db,
         user_id=ctx.user_id,
@@ -110,11 +148,8 @@ def _call_humanize(
     )
 
     manuscript_version_id = ctx.payload.get("manuscript_version_id")
+    manuscript_version_id = manuscript_version_id or str(_current_manuscript_version_id(db, ctx.report_id))
     mode = ctx.payload.get("mode", "academic")
-    if manuscript_version_id is None:
-        raise ValueError(
-            "humanize requires manuscript_version_id"
-        )
     persisted = mh_persist.run_m32_persisted(
         db,
         report_id=ctx.report_id,
@@ -134,12 +169,8 @@ def _call_target_compliance(
     from app.services.publication import persistence as pub_persist
 
     manuscript_version_id = ctx.payload.get("manuscript_version_id")
-    target_id = ctx.payload.get("target_id")
-    if manuscript_version_id is None or target_id is None:
-        raise ValueError(
-            "target_compliance requires manuscript_version_id "
-            "and target_id"
-        )
+    manuscript_version_id = manuscript_version_id or str(_current_manuscript_version_id(db, ctx.report_id))
+    target_id = target_id or str(_current_target_id(db, ctx.report_id))
     persisted = pub_persist.run_m33_persisted(
         db,
         report_id=ctx.report_id,
@@ -160,11 +191,7 @@ def _call_manuscript_prose_generate(
     base_manuscript_version_id = ctx.payload.get(
         "base_manuscript_version_id"
     ) or ctx.payload.get("manuscript_version_id")
-    if base_manuscript_version_id is None:
-        raise ValueError(
-            "manuscript_prose_generate requires "
-            "base_manuscript_version_id"
-        )
+    base_manuscript_version_id = base_manuscript_version_id or str(_current_manuscript_version_id(db, ctx.report_id))
     mode = ctx.payload.get("mode")
     persisted = mp_persist.run_m28_5_persisted(
         db,
@@ -204,6 +231,34 @@ def _register_all() -> None:
             idempotent=True,
         ),
         _call_build_plan,
+    )
+    register_tool(
+        ToolSpec(
+            key="manuscript_generate",
+            version=_TOOL_VERSION,
+            description="Build the evidence-ready manuscript architecture.",
+            permission="write",
+            deterministic=True,
+            timeout_seconds=180,
+            max_attempts=2,
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "force": {"type": "boolean"},
+                },
+            },
+            output_schema={
+                "type": "object",
+                "properties": {
+                    "run_id": {"type": "string"},
+                    "manuscript_id": {"type": "string"},
+                    "version_id": {"type": "string"},
+                    "section_count": {"type": "integer"},
+                },
+            },
+            idempotent=True,
+        ),
+        _call_manuscript_generate,
     )
     register_tool(
         ToolSpec(

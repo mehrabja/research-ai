@@ -6,12 +6,14 @@ import uuid
 import pytest
 from sqlalchemy import text
 
+from app.db.models.jobs import Job
+
 from app.db.session import SessionLocal
 from app.domain.generation import GenerationProviderResult
 from app.services.generation import generate_report
 
 
-def _seed() -> tuple[uuid.UUID, uuid.UUID]:
+def _seed() -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
     with SessionLocal() as db:
         uid = db.execute(text(
             "INSERT INTO users (email, password_hash) "
@@ -22,8 +24,10 @@ def _seed() -> tuple[uuid.UUID, uuid.UUID]:
             "(user_id, topic, status, output_language) "
             "VALUES (:u, 'T', 'draft', 'en') RETURNING id"
         ), {"u": uid}).scalar()
+        job_id = uuid.uuid4()
+        db.add(Job(id=job_id, job_type="generate_report", user_id=uid, report_id=rid))
         db.commit()
-    return uid, rid
+    return uid, rid, job_id
 
 
 def _rc(rid):  # type: ignore[no-untyped-def]
@@ -49,7 +53,7 @@ class _OkProvider:
 def test_persistence_rolls_back_on_version_failure(
     monkeypatch,  # type: ignore[no-untyped-def]
 ) -> None:
-    uid, rid = _seed()
+    uid, rid, job_id = _seed()
     monkeypatch.setattr(
         "app.services.generation.retrieval_service.retrieve",
         lambda *a, **k: ([_rc(rid)], {}),
@@ -66,7 +70,7 @@ def test_persistence_rolls_back_on_version_failure(
 
     with SessionLocal() as db, pytest.raises(RuntimeError):
         generate_report(
-            db, job_id=uuid.uuid4(), user_id=uid, report_id=rid,
+            db, job_id=job_id, user_id=uid, report_id=rid,
             provider=_OkProvider(),
         )
 

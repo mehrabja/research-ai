@@ -32,6 +32,7 @@ export default function LoginPage(){
       if(!res.ok)throw new Error(
         typeof body?.detail==="string"?body.detail:
         typeof body?.message==="string"?body.message:
+        typeof body?.error?.message==="string"?body.error.message:
         "Login failed."
       );
       router.replace("/dashboard");
@@ -64,8 +65,8 @@ export default function LoginPage(){
         {error&&<div className="notice error" style={{marginTop:14}}>{error}</div>}
 
         <form className="auth-form" onSubmit={submit}>
-          <div className="field"><label>Email</label><input className="input" type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required/></div>
-          <div className="field"><label>Password</label><input className="input" type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required/></div>
+          <div className="field"><label htmlFor="login-email">Email</label><input id="login-email" className="input" type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required/></div>
+          <div className="field"><label htmlFor="login-password">Password</label><input id="login-password" className="input" type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required/></div>
           <div className="row">
             <span className="muted small">Secure session via HttpOnly refresh cookie</span>
             <Link className="muted small" href="/forgot-password">Forgot password?</Link>

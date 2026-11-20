@@ -59,7 +59,6 @@ def validate_citation_run(
                 CitationIdentity.id.in_(citation_ids)
             )
         ).scalars().all())
-        by_id = {i.id: i for i in idents}
         src_ids = [
             i.source_id for i in idents if i.source_id is not None
         ]
@@ -89,6 +88,42 @@ def validate_citation_run(
     for e in evs:
         if not e.provenance:
             errors.append(f"claim_evidence_missing_provenance:{e.id}")
+
+    by_id = {i.id: i for i in idents} if citation_ids else {}
+    claim_by_id = {claim.id: claim for claim in claims}
+    evidence_by_claim: dict[uuid.UUID, list[ClaimEvidence]] = {}
+    for evidence in evs:
+        evidence_by_claim.setdefault(evidence.claim_id, []).append(evidence)
+
+    # Every ClaimCitation must be backed by evidence on the same claim.
+    # This prevents a citation from appearing in the bibliography solely
+    # because an identity resolved, without a persisted provenance edge.
+    for citation in citations:
+        claim = claim_by_id.get(citation.claim_id)
+        if claim is None:
+            errors.append(f"claim_citation_orphan_claim:{citation.id}")
+            continue
+        matching_evidence = [
+            evidence
+            for evidence in evidence_by_claim.get(claim.id, [])
+            if evidence.source_id is not None
+            and evidence.support_level == citation.support_level
+        ]
+        if not matching_evidence:
+            errors.append(
+                f"claim_citation_without_evidence:{citation.id}"
+            )
+            continue
+
+        identity = by_id.get(citation.citation_id) if citation_ids else None
+        if identity is not None and identity.source_id is not None:
+            if not any(
+                evidence.source_id == identity.source_id
+                for evidence in matching_evidence
+            ):
+                errors.append(
+                    f"claim_citation_source_mismatch:{citation.id}"
+                )
 
     if run.unsupported_count > 0:
         warnings.append(

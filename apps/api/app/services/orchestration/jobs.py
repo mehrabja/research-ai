@@ -10,6 +10,7 @@ from app.core.config import get_settings
 from app.db.models.report import Report
 from app.domain.orchestration import M35_VERSION
 from app.services import jobs as jobs_service
+from app.services.orchestration import budgets as budget_svc
 from app.services.orchestration import context as ctx_svc
 from app.services.reports import get_report
 
@@ -32,13 +33,15 @@ def enqueue_orchestration(
     if report is None or report.project_id != project_id:
         raise ValueError("report does not belong to project")
 
+    settings = get_settings()
+    effective_budget = budget_svc.effective_budget(settings)
     context_hash = ctx_svc.compute_m35_context_hash(
         db,
         project_id=project_id,
         report_id=report_id,
         goal=goal,
         strategy=strategy,
-        budget={},
+        budget=effective_budget,
     )
     job_payload = {
         "project_id": str(project_id),
@@ -51,7 +54,6 @@ def enqueue_orchestration(
         "m35_version": M35_VERSION,
         "force": bool(force),
     }
-    settings = get_settings()
     enqueued = jobs_service.enqueue_job(
         db,
         job_type="orchestration_run",

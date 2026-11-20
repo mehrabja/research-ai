@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import uuid
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import cast, get_args
 
 from sqlalchemy import select
@@ -49,10 +49,12 @@ class LexicalOnlyEmbeddingProvider:
     max_input_tokens_per_item: int | None = None
     max_input_tokens_per_request: int | None = None
     max_batch_size = 1
+    model_name: str = field(init=False)
+    dimensions: int = field(init=False)
 
     def __init__(self, profile: EmbeddingProfile) -> None:
-        self.model_name = profile.model
-        self.dimensions = profile.dimensions
+        object.__setattr__(self, "model_name", profile.model)
+        object.__setattr__(self, "dimensions", profile.dimensions)
 
     def estimate_input_tokens(self, text: str) -> int | None:
         return None

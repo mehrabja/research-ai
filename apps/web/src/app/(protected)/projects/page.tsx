@@ -41,7 +41,7 @@ export default function Projects(){
       research_questions:splitLines(questions),
     }),
     onSuccess:async project=>{
-      await qc.invalidateQueries({queryKey:["projects",workspaceId]});
+      void qc.invalidateQueries({queryKey:["projects",workspaceId]});
       setName("");
       setDomain("");
       setObjective("");
@@ -94,35 +94,35 @@ export default function Projects(){
         {step===1 ? (
           <div className="grid grid-2" style={{marginTop:18}}>
             <div className="field">
-              <label>Project name</label>
-              <input className="input" autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Climate adaptation literature review"/>
+              <label htmlFor="project-name">Project name</label>
+              <input id="project-name" className="input" autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Climate adaptation literature review"/>
             </div>
             <div className="field">
-              <label>Domain</label>
-              <input className="input" value={domain} onChange={e=>setDomain(e.target.value)} placeholder="e.g. Public health, NLP, Climate science"/>
+              <label htmlFor="project-domain">Domain</label>
+              <input id="project-domain" className="input" value={domain} onChange={e=>setDomain(e.target.value)} placeholder="e.g. Public health, NLP, Climate science"/>
             </div>
             <div className="field" style={{gridColumn:"1 / -1"}}>
-              <label>Research objective</label>
-              <textarea className="input textarea" style={{minHeight:120}} value={objective} onChange={e=>setObjective(e.target.value)} placeholder="What decision, question or body of evidence is this project intended to address?"/>
+              <label htmlFor="project-objective">Research objective</label>
+              <textarea id="project-objective" className="input textarea" style={{minHeight:120}} value={objective} onChange={e=>setObjective(e.target.value)} placeholder="What decision, question or body of evidence is this project intended to address?"/>
             </div>
             <div className="field" style={{gridColumn:"1 / -1"}}>
-              <label>Description</label>
-              <textarea className="input textarea" style={{minHeight:110}} value={description} onChange={e=>setDescription(e.target.value)} placeholder="Optional project context, audience or deliverable notes."/>
+              <label htmlFor="project-description">Description</label>
+              <textarea id="project-description" className="input textarea" style={{minHeight:110}} value={description} onChange={e=>setDescription(e.target.value)} placeholder="Optional project context, audience or deliverable notes."/>
             </div>
           </div>
         ) : (
           <div className="grid grid-2" style={{marginTop:18}}>
             <div className="field">
-              <label>Research scope</label>
-              <textarea className="input textarea" value={scope} onChange={e=>setScope(e.target.value)} placeholder="Population, geography, time range, methods or inclusion boundaries."/>
+              <label htmlFor="project-scope">Research scope</label>
+              <textarea id="project-scope" className="input textarea" value={scope} onChange={e=>setScope(e.target.value)} placeholder="Population, geography, time range, methods or inclusion boundaries."/>
             </div>
             <div className="field">
-              <label>Constraints</label>
-              <textarea className="input textarea" value={constraints} onChange={e=>setConstraints(e.target.value)} placeholder="Known limitations, exclusions, source restrictions or deadline constraints."/>
+              <label htmlFor="project-constraints">Constraints</label>
+              <textarea id="project-constraints" className="input textarea" value={constraints} onChange={e=>setConstraints(e.target.value)} placeholder="Known limitations, exclusions, source restrictions or deadline constraints."/>
             </div>
             <div className="field" style={{gridColumn:"1 / -1"}}>
-              <label>Research questions <span className="muted tiny">(one per line)</span></label>
-              <textarea className="input textarea" value={questions} onChange={e=>setQuestions(e.target.value)} placeholder={"What is already known?\nWhich findings are most consistent?\nWhere are the evidence gaps?"}/>
+              <label htmlFor="project-research-questions">Research questions <span className="muted tiny">(one per line)</span></label>
+              <textarea id="project-research-questions" className="input textarea" value={questions} onChange={e=>setQuestions(e.target.value)} placeholder={"What is already known?\nWhich findings are most consistent?\nWhere are the evidence gaps?"}/>
             </div>
             <div className="notice" style={{gridColumn:"1 / -1"}}>
               <b>Next step</b>

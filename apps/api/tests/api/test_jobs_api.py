@@ -76,6 +76,16 @@ def _register_and_login(
         json={"email": email, "password": password},
     )
     assert r.status_code == 200, r.text
+    with SessionLocal() as db:
+        db.execute(
+            delete(Job).where(
+                Job.user_id == user_id,
+                Job.job_type.in_((
+                    "send_email_verification", "send_password_reset"
+                )),
+            )
+        )
+        db.commit()
     return user_id, r.json()["access_token"]
 
 
@@ -199,8 +209,11 @@ def test_list_jobs_only_own(
     b_items = client.get(
         "/api/v1/jobs", headers=_auth(token_b)
     ).json()
-    assert len(a_items) == 2
-    assert len(b_items) == 1
+    # Registration may enqueue an email-verification job for each user.
+    # The contract under test is ownership isolation of user-created jobs.
+    assert [item["job_type"] for item in a_items].count("test_noop") == 2
+    assert [item["job_type"] for item in b_items].count("test_noop") == 1
+
 
 
 def test_cancel_queued_job(

@@ -134,11 +134,22 @@ def enqueue_job(
         return result.job
 
     if payload.job_type == JobTypes.GENERATE_REPORT:
-        report_id = _parse_generation_payload(payload.payload or {})
+        body = payload.payload or {}
+        report_id = _parse_generation_payload(body)
+        brief = body.get("brief")
+        if brief is not None and not isinstance(brief, str):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "INVALID_PAYLOAD",
+                    "message": "brief must be a string when provided",
+                },
+            )
         result = generation_jobs.enqueue_report_generation_job(
             db,
             user_id=current_user.id,
             report_id=report_id,
+            brief=brief,
             idempotency_key=payload.idempotency_key,
             priority=payload.priority,
             max_attempts=payload.max_attempts,

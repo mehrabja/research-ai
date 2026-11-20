@@ -21,7 +21,6 @@ COPY pyproject.toml ./
 COPY app ./app
 
 RUN python -m venv /opt/venv \
- && /opt/venv/bin/pip install --upgrade pip \
  && /opt/venv/bin/pip install .
 
 # ---------------------------------------------------------------------

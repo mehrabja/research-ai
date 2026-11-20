@@ -14,6 +14,7 @@ class ProjectCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(..., min_length=1, max_length=200)
+    workspace_id: uuid.UUID | None = None
     description: str | None = Field(default=None, max_length=10_000)
     domain: str | None = Field(default=None, max_length=10_000)
     research_objective: str | None = Field(default=None, max_length=10_000)

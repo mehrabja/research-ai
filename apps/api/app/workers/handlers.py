@@ -181,12 +181,15 @@ class InvalidGenerationPayloadError(AppError):
     message = "Generation job payload is invalid."
 
 
-def _parse_generation_payload(payload: dict) -> uuid.UUID:
+def _parse_generation_payload(payload: dict) -> tuple[uuid.UUID, str | None]:
     raw = payload.get("report_id")
     if not isinstance(raw, str):
         raise InvalidGenerationPayloadError("report_id is required")
+    brief = payload.get("brief")
+    if brief is not None and not isinstance(brief, str):
+        raise InvalidGenerationPayloadError("brief must be a string when provided")
     try:
-        return uuid.UUID(raw)
+        return uuid.UUID(raw), brief
     except (ValueError, TypeError) as exc:
         raise InvalidGenerationPayloadError(
             "report_id must be a valid UUID"
@@ -196,7 +199,7 @@ def _parse_generation_payload(payload: dict) -> uuid.UUID:
 def _generate_report(ctx: JobContext) -> None:
     from app.db.models.jobs import Job
 
-    report_id = _parse_generation_payload(dict(ctx.payload))
+    report_id, brief = _parse_generation_payload(dict(ctx.payload))
 
     with SessionLocal() as db:
         job = db.get(Job, ctx.job_id)
@@ -228,6 +231,7 @@ def _generate_report(ctx: JobContext) -> None:
                 report_id=report_id,
                 provider=provider,
                 profile=profile,
+                brief=brief,
             )
     except GenerationAlreadySucceeded:
         logger.info(
