@@ -351,7 +351,7 @@ def embed_source(
 
         for batch in batches:
             try:
-                def _call_embedding_provider(batch: Sequence[Chunk] = batch) -> EmbeddingBatchResult:
+                def _call_embedding_provider(batch: list[Chunk] = batch) -> EmbeddingBatchResult:
                     return _embed_documents_for_batch(provider, batch)
 
                 result = execute_metered_provider_call(

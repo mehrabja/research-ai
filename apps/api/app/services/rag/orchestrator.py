@@ -68,7 +68,7 @@ from app.services.rag.context import (
 logger = logging.getLogger(__name__)
 
 
-class _MeteredRAGGenerationProvider:
+class _MeteredRAGGenerationProvider(GenerationProvider):
     def __init__(
         self,
         provider: GenerationProvider,

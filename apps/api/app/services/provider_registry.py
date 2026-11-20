@@ -122,7 +122,6 @@ class EmbeddingProviderFallback:
         from app.integrations.embeddings.base import (
             EmbeddingProviderUnavailableError,
             EmbeddingRateLimitError,
-            EmbeddingTimeoutError,
         )
         last: Exception | None = None
         for provider in self._providers:
@@ -134,7 +133,6 @@ class EmbeddingProviderFallback:
                 return result
             except (
                 EmbeddingRateLimitError,
-                EmbeddingTimeoutError,
                 EmbeddingProviderUnavailableError,
             ) as exc:
                 last = exc
@@ -158,7 +156,6 @@ class EmbeddingProviderFallback:
                 return vector
             except (
                 EmbeddingRateLimitError,
-                EmbeddingTimeoutError,
                 EmbeddingProviderUnavailableError,
             ) as exc:
                 last = exc
@@ -421,28 +418,20 @@ def _build_translation(provider_name: str, config: TranslationProfile | None) ->
 def build_provider_registry() -> ProviderRegistry:
     registry = ProviderRegistry()
     for capability in ("generation", "embedding", "translation"):
-        registry.register(
-            ProviderDefinition(
-                name="openrouter",
-                capability=capability,
-                factory=partial({
-                    "generation": _build_generation,
-                    "embedding": _build_embedding,
-                    "translation": _build_translation,
-                }[capability], "openrouter"),
+        for provider_name in ("openrouter", "openai"):
+            if capability == "generation":
+                factory = partial(_build_generation, provider_name)
+            elif capability == "embedding":
+                factory = partial(_build_embedding, provider_name)
+            else:
+                factory = partial(_build_translation, provider_name)
+            registry.register(
+                ProviderDefinition(
+                    name=provider_name,
+                    capability=capability,
+                    factory=factory,
+                )
             )
-        )
-        registry.register(
-            ProviderDefinition(
-                name="openai",
-                capability=capability,
-                factory=partial({
-                    "generation": _build_generation,
-                    "embedding": _build_embedding,
-                    "translation": _build_translation,
-                }[capability], "openai"),
-            )
-        )
     return registry
 
 

@@ -16,7 +16,10 @@ from app.db.models.project import Project
 from app.db.models.source import Source
 from app.domain.generation import GenerationProfile
 from app.services import ai_metering, retrieval
-from app.services.embedding_profile import get_current_embedding_profile
+from app.services.embedding_profile import (
+    build_embedding_provider,
+    get_current_embedding_profile,
+)
 from app.services.generation_profile import (
     build_generation_provider,
     get_current_generation_profile,
@@ -329,7 +332,7 @@ def run_roundtable_review(db: Session, context: Any) -> dict[str, Any]:
         mode="lexical",
         algorithm="ann",
         source_ids=source_ids,
-        provider=None,
+        provider=build_embedding_provider(embedding_profile),
         profile=embedding_profile,
     )
     prompt_evidence, evidence_index = _evidence_bundle(
