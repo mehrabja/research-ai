@@ -20,6 +20,6 @@ This is an initial notice for known license-sensitive dependencies identified du
 - psycopg 3.3.5: https://pypi.org/project/psycopg/3.3.5/
 - psycopg-binary: https://pypi.org/project/psycopg-binary/
 - PyMuPDF licensing: https://pymupdf.io/licensing
-- Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0
+- MIT License: https://opensource.org/license/mit
 
 Do not treat this file as a substitute for an SBOM or a version-specific legal review. Regenerate the inventory from the exact locked environment when the npm lockfile and Python dependency set are finalized.
