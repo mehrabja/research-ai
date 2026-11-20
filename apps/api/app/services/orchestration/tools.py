@@ -436,8 +436,6 @@ def _register_all() -> None:
         _call_target_compliance,
     )
 
-
-
     register_tool(
         ToolSpec(
             key="roundtable_review",

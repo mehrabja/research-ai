@@ -51,8 +51,7 @@ def parse_model_json(raw: str) -> dict[str, Any] | None:
         lines = text.splitlines()[1:]
         if lines and lines[-1].strip() == "```":
             lines = lines[:-1]
-        text = "
-".join(lines).strip()
+        text = "\n".join(lines).strip()
     decoder = json.JSONDecoder()
     for index, char in enumerate(text):
         if char != "{":
