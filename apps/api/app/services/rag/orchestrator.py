@@ -36,12 +36,12 @@ from app.domain.embeddings import (
     build_embedding_profile_id,
 )
 from app.domain.retrieval import RetrievalAlgorithm, RetrievalMode
+from app.domain.generation import GenerationProviderResult
 from app.domain.retrieval_advanced import (
     ADVANCED_RAG_VERSION,
     RANKING_MODEL_VERSION,
     RetrievalRunStatus,
 )
-from app.domain.generation import GenerationProviderResult
 from app.integrations.embeddings.base import EmbeddingProvider
 from app.integrations.generation.base import GenerationProvider
 from app.services.ai_metering import execute_metered_provider_call
