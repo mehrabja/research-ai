@@ -6,11 +6,11 @@ contracts are different; M8 is not duplicated.
 """
 from __future__ import annotations
 
-import re
-from typing import Any
 from dataclasses import dataclass, field
 from html import unescape
 from io import BytesIO
+import re
+from typing import Any
 
 from pypdf import PdfReader
 

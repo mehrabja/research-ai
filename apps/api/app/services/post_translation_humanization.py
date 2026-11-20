@@ -778,10 +778,13 @@ def run_post_translation_humanization(
             _touch_owned_run(db=db, run_id=run.id, token=token)
             db.commit()
 
-            def call_provider() -> GenerationProviderResult:
+            def call_provider(
+                prompt_system: str = system_prompt,
+                prompt_user: str = user_prompt,
+            ) -> GenerationProviderResult:
                 return provider.generate(
-                    system_prompt=system_prompt,
-                    user_prompt=user_prompt,
+                    system_prompt=prompt_system,
+                    user_prompt=prompt_user,
                     temperature=policy.temperature,
                     max_output_tokens=policy.max_output_tokens,
                 )

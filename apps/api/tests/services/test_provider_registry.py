@@ -103,7 +103,7 @@ class _TimeoutEmbedding(_UnavailableEmbedding):
         raise EmbeddingProviderUnavailableError("transport timeout")
 
 
-def test_embedding_fallback_advances_on_provider_unavailable() -> None:
+def test_embedding_fallback_continues_after_transport_failure() -> None:
     router = EmbeddingProviderFallback(
         (_TimeoutEmbedding(), _WorkingEmbedding())
     )
@@ -118,4 +118,4 @@ def test_embedding_query_fallback_advances_on_provider_unavailable() -> None:
     )
     result = router.embed_query("x")
     assert result == [0.1, 0.2, 0.3]
-    assert router.attempted_providers == ["openrouter", "openai"]
+    assert router.attempted_providers == ["openrouter", "secondary"]
