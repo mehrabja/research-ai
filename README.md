@@ -3,7 +3,7 @@
 **An evidence-grounded research workspace for discovering literature, organizing source material, building traceable evidence, and developing research manuscripts.**
 
 [![CI](https://github.com/mehrabja/research-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/mehrabja/research-ai/actions/workflows/ci.yml)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Research AI is a full-stack research-workflow application. It brings literature discovery, document ingestion, evidence retrieval, research planning, manuscript workflows, and collaboration into one workspace. It is designed around traceability: research material is stored as sources and files, processed into structured evidence, and connected to reports and manuscript work.
 
@@ -190,4 +190,4 @@ Contributions are welcome after the public repository is opened. Start with [CON
 
 ## License
 
-Research AI is proposed to be distributed under the Apache License 2.0. See [LICENSE](LICENSE). Third-party dependencies retain their own licenses; see [docs/LICENSING_AUDIT.md](docs/LICENSING_AUDIT.md) and [docs/THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md).
+Research AI is proposed to be distributed under the MIT License. See [LICENSE](LICENSE). Third-party dependencies retain their own licenses; see [docs/LICENSING_AUDIT.md](docs/LICENSING_AUDIT.md) and [docs/THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md).
