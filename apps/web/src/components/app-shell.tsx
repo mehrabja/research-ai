@@ -9,6 +9,7 @@ import {api} from "@/lib/api/client";
 const nav=[
   ["/dashboard","⌂","Dashboard"],
   ["/workspace","◈","Workspace"],
+  ["/workbench","⌘","Science Workbench"],
   ["/projects","▦","Projects"],
   ["/research","⌕","Research discovery"],
   ["/rag","⌁","RAG retrieval"],
