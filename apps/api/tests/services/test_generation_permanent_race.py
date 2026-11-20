@@ -149,7 +149,7 @@ def test_late_failure_does_not_overwrite_success(
 def test_late_failure_on_terminal_failed_is_noop(
     monkeypatch,  # type: ignore[no-untyped-def]
 ) -> None:
-    uid, rid = _seed()
+    uid, rid, _job_id = _seed()
     monkeypatch.setattr(
         "app.services.generation.retrieval_service.retrieve",
         lambda *a, **k: ([], {}),

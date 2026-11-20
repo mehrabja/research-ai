@@ -52,6 +52,11 @@ def test_openrouter_preserves_routed_model_identifier() -> None:
             {
                 "embedding_openai_base_url": "https://api.openai.com/v1",
                 "embedding_openai_api_key": "",
+                "embedding_timeout_seconds": 30.0,
+                "embedding_max_retries": 0,
+                "embedding_retry_base_seconds": 1.0,
+                "embedding_retry_max_seconds": 5.0,
+                "embedding_retry_jitter_fraction": 0.0,
             },
         )(),
     ):
