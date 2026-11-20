@@ -720,7 +720,7 @@ class Settings(BaseSettings):
     )
 
     # --- Scientific source discovery ---------------------------------------
-    source_search_provider: Literal["semantic_scholar", "pubmed", "openalex", "arxiv"] = "semantic_scholar"
+    source_search_provider: Literal["semantic_scholar", "pubmed", "openalex", "arxiv", "crossref"] = "semantic_scholar"
     semantic_scholar_api_key: str = Field(default="", repr=False)
     semantic_scholar_base_url: str = (
         "https://api.semanticscholar.org/graph/v1"
@@ -756,6 +756,15 @@ class Settings(BaseSettings):
     arxiv_max_retries: int = Field(default=2, ge=0, le=10)
     # The arXiv API recommends a delay of at least three seconds between requests.
     arxiv_min_interval_seconds: float = Field(default=3.0, ge=3.0, le=30.0)
+    crossref_mailto: str = Field(default="", max_length=254)
+    crossref_api_key: str = Field(default="", repr=False)
+    crossref_timeout_seconds: float = Field(
+        default=15.0, ge=1.0, le=120.0
+    )
+    crossref_max_retries: int = Field(default=2, ge=0, le=10)
+    crossref_min_interval_seconds: float = Field(
+        default=1.0, ge=0.34, le=30.0
+    )
     source_search_limit_default: int = Field(default=25, ge=1, le=1000)
     source_search_limit_max: int = Field(default=1000, ge=1, le=1000)
 
@@ -923,6 +932,13 @@ class Settings(BaseSettings):
             raise ValueError("pubmed_tool must not be empty")
         if self.arxiv_min_interval_seconds < 3.0:
             raise ValueError("arxiv_min_interval_seconds must be >= 3.0")
+        if (
+            not self.crossref_mailto.strip()
+            and self.crossref_min_interval_seconds < 1.0
+        ):
+            raise ValueError(
+                "crossref_min_interval_seconds must be >= 1.0 without a mailto address"
+            )
         return self
 
     @model_validator(mode="after")
