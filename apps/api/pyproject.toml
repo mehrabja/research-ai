@@ -1,15 +1,15 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "research-ai-api"
 version = "0.1.0"
-description = "Evidence-grounded Research Report Generator — API and DB layer"
+description = "Evidence-grounded research workspace API"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Proprietary" }
-authors = [{ name = "research-ai" }]
+license = "Apache-2.0"
+authors = [{ name = "Mehrab Jalilian" }]
 
 dependencies = [
     # Database Foundation
@@ -27,8 +27,8 @@ dependencies = [
     "httpx>=0.27,<1.0",
     "python-multipart>=0.0.9,<1.0",
 
-    # Document Extraction
-    "pymupdf>=1.24,<2.0",
+    # Document Extraction (BSD-3-Clause)
+    "pypdf>=7.1,<8",
     "beautifulsoup4>=4.12,<5.0",
 
     # RAG & Embedding
