@@ -9,7 +9,6 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 _OUTPUT_PREVIEW_MAX_BYTES = 16_000
 _OUTPUT_PREVIEW_BUDGET_CHARS = 2_800
 _OUTPUT_PREVIEW_MAX_DEPTH = 5
