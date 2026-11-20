@@ -64,6 +64,9 @@ _GOAL_PRESETS: dict[str, list[str]] = {
     "reviewer_revision_plan": [
         "academic_qa",
     ],
+    "roundtable_review": [
+        "roundtable_review",
+    ],
 }
 
 
@@ -108,5 +111,8 @@ def available_orchestration_strategies() -> list[tuple[str, str]]:
         "resolve_qa_blockers": "Re-run QA around humanization and remediation.",
         "improve_citation_completeness": "Improve evidence coverage and citation completeness.",
         "reviewer_revision_plan": "Rebuild the academic QA view for reviewer revisions.",
+        "roundtable_review": (
+            "Three role-specific, evidence-grounded reviews with explicit disagreement capture."
+        ),
     }
     return [(key, descriptions.get(key, key)) for key in sorted(_GOAL_PRESETS)]

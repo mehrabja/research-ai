@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-_TOOL_VERSION = "m35-tools-v1"
+_TOOL_VERSION = "m39-tools-v2"
 
 
 def _current_manuscript_version_id(db: Session, report_id: _uuid.UUID) -> _uuid.UUID:
@@ -207,6 +207,12 @@ def _call_manuscript_prose_generate(
         "section_count": int(persisted.run.section_count or 0),
         "word_count": int(persisted.run.word_count or 0),
     }
+
+def _call_roundtable_review(db: Session, ctx: Any) -> dict[str, Any]:
+    from app.services.orchestration.roundtable import run_roundtable_review
+
+    return run_roundtable_review(db, ctx)
+
 
 def _register_all() -> None:
     from app.services.orchestration.registry import (
@@ -430,6 +436,47 @@ def _register_all() -> None:
         _call_target_compliance,
     )
 
+
+
+    register_tool(
+        ToolSpec(
+            key="roundtable_review",
+            version=_TOOL_VERSION,
+            description=(
+                "Run three role-specific, evidence-grounded research reviews and "
+                "synthesize consensus, disagreements and evidence gaps."
+            ),
+            permission="write",
+            deterministic=False,
+            timeout_seconds=600,
+            max_attempts=1,
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "minLength": 1, "maxLength": 500},
+                    "source_ids": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 20,
+                        "items": {"type": "string", "format": "uuid"},
+                    },
+                },
+                "additionalProperties": False,
+            },
+            output_schema={
+                "type": "object",
+                "properties": {
+                    "protocol_version": {"type": "string"},
+                    "status": {"type": "string"},
+                    "reviewers": {"type": "array"},
+                    "synthesis": {"type": ["object", "null"]},
+                    "evidence": {"type": "array"},
+                },
+            },
+            idempotent=False,
+        ),
+        _call_roundtable_review,
+    )
 
 _register_all()
 

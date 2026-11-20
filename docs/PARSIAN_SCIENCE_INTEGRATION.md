@@ -22,7 +22,7 @@ This integration is intentionally incremental and backend-backed.
 2. Scientific execution — adapt notebook/job contracts to Research AI's durable job system. Kernel execution must run in an isolated worker/container with CPU, memory, wall-clock, filesystem and network limits. Never execute notebook code inside the web or API process.
 3. Connectors — add required scientific APIs through the existing provider/connector registry, with per-provider timeouts, rate limits, attribution, content-rights checks and tenant-scoped provenance.
 4. PDF structure — benchmark Parsian's table/figure extraction against the existing ingestion pipeline before replacing any parser. Preserve source page/region coordinates and extraction confidence.
-5. Round-table review — implement as durable orchestration tasks with independent evidence inputs and explicit disagreement capture; a set of prompt-only personas is not evidence of independent review.
+5. Round-table review — implemented as a durable orchestration strategy with three separate role-specific requests (disciplinary, methodology, evidence/provenance), followed by a synthesis request. Every perspective receives the same report-scoped retrieved excerpts; AI calls are metered, token/provider-call budgets are enforced, unsupported evidence references are surfaced, and the persisted node is human-approval gated. These are distinct prompts and requests using the configured Research AI provider/model, not separate agent runtimes or guaranteed independent model families.
 6. Localization and UX — borrow interaction patterns, not the Electron design system wholesale. Keep Research AI navigation, responsive breakpoints, keyboard behavior and accessible controls.
 
 ## Provenance and licensing
@@ -34,6 +34,12 @@ Upstream references:
 - https://github.com/AIPOCH/Open-Science
 - https://github.com/Ho3seinTork/Parsian_Science/blob/main/docs/ARCHITECTURE.md
 - https://github.com/Ho3seinTork/Parsian_Science/blob/main/docs/THIRD_PARTY_LICENSES.md
+
+## Round-table review capability
+
+The `roundtable_review` strategy is exposed by the existing orchestration API and Workbench strategy selector. It retrieves lexical report-scoped chunks, binds source references to existing source/chunk IDs, runs three role-specific reviewer calls, then synthesizes consensus, disagreements, priority actions and evidence gaps. Provider calls are recorded in the existing AI operation/usage ledger. The model-assisted node follows the configured human-approval policy.
+
+Structured output is not treated as proof of truth. References invented by a model are filtered into `unsupported_evidence_refs`; unstructured output is retained as an explicitly unstructured review. Provider/model diversity is not claimed: all roles use the configured generation chain.
 
 ## Validation status
 

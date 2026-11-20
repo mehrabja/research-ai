@@ -43,6 +43,7 @@ def test_strategy_catalog_matches_presets() -> None:
     keys = [key for key, _description in available_orchestration_strategies()]
     assert "research_pipeline" in keys
     assert "complete_pre_submission" in keys
+    assert "roundtable_review" in keys
 
 
 def test_resolve_qa_blockers_has_unique_node_keys() -> None:
