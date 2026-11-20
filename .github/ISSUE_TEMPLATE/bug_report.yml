@@ -1,0 +1,71 @@
+name: Bug report
+description: Report a reproducible bug in Research AI
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues first. Do not include passwords, API keys, private research documents, or personal data. Report security vulnerabilities through SECURITY.md, not this public form.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release tag or Git commit SHA.
+      placeholder: v0.1.0-beta or commit SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Setup / installation
+        - Web frontend
+        - API
+        - Source discovery
+        - PDF / document extraction
+        - Embeddings / retrieval / RAG
+        - Research planning / manuscript
+        - Authentication / workspace
+        - Background jobs
+        - Docker / CI
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python, Node, PostgreSQL and browser versions where applicable.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Provide minimal, numbered steps and sanitized sample data.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or screenshots
+      description: Remove credentials, tokens, document contents, and personal data before posting.
+      render: text
+    validations:
+      required: false
