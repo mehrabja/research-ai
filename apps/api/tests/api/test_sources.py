@@ -15,7 +15,12 @@ from app.db.models.user import User
 from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
 from app.domain.source import SourceCandidate
-from app.integrations.sources import ArxivProvider, OpenAlexProvider, PubMedProvider
+from app.integrations.sources import (
+    ArxivProvider,
+    CrossrefProvider,
+    OpenAlexProvider,
+    PubMedProvider,
+)
 from app.main import app
 from app.services.rate_limit import set_login_rate_limiter
 
@@ -148,6 +153,28 @@ def _payload(ext: str = "P1") -> dict:
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
+def test_default_provider_selects_crossref(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from types import SimpleNamespace
+
+    settings = SimpleNamespace(
+        source_search_provider="crossref",
+        crossref_mailto="maintainer@example.org",
+        crossref_api_key="",
+        crossref_timeout_seconds=15.0,
+        crossref_max_retries=2,
+        crossref_min_interval_seconds=1.0,
+    )
+    monkeypatch.setattr(
+        "app.api.routes.sources.get_settings",
+        lambda: settings,
+    )
+    provider = _default_provider()
+    assert isinstance(provider, CrossrefProvider)
+    assert provider.provider_name == "crossref"
+
+
 def test_default_provider_selects_arxiv(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -43,6 +43,30 @@ NCBI settings are optional: `PUBMED_API_KEY`, `PUBMED_EMAIL`, `PUBMED_TOOL`, `PU
 
 This is a focused adapter, not a copy of the full Parsian PubMed connector: ID conversion, Europe PMC full-text fetch, JATS parsing and PubTator are not part of this increment. No Electron, npm or XML parser dependency is added to the API.
 
+## Scientific source connector: Crossref
+
+Research AI supports Crossref Works discovery through the existing report-scoped source-search
+provider contract. Set `SOURCE_SEARCH_PROVIDER=crossref`. The adapter uses bibliographic search,
+optional publication-year bounds and a field-select list, capped at 1,000 returned records in one
+request. It maps DOI, title, authors, publication year, publisher landing URL and citation count into
+the shared `SourceCandidate` type. An optional `CROSSREF_MAILTO` puts requests in Crossref's polite
+pool; the public-pool default is paced at one list query per second. An optional Metadata Plus key is
+sent in Crossref's `crossref-api-key` header, not in the URL. Timeouts, bounded retries, Retry-After,
+response-size limits and process-local serialization are enforced.
+
+Crossref states that most bibliographic metadata is reusable but some deposited abstracts may be
+copyrighted. This adapter therefore returns abstract text only when the record explicitly reports
+CC BY, CC BY-SA, CC0 or public-domain licensing. In `open_access_only` mode it further filters to
+records with one of those explicitly reusable licences; a generic `has-license` flag is not treated
+as a sufficient licence. Unknown, non-commercial, no-derivatives or publisher-specific terms yield
+bibliographic metadata without abstract text. Full-text PDF retrieval remains in the existing
+controlled ingestion pipeline.
+
+Official references:
+- https://www.crossref.org/documentation/retrieve-metadata/rest-api/
+- https://www.crossref.org/documentation/retrieve-metadata/rest-api/access-and-authentication/
+- https://www.crossref.org/documentation/retrieve-metadata/rest-api/tips-for-using-the-crossref-rest-api/
+
 ## Scientific source connector: arXiv
 
 Research AI supports the official arXiv Atom API through the same report-scoped source-search

@@ -9,6 +9,7 @@ from app.integrations.sources.base import (
     SourceProviderUnavailableError,
     SourceSearchProvider,
 )
+from app.integrations.sources.crossref import CrossrefProvider
 from app.integrations.sources.openalex import OpenAlexProvider
 from app.integrations.sources.pubmed import PubMedProvider
 from app.integrations.sources.semantic_scholar import (
@@ -17,6 +18,7 @@ from app.integrations.sources.semantic_scholar import (
 
 __all__ = [
     "ArxivProvider",
+    "CrossrefProvider",
     "OpenAlexProvider",
     "PubMedProvider",
     "SemanticScholarProvider",

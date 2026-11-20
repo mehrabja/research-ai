@@ -24,6 +24,7 @@ from app.db.session import get_db
 from app.domain.source import SourceCandidate
 from app.integrations.sources import (
     ArxivProvider,
+    CrossrefProvider,
     OpenAlexProvider,
     PubMedProvider,
     SemanticScholarProvider,
@@ -63,6 +64,14 @@ def _default_provider() -> SourceSearchProvider:
             timeout_seconds=settings.arxiv_timeout_seconds,
             max_retries=settings.arxiv_max_retries,
             min_interval_seconds=settings.arxiv_min_interval_seconds,
+        )
+    if settings.source_search_provider == "crossref":
+        return CrossrefProvider(
+            mailto=settings.crossref_mailto,
+            api_key=settings.crossref_api_key,
+            timeout_seconds=settings.crossref_timeout_seconds,
+            max_retries=settings.crossref_max_retries,
+            min_interval_seconds=settings.crossref_min_interval_seconds,
         )
     if settings.source_search_provider == "pubmed":
         return PubMedProvider(
