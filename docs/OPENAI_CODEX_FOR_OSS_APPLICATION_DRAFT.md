@@ -22,12 +22,12 @@ The GitHub connector audit of this private repository found:
 - The account owner is the repository owner and has admin, maintain, and push permissions.
 - The repository's default branch at audit time was m39-production-capabilities.
 - 12 pull requests were authored from the account during September–October 2026.
-- Of those 12 pull requests, 2 were merged, 5 remained open, and 5 were closed without merging at the time of review.
+- Of those 12 pull requests, 2 were merged, 6 remained open, and 4 were closed without merging at the time of review.
 - The PR set includes production frontend/BFF work, provider registry work, research-pipeline integration, security/authorization hardening, and CI/test-gate fixes.
 - The current default-branch snapshot had an 887-file Git tree, including API, frontend, tests, migrations, and CI.
 - The base branch includes a PostgreSQL 16 + pgvector CI service and backend/frontend test workflows.
 
-The PR list is evidence of maintainer activity, not evidence of external contributors or adoption. The 5 open PRs and the age of the latest base-branch commits should be reviewed before applying.
+The PR list is evidence of maintainer activity, not evidence of external contributors or adoption. The 6 open PRs and the age of the latest base-branch commits should be reviewed before applying.
 
 ## Evidence not yet available
 
