@@ -9,7 +9,6 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from typing import Any
 
 from app.domain.source import SourceCandidate
 from app.integrations.sources.base import (
@@ -75,9 +74,12 @@ class ArxivProvider:
             raise SourceProviderInvalidResponseError("arXiv query is empty")
         if len(query) > 500 or any(ord(char) < 32 for char in query):
             raise SourceProviderInvalidResponseError("arXiv query is invalid")
-        if year is not None:
-            if isinstance(year, bool) or not isinstance(year, int) or not 1900 <= year <= 2100:
-                raise SourceProviderInvalidResponseError("Invalid publication year")
+        if year is not None and (
+            isinstance(year, bool)
+            or not isinstance(year, int)
+            or not 1900 <= year <= 2100
+        ):
+            raise SourceProviderInvalidResponseError("Invalid publication year")
 
         query_parts = [f"all:{query.strip()}"]
         if year is not None:
