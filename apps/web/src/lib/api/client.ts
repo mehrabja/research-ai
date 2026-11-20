@@ -1,5 +1,4 @@
-import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,Job,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,ManuscriptComment,ManuscriptReviewTask,ManuscriptVersion,Member,NotificationPreference,Session,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
-import type {APIToken,APITokenCreateResponse,BillingInvoice,DetectionResult,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,Job,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,ManuscriptVersion,Member,NotificationPreference,Session,Plan,PreTranslationReview,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace,TechnicalFact,ExperimentResult,TechnicalMetric,TechnicalIntelligenceCurrent,TechnicalIntelligenceRunList,TechnicalFactList,ExperimentResultList,TechnicalMetricList,TechnicalIntelligenceValidation,TechnicalIntelligenceGenerateResponse,SectionResearchCurrent,SectionResearchGenerateResponse,SectionResearchRunList,SectionResearchValidation,PublicationTarget,PublicationTargetList,PublicationTargetSelection,PublicationComplianceCurrent,PublicationComplianceRunList,PublicationComplianceFindingList,PublicationChecklist,PublicationComplianceValidation,PublicationComplianceResponse,OrchestrationRunDetail,OrchestrationRunList,OrchestrationNodeList,OrchestrationRunResponse,OrchestrationPauseResponse,OrchestrationCancelResponse,OrchestrationToolList,OrchestrationValidation,CitationCurrent,CitationGenerateResponse,CitationValidation,CitationRunList,Bibliography,AcademicQACurrent,AcademicQAGenerateResponse,AcademicQAValidation,AcademicQARunList,AcademicQAFindingList,Classification,ClassificationEvidenceList,ClassificationHistory,ClassificationExplanation} from "./generated";
+import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,Job,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,ManuscriptComment,ManuscriptReviewTask,ManuscriptVersion,Member,NotificationPreference,Session,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace,DetectionResult,PreTranslationReview,TechnicalFact,ExperimentResult,TechnicalMetric,TechnicalIntelligenceCurrent,TechnicalIntelligenceRunList,TechnicalFactList,ExperimentResultList,TechnicalMetricList,TechnicalIntelligenceValidation,TechnicalIntelligenceGenerateResponse,SectionResearchCurrent,SectionResearchGenerateResponse,SectionResearchRunList,SectionResearchValidation,PublicationTarget,PublicationTargetList,PublicationTargetSelection,PublicationComplianceCurrent,PublicationComplianceRunList,PublicationComplianceFindingList,PublicationChecklist,PublicationComplianceValidation,PublicationComplianceResponse,OrchestrationRunDetail,OrchestrationRunList,OrchestrationNodeList,OrchestrationRunResponse,OrchestrationPauseResponse,OrchestrationCancelResponse,OrchestrationToolList,OrchestrationValidation,CitationCurrent,CitationGenerateResponse,CitationValidation,CitationRunList,Bibliography,AcademicQACurrent,AcademicQAGenerateResponse,AcademicQAValidation,AcademicQARunList,AcademicQAFindingList,Classification,ClassificationEvidenceList,ClassificationHistory,ClassificationExplanation} from "./generated";
 import {routes} from "./routes";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
@@ -291,73 +290,14 @@ export const api={
       xhr.send(form);
     });
   },
-  downloadFile:(id:string)=>fetch("/api/backend/files/"+id+"/content",{credentials:"same-origin",cache:"no-store"}),
-  updateFile:(id:string,b:object)=>request<ProjectFile>("files/"+id,{method:"PATCH",body:JSON.stringify(b)}),
-  deleteFile:(id:string)=>request<void>("files/"+id,{method:"DELETE"}),
 
-  plan:(p:string)=>request<ResearchPlan>("projects/"+p+"/research-plan"),
-  planVersions:(p:string)=>request<{items:ResearchPlan[];total:number;limit:number;offset:number}>("projects/"+p+"/research-plan/versions"),
-  savePlan:(p:string,b:object)=>request<ResearchPlan>("projects/"+p+"/research-plan",{method:"PATCH",body:JSON.stringify(b)}),
-  validatePlan:(p:string)=>request<ResearchPlanValidation>("projects/"+p+"/research-plan/validate"),
-  planCoverage:(p:string)=>request<ResearchPlanCoverage>("projects/"+p+"/research-plan/coverage"),
 
-  manuscript:(r:string)=>request<Manuscript>("reports/"+r+"/manuscript"),
-  manuscriptVersions:(r:string)=>request<{items:ManuscriptVersion[];total:number;limit:number;offset:number}>("reports/"+r+"/manuscript/versions"),
-  manuscriptProseCurrent:(r:string)=>request<import("./generated").ManuscriptProseCurrent>("reports/"+r+"/manuscript/prose/current"),
-  manuscriptProseGenerate:(r:string,b:{base_manuscript_version_id:string;mode?:string;force?:boolean;async?:boolean})=>request<{status:string;job_id:string|null;run_id:string|null;context_hash:string|null;section_count:number|null;word_count:number|null}>("reports/"+r+"/manuscript/prose/generate",{method:"POST",body:JSON.stringify(b)}),
-  manuscriptProseValidate:(r:string)=>request<import("./generated").ManuscriptValidation>("reports/"+r+"/manuscript/prose/validate"),
-  manuscriptDraft:(r:string)=>request<{revision:number;base_version_id:string|null;content:unknown}>("reports/"+r+"/manuscript/draft"),
-  autosaveManuscript:(r:string,b:object)=>request<{conflict?:boolean;draft:{revision:number;base_version_id:string|null;content:unknown}}>("reports/"+r+"/manuscript/draft/autosave",{method:"PUT",body:JSON.stringify(b)}),
-  saveManuscriptVersion:(r:string,b:object)=>request<unknown>("reports/"+r+"/manuscript/save-version",{method:"POST",body:JSON.stringify(b)}),
-  restoreManuscriptVersion:(r:string,v:string,b:{expected_revision:number})=>request<{saved:boolean;conflict:boolean;draft:{revision:number;base_version_id:string|null;content:unknown}}>("reports/"+r+"/manuscript/versions/"+v+"/restore",{method:"POST",body:JSON.stringify(b)}),
 
-  generate:(r:string,b:object)=>request<unknown>("reports/"+r+"/generate",{method:"POST",body:JSON.stringify(b)}),
-  humanize:(r:string,b:object)=>request<unknown>("reports/"+r+"/humanization/enqueue",{method:"POST",body:JSON.stringify(b)}),
-  translate:(r:string,b:object)=>request<unknown>("reports/"+r+"/translation/enqueue",{method:"POST",body:JSON.stringify(b)}),
 
-  jobs:(w?:string)=>request<Job[]>("jobs"+(w?"?workspace_id="+encodeURIComponent(w):"")),
-  enqueueJob:(jobType:string,payload:object,reportId?:string)=>request<Job>("jobs",{method:"POST",body:JSON.stringify({job_type:jobType,payload,report_id:reportId})}),
 
-  retryJob:(id:string)=>request<Job>("jobs/"+id+"/retry",{method:"POST"}),
-  cancelJob:(id:string)=>request<{job:Job}>("jobs/"+id+"/cancel",{method:"POST"}),
 
-  sessions:()=>request<{items:Session[];total:number}>("auth/sessions"),
-  revokeSession:(id:string)=>request<void>("auth/sessions/"+id,{method:"DELETE"}),
-  revokeOtherSessions:()=>request<void>("auth/sessions/revoke-others",{method:"POST"}),
-  apiTokens:()=>request<APIToken[]>("auth/api-tokens"),
-  createApiToken:(body:object)=>request<APITokenCreateResponse>("auth/api-tokens",{method:"POST",body:JSON.stringify(body)}),
-  revokeApiToken:(id:string)=>request<void>("auth/api-tokens/"+id,{method:"DELETE"}),
-  twoFactor:()=>request<{enabled:boolean}>("auth/2fa"),
-  beginTwoFactor:()=>request<TwoFactorEnrollment>("auth/2fa/enroll",{method:"POST"}),
-  confirmTwoFactor:(code:string)=>request<{enabled:boolean}>("auth/2fa/confirm",{method:"POST",body:JSON.stringify({code})}),
-  disableTwoFactor:(code:string)=>request<{enabled:boolean}>("auth/2fa/disable",{method:"POST",body:JSON.stringify({code})}),
-  members:(w:string)=>request<{items:Member[];total:number}>("workspaces/"+w+"/members"),
-  manuscriptComments:(r:string,v:string)=>request<{items:ManuscriptComment[];total:number;limit:number;offset:number}>("reports/"+r+"/manuscript-versions/"+v+"/comments"),
-  addManuscriptComment:(r:string,v:string,body:object)=>request<unknown>("reports/"+r+"/manuscript-versions/"+v+"/comments",{method:"POST",body:JSON.stringify(body)}),
-  resolveComment:(r:string,id:string)=>request<unknown>("reports/"+r+"/comments/"+id+"/resolve",{method:"POST"}),
-  reopenComment:(r:string,id:string)=>request<unknown>("reports/"+r+"/comments/"+id+"/reopen",{method:"POST"}),
-  reviewTasks:(r:string,v:string)=>request<{items:ManuscriptReviewTask[];total:number;limit:number;offset:number}>("reports/"+r+"/manuscript-versions/"+v+"/reviews"),
-  createReviewTask:(r:string,v:string,body:object)=>request<unknown>("reports/"+r+"/manuscript-versions/"+v+"/reviews",{method:"POST"}),
-  updateReviewTask:(r:string,id:string,body:object)=>request<unknown>("reports/"+r+"/reviews/"+id,{method:"PATCH",body:JSON.stringify(body)}),
-  changeMemberRole:(w:string,u:string,role:string)=>request<Member>("workspaces/"+w+"/members/"+u,{method:"PATCH",body:JSON.stringify({role})}),
-  removeMember:(w:string,u:string)=>request<null>("workspaces/"+w+"/members/"+u,{method:"DELETE"}),
-  invitations:(w:string)=>request<{items:Invitation[];total:number}>("workspaces/"+w+"/members/invitations"),
-  invite:(w:string,b:object)=>request<{invitation:Invitation;token:string}>("workspaces/"+w+"/members/invitations",{method:"POST",body:JSON.stringify(b)}),
-  acceptInvitation:(token:string)=>request<{workspace_id:string;user_id:string;role:string;status:string}>("invitations/"+encodeURIComponent(token)+"/accept",{method:"POST"}),
-  revokeInvitation:(w:string,i:string)=>request<null>("workspaces/"+w+"/members/invitations/"+i,{method:"DELETE"}),
-  transferOwnership:(w:string,u:string)=>request<Workspace>("workspaces/"+w+"/transfer-ownership",{method:"POST",body:JSON.stringify({target_user_id:u})}),
 
-  usage:(w:string)=>request<Usage>("workspaces/"+w+"/usage"),
-  subscription:(w:string)=>request<Subscription>("workspaces/"+w+"/subscription"),
-  planSubscription:(w:string)=>request<Plan>("workspaces/"+w+"/plan"),
-  billingInvoices:(w:string)=>request<{items:BillingInvoice[];total:number}>("workspaces/"+w+"/billing/invoices"),
-  billingCheckout:(w:string,planCode:string)=>request<{provider:string;checkout_session_id:string;checkout_url:string}>("workspaces/"+w+"/billing/checkout",{method:"POST",body:JSON.stringify({plan_code:planCode})}),
-  billingChangePlan:(w:string,planCode:string)=>request<Subscription>("workspaces/"+w+"/billing/change-plan",{method:"POST",body:JSON.stringify({plan_code:planCode})}),
-  billingCancel:(w:string)=>request<Subscription>("workspaces/"+w+"/billing/cancel",{method:"POST"}),
-  billingResume:(w:string)=>request<Subscription>("workspaces/"+w+"/billing/resume",{method:"POST"}),
 
-  citations:(r:string)=>request<Citation>("reports/"+r+"/citations/current"),
-  qa:(r:string)=>request<QA>("reports/"+r+"/academic-qa/current"),
   downloadFile:(id:string)=>fetch("/api/backend/"+routes.fileContent(id),{credentials:"same-origin",cache:"no-store"}),
   updateFile:(id:string,b:object)=>request<ProjectFile>(routes.file(id),{method:"PATCH",body:JSON.stringify(b)}),
   deleteFile:(id:string)=>request<void>(routes.file(id),{method:"DELETE"}),
