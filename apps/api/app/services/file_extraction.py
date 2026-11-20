@@ -1,14 +1,17 @@
 """M19 — bytes-based extraction adapter.
 
-M8 (``app/services/extraction.py``) extracts from a URL for a Source.
-M19 extracts from bytes already stored for a ProjectFile. Different
-input contracts; M8 is not duplicated.
+M8 (app/services/extraction.py) extracts from a URL for a Source.
+M19 extracts from bytes already stored for a ProjectFile. The input
+contracts are different; M8 is not duplicated.
 """
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
 from html import unescape
+from io import BytesIO
+
+from pypdf import PdfReader
 
 from app.domain.file import FileKind
 
@@ -41,35 +44,36 @@ def extract_bytes(
 
 def _extract_pdf(content: bytes) -> ExtractionResult:
     try:
-        import fitz
-    except ImportError as exc:
-        return ExtractionResult(supported=False, error=str(exc))
-    try:
-        doc = fitz.open(stream=content, filetype="pdf")
-    except Exception as exc:  # noqa: BLE001
-        return ExtractionResult(supported=True, text="", error=str(exc))
-    try:
+        reader = PdfReader(BytesIO(content), strict=False)
+        if reader.is_encrypted:
+            return ExtractionResult(
+                supported=True, text="", error="encrypted_pdf"
+            )
+
         pages: list[str] = []
         total = 0
-        for page in doc:
-            t = page.get_text() or ""
-            total += len(t)
+        for page in reader.pages:
+            page_text = page.extract_text() or ""
+            total += len(page_text)
             if total > _MAX_EXTRACTED_CHARS:
                 break
-            pages.append(t)
-        text = "\n\n".join(pages).strip()
-        doc_meta = doc.metadata or {}
+            pages.append(page_text)
+
+        metadata = reader.metadata or {}
         return ExtractionResult(
             supported=True,
-            text=text,
+            text="\n\n".join(pages).strip(),
             meta={
-                "page_count": doc.page_count,
-                "title": doc_meta.get("title") or None,
-                "author": doc_meta.get("author") or None,
+                "page_count": len(reader.pages),
+                "title": metadata.get("/Title") or None,
+                "author": metadata.get("/Author") or None,
             },
         )
-    finally:
-        doc.close()
+    except Exception:
+        # Keep parser internals out of API-facing error values.
+        return ExtractionResult(
+            supported=True, text="", error="pdf_parse_failed"
+        )
 
 
 def _extract_text(content: bytes) -> ExtractionResult:
