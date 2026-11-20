@@ -170,6 +170,7 @@ def _call_target_compliance(
 
     manuscript_version_id = ctx.payload.get("manuscript_version_id")
     manuscript_version_id = manuscript_version_id or str(_current_manuscript_version_id(db, ctx.report_id))
+    target_id = ctx.payload.get("target_id")
     target_id = target_id or str(_current_target_id(db, ctx.report_id))
     persisted = pub_persist.run_m33_persisted(
         db,

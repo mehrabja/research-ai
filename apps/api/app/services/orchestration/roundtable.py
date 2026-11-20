@@ -15,8 +15,7 @@ from app.db.models.orchestration import ResearchOrchestrationRun
 from app.db.models.project import Project
 from app.db.models.source import Source
 from app.domain.generation import GenerationProfile
-from app.services import ai_metering
-from app.services import retrieval
+from app.services import ai_metering, retrieval
 from app.services.embedding_profile import get_current_embedding_profile
 from app.services.generation_profile import (
     build_generation_provider,
