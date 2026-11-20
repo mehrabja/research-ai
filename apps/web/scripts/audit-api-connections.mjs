@@ -53,8 +53,12 @@ for(const file of files){
   if(text.includes("https://api.openai.com")||text.includes("https://openrouter.ai")){
     violations.push(rel+": direct AI provider URL in frontend source");
   }
-  if(text.includes("/api/v1/")){
-    violations.push(rel+": direct /api/v1 backend path in frontend source; use /api/backend proxy");
+  // Next.js route handlers are server-only adapters. They intentionally call
+  // FastAPI's /api/v1 endpoints using the private backend URL; browser modules
+  // must continue to use the same-origin /api/backend proxy.
+  const isServerRoute=rel.startsWith("src/app/api/");
+  if(text.includes("/api/v1/")&&!isServerRoute){
+    violations.push(rel+": direct /api/v1 backend path in browser-facing frontend source; use /api/backend proxy");
   }
   if(/localStorage\.(?:setItem|getItem|removeItem)\([^)]*research_ai_(?:access_token|refresh)/i.test(text)){
     violations.push(rel+": auth token stored/read from browser storage");
@@ -65,7 +69,6 @@ if(unused.length||violations.length||missingPages.length){
   console.error("Frontend API connection audit failed.");
   if(unused.length)console.error("Unused route builders:",unused.join(", "));
   if(missingPages.length)console.error("Protected nav routes without page.tsx:",missingPages.join(", "));
-NaN
   process.exit(1);
 }
 
