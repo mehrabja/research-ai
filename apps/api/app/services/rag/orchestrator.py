@@ -35,6 +35,7 @@ from app.domain.embeddings import (
     EmbeddingProfile,
     build_embedding_profile_id,
 )
+from app.domain.generation import GenerationProviderResult
 from app.domain.retrieval import RetrievalAlgorithm, RetrievalMode
 from app.domain.generation import GenerationProviderResult
 from app.domain.retrieval_advanced import (
