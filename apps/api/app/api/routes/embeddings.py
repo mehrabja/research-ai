@@ -20,11 +20,11 @@ from app.schemas.retrieval import (
 )
 from app.services import embeddings as embeddings_service
 from app.services import retrieval as retrieval_service
-from app.services.reports import get_report
 from app.services.embedding_profile import (
     build_embedding_provider,
     get_current_embedding_profile,
 )
+from app.services.reports import get_report
 
 router = APIRouter(prefix="/reports", tags=["embeddings"])
 
@@ -42,7 +42,9 @@ def embed_source(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SourceEmbeddingResponse:
-    # Enforce report ownership before resolving any external provider.\n    get_report(db, user_id=current_user.id, report_id=report_id)\n    profile = get_current_embedding_profile()
+    # Enforce report ownership before resolving any external provider.
+    get_report(db, user_id=current_user.id, report_id=report_id)
+    profile = get_current_embedding_profile()
     result = embeddings_service.embed_source(
         db,
         user_id=current_user.id,
@@ -74,6 +76,8 @@ def retrieve(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RetrievalResponse:
+    # Enforce report ownership before resolving any external provider.
+    get_report(db, user_id=current_user.id, report_id=report_id)
     profile = get_current_embedding_profile()
     results, coverage = retrieval_service.retrieve(
         db,

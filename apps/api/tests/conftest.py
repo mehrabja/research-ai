@@ -7,6 +7,8 @@ rolled back on teardown, so the database is left clean.
 """
 from __future__ import annotations
 
+import hashlib
+import math
 import os
 from collections.abc import Iterator
 from pathlib import Path
@@ -54,12 +56,11 @@ def conn(engine: Engine) -> Iterator[Connection]:
 @pytest.fixture(autouse=True)
 def _reset_m36_state() -> Iterator[None]:
     """Reset module-global M36 state between tests."""
+    from app.core.config import get_settings
     from app.services.general_rate_limit import (
         reset_rate_limit_backend,
     )
     from app.workers import stats as worker_stats
-
-    from app.core.config import get_settings
 
     get_settings.cache_clear()
     reset_rate_limit_backend()
@@ -78,7 +79,11 @@ def _deterministic_embedding_when_provider_is_unconfigured(
 ) -> None:
     """Use local embeddings for credential-free tests; never call a provider."""
     from app.core.config import get_settings
-    from app.domain.embeddings import EmbeddingBatchResult, EmbeddingUsage
+    from app.domain.embeddings import (
+        EmbeddingBatchResult,
+        EmbeddingProfile,
+        EmbeddingUsage,
+    )
 
     settings = get_settings()
     if settings.app_env.lower() != "test":
@@ -86,16 +91,15 @@ def _deterministic_embedding_when_provider_is_unconfigured(
     if settings.openrouter_api_key.strip() or settings.embedding_openai_api_key.strip():
         return
 
-    import hashlib
-    import math
-
     import app.services.provider_registry as provider_registry
 
     class DeterministicEmbeddingProvider:
-        def __init__(self, provider_name: str, profile: object) -> None:
+        def __init__(
+            self, provider_name: str, profile: EmbeddingProfile
+        ) -> None:
             self.provider_name = provider_name
-            self.model_name = str(getattr(profile, "model"))
-            self.dimensions = int(getattr(profile, "dimensions"))
+            self.model_name = profile.model
+            self.dimensions = profile.dimensions
             self.max_batch_size = 64
             self.max_input_tokens_per_item = 8191
             self.max_input_tokens_per_request = 300_000
@@ -126,7 +130,9 @@ def _deterministic_embedding_when_provider_is_unconfigured(
         def embed_query(self, text: str) -> list[float]:
             return self._embed(text)
 
-    def _build_test_embedding_provider(provider_name: str, profile: object):
+    def _build_test_embedding_provider(
+        provider_name: str, profile: EmbeddingProfile
+    ) -> DeterministicEmbeddingProvider:
         return DeterministicEmbeddingProvider(provider_name, profile)
 
     monkeypatch.setattr(

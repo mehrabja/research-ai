@@ -17,7 +17,9 @@ def test_parse_fenced_json_object() -> None:
 
 def test_parse_rejects_top_level_array_even_when_it_contains_objects() -> None:
     assert parse_model_json('[{"assessment":"not a root object"}]') is None
-\n\ndef test_parse_json_object_after_explanatory_text() -> None:
+
+
+def test_parse_json_object_after_explanatory_text() -> None:
     parsed = parse_model_json('Review: {"assessment":"limited"}')
     assert parsed == {"assessment": "limited"}
 
