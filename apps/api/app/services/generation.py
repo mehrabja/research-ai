@@ -22,6 +22,7 @@ from app.db.models.report import Report
 from app.domain.generation import (
     AttemptState,
     EmptyGenerationError,
+    EvidenceSet,
     GenerationAlreadySucceeded,
     GenerationAttemptLease,
     GenerationContext,
@@ -90,7 +91,7 @@ def _generation_context_hash(
     system_prompt: str,
     user_prompt: str,
     brief: str | None,
-    evidence: Any,
+    evidence: EvidenceSet,
 ) -> str:
     payload = {
         "report_id": str(report.id),

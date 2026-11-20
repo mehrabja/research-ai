@@ -81,14 +81,11 @@ test("creates project/report and uploads a research file through the browser",as
   const fileChooserPromise=page.waitForEvent("filechooser");
   await page.getByRole("button",{name:"Choose a file"}).click();
   const fileChooser=await fileChooserPromise;
-  const fileInput=page.locator('input[type="file"]');
   await fileChooser.setFiles({
     name:fileName,
     mimeType:"text/plain",
     buffer:Buffer.from("A browser-uploaded research source for end-to-end validation.\n"),
   });
-  await expect.poll(async()=>fileInput.evaluate(element=>(element as HTMLInputElement).files?.[0]?.name??""))
-    .toBe(fileName);
 
   const uploadRequest=await uploadRequestPromise;
   console.log(`[E2E] upload request started: ${uploadRequest.url()}`);

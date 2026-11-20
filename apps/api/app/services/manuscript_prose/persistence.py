@@ -139,7 +139,7 @@ def run_m28_5_persisted(
         raise ManuscriptProseInvalid("report has no project")
     project = db.get(Project, report.project_id)
     if project is None:
-        raise ManuscriptProseInvalid("project not found")
+        raise ManuscriptProseInvalid("report project not found")
     version = db.get(ManuscriptVersion, base_manuscript_version_id)
     if version is None:
         raise ManuscriptProseInvalid("manuscript version not found")

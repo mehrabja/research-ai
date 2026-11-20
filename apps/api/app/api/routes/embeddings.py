@@ -24,6 +24,7 @@ from app.services.embedding_profile import (
     build_embedding_provider,
     get_current_embedding_profile,
 )
+from app.services.reports import get_report
 
 router = APIRouter(prefix="/reports", tags=["embeddings"])
 
@@ -41,6 +42,8 @@ def embed_source(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SourceEmbeddingResponse:
+    # Enforce report ownership before resolving any external provider.
+    get_report(db, user_id=current_user.id, report_id=report_id)
     profile = get_current_embedding_profile()
     result = embeddings_service.embed_source(
         db,
@@ -73,6 +76,8 @@ def retrieve(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RetrievalResponse:
+    # Enforce report ownership before resolving any external provider.
+    get_report(db, user_id=current_user.id, report_id=report_id)
     profile = get_current_embedding_profile()
     results, coverage = retrieval_service.retrieve(
         db,

@@ -113,6 +113,9 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
 
 def _seed(uid):
     with SessionLocal() as db:
+        from app.services.workspaces import ensure_default_workspace
+
+        ensure_default_workspace(db, user_id=uid)
         report = Report(
             user_id=uid,
             topic="T",

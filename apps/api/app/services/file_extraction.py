@@ -10,6 +10,7 @@ import re
 from dataclasses import dataclass, field
 from html import unescape
 from io import BytesIO
+from typing import Any
 
 from pypdf import PdfReader
 
@@ -59,7 +60,7 @@ def _extract_pdf(content: bytes) -> ExtractionResult:
                 break
             pages.append(page_text)
 
-        metadata = reader.metadata or {}
+        metadata: Any = reader.metadata or {}
         return ExtractionResult(
             supported=True,
             text="\n\n".join(pages).strip(),

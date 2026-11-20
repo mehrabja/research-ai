@@ -15,6 +15,7 @@ from app.db.models.user import User
 from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
 from app.domain.source import SourceCandidate
+from app.integrations.sources import PubMedProvider
 from app.main import app
 from app.services.rate_limit import set_login_rate_limiter
 
@@ -147,6 +148,28 @@ def _payload(ext: str = "P1") -> dict:
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
+def test_default_provider_selects_pubmed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from types import SimpleNamespace
+
+    settings = SimpleNamespace(
+        source_search_provider="pubmed",
+        pubmed_api_key="",
+        pubmed_email="research@example.org",
+        pubmed_tool="research_ai_tests",
+        pubmed_base_url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils",
+        pubmed_timeout_seconds=15.0,
+        pubmed_max_retries=1,
+        pubmed_min_interval_seconds=0.34,
+    )
+    monkeypatch.setattr(
+        "app.api.routes.sources.get_settings",
+        lambda: settings,
+    )
+    assert isinstance(_default_provider(), PubMedProvider)
+
+
 def test_search_requires_auth() -> None:
     r = client.get(
         f"/api/v1/reports/{uuid.uuid4()}/sources/search?q=x"

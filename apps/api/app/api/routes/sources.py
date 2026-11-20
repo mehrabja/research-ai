@@ -22,7 +22,7 @@ from app.core.config import get_settings
 from app.db.models.user import User
 from app.db.session import get_db
 from app.domain.source import SourceCandidate
-from app.integrations.sources import SemanticScholarProvider
+from app.integrations.sources import PubMedProvider, SemanticScholarProvider
 from app.integrations.sources.base import SourceSearchProvider
 from app.schemas.source_extraction import SourceExtractionResponse
 from app.schemas.sources import (
@@ -46,6 +46,16 @@ router = APIRouter(
 # ---------------------------------------------------------------------------
 def _default_provider() -> SourceSearchProvider:
     settings = get_settings()
+    if settings.source_search_provider == "pubmed":
+        return PubMedProvider(
+            api_key=settings.pubmed_api_key,
+            email=settings.pubmed_email,
+            tool=settings.pubmed_tool,
+            base_url=settings.pubmed_base_url,
+            timeout_seconds=settings.pubmed_timeout_seconds,
+            max_retries=settings.pubmed_max_retries,
+            min_interval_seconds=settings.pubmed_min_interval_seconds,
+        )
     return SemanticScholarProvider(
         api_key=settings.semantic_scholar_api_key,
         base_url=settings.semantic_scholar_base_url,

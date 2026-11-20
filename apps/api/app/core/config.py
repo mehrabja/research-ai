@@ -22,6 +22,19 @@ def _resolve_repo_root() -> Path:
 REPO_ROOT: Path = _resolve_repo_root()
 DEV_JWT_SECRET: str = "dev-insecure-secret-change-me-before-production"
 _MIN_JWT_SECRET_BYTES: int = 32
+_PLACEHOLDER_SECRETS = frozenset({
+    "",
+    "changeme",
+    "change-me",
+    "replace-me",
+    "your-api-key",
+    "your_api_key",
+    "placeholder",
+})
+
+
+def _is_placeholder_secret(value: str) -> bool:
+    return value.strip().lower() in _PLACEHOLDER_SECRETS
 
 
 class Settings(BaseSettings):
@@ -706,7 +719,8 @@ class Settings(BaseSettings):
         default=60, ge=30, le=3600
     )
 
-    # --- Semantic Scholar / Source Discovery (M7) -------------------------
+    # --- Scientific source discovery ---------------------------------------
+    source_search_provider: Literal["semantic_scholar", "pubmed"] = "semantic_scholar"
     semantic_scholar_api_key: str = Field(default="", repr=False)
     semantic_scholar_base_url: str = (
         "https://api.semanticscholar.org/graph/v1"
@@ -715,6 +729,19 @@ class Settings(BaseSettings):
         default=15.0, ge=1.0, le=120.0
     )
     semantic_scholar_max_retries: int = Field(default=3, ge=0, le=10)
+    pubmed_api_key: str = Field(default="", repr=False)
+    pubmed_email: str = ""
+    pubmed_tool: str = Field(default="research_ai", min_length=1, max_length=64)
+    pubmed_base_url: str = (
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+    )
+    pubmed_timeout_seconds: float = Field(
+        default=15.0, ge=1.0, le=120.0
+    )
+    pubmed_max_retries: int = Field(default=2, ge=0, le=10)
+    pubmed_min_interval_seconds: float = Field(
+        default=0.34, ge=0.0, le=5.0
+    )
     source_search_limit_default: int = Field(default=25, ge=1, le=1000)
     source_search_limit_max: int = Field(default=1000, ge=1, le=1000)
 
@@ -876,6 +903,10 @@ class Settings(BaseSettings):
             raise ValueError(
                 "semantic_scholar_base_url must start with http(s)://"
             )
+        if not self.pubmed_base_url.startswith(("http://", "https://")):
+            raise ValueError("pubmed_base_url must start with http(s)://")
+        if not self.pubmed_tool.strip():
+            raise ValueError("pubmed_tool must not be empty")
         return self
 
     @model_validator(mode="after")
@@ -997,20 +1028,20 @@ class Settings(BaseSettings):
                 "openrouter" in chain
                 for chain in (generation_chain, embedding_chain, translation_chain)
             )
-            if uses_openrouter and self._is_placeholder_secret(self.openrouter_api_key):
+            if uses_openrouter and _is_placeholder_secret(self.openrouter_api_key):
                 raise ValueError(
                     "OPENROUTER_API_KEY must be configured when OpenRouter is enabled."
                 )
             if (
                 ("openai" in generation_chain or "openai" in translation_chain)
-                and self._is_placeholder_secret(self.generation_openai_api_key)
+                and _is_placeholder_secret(self.generation_openai_api_key)
             ):
                 raise ValueError(
                     "GENERATION_OPENAI_API_KEY must be configured when OpenAI generation/translation is enabled."
                 )
             if (
                 "openai" in embedding_chain
-                and self._is_placeholder_secret(self.embedding_openai_api_key)
+                and _is_placeholder_secret(self.embedding_openai_api_key)
             ):
                 raise ValueError(
                     "EMBEDDING_OPENAI_API_KEY must be configured when OpenAI embeddings are enabled."

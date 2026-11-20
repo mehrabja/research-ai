@@ -28,6 +28,9 @@ def _seed_report(
             ),
             {"e": f"src-{uuid.uuid4().hex}@example.com"},
         ).scalar()
+        from app.services.workspaces import ensure_default_workspace
+
+        ensure_default_workspace(db, user_id=uid)
         rid = db.execute(
             text(
                 "INSERT INTO reports "

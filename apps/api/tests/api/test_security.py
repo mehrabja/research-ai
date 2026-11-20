@@ -325,6 +325,7 @@ def test_production_accepts_strong_secret() -> None:
     s = Settings(
         app_env="production",
         jwt_secret_key="x" * 64,
+        openrouter_api_key="test-openrouter-key",
         two_factor_encryption_key="x" * 32,
         debug=False,
         cors_allowed_origins="",
@@ -336,6 +337,7 @@ def test_production_accepts_strong_secret() -> None:
         smtp_host="smtp.example.com",
         smtp_sender="no-reply@example.com",
         frontend_base_url="https://example.com",
+        trusted_hosts="example.com",
         file_storage_backend="s3",
         file_storage_s3_bucket="test-bucket",
         file_storage_s3_region="us-east-1",

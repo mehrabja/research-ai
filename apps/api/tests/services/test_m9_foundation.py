@@ -17,8 +17,8 @@ from app.core.exceptions import (
 
 def test_embedding_defaults_are_coherent() -> None:
     s = get_settings()
-    assert s.embedding_provider == "openai"
-    assert s.embedding_model == "text-embedding-3-small"
+    assert s.embedding_provider == "openrouter"
+    assert s.embedding_model == "openai/text-embedding-3-small"
     assert s.embedding_dimensions == 1536
     assert s.embedding_distance_metric == "cosine"
     assert 1 <= s.embedding_batch_size <= 512

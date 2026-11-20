@@ -99,23 +99,23 @@ def test_registry_candidate_order_preserves_requested_provider() -> None:
 
 class _TimeoutEmbedding(_UnavailableEmbedding):
     def embed_documents(self, texts):
-        from app.integrations.embeddings.base import EmbeddingTimeoutError
-        raise EmbeddingTimeoutError("timeout")
+        from app.integrations.embeddings.base import EmbeddingProviderUnavailableError
+        raise EmbeddingProviderUnavailableError("transport timeout")
 
 
-def test_embedding_fallback_advances_on_timeout() -> None:
+def test_embedding_fallback_continues_after_transport_failure() -> None:
     router = EmbeddingProviderFallback(
         (_TimeoutEmbedding(), _WorkingEmbedding())
     )
     result = router.embed_documents(["x"])
     assert result.vectors == [[0.1, 0.2, 0.3]]
-    assert router.attempted_providers == ["openrouter", "openai"]
+    assert router.attempted_providers == ["openrouter", "secondary"]
 
 
-def test_embedding_query_fallback_advances_on_timeout() -> None:
+def test_embedding_query_fallback_advances_on_provider_unavailable() -> None:
     router = EmbeddingProviderFallback(
         (_TimeoutEmbedding(), _WorkingEmbedding())
     )
     result = router.embed_query("x")
     assert result == [0.1, 0.2, 0.3]
-    assert router.attempted_providers == ["openrouter", "openai"]
+    assert router.attempted_providers == ["openrouter", "secondary"]
