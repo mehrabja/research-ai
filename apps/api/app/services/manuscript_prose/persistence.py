@@ -14,12 +14,12 @@ from app.core.exceptions import (
     ManuscriptProseConfigurationInvalid,
     ManuscriptProseInvalid,
 )
-from app.db.models.project import Project
 from app.db.models.manuscript import (
     Manuscript,
     ManuscriptSection,
     ManuscriptVersion,
 )
+from app.db.models.project import Project
 from app.db.models.manuscript_prose import (
     ManuscriptProseParagraph,
     ManuscriptProseRun,
