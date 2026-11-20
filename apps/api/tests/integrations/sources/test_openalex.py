@@ -156,7 +156,13 @@ def test_open_access_filter_is_applied_server_side(
 def test_unlicensed_abstract_is_not_reconstructed_even_when_open_access(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    record = _work(best_oa_location={"license": None})
+    record = _work(
+        best_oa_location={"license": None},
+        primary_location={
+            "landing_page_url": "https://publisher.example/article",
+            "license": None,
+        },
+    )
     _install(
         monkeypatch,
         lambda request, timeout: _Response(_payload([record])),
