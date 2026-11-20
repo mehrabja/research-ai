@@ -266,8 +266,8 @@ class ArxivProvider:
         title = _collapse(_child_text(entry, f"{_ATOM}title"))
         if not title:
             return None
-        abstract = _collapse(_child_text(entry, f"{_ATOM}summary"))
-        abstract = abstract[:_MAX_ABSTRACT_CHARS] or None
+        abstract_text = _collapse(_child_text(entry, f"{_ATOM}summary"))
+        abstract_value = abstract_text[:_MAX_ABSTRACT_CHARS] or None
 
         authors: list[str] = []
         for author in entry.findall(f"{_ATOM}author")[:_MAX_AUTHORS]:
@@ -289,7 +289,7 @@ class ArxivProvider:
                 year=year,
                 doi=doi,
                 url=f"https://arxiv.org/abs/{url_id}",
-                abstract=abstract,
+                abstract=abstract_value,
                 citation_count=None,
             )
         except ValueError:
