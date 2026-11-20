@@ -11,8 +11,10 @@ from app.integrations.sources.base import (
 from app.integrations.sources.semantic_scholar import (
     SemanticScholarProvider,
 )
+from app.integrations.sources.pubmed import PubMedProvider
 
 __all__ = [
+    "PubMedProvider",
     "SemanticScholarProvider",
     "SourceProviderAuthError",
     "SourceProviderError",

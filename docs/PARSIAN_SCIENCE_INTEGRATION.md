@@ -35,6 +35,14 @@ Upstream references:
 - https://github.com/Ho3seinTork/Parsian_Science/blob/main/docs/ARCHITECTURE.md
 - https://github.com/Ho3seinTork/Parsian_Science/blob/main/docs/THIRD_PARTY_LICENSES.md
 
+## Scientific source connector: PubMed
+
+Research AI now supports a deployment-selectable PubMed provider alongside Semantic Scholar. Set `SOURCE_SEARCH_PROVIDER=pubmed` to route the existing report-scoped source-search endpoint through NCBI E-utilities. The adapter performs one ESearch request followed by one ESummary request and normalizes PMID, title, authors, publication year, DOI and PubMed URL into the existing `SourceCandidate` contract. Abstract/full-text acquisition remains in the existing extraction pipeline.
+
+NCBI settings are optional: `PUBMED_API_KEY`, `PUBMED_EMAIL`, `PUBMED_TOOL`, `PUBMED_BASE_URL`, timeout/retry settings and a conservative per-process request interval. The adapter sends the NCBI `tool` parameter on each request and includes email/API key only when configured. HTTP/auth/rate-limit/transport/response failures use the existing typed provider exceptions. `open_access_only` adds PubMed's `free full text[sb]` search filter; it does not claim that full text has been downloaded.
+
+This is a focused adapter, not a copy of the full Parsian PubMed connector: ID conversion, Europe PMC full-text fetch, JATS parsing and PubTator are not part of this increment. No Electron, npm or XML parser dependency is added to the API.
+
 ## Round-table review capability
 
 The `roundtable_review` strategy is exposed by the existing orchestration API and Workbench strategy selector. It retrieves lexical report-scoped chunks, binds source references to existing source/chunk IDs, runs three role-specific reviewer calls, then synthesizes consensus, disagreements, priority actions and evidence gaps. Provider calls are recorded in the existing AI operation/usage ledger. The model-assisted node follows the configured human-approval policy.
