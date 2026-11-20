@@ -43,7 +43,6 @@ function VerifyEmailForm(){
       <button className="btn primary" style={{marginTop:14}} disabled={!token||busy} onClick={()=>void verify()}>{busy?"Verifying…":"Verify email"}</button>
       <div className="divider">or</div>
       <form className="auth-form" onSubmit={resend}><div className="field"><label htmlFor="resend-email">Email for resend</label><input id="resend-email" className="input" type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="researcher@lab.edu" required/></div><button className="btn" disabled={resending}>{resending?"Sending…":"Resend verification email"}</button></form>
-      <form className="auth-form" onSubmit={resend}><div className="field"><label htmlFor="verification-email">Email for resend</label><input id="verification-email" className="input" type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="researcher@lab.edu" required/></div><button className="btn" disabled={resending}>{resending?"Sending…":"Resend verification email"}</button></form>
       <div className="actions" style={{marginTop:14}}><Link className="btn" href="/login">Sign in</Link><Link className="btn" href="/forgot-password">Reset password</Link></div>
     </div></section>
   </div>;

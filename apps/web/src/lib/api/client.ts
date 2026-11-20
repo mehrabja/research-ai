@@ -290,6 +290,14 @@ export const api={
       xhr.send(form);
     });
   },
+
+
+
+
+
+
+
+
   downloadFile:(id:string)=>fetch("/api/backend/"+routes.fileContent(id),{credentials:"same-origin",cache:"no-store"}),
   updateFile:(id:string,b:object)=>request<ProjectFile>(routes.file(id),{method:"PATCH",body:JSON.stringify(b)}),
   deleteFile:(id:string)=>request<void>(routes.file(id),{method:"DELETE"}),

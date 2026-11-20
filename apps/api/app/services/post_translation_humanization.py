@@ -25,6 +25,7 @@ from app.db.models.pipeline import (
 )
 from app.db.models.project import Project
 from app.db.models.report import Report, ReportVersion
+from app.domain.generation import GenerationProviderResult
 from app.domain.humanization import (
     HumanizationAlreadyCompletedError,
     HumanizationAlreadyRunningError,
@@ -777,13 +778,19 @@ def run_post_translation_humanization(
             _touch_owned_run(db=db, run_id=run.id, token=token)
             db.commit()
 
-            result = execute_metered_provider_call(
-                lambda system_prompt=system_prompt, user_prompt=user_prompt: provider.generate(
-                    system_prompt=system_prompt,
-                    user_prompt=user_prompt,
+            def call_provider(
+                prompt_system: str = system_prompt,
+                prompt_user: str = user_prompt,
+            ) -> GenerationProviderResult:
+                return provider.generate(
+                    system_prompt=prompt_system,
+                    user_prompt=prompt_user,
                     temperature=policy.temperature,
                     max_output_tokens=policy.max_output_tokens,
-                ),
+                )
+
+            result = execute_metered_provider_call(
+                call_provider,
                 workspace_id=workspace_id,
                 user_id=user_id,
                 operation="report.post_translation_humanization.provider_call",

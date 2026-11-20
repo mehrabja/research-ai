@@ -53,13 +53,14 @@ def validate_citation_run(
 
     # Every cited identity must resolve to a real source.
     citation_ids = {cc.citation_id for cc in citations}
-    idents: list[CitationIdentity] = []
+    by_id: dict[uuid.UUID, CitationIdentity] = {}
     if citation_ids:
         idents = list(db.execute(
             select(CitationIdentity).where(
                 CitationIdentity.id.in_(citation_ids)
             )
         ).scalars().all())
+        by_id = {identity.id: identity for identity in idents}
         src_ids = [
             i.source_id for i in idents if i.source_id is not None
         ]
@@ -72,7 +73,6 @@ def validate_citation_run(
             }
         else:
             real_srcs = set()
-        by_id = {identity.id: identity for identity in idents}
         for cid in citation_ids:
             ident = by_id.get(cid)
             if ident is None:

@@ -4,8 +4,8 @@ from __future__ import annotations
 from enum import StrEnum
 
 M35_VERSION = "m35.1"
-ORCHESTRATION_PLANNER_VERSION = "m35-planner-v1"
-ORCHESTRATION_TOOL_REGISTRY_VERSION = "m35-tools-v1"
+ORCHESTRATION_PLANNER_VERSION = "m39-planner-v2"
+ORCHESTRATION_TOOL_REGISTRY_VERSION = "m39-tools-v2"
 
 
 class RunStatus(StrEnum):

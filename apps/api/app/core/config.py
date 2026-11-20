@@ -22,6 +22,19 @@ def _resolve_repo_root() -> Path:
 REPO_ROOT: Path = _resolve_repo_root()
 DEV_JWT_SECRET: str = "dev-insecure-secret-change-me-before-production"
 _MIN_JWT_SECRET_BYTES: int = 32
+_PLACEHOLDER_SECRETS = frozenset({
+    "",
+    "changeme",
+    "change-me",
+    "replace-me",
+    "your-api-key",
+    "your_api_key",
+    "placeholder",
+})
+
+
+def _is_placeholder_secret(value: str) -> bool:
+    return value.strip().lower() in _PLACEHOLDER_SECRETS
 
 
 class Settings(BaseSettings):
@@ -997,20 +1010,20 @@ class Settings(BaseSettings):
                 "openrouter" in chain
                 for chain in (generation_chain, embedding_chain, translation_chain)
             )
-            if uses_openrouter and self._is_placeholder_secret(self.openrouter_api_key):
+            if uses_openrouter and _is_placeholder_secret(self.openrouter_api_key):
                 raise ValueError(
                     "OPENROUTER_API_KEY must be configured when OpenRouter is enabled."
                 )
             if (
                 ("openai" in generation_chain or "openai" in translation_chain)
-                and self._is_placeholder_secret(self.generation_openai_api_key)
+                and _is_placeholder_secret(self.generation_openai_api_key)
             ):
                 raise ValueError(
                     "GENERATION_OPENAI_API_KEY must be configured when OpenAI generation/translation is enabled."
                 )
             if (
                 "openai" in embedding_chain
-                and self._is_placeholder_secret(self.embedding_openai_api_key)
+                and _is_placeholder_secret(self.embedding_openai_api_key)
             ):
                 raise ValueError(
                     "EMBEDDING_OPENAI_API_KEY must be configured when OpenAI embeddings are enabled."
