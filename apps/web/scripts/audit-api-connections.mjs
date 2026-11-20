@@ -65,7 +65,6 @@ if(unused.length||violations.length||missingPages.length){
   console.error("Frontend API connection audit failed.");
   if(unused.length)console.error("Unused route builders:",unused.join(", "));
   if(missingPages.length)console.error("Protected nav routes without page.tsx:",missingPages.join(", "));
-NaN
   process.exit(1);
 }
 
