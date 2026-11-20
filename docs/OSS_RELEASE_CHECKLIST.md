@@ -4,7 +4,8 @@ This checklist is for the first public release. It is intentionally conservative
 
 ## 1. Security and repository history
 
-- [ ] Run Gitleaks or an equivalent scanner against the complete Git history of every branch and tag, not only the current working tree.
+- [ ] Run the committed Secret Scan workflow and require a successful Gitleaks CLI scan across all locally fetched refs (`git --log-opts=--all`), not only the current branch or first-parent history.
+- [ ] Manual fallback from the repository root: `docker run --rm -v "$PWD:/path" -w /path ghcr.io/gitleaks/gitleaks:v8.30.1 git --log-opts=--all --redact --no-banner .`.
 - [ ] Review all findings manually. Do not publish if a credential or private key is found.
 - [ ] If a real secret was ever committed, revoke or rotate it first. Removing a file from the latest tree does not remove it from Git history.
 - [ ] Review all environment templates and confirm they contain placeholders only.
