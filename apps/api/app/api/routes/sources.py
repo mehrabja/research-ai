@@ -23,6 +23,7 @@ from app.db.models.user import User
 from app.db.session import get_db
 from app.domain.source import SourceCandidate
 from app.integrations.sources import (
+    ArxivProvider,
     OpenAlexProvider,
     PubMedProvider,
     SemanticScholarProvider,
@@ -56,6 +57,12 @@ def _default_provider() -> SourceSearchProvider:
             timeout_seconds=settings.openalex_timeout_seconds,
             max_retries=settings.openalex_max_retries,
             min_interval_seconds=settings.openalex_min_interval_seconds,
+        )
+    if settings.source_search_provider == "arxiv":
+        return ArxivProvider(
+            timeout_seconds=settings.arxiv_timeout_seconds,
+            max_retries=settings.arxiv_max_retries,
+            min_interval_seconds=settings.arxiv_min_interval_seconds,
         )
     if settings.source_search_provider == "pubmed":
         return PubMedProvider(
