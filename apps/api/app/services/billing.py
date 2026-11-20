@@ -205,6 +205,7 @@ def cancel_subscription(
         provider.cancel_subscription(
             subscription_id=sub.provider_subscription_id,
             at_period_end=True,
+            idempotency_key=f"cancel-subscription:{sub.id}",
             idempotency_key=_subscription_action_idempotency_key(
                 "cancel-subscription", sub.id
             ),
@@ -239,6 +240,7 @@ def resume_subscription(
     if provider is not None and sub.provider_subscription_id:
         provider.resume_subscription(
             subscription_id=sub.provider_subscription_id,
+            idempotency_key=f"resume-subscription:{sub.id}",
             idempotency_key=_subscription_action_idempotency_key(
                 "resume-subscription", sub.id
             ),

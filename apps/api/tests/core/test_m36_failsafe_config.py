@@ -17,11 +17,13 @@ def _base(**overrides) -> dict:
     return base
 
 
+def _production_base(**overrides) -> dict:
 def _production_base(**overrides: object) -> dict[str, object]:
     base = _base(
         app_env="production",
         debug=False,
         jwt_secret_key="x" * 64,
+        cors_allowed_origins="https://example.com",
         cors_allowed_origins="",
         trusted_hosts="api.example.com",
         two_factor_encryption_key="x" * 32,
@@ -76,6 +78,7 @@ def test_production_rejects_default_jwt() -> None:
 
 
 def test_production_accepts_valid_config() -> None:
+    s = Settings(**_production_base(cors_allowed_origins="https://example.com"))
     s = Settings(
         **_production_base(cors_allowed_origins="https://example.com")
     )

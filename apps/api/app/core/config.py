@@ -881,6 +881,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate_file_config(self) -> Settings:
+        if self.file_storage_backend not in ("local", "s3"):
+            raise ValueError("file_storage_backend must be 'local' or 's3'")
         if self.file_storage_backend not in _SUPPORTED_FILE_STORAGE_BACKENDS:
             raise ValueError(
                 "file_storage_backend must be 'local' or 's3'"
