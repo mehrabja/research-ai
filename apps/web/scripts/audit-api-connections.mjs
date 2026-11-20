@@ -48,6 +48,8 @@ for(const route of navPaths){
 const violations=[];
 for(const file of files){
   const rel=path.relative(root,file).replaceAll(path.sep,"/");
+  // Server-side Next.js handlers are the BFF boundary and intentionally call the backend.
+  if(rel.startsWith("src/app/api/"))continue;
   if(rel==="src/lib/server/backend-url.ts"||rel==="src/lib/api/generated.openapi.ts")continue;
   const text=await fs.readFile(file,"utf8");
   if(text.includes("https://api.openai.com")||text.includes("https://openrouter.ai")){
@@ -65,7 +67,6 @@ if(unused.length||violations.length||missingPages.length){
   console.error("Frontend API connection audit failed.");
   if(unused.length)console.error("Unused route builders:",unused.join(", "));
   if(missingPages.length)console.error("Protected nav routes without page.tsx:",missingPages.join(", "));
-NaN
   process.exit(1);
 }
 

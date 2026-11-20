@@ -90,7 +90,7 @@ def _generation_context_hash(
     system_prompt: str,
     user_prompt: str,
     brief: str | None,
-    evidence: EvidenceSet,
+    evidence: Any,
 ) -> str:
     payload = {
         "report_id": str(report.id),

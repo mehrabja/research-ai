@@ -349,9 +349,6 @@ def embed_source(
     settings = get_settings()
 
     all_chunks = list(
-        db.execute(select(Chunk).where(Chunk.source_id == source.id))
-        .scalars()
-        .all()
         db.execute(
             select(Chunk).where(Chunk.source_id == source.id)
         ).scalars().all()
@@ -371,7 +368,6 @@ def embed_source(
 
     already_current = sum(
         1 for chunk in all_chunks if _chunk_current(chunk, profile)
-        1 for c in all_chunks if _chunk_current(c, profile)
     )
     if already_current == total:
         return EmbeddingRunResult(
@@ -411,24 +407,15 @@ def embed_source(
 
         batched_ids = {chunk.id for batch in batches for chunk in batch}
         oversized = [chunk for chunk in claimed if chunk.id not in batched_ids]
-        batched_ids = {c.id for b in batches for c in b}
-        oversized = [c for c in claimed if c.id not in batched_ids]
         if oversized:
             _mark_failed(db, oversized, "input_too_large")
             failed_count += len(oversized)
 
         for batch in batches:
             try:
-                def _call_embedding_provider() -> EmbeddingBatchResult:
-                    return _embed_documents_for_batch(provider, batch)
-
-                result = execute_metered_provider_call(
-                    _call_embedding_provider,
-                embed_call: Callable[[], EmbeddingBatchResult] = partial(
+                embed_call = partial(
                     _embed_documents_for_batch, provider, batch
                 )
-                def input_units(value: EmbeddingBatchResult) -> int:
-                    return value.usage.input_tokens
                 result = execute_metered_provider_call(
                     embed_call,
                     workspace_id=workspace_id,
@@ -440,7 +427,6 @@ def embed_source(
                     project_id=report.project_id,
                     report_id=report_id,
                     input_units=_embedding_input_tokens,
-                    input_units=input_units,
                 )
             except EmbeddingInputTooLargeError as exc:
                 _mark_failed(db, batch, "input_too_large")
@@ -503,28 +489,17 @@ def embed_source(
         )
     ).all()
     pending_now = sum(
-        1
-        for status, _ in final_rows
+        1 for status, _ in final_rows
         if status in (None, _STATUS_PENDING, _STATUS_PROCESSING)
     )
-    failed_now = sum(1 for status, _ in final_rows if status == _STATUS_FAILED)
-        select(
-            Chunk.embedding_status, Chunk.embedding.is_not(None)
-        ).where(Chunk.source_id == source.id)
-    ).all()
-    pending_now = sum(
-        1 for st, _ in final_rows
-        if st in (None, _STATUS_PENDING, _STATUS_PROCESSING)
+    failed_now = sum(
+        1 for status, _ in final_rows if status == _STATUS_FAILED
     )
-    failed_now = sum(1 for st, _ in final_rows if st == _STATUS_FAILED)
 
     if aborted_by_provider is not None and embedded_count == 0:
         if isinstance(aborted_by_provider, EmbeddingRateLimitError):
             raise EmbeddingRateLimitAppError() from aborted_by_provider
         raise EmbeddingProviderUnavailableAppError() from aborted_by_provider
-        raise EmbeddingProviderUnavailableAppError() from (
-            aborted_by_provider
-        )
 
     return EmbeddingRunResult(
         source_id=source.id,

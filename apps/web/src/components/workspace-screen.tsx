@@ -361,7 +361,6 @@ function Settings(){
   const sessions=useQuery({queryKey:["sessions"],queryFn:api.sessions});
   const tokens=useQuery({queryKey:["tokens"],queryFn:api.apiTokens});
   const tf=useQuery({queryKey:["2fa"],queryFn:api.twoFactor});
-  const preferences=useQuery({queryKey:["notification-preferences",ws.workspaceId],queryFn:()=>api.notificationPreferences(ws.workspaceId??undefined),enabled:Boolean(ws.workspaceId)});
   const preferences=useQuery({queryKey:["notification-preferences",ws.workspaceId],queryFn:()=>api.notificationPreferences(workspaceId),enabled:Boolean(workspaceId)});
   const [tokenName,setTokenName]=useState("");
   const [tokenScopes,setTokenScopes]=useState("read");
@@ -384,7 +383,6 @@ function Settings(){
   const disable2fa=useMutation({mutationFn:()=>api.disableTwoFactor(twoFaCode),onSuccess:()=>{setTwoFaCode("");void qc.invalidateQueries({queryKey:["2fa"]});}});
   const twoFaError=begin2fa.error??confirm2fa.error??disable2fa.error;
   const savePreferences=useMutation({
-    mutationFn:()=>api.updateNotificationPreferences({channel:preferences.data?.channel??"in_app",preferences:prefValues},ws.workspaceId??undefined),
     mutationFn:()=>api.updateNotificationPreferences({channel:preferences.data?.channel??"in_app",preferences:prefValues},workspaceId),
     onSuccess:r=>{setPrefValues(r.preferences);setPrefError("");void qc.invalidateQueries({queryKey:["notification-preferences",ws.workspaceId]});},
     onError:e=>setPrefError(e instanceof Error?e.message:"Notification preferences could not be saved."),
@@ -776,11 +774,6 @@ function Knowledge(){
     }catch(e){setExportError(e instanceof Error?e.message:"Knowledge graph export failed. Retry.");}
   }
   const nodeTypes=Object.keys(summary.data?.node_type_counts??{});
-  return <>
-    <Head route="knowledge" actions={<>
-      <button className="btn" disabled={!projectId||ex.isPending} onClick={()=>void exportGraph("json")}>{ex.isPending?"Exporting…":"Export JSON"}</button>
-      <button className="btn" disabled={!projectId||ex.isPending} onClick={()=>void exportGraph("csv")}>Export CSV</button>
-    </>}/>
   useEffect(()=>{
     const status=job.data?.status;
     if(status==="completed"||status==="failed"||status==="cancelled"){
@@ -826,10 +819,6 @@ function Knowledge(){
         </Card>
       </>}
     </>}
-  </>;
-}
-    </>}
-  </>}
   </>;
 }
 
