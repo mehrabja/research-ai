@@ -25,7 +25,7 @@ iniconfig==2.3.0
 librt==0.15.0
 Mako==1.4.1
 MarkupSafe==3.0.3
-mypy==2.3.1
+mypy==2.4.1
 mypy_extensions==1.1.0
 numpy==2.4.6
 packaging==26.3
