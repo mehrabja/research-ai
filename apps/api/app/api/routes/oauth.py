@@ -8,11 +8,11 @@ from app.api.dependencies import get_client_ip, get_current_user
 from app.core.exceptions import OAuthLastAuthMethod
 from app.db.models.oauth_account import OAuthAccount
 from app.db.session import get_db
-from app.services.audit import emit_audit
-from app.services.auth import revoke_all_sessions
 from app.schemas.auth import TokenResponse
 from app.schemas.oauth import OAuthCallbackRequest, OAuthStartResponse
 from app.services import oauth as oauth_service
+from app.services.audit import emit_audit
+from app.services.auth import revoke_all_sessions
 
 router = APIRouter(prefix="/auth/oauth", tags=["oauth"])
 
@@ -115,11 +115,16 @@ def disconnect_oauth(
     if account_count <= 1:
         raise OAuthLastAuthMethod()
 
-    result = db.execute(delete(OAuthAccount).where(
-        OAuthAccount.user_id == current_user.id,
-        OAuthAccount.provider == provider,
-    ))
-    if result.rowcount == 0:
+    deleted_id = db.execute(
+        delete(OAuthAccount)
+        .where(
+            OAuthAccount.user_id == current_user.id,
+            OAuthAccount.provider == provider,
+        )
+        .returning(OAuthAccount.id)
+    ).scalar_one_or_none()
+
+    if deleted_id is None:
         raise OAuthLastAuthMethod()
 
     current_user.security_version += 1

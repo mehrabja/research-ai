@@ -1,0 +1,54 @@
+name: Staging Deploy & Smoke
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  staging:
+    runs-on: [self-hosted, windows, x64]
+    environment: staging
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENALEX_API_KEY: ${{ secrets.OPENALEX_API_KEY }}
+      NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
+      SAPLING_API_KEY: ${{ secrets.SAPLING_API_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+      CROSSREF_MAILTO: ${{ vars.CROSSREF_MAILTO }}
+      UNPAYWALL_EMAIL: ${{ vars.UNPAYWALL_EMAIL }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verify staging prerequisites
+        shell: powershell
+        run: |
+          docker version
+          docker compose version
+          python --version
+      - name: Deploy staging
+        shell: powershell
+        run: .\scripts\staging_deploy.ps1
+      - name: Generate ephemeral smoke credentials
+        shell: powershell
+        run: |
+          $bytes = New-Object byte[] 24
+          [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+          $hex = ([System.BitConverter]::ToString($bytes)).Replace('-', '').ToLowerInvariant()
+          $email = "staging-smoke-${{ github.run_id }}@example.invalid"
+          $password = "Smoke-$hex!Aa9"
+          $path = Join-Path $env:GITHUB_WORKSPACE 'deploy\staging\runtime\smoke-credentials.json'
+          $json = @{ email = $email; password = $password } | ConvertTo-Json -Compress
+          [System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding($false)))
+      - name: Bootstrap smoke account
+        shell: powershell
+        run: |
+          docker compose -p research-ai-staging -f deploy\staging\docker-compose.yml exec -T api python scripts/bootstrap_staging_smoke.py
+          if ($LASTEXITCODE -ne 0) { throw 'Smoke account bootstrap failed.' }
+      - name: Run F17 production smoke
+        shell: powershell
+        run: .\scripts\staging_run_smoke.ps1
+      - name: Remove ephemeral smoke credentials
+        if: always()
+        shell: powershell
+        run: |
+          Remove-Item -Force -ErrorAction SilentlyContinue 'deploy\staging\runtime\smoke-credentials.json'
+          docker compose -p research-ai-staging -f deploy\staging\docker-compose.yml ps

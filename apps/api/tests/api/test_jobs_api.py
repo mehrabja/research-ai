@@ -322,3 +322,102 @@ def test_enqueue_generate_report_foreign_report_404(
         },
     )
     assert r.status_code == 404
+
+
+def test_manual_retry_cancelled_job_requeues_and_is_idempotent(
+    cleanup_users: list[uuid.UUID],
+) -> None:
+    _, token = _register_and_login(cleanup_users)
+    r = client.post(
+        "/api/v1/jobs",
+        headers=_auth(token),
+        json={
+            "job_type": "test_noop",
+            "payload": {"mode": "success"},
+            "idempotency_key": "retry-api-" + str(uuid.uuid4()),
+            "max_attempts": 3,
+        },
+    )
+    assert r.status_code == 201, r.text
+    job_id = r.json()["id"]
+
+    cancelled = client.post(
+        f"/api/v1/jobs/{job_id}/cancel",
+        headers=_auth(token),
+    )
+    assert cancelled.status_code == 200, cancelled.text
+
+    retried = client.post(
+        f"/api/v1/jobs/{job_id}/retry",
+        headers=_auth(token),
+    )
+    assert retried.status_code == 200, retried.text
+    assert retried.json()["id"] == job_id
+    assert retried.json()["status"] == "queued"
+    assert retried.json()["attempt_count"] == 0
+
+    repeated = client.post(
+        f"/api/v1/jobs/{job_id}/retry",
+        headers=_auth(token),
+    )
+    assert repeated.status_code == 200, repeated.text
+    assert repeated.json()["id"] == job_id
+    assert repeated.json()["status"] == "queued"
+    assert repeated.json()["attempt_count"] == 0
+
+
+def test_manual_retry_foreign_job_is_hidden(
+    cleanup_users: list[uuid.UUID],
+) -> None:
+    _, token_a = _register_and_login(cleanup_users)
+    _, token_b = _register_and_login(cleanup_users)
+
+    r = client.post(
+        "/api/v1/jobs",
+        headers=_auth(token_a),
+        json={"job_type": "test_noop"},
+    )
+    assert r.status_code == 201, r.text
+    job_id = r.json()["id"]
+
+    client.post(
+        f"/api/v1/jobs/{job_id}/cancel",
+        headers=_auth(token_a),
+    )
+
+    retry = client.post(
+        f"/api/v1/jobs/{job_id}/retry",
+        headers=_auth(token_b),
+    )
+    assert retry.status_code == 404
+
+
+def test_manual_retry_completed_job_is_rejected(
+    cleanup_users: list[uuid.UUID],
+) -> None:
+    _, token = _register_and_login(cleanup_users)
+    r = client.post(
+        "/api/v1/jobs",
+        headers=_auth(token),
+        json={"job_type": "test_noop"},
+    )
+    assert r.status_code == 201, r.text
+    job_id = r.json()["id"]
+
+    from app.services.jobs import claim_job, complete_job
+
+    with SessionLocal() as db:
+        claimed = claim_job(db, worker_id="f10-test-worker")
+        assert claimed is not None
+        assert claimed.id == uuid.UUID(job_id)
+        complete_job(
+            db,
+            job_id=claimed.id,
+            worker_id="f10-test-worker",
+        )
+
+    retry = client.post(
+        f"/api/v1/jobs/{job_id}/retry",
+        headers=_auth(token),
+    )
+    assert retry.status_code == 409

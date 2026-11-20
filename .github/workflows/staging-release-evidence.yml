@@ -1,0 +1,73 @@
+name: Staging Release Evidence
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  evidence:
+    runs-on: [self-hosted, windows, x64]
+    environment: staging
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENALEX_API_KEY: ${{ secrets.OPENALEX_API_KEY }}
+      NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
+      SAPLING_API_KEY: ${{ secrets.SAPLING_API_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+      CROSSREF_MAILTO: ${{ vars.CROSSREF_MAILTO }}
+      UNPAYWALL_EMAIL: ${{ vars.UNPAYWALL_EMAIL }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Deploy staging candidate
+        shell: powershell
+        run: .\scripts\staging_deploy.ps1
+      - name: Run repository final audit
+        shell: powershell
+        run: python scripts\final_audit.py
+      - name: Generate ephemeral smoke credentials
+        shell: powershell
+        run: |
+          $bytes = New-Object byte[] 24
+          [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+          $hex = ([System.BitConverter]::ToString($bytes)).Replace('-', '').ToLowerInvariant()
+          $email = "staging-evidence-${{ github.run_id }}@example.invalid"
+          $password = "Evidence-$hex!Aa9"
+          $path = Join-Path $env:GITHUB_WORKSPACE 'deploy\staging\runtime\smoke-credentials.json'
+          $json = @{ email = $email; password = $password } | ConvertTo-Json -Compress
+          [System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding($false)))
+      - name: Bootstrap evidence account
+        shell: powershell
+        run: |
+          docker compose -p research-ai-staging -f deploy\staging\docker-compose.yml exec -T api python scripts/bootstrap_staging_smoke.py
+          if ($LASTEXITCODE -ne 0) { throw 'Evidence account bootstrap failed.' }
+      - name: Run F17 smoke
+        shell: powershell
+        run: .\scripts\staging_run_smoke.ps1
+      - name: Run F18 live recovery
+        shell: powershell
+        run: .\scripts\staging_chaos.ps1
+      - name: Run backup/restore evidence
+        shell: powershell
+        run: .\scripts\staging_backup_restore.ps1
+      - name: Write release evidence summary
+        shell: powershell
+        run: |
+          $out = Join-Path $env:GITHUB_WORKSPACE 'deploy\staging\runtime\release-evidence.txt'
+          @(
+            "commit=$env:GITHUB_SHA",
+            "run_id=${{ github.run_id }}",
+            "environment=staging",
+            "provider_matrix=generation=openrouter;embedding=openrouter;translation=openrouter;detection=sapling;source_discovery=openalex",
+            "storage=local",
+            "email=resend",
+            "billing=none",
+            "f17=PASS",
+            "f18=PASS",
+            "backup_restore=PASS",
+            "final_audit=PASS"
+          ) | Set-Content -Path $out -Encoding utf8
+          Write-Host "Evidence written to $out"
+      - name: Remove ephemeral smoke credentials
+        if: always()
+        shell: powershell
+        run: Remove-Item -Force -ErrorAction SilentlyContinue 'deploy\staging\runtime\smoke-credentials.json'

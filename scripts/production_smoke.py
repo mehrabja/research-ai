@@ -23,11 +23,18 @@ def required(name: str) -> str:
     return value
 
 
-def request(url: str, headers: dict[str, str] | None = None) -> tuple[int, dict[str, str], bytes]:
+def request(
+    url: str,
+    headers: dict[str, str] | None = None,
+    *,
+    method: str = "GET",
+    body: bytes | None = None,
+) -> tuple[int, dict[str, str], bytes]:
     req = urllib.request.Request(
         url,
         headers=headers or {"Accept": "application/json"},
-        method="GET",
+        method=method,
+        data=body,
     )
     try:
         with urllib.request.urlopen(req, timeout=15) as response:
@@ -36,7 +43,10 @@ def request(url: str, headers: dict[str, str] | None = None) -> tuple[int, dict[
         return exc.code, dict(exc.headers.items()), exc.read()
 
 
-def json_request(url: str, headers: dict[str, str] | None = None) -> tuple[int, dict[str, str], dict[str, Any]]:
+def json_request(
+    url: str,
+    headers: dict[str, str] | None = None,
+) -> tuple[int, dict[str, str], dict[str, Any]]:
     status, response_headers, body = request(url, headers)
     try:
         payload = json.loads(body.decode("utf-8"))
@@ -75,6 +85,46 @@ def auth_headers() -> dict[str, str]:
     return headers
 
 
+def post_json(
+    url: str,
+    payload: dict[str, Any],
+    headers: dict[str, str] | None = None,
+) -> tuple[int, dict[str, str], dict[str, Any]]:
+    merged = {"Accept": "application/json", "Content-Type": "application/json"}
+    if headers:
+        merged.update(headers)
+    status, response_headers, body = request(
+        url,
+        merged,
+        method="POST",
+        body=json.dumps(payload).encode("utf-8"),
+    )
+    try:
+        decoded = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise RuntimeError(f"{url} returned invalid JSON (HTTP {status}).")
+    if not isinstance(decoded, dict):
+        raise RuntimeError(f"{url} returned a non-object JSON payload.")
+    return status, response_headers, decoded
+
+
+def login_for_smoke(base_url: str) -> tuple[str, str]:
+    email = os.getenv("SMOKE_AUTH_EMAIL", "").strip()
+    password = os.getenv("SMOKE_AUTH_PASSWORD", "")
+    if not email or not password:
+        raise RuntimeError("SMOKE_AUTH_EMAIL and SMOKE_AUTH_PASSWORD are required for authenticated smoke.")
+    status, _, payload = post_json(
+        base_url + "/api/v1/auth/login",
+        {"email": email, "password": password},
+    )
+    expect(status, 200, "smoke login")
+    access = str(payload.get("access_token") or "")
+    refresh = str(payload.get("refresh_token") or "")
+    if not access or not refresh:
+        raise RuntimeError("Smoke login did not return both access and refresh tokens.")
+    return access, refresh
+
+
 def core_smoke(base_url: str, headers: dict[str, str]) -> None:
     for path, label in (
         ("/api/v1/health/live", "liveness"),
@@ -90,9 +140,15 @@ def core_smoke(base_url: str, headers: dict[str, str]) -> None:
             )
         print(f"PASS {label} request_id={request_id}")
 
+    refresh_token = ""
     if "Authorization" not in headers and "X-API-Key" not in headers:
-        print("INFO authenticated smoke skipped; set SMOKE_ACCESS_TOKEN or SMOKE_API_KEY.")
-        return
+        if os.getenv("SMOKE_AUTH_EMAIL", "").strip() and os.getenv("SMOKE_AUTH_PASSWORD", ""):
+            access_token, refresh_token = login_for_smoke(base_url)
+            headers = {"Accept": "application/json", "Authorization": f"Bearer {access_token}"}
+            print("PASS smoke login")
+        else:
+            print("INFO authenticated smoke skipped; set smoke access credentials.")
+            return
 
     status, _, _ = json_request(base_url + "/api/v1/auth/me", headers)
     expect(status, 200, "authenticated user")
@@ -106,6 +162,38 @@ def core_smoke(base_url: str, headers: dict[str, str]) -> None:
     status, _, _ = json_request(base_url + "/api/v1/projects?limit=1", headers)
     expect(status, 200, "project listing")
     print("PASS project listing")
+
+    if refresh_token:
+        status, _, refresh_payload = post_json(
+            base_url + "/api/v1/auth/refresh",
+            {"refresh_token": refresh_token},
+        )
+        expect(status, 200, "refresh")
+        rotated = str(refresh_payload.get("refresh_token") or "")
+        if not rotated:
+            raise RuntimeError("Refresh did not return a rotated refresh token.")
+        status, _, _ = post_json(
+            base_url + "/api/v1/auth/logout",
+            {"refresh_token": rotated},
+        )
+        expect(status, 200, "logout")
+        print("PASS refresh/logout")
+
+
+def check_web_smoke() -> None:
+    base = os.getenv("SMOKE_WEB_BASE_URL", "").strip().rstrip("/")
+    if not base:
+        return
+    status, headers, _ = request(base + "/login")
+    expect(status, 200, "web login page")
+    for name, expected in (
+        ("X-Content-Type-Options", "nosniff"),
+        ("X-Frame-Options", "DENY"),
+    ):
+        actual = header_value(headers, name)
+        if actual != expected:
+            raise RuntimeError(f"Web security header {name}={actual!r}, expected {expected!r}.")
+    print("PASS web login/security headers")
 
 
 def check_expected_providers(matrix: dict[str, Any]) -> None:
@@ -147,6 +235,40 @@ def external_get(
     status, _, _ = json_request(url, headers)
     expect(status, expected, label)
     print(f"PASS external {label}")
+
+
+def verify_sapling() -> None:
+    key = required("SAPLING_API_KEY")
+    base = os.getenv(
+        "DETECTION_SAPLING_BASE_URL",
+        "https://api.sapling.ai/api/v1",
+    ).rstrip("/")
+    status, _, payload = json_request(
+        base + "/account/status",
+        {"Accept": "application/json", "Authorization": "Bearer " + key},
+    )
+    expect(status, 200, "Sapling account status")
+    if payload.get("api_access") is not True:
+        raise RuntimeError(
+            "Sapling API access is unavailable: "
+            + str(payload.get("blocked_reason") or payload.get("message"))
+        )
+    print("PASS external Sapling")
+
+def verify_originality() -> None:
+    key = required("AI_DETECTION_API_KEY")
+    base = os.getenv(
+        "DETECTION_ORIGINALITY_BASE_URL",
+        "https://api.originality.ai/api/v3",
+    ).rstrip("/")
+    status, _, payload = json_request(
+        base + "/account/balance",
+        {"Accept": "application/json", "X-OAI-API-KEY": key},
+    )
+    expect(status, 200, "Originality.ai account balance")
+    if not all(key in payload for key in ("credits", "subscriptionCredits")):
+        raise RuntimeError("Originality.ai account balance returned an unexpected payload.")
+    print("PASS external Originality.ai")
 
 
 def verify_openrouter() -> None:
@@ -222,7 +344,10 @@ def main() -> int:
         base_url = required("SMOKE_BASE_URL").rstrip("/")
         core_smoke(base_url, auth_headers())
 
+        check_web_smoke()
         checks = {
+            "SMOKE_VERIFY_SAPLING": verify_sapling,
+            "SMOKE_VERIFY_ORIGINALITY": verify_originality,
             "SMOKE_VERIFY_OPENROUTER": verify_openrouter,
             "SMOKE_VERIFY_SEMANTIC_SCHOLAR": verify_semantic_scholar,
             "SMOKE_VERIFY_OPENALEX": verify_openalex,

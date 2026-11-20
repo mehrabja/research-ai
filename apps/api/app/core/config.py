@@ -171,6 +171,7 @@ class Settings(BaseSettings):
     github_oauth_client_secret: str = Field(default="", repr=False)
     github_oauth_redirect_uri: str = ""
     ai_detection_api_key: str = Field(default="", repr=False)
+    sapling_api_key: str = Field(default="", repr=False)
     sentry_dsn: str = ""
     turnstile_secret_key: str = Field(default="", repr=False)
     turnstile_site_key: str = ""
@@ -376,6 +377,11 @@ class Settings(BaseSettings):
     # --- Research Classification (Milestone 21) --------------------------
     detection_api_base_url: str = ""
     detection_api_model: str = "ai-detector-v1"
+    detection_originality_base_url: str = "https://api.originality.ai/api/v3"
+    detection_originality_model: str = "multilang"
+    detection_originality_store_scan: bool = False
+    detection_sapling_base_url: str = "https://api.sapling.ai/api/v1"
+    detection_sapling_model: str = "20260820"
     detection_timeout_seconds: float = 20.0
     detection_max_input_chars: int = 100_000
     detection_max_retries: int = Field(default=2, ge=0, le=10)
@@ -901,12 +907,23 @@ class Settings(BaseSettings):
             raise ValueError(
                 "detection_retry_max_seconds must be >= detection_retry_base_seconds"
             )
-        if (
-            self.detection_provider.strip().lower() == "http"
-            and not self.detection_api_base_url.strip()
-        ):
+        provider = self.detection_provider.strip().lower()
+        if provider == "http" and not self.detection_api_base_url.strip():
             raise ValueError(
                 "detection_api_base_url is required when detection_provider='http'"
+            )
+        if provider == "originality":
+            if not self.detection_originality_base_url.strip():
+                raise ValueError(
+                    "detection_originality_base_url is required when detection_provider='originality'"
+                )
+            if self.app_env.lower() == "production" and not self.ai_detection_api_key.strip():
+                raise ValueError(
+                    "AI_DETECTION_API_KEY is required in production when detection_provider='originality'"
+                )
+        if self.app_env.lower() == "production" and provider == "heuristic":
+            raise ValueError(
+                "detection_provider='heuristic' is not allowed in production"
             )
         return self
 

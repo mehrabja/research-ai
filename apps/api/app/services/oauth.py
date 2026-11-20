@@ -14,7 +14,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.exceptions import InvalidCredentials
+from app.core.exceptions import (
+    InvalidCredentials,
+    OAuthProviderNotConfigured,
+    OAuthProviderUnavailable,
+)
 from app.core.security import create_access_token, hash_password
 from app.db.models.oauth_account import OAuthAccount
 from app.db.models.oauth_state import OAuthState
@@ -115,12 +119,44 @@ def consume_state(
     return True
 
 
-def authorization_url(provider: str, state: str, code_challenge: str) -> str:
+def _redirect_uri(provider: str, configured: str) -> str:
+    configured = configured.strip()
+    if configured:
+        return configured
+    base = get_settings().web_app_base_url.rstrip("/")
+    return f"{base}/oauth/{provider}/callback"
+
+
+def _provider_credentials(provider: str) -> tuple[str, str, str]:
     settings = get_settings()
     if provider == "google":
+        client_id = settings.google_oauth_client_id.strip()
+        secret = settings.google_oauth_client_secret.strip()
+        redirect_uri = _redirect_uri(
+            "google",
+            settings.google_oauth_redirect_uri,
+        )
+    elif provider == "github":
+        client_id = settings.github_oauth_client_id.strip()
+        secret = settings.github_oauth_client_secret.strip()
+        redirect_uri = _redirect_uri(
+            "github",
+            settings.github_oauth_redirect_uri,
+        )
+    else:
+        raise InvalidCredentials()
+
+    if not client_id or not secret:
+        raise OAuthProviderNotConfigured()
+    return client_id, secret, redirect_uri
+
+
+def authorization_url(provider: str, state: str, code_challenge: str) -> str:
+    client_id, _secret, redirect_uri = _provider_credentials(provider)
+    if provider == "google":
         params = {
-            "client_id": settings.google_oauth_client_id,
-            "redirect_uri": settings.google_oauth_redirect_uri,
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
             "response_type": "code",
             "scope": "openid email profile",
             "state": state,
@@ -132,8 +168,8 @@ def authorization_url(provider: str, state: str, code_challenge: str) -> str:
         return "https://accounts.google.com/o/oauth2/v2/auth?" + parse.urlencode(params)
     if provider == "github":
         params = {
-            "client_id": settings.github_oauth_client_id,
-            "redirect_uri": settings.github_oauth_redirect_uri,
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
             "scope": "read:user user:email",
             "state": state,
             "code_challenge": code_challenge,
@@ -144,31 +180,37 @@ def authorization_url(provider: str, state: str, code_challenge: str) -> str:
 
 
 def _exchange_google(code: str, code_verifier: str) -> dict[str, Any]:
-    settings = get_settings()
-    response = httpx.post(
-        "https://oauth2.googleapis.com/token",
-        data={
-            "client_id": settings.google_oauth_client_id,
-            "client_secret": settings.google_oauth_client_secret,
-            "code": code,
-            "grant_type": "authorization_code",
-            "redirect_uri": settings.google_oauth_redirect_uri,
-            "code_verifier": code_verifier,
-        },
-        timeout=20,
-    )
-    response.raise_for_status()
-    tokens = response.json()
+    client_id, client_secret, redirect_uri = _provider_credentials("google")
+    try:
+        response = httpx.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": redirect_uri,
+                "code_verifier": code_verifier,
+            },
+            timeout=20,
+        )
+        response.raise_for_status()
+        tokens = response.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        raise OAuthProviderUnavailable() from exc
     access = tokens.get("access_token")
     if not isinstance(access, str):
         raise InvalidCredentials()
-    userinfo = httpx.get(
-        "https://openidconnect.googleapis.com/v1/userinfo",
-        headers={"Authorization": f"Bearer {access}"},
-        timeout=20,
-    )
-    userinfo.raise_for_status()
-    profile = userinfo.json()
+    try:
+        userinfo = httpx.get(
+            "https://openidconnect.googleapis.com/v1/userinfo",
+            headers={"Authorization": f"Bearer {access}"},
+            timeout=20,
+        )
+        userinfo.raise_for_status()
+        profile = userinfo.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        raise OAuthProviderUnavailable() from exc
     return {
         "provider_user_id": profile.get("sub"),
         "email": profile.get("email"),
@@ -177,46 +219,56 @@ def _exchange_google(code: str, code_verifier: str) -> dict[str, Any]:
 
 
 def _exchange_github(code: str, code_verifier: str) -> dict[str, Any]:
-    settings = get_settings()
-    response = httpx.post(
-        "https://github.com/login/oauth/access_token",
-        headers={"Accept": "application/json"},
-        data={
-            "client_id": settings.github_oauth_client_id,
-            "client_secret": settings.github_oauth_client_secret,
-            "code": code,
-            "redirect_uri": settings.github_oauth_redirect_uri,
-            "code_verifier": code_verifier,
-        },
-        timeout=20,
-    )
-    response.raise_for_status()
-    tokens = response.json()
+    client_id, client_secret, redirect_uri = _provider_credentials("github")
+    try:
+        response = httpx.post(
+            "https://github.com/login/oauth/access_token",
+            headers={"Accept": "application/json"},
+            data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "code": code,
+                "redirect_uri": redirect_uri,
+                "code_verifier": code_verifier,
+            },
+            timeout=20,
+        )
+        response.raise_for_status()
+        tokens = response.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        raise OAuthProviderUnavailable() from exc
     access = tokens.get("access_token")
     if not isinstance(access, str):
         raise InvalidCredentials()
-    profile = httpx.get(
-        "https://api.github.com/user",
-        headers={
-            "Authorization": f"Bearer {access}",
-            "Accept": "application/vnd.github+json",
-        },
-        timeout=20,
-    )
-    profile.raise_for_status()
-    data = profile.json()
-    email = data.get("email")
-    if not email:
-        emails = httpx.get(
-            "https://api.github.com/user/emails",
+    try:
+        profile = httpx.get(
+            "https://api.github.com/user",
             headers={
                 "Authorization": f"Bearer {access}",
                 "Accept": "application/vnd.github+json",
             },
             timeout=20,
         )
-        emails.raise_for_status()
-        for item in emails.json() or []:
+        profile.raise_for_status()
+        data = profile.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        raise OAuthProviderUnavailable() from exc
+    email = data.get("email")
+    if not email:
+        try:
+            emails = httpx.get(
+                "https://api.github.com/user/emails",
+                headers={
+                    "Authorization": f"Bearer {access}",
+                    "Accept": "application/vnd.github+json",
+                },
+                timeout=20,
+            )
+            emails.raise_for_status()
+            email_items = emails.json() or []
+        except (httpx.HTTPError, ValueError) as exc:
+            raise OAuthProviderUnavailable() from exc
+        for item in email_items:
             if item.get("primary") and item.get("verified"):
                 email = item.get("email")
                 break

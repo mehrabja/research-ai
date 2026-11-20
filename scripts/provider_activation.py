@@ -100,19 +100,150 @@ def config_checks(strict: bool) -> list[Check]:
         Check("S3 object storage", storage != "s3" or all(configured(name) for name in ("STORAGE_ENDPOINT", "STORAGE_ACCESS_KEY_ID", "STORAGE_SECRET_ACCESS_KEY", "STORAGE_BUCKET")), "active" if storage == "s3" else "local backend"),
         Check("Resend email", email != "resend" or (configured("RESEND_API_KEY") and configured("EMAIL_FROM")), "active" if email == "resend" else "not active"),
         Check("Stripe billing", billing != "stripe" or (configured("STRIPE_SECRET_KEY") and configured("STRIPE_WEBHOOK_SECRET") and configured("STRIPE_PRICE_IDS")), "active" if billing == "stripe" else "not active"),
-        Check("HTTP AI detection", detection != "http" or (configured("DETECTION_API_BASE_URL") and configured("AI_DETECTION_API_KEY")), "active" if detection == "http" else "heuristic baseline"),
+        Check(
+            "AI detection provider",
+            (
+                (
+                    (
+                        configured("AI_DETECTION_API_KEY")
+                        and configured("DETECTION_API_BASE_URL")
+                    )
+                    if detection == "http"
+                    else configured("AI_DETECTION_API_KEY")
+                    if detection == "originality"
+                    else configured("SAPLING_API_KEY")
+                    if detection == "sapling"
+                    else False
+                )
+                if detection in ("http", "originality", "sapling")
+                else (detection == "heuristic" and not strict)
+            ),
+            (
+                f"active {detection}"
+                if detection in ("http", "originality", "sapling")
+                else "non-production baseline" if detection == "heuristic" else "unsupported provider"
+            ),
+        ),
     ]
     return checks
 
 
 def external_check(name: str) -> Check:
     try:
+        if name == "Sapling":
+            if (env("DETECTION_PROVIDER") or "heuristic") != "sapling":
+                return Check(name, True, "skipped; provider not active")
+            key = env("SAPLING_API_KEY")
+            if not key:
+                return Check(name, False, "missing required configuration")
+            base = env("DETECTION_SAPLING_BASE_URL") or "https://api.sapling.ai/api/v1"
+            request = urllib.request.Request(
+                base.rstrip("/") + "/account/status",
+                headers={
+                    "Accept": "application/json",
+                    "Authorization": "Bearer " + key,
+                },
+                method="GET",
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=15) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+            except urllib.error.HTTPError as exc:
+                return Check(name, False, f"HTTP {exc.code}")
+            ok = (
+                response.status == 200
+                and isinstance(payload, dict)
+                and payload.get("api_access") is True
+            )
+            detail = (
+                "read-only account status"
+                if ok
+                else f"account access unavailable: {payload.get('blocked_reason')}"
+                if isinstance(payload, dict)
+                else "unexpected response"
+            )
+            return Check(name, ok, detail)
+
+        if name == "Originality.ai":
+            if (env("DETECTION_PROVIDER") or "heuristic") != "originality":
+                return Check(name, True, "skipped; provider not active")
+            key = env("AI_DETECTION_API_KEY")
+            if not key:
+                return Check(name, False, "missing required configuration")
+            base = env("DETECTION_ORIGINALITY_BASE_URL") or "https://api.originality.ai/api/v3"
+            status, payload = http_json(
+                base.rstrip("/") + "/account/balance",
+                {"Accept": "application/json", "X-OAI-API-KEY": key},
+            )
+            return Check(
+                name,
+                status == 200 and "credits" in payload and "subscriptionCredits" in payload,
+                "read-only verification",
+            )
+
         if name == "OpenRouter":
             if not configured("OPENROUTER_API_KEY"):
                 return Check(name, True, "skipped; no configured key")
             base = env("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1"
             status, payload = http_json(base.rstrip("/") + "/models", {"Accept": "application/json", "Authorization": f"Bearer {env('OPENROUTER_API_KEY')}"})
             return Check(name, status == 200 and bool(payload.get("data")), "read-only verification")
+
+        if name == "S3 object storage":
+            if (env("FILE_STORAGE_BACKEND") or "local") != "s3":
+                return Check(name, True, "skipped; provider not active")
+            required_names = (
+                "STORAGE_ENDPOINT",
+                "STORAGE_ACCESS_KEY_ID",
+                "STORAGE_SECRET_ACCESS_KEY",
+                "STORAGE_BUCKET",
+            )
+            if not all(configured(item) for item in required_names):
+                return Check(name, False, "missing required configuration")
+            try:
+                import boto3
+                from botocore.config import Config
+
+                client = boto3.client(
+                    "s3",
+                    endpoint_url=env("STORAGE_ENDPOINT").rstrip("/"),
+                    aws_access_key_id=env("STORAGE_ACCESS_KEY_ID"),
+                    aws_secret_access_key=env("STORAGE_SECRET_ACCESS_KEY"),
+                    region_name=env("STORAGE_REGION") or "auto",
+                    config=Config(
+                        signature_version="s3v4",
+                        s3={"addressing_style": "path"},
+                    ),
+                )
+                client.head_bucket(Bucket=env("STORAGE_BUCKET"))
+                return Check(name, True, "read-only verification")
+            except Exception as exc:
+                return Check(name, False, type(exc).__name__)
+
+        if name == "Stripe":
+            if (env("BILLING_PROVIDER") or "none") != "stripe":
+                return Check(name, True, "skipped; provider not active")
+            key = env("STRIPE_SECRET_KEY")
+            if not key:
+                return Check(name, False, "missing required configuration")
+            base = env("STRIPE_API_BASE_URL") or "https://api.stripe.com/v1"
+            request = urllib.request.Request(
+                base.rstrip("/") + "/balance",
+                headers={
+                    "Accept": "application/json",
+                    "Authorization": "Bearer " + key,
+                },
+                method="GET",
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=15) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+            except urllib.error.HTTPError as exc:
+                return Check(name, False, f"HTTP {exc.code}")
+            return Check(
+                name,
+                response.status == 200 and isinstance(payload, dict) and payload.get("object") == "balance",
+                "read-only verification",
+            )
 
         if name == "Semantic Scholar":
             if not configured("SEMANTIC_SCHOLAR_API_KEY"):
@@ -156,7 +287,10 @@ def main() -> int:
 
     checks = config_checks(args.strict)
     if args.external:
-        checks.extend(external_check(name) for name in ("OpenRouter", "Semantic Scholar", "OpenAlex", "Crossref", "NCBI"))
+        checks.extend(
+            external_check(name)
+            for name in ("Sapling", "Originality.ai", "OpenRouter", "Stripe", "Semantic Scholar", "OpenAlex", "Crossref", "NCBI")
+        )
 
     failures = [check for check in checks if not check.ok]
     for check in checks:

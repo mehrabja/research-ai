@@ -119,6 +119,7 @@ def get_file(
 @files_router.get("/{file_id}/content", summary="Download file content")
 def download_file(
     file_id: uuid.UUID,
+    inline: bool = Query(default=False),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
@@ -131,8 +132,10 @@ def download_file(
         or "application/octet-stream"
     )
     headers = {
-        "Content-Disposition":
-            f'attachment; filename="{pf.normalized_filename}"',
+        "Content-Disposition": (
+            f'{"inline" if inline else "attachment"}; '
+            f'filename="{pf.normalized_filename}"'
+        ),
         "Content-Length": str(pf.size_bytes),
         "X-Content-Type-Options": "nosniff",
     }

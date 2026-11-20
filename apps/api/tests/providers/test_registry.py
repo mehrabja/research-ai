@@ -72,3 +72,22 @@ def test_fallback_provider_advances_only_on_transient_failure() -> None:
 
     assert result == {"provider": "stub"}
     assert provider.model_name == "stub-v1"
+
+
+def test_registry_registers_originality_detection_provider() -> None:
+    registry = ProviderRegistry()
+
+    from app.integrations.detection.originality import OriginalityDetectionProvider
+
+    registry.register(
+        capability=ProviderCapability.DETECTION,
+        name="originality",
+        factory=lambda ctx: OriginalityDetectionProvider(),
+    )
+
+    provider = registry.resolve(
+        capability=ProviderCapability.DETECTION,
+        preferred="originality",
+    )
+    assert provider.provider_name == "originality"
+    assert isinstance(provider, OriginalityDetectionProvider)

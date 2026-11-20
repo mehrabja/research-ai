@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { queryKeys } from "./query-keys";
 
 export const SESSION_EVENT_KEY = "research-ai:session-event";
 export type SessionEventType = "authenticated" | "logout";
@@ -26,7 +27,7 @@ export function syncSessionUser(
   }
 
   queryClient.removeQueries({
-    predicate: (query) => query.queryKey[0] !== "session",
+    predicate: (query) => query.queryKey[0] !== queryKeys.session[0],
   });
   knownSessionUserId = userId;
   return true;

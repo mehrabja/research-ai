@@ -48,3 +48,19 @@ Release verification:
     python scripts/production_smoke.py
 
 The GitHub Actions workflow named Production Smoke is manual and reads deployment/provider credentials only from GitHub Environment secrets and variables.
+
+## Zero-cost staging runtime
+
+The repository includes a real staging-like Docker deployment for the self-hosted Windows GitHub runner.
+
+    gh workflow run staging-deploy-smoke.yml --ref phase14-15-completion
+
+This provisions PostgreSQL + pgvector, FastAPI, and the Next.js standalone frontend with the staging provider contract.
+
+Additional operational gates:
+
+    gh workflow run staging-chaos.yml --ref phase14-15-completion
+    gh workflow run staging-backup-restore.yml --ref phase14-15-completion
+    gh workflow run staging-release-evidence.yml --ref phase14-15-completion
+
+GitHub CI, recovery, smoke, and backup workflows are configured for the self-hosted Windows runner so they do not depend on GitHub-hosted runner billing. The runner requires Python 3.11+, Node.js 20+, and Docker.

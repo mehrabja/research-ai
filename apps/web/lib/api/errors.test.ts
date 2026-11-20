@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, test } from "vitest";
 import { ApiError, apiErrorFromUnknown } from "./errors";
 
 describe("ApiError", () => {
@@ -26,4 +26,27 @@ describe("ApiError", () => {
 
     expect(error.retryable).toBe(true);
   });
+});
+
+
+test("unwraps the canonical nested error envelope", () => {
+  const error = apiErrorFromUnknown(
+    {
+      error: {
+        code: "RATE_LIMITED",
+        message: "Too many requests",
+        request_id: "rid-123",
+        retry_after: 17,
+        details: { limit: 10 },
+      },
+    },
+    { status: 429 },
+  );
+
+  expect(error.message).toBe("Too many requests");
+  expect(error.code).toBe("RATE_LIMITED");
+  expect(error.requestId).toBe("rid-123");
+  expect(error.retryable).toBe(true);
+  expect(error.retryAfter).toBe(17);
+  expect(error.details).toEqual({ limit: 10 });
 });

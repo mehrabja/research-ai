@@ -31,7 +31,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           <span className="muted" aria-hidden="true">↗</span>
         </div>
       </Link>
-      <nav className="nav" aria-label="Primary navigation">
+      <nav id="primary-navigation" className="nav" aria-label="Primary navigation">
         {NAV_ITEMS.map((item, index) => {
           const showSection = index === 0 || NAV_ITEMS[index - 1]?.section !== item.section;
           const active = pathname === item.href || pathname.startsWith(item.href + "/");

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { ROUTES } from "@/lib/routes";
 
 export default function AppError({
   error,
@@ -30,7 +31,7 @@ export default function AppError({
           <button className="btn primary" type="button" onClick={() => reset()}>
             Try again
           </button>
-          <Link className="btn" href="/dashboard">
+          <Link className="btn" href={ROUTES.dashboard}>
             Go to dashboard
           </Link>
         </div>

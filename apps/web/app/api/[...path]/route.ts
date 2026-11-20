@@ -383,13 +383,19 @@ async function proxy(
       return response;
     }
 
-    return NextResponse.json(payload, {
+    const response = NextResponse.json(payload, {
       status: upstream.status,
       headers:
         responseHeadersWithoutBodyMetadata(
           upstream.headers,
         ),
     });
+
+    if (!upstream.ok) {
+      clearAuthCookies(response);
+    }
+
+    return response;
   }
 
   if (isAuthPath(path, "refresh")) {
@@ -584,7 +590,7 @@ async function proxy(
     return response;
   }
 
-  return new NextResponse(upstream.body, {
+  const response = new NextResponse(upstream.body, {
     status: upstream.status,
     statusText: upstream.statusText,
     headers:
@@ -592,6 +598,16 @@ async function proxy(
         upstream.headers,
       ),
   });
+
+  if (
+    upstream.ok &&
+    (isAuthPath(path, "account") ||
+      isAuthPath(path, "logout-all"))
+  ) {
+    clearAuthCookies(response);
+  }
+
+  return response;
 }
 
 export {

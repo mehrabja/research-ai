@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -16,6 +16,15 @@ class CanvasNode(BaseModel):
     body: str = Field(default="", max_length=5_000)
     x: float = Field(default=0, ge=-100_000, le=100_000)
     y: float = Field(default=0, ge=-100_000, le=100_000)
+    ref_type: Literal[
+        "source",
+        "evidence",
+        "project_file",
+        "manuscript_section",
+    ] | None = None
+    ref_id: uuid.UUID | None = None
+    evidence_key: str | None = Field(default=None, max_length=300)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class CanvasEdge(BaseModel):

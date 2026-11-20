@@ -247,6 +247,14 @@ def build_default_registry() -> ProviderRegistry:
         from app.integrations.detection.http import HTTPDetectionProvider
         return HTTPDetectionProvider()
 
+    def originality_detection_factory(ctx: ProviderContext) -> Any:
+        from app.integrations.detection.originality import OriginalityDetectionProvider
+        return OriginalityDetectionProvider()
+
+    def sapling_detection_factory(ctx: ProviderContext) -> Any:
+        from app.integrations.detection.sapling import SaplingDetectionProvider
+        return SaplingDetectionProvider()
+
     def source_factory(ctx: ProviderContext) -> Any:
         from app.integrations.sources.semantic_scholar import (
             SemanticScholarProvider,
@@ -339,6 +347,16 @@ def build_default_registry() -> ProviderRegistry:
         capability=ProviderCapability.DETECTION,
         name="http",
         factory=http_detection_factory,
+    )
+    registry.register(
+        capability=ProviderCapability.DETECTION,
+        name="originality",
+        factory=originality_detection_factory,
+    )
+    registry.register(
+        capability=ProviderCapability.DETECTION,
+        name="sapling",
+        factory=sapling_detection_factory,
     )
     registry.register(
         capability=ProviderCapability.SOURCE_DISCOVERY,

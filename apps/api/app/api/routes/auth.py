@@ -38,8 +38,8 @@ from app.schemas.auth import (
 from app.services import account_security as account_security_service
 from app.services import activity as activity_service
 from app.services import auth as auth_service
-from app.services.audit import emit_audit
 from app.services import mfa as mfa_service
+from app.services.audit import emit_audit
 from app.services.email import EmailDeliveryService
 from app.services.rate_limit import get_login_rate_limiter
 
@@ -63,6 +63,8 @@ def register(
         db,
         email=payload.email,
         password=payload.password,
+        full_name=payload.full_name,
+        workspace_name=payload.workspace_name,
     )
     # The raw token is intentionally not returned by the API. F11 email
     # delivery will send the token through the configured transactional
@@ -393,11 +395,13 @@ def delete_account(
         email=current_user.email,
         password=body.password,
     )
-    if current_user.mfa_enabled:
-        if not body.mfa_code or not mfa_service.verify_encrypted_code(
+    if current_user.mfa_enabled and (
+        not body.mfa_code
+        or not mfa_service.verify_encrypted_code(
             current_user.mfa_secret, body.mfa_code
-        ):
-            raise MFAInvalid()
+        )
+    ):
+        raise MFAInvalid()
 
     account_security_service.delete_account(db, user_id=current_user.id)
     db.commit()

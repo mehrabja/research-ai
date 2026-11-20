@@ -13,6 +13,8 @@ import {
   suspendWorkspace,
 } from "@/lib/api/workspaces";
 import { useResearchContext } from "@/lib/research-context";
+import { canManageWorkspaceLifecycle } from "@/lib/permissions";
+import { queryKeys } from "@/lib/query-keys";
 
 export default function WorkspaceProjects() {
   const [projectName, setProjectName] = useState("");
@@ -36,7 +38,7 @@ export default function WorkspaceProjects() {
     onSuccess: async () => {
       setProjectName("");
       setDescription("");
-      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projects(activeWorkspaceId) });
     },
   });
 
@@ -91,7 +93,7 @@ export default function WorkspaceProjects() {
       (workspace) => workspace.id === activeWorkspaceId,
     ) ?? null;
   const isSuspended = activeWorkspace?.status === "suspended";
-  const owner = activeWorkspace?.role === "owner";
+  const owner = canManageWorkspaceLifecycle(activeWorkspace?.role ?? null);
 
   return (
     <div className="stack" style={{ gap: 16 }}>

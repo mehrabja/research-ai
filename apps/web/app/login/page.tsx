@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { useRouter } from "next/navigation";
+import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -13,8 +14,9 @@ import {
 } from "@/lib/validation/auth";
 import { login } from "@/lib/api/auth";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const {
     register,
@@ -38,7 +40,14 @@ export default function LoginPage() {
       login(values.email, values.password),
 
     onSuccess: () => {
-      router.replace("/dashboard");
+      const next = searchParams.get("next");
+      const safeNext =
+        next &&
+        next.startsWith("/") &&
+        !next.startsWith("//")
+          ? next
+          : "/dashboard";
+      router.replace(safeNext as Route);
     },
 
     onError: () => {
@@ -52,6 +61,18 @@ export default function LoginPage() {
   const submitForm = handleSubmit((values) => {
     loginMutation.mutate(values);
   });
+
+  const oauthError = searchParams.get("oauth_error");
+  const oauthProvider = searchParams.get("provider");
+
+  const oauthMessage =
+    oauthError === "provider_not_configured"
+      ? `Sign-in with ${oauthProvider || "this provider"} is not configured yet.`
+      : oauthError === "provider_unavailable"
+        ? `Sign-in with ${oauthProvider || "this provider"} is temporarily unavailable.`
+        : oauthError
+          ? "The social sign-in request could not be completed. Please try again."
+          : "";
 
   const emailInvalid = Boolean(errors.email);
   const passwordInvalid = Boolean(errors.password);
@@ -200,6 +221,18 @@ export default function LoginPage() {
               </Link>
             </div>
 
+            {oauthMessage && (
+              <div
+                className="hint"
+                role="alert"
+                style={{
+                  color: "var(--danger)",
+                }}
+              >
+                {oauthMessage}
+              </div>
+            )}
+
             {errors.root && (
               <div
                 className="hint"
@@ -227,7 +260,7 @@ export default function LoginPage() {
               <button
                 className="btn"
                 type="button"
-                onClick={() => window.location.assign("/oauth/google/start")}
+                onClick={() => router.push("/oauth/google/start" as Route)}
               >
                 Continue with Google
               </button>
@@ -235,7 +268,7 @@ export default function LoginPage() {
               <button
                 className="btn"
                 type="button"
-                onClick={() => window.location.assign("/oauth/github/start")}
+                onClick={() => router.push("/oauth/github/start" as Route)}
               >
                 Continue with GitHub
               </button>
@@ -254,5 +287,23 @@ export default function LoginPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="shell-gate">
+          <section className="card pad shell-gate-card" aria-busy="true">
+            <div className="eyebrow">Research AI</div>
+            <h1>Loading sign-in…</h1>
+          </section>
+        </main>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }

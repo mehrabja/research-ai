@@ -82,9 +82,21 @@ def disable_mfa(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> MFAStatusResponse:
-    if not mfa_service.verify_encrypted_code(current_user.mfa_secret, body.code):
-        raise MFAInvalid()
-    current_user.mfa_enabled = False
+    valid_totp = mfa_service.verify_encrypted_code(
+        current_user.mfa_secret,
+        body.code,
+    )
+    if valid_totp:
+        current_user.mfa_enabled = False
+    else:
+        valid_recovery, remaining = mfa_service.consume_recovery_code(
+            list(current_user.mfa_recovery_code_hashes or []),
+            body.code,
+        )
+        if not valid_recovery:
+            raise MFAInvalid()
+        current_user.mfa_recovery_code_hashes = remaining
+        current_user.mfa_enabled = False
     current_user.security_version += 1
     revoke_all_sessions(db, user_id=current_user.id)
     emit_audit(

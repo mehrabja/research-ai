@@ -23,6 +23,7 @@ from app.core.security import hash_password, password_needs_rehash, verify_passw
 from app.db.models.auth_session import AuthSession
 from app.db.models.auth_token import AuthOneTimeToken
 from app.db.models.user import User
+from app.services import workspaces as workspaces_service
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,8 @@ def register_user(
     *,
     email: str,
     password: str,
+    full_name: str | None = None,
+    workspace_name: str | None = None,
 ) -> User:
     if get_user_by_email(db, email) is not None:
         raise UserAlreadyExists()
@@ -48,10 +51,23 @@ def register_user(
     user = User(
         email=email,
         password_hash=hash_password(password),
+        full_name=full_name.strip() if full_name else None,
     )
 
     try:
         db.add(user)
+        db.flush()
+
+        if workspace_name is not None:
+            name = workspace_name.strip()
+            if not name:
+                raise ValueError("workspace_name must not be empty")
+            workspaces_service.create_workspace(
+                db,
+                name=name,
+                owner_user_id=user.id,
+            )
+
         db.commit()
         db.refresh(user)
     except IntegrityError as exc:

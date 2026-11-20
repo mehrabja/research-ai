@@ -9,8 +9,8 @@ from app.api.dependencies import get_current_user
 from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.api_token import APITokenCreate, APITokenCreated, APITokenRead
-from app.services.audit import emit_audit
 from app.services.api_tokens import create_token, list_tokens, revoke_token
+from app.services.audit import emit_audit
 
 router = APIRouter(prefix="/auth/api-tokens", tags=["api-tokens"])
 

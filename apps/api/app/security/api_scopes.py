@@ -7,8 +7,8 @@ explicitly privileged automation tokens.
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 SCOPE_READ = "read"
 SCOPE_WRITE = "write"

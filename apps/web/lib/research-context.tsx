@@ -24,6 +24,8 @@ import {
   type ProjectReport,
 } from "@/lib/api/projects";
 import { isApiError } from "@/lib/api/errors";
+import { queryKeys } from "@/lib/query-keys";
+import { ROUTES } from "@/lib/routes";
 import {
   clearSessionUserCache,
   SESSION_EVENT_KEY,
@@ -177,7 +179,7 @@ export function ResearchContextProvider({
   const reportParam = searchParams.get("reportId");
 
   const sessionQuery = useQuery({
-    queryKey: ["session", "user"],
+    queryKey: queryKeys.session,
     queryFn: me,
     staleTime: 5 * 60_000,
     retry: false,
@@ -197,7 +199,7 @@ export function ResearchContextProvider({
       sessionQuery.error.status === 401
     ) {
       clearSessionUserCache(queryClient);
-      router.replace("/login");
+      router.replace(ROUTES.login);
     }
   }, [queryClient, router, sessionQuery.error]);
 
@@ -224,7 +226,7 @@ export function ResearchContextProvider({
   }, [queryClient, refetchSession, router]);
 
   const workspacesQuery = useQuery({
-    queryKey: ["workspaces"],
+    queryKey: queryKeys.workspaces,
     queryFn: listWorkspaces,
     enabled: Boolean(sessionQuery.data),
     staleTime: 60_000,
@@ -248,7 +250,7 @@ export function ResearchContextProvider({
     workspace === null;
 
   const projectsQuery = useQuery({
-    queryKey: ["projects", workspaceId],
+    queryKey: queryKeys.projects(workspaceId),
     queryFn: () => listProjects(workspaceId!),
     enabled:
       Boolean(sessionQuery.data && workspaceId) &&
@@ -273,7 +275,7 @@ export function ResearchContextProvider({
     project === null;
 
   const reportsQuery = useQuery({
-    queryKey: ["project-reports", projectId],
+    queryKey: queryKeys.projectReports(projectId),
     queryFn: () => listProjectReports(projectId!),
     enabled:
       Boolean(sessionQuery.data && projectId) &&

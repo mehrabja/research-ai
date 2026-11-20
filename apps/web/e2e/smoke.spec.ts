@@ -174,6 +174,22 @@ test("authenticated app shell exposes main navigation and a working CSP nonce", 
   ).toBeVisible();
 });
 
+test("public and protected responses expose baseline security headers", async ({ page }) => {
+  const publicResponse = await page.goto("/login");
+  expect(publicResponse?.status()).toBe(200);
+  expect(publicResponse?.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(publicResponse?.headers()["x-frame-options"]).toBe("DENY");
+  expect(publicResponse?.headers()["cross-origin-opener-policy"]).toBe("same-origin");
+  expect(publicResponse?.headers()["cross-origin-resource-policy"]).toBe("same-origin");
+  expect(publicResponse?.headers()["x-permitted-cross-domain-policies"]).toBe("none");
+
+  await createAuthenticatedSession(page);
+  const protectedResponse = await page.goto("/dashboard");
+  expect(protectedResponse?.status()).toBe(200);
+  expect(protectedResponse?.headers()["content-security-policy"]).toContain("script-src 'self'");
+  expect(protectedResponse?.headers()["x-content-type-options"]).toBe("nosniff");
+});
+
 test("BFF rejects cross-origin state-changing requests", async ({
   page,
 }) => {

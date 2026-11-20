@@ -48,4 +48,4 @@ Baseline commit: 106ca1fd2b5b1b86e4e9521ffa9c33f3d8ddfa91
 | API tokens | Yes | X-API-Key auth | APIToken | Security UI | Implemented (code) |
 | 2FA | Yes | TOTP | User MFA fields | Security UI | Implemented (code) |
 | Health | Yes | DB/live checks | N/A | Loading/system | Implemented / not runtime-verified |
-| CI | Yes | GitHub Actions | N/A | N/A | Partial |
+| CI | Yes | GitHub Actions | N/A | N/A | Implemented in code; workflows use self-hosted Windows runner |

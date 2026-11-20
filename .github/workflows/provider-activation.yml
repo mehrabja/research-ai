@@ -22,16 +22,22 @@ permissions:
   contents: read
 jobs:
   activation:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, windows, x64]
     environment: ${{ inputs.environment }}
     env:
       GENERATION_PROVIDER: ${{ vars.GENERATION_PROVIDER }}
+      EMBEDDING_PROVIDER: ${{ vars.EMBEDDING_PROVIDER }}
+      TRANSLATION_PROVIDER: ${{ vars.TRANSLATION_PROVIDER }}
       SOURCE_DISCOVERY_PROVIDER: ${{ vars.SOURCE_DISCOVERY_PROVIDER }}
       FILE_STORAGE_BACKEND: ${{ vars.FILE_STORAGE_BACKEND }}
       EMAIL_PROVIDER: ${{ vars.EMAIL_PROVIDER }}
       BILLING_PROVIDER: ${{ vars.BILLING_PROVIDER }}
       DETECTION_PROVIDER: ${{ vars.DETECTION_PROVIDER }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      GENERATION_OPENAI_API_KEY: ${{ secrets.GENERATION_OPENAI_API_KEY }}
+      EMBEDDING_OPENAI_API_KEY: ${{ secrets.EMBEDDING_OPENAI_API_KEY }}
+      GENERATION_OPENAI_BASE_URL: ${{ vars.GENERATION_OPENAI_BASE_URL }}
+      EMBEDDING_OPENAI_BASE_URL: ${{ vars.EMBEDDING_OPENAI_BASE_URL }}
       OPENROUTER_BASE_URL: ${{ vars.OPENROUTER_BASE_URL }}
       SEMANTIC_SCHOLAR_API_KEY: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
       OPENALEX_API_KEY: ${{ secrets.OPENALEX_API_KEY }}
@@ -42,19 +48,32 @@ jobs:
       STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
       STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
       STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET }}
+      STORAGE_REGION: ${{ vars.STORAGE_REGION }}
+      STORAGE_PATH_STYLE: ${{ vars.STORAGE_PATH_STYLE }}
       RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
       EMAIL_FROM: ${{ vars.EMAIL_FROM }}
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
       STRIPE_PRICE_IDS: ${{ vars.STRIPE_PRICE_IDS }}
+      STRIPE_API_BASE_URL: ${{ vars.STRIPE_API_BASE_URL }}
       DETECTION_API_BASE_URL: ${{ vars.DETECTION_API_BASE_URL }}
+      DETECTION_ORIGINALITY_BASE_URL: ${{ vars.DETECTION_ORIGINALITY_BASE_URL }}
+      DETECTION_SAPLING_BASE_URL: ${{ vars.DETECTION_SAPLING_BASE_URL }}
       AI_DETECTION_API_KEY: ${{ secrets.AI_DETECTION_API_KEY }}
+      SAPLING_API_KEY: ${{ secrets.SAPLING_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: "3.11"}
-      - run: |
-          args=""
-          if [[ "${{ inputs.strict }}" == "true" ]]; then args="$args --strict"; fi
-          if [[ "${{ inputs.external }}" == "true" ]]; then args="$args --external"; fi
-          python scripts/provider_activation.py $args
+      - uses: actions/checkout@v6
+      - name: Verify runner Python
+        run: python --version
+      - name: Install activation runner dependency
+        run: python -m pip install --disable-pip-version-check "python-dotenv>=1.0.1,<2.0" "boto3>=1.35,<2.0"
+      - name: Run provider activation
+        shell: cmd
+        env:
+          ACTIVATION_STRICT: ${{ inputs.strict }}
+          ACTIVATION_EXTERNAL: ${{ inputs.external }}
+        run: |
+          set "ARGS="
+          if /I "%ACTIVATION_STRICT%"=="true" set "ARGS=%ARGS% --strict"
+          if /I "%ACTIVATION_EXTERNAL%"=="true" set "ARGS=%ARGS% --external"
+          python scripts/provider_activation.py %ARGS%

@@ -1,7 +1,7 @@
 # F13 — Frontend Production Port
 
-Date: 2026-09-29
-Branch: phase123-integration
+Date: 2026-10-01
+Branch: phase14-15-completion
 
 ## Scope
 
@@ -11,13 +11,13 @@ The production frontend now exposes the research workflow as real Next.js route 
 
 ## Route surface
 
-The current app contains 31 route pages, including:
+The current app exposes 25 protected application routes plus 8 public page modules and 2 OAuth route handlers. The Next.js production build currently reports 35 route entries, including the API catch-all and not-found entry.
 
 - research workflow: dashboard, research, sources, literature, evidence, plan, knowledge, manuscript, generate, humanize, translate, citations and final review
 - operations: files, jobs, workspace, team, collaboration and usage/billing
 - account/security: settings
-- supporting public routes: login, signup, verification, password reset and landing/boot pages
-- dedicated PDF workspace and research canvas surfaces
+- supporting public routes: landing, boot, login, signup, verification, password reset and invite
+- dedicated PDF workspace and research canvas surfaces (implemented as top-level route modules and explicitly covered by the same proxy matcher)
 
 ## Security boundary
 

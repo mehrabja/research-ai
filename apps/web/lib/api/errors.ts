@@ -3,6 +3,19 @@ export type ApiErrorPayload = {
   message?: unknown;
   error?: unknown;
   code?: unknown;
+  request_id?: unknown;
+  retry_after?: unknown;
+  details?: unknown;
+  extra?: unknown;
+};
+
+type StructuredApiError = {
+  code?: unknown;
+  message?: unknown;
+  request_id?: unknown;
+  retry_after?: unknown;
+  details?: unknown;
+  extra?: unknown;
 };
 
 export class ApiError extends Error {
@@ -10,6 +23,8 @@ export class ApiError extends Error {
   readonly code: string | null;
   readonly requestId: string | null;
   readonly retryable: boolean;
+  readonly retryAfter: number | null;
+  readonly details: unknown;
 
   constructor(
     message: string,
@@ -18,6 +33,8 @@ export class ApiError extends Error {
       code?: string | null;
       requestId?: string | null;
       retryable?: boolean;
+      retryAfter?: number | null;
+      details?: unknown;
     } = {},
   ) {
     super(message);
@@ -25,6 +42,8 @@ export class ApiError extends Error {
     this.status = options.status ?? 0;
     this.code = options.code ?? null;
     this.requestId = options.requestId ?? null;
+    this.retryAfter = options.retryAfter ?? null;
+    this.details = options.details;
     this.retryable =
       options.retryable ??
       (this.status === 408 ||
@@ -46,24 +65,42 @@ export function apiErrorFromUnknown(
       ? (value as ApiErrorPayload)
       : null;
 
-  const code =
-    payload && typeof payload.code === "string"
-      ? payload.code
+  const nested =
+    payload?.error &&
+    typeof payload.error === "object" &&
+    payload.error !== null
+      ? (payload.error as StructuredApiError)
       : null;
 
+  const codeValue = nested?.code ?? payload?.code;
+  const requestIdValue = nested?.request_id ?? payload?.request_id;
+  const retryAfterValue = nested?.retry_after ?? payload?.retry_after;
+  const details =
+    nested?.details ??
+    nested?.extra ??
+    payload?.details ??
+    payload?.extra;
+
   const message =
-    payload && typeof payload.detail === "string"
-      ? payload.detail
-      : payload && typeof payload.message === "string"
-        ? payload.message
-        : payload && typeof payload.error === "string"
-          ? payload.error
-          : options.fallback ?? "API request failed";
+    (typeof nested?.message === "string" && nested.message) ||
+    (typeof payload?.detail === "string" && payload.detail) ||
+    (typeof payload?.message === "string" && payload.message) ||
+    (typeof payload?.error === "string" && payload.error) ||
+    options.fallback ||
+    "API request failed";
 
   return new ApiError(message, {
     status: options.status,
-    code,
-    requestId: options.requestId,
+    code: typeof codeValue === "string" ? codeValue : null,
+    requestId:
+      typeof requestIdValue === "string"
+        ? requestIdValue
+        : options.requestId,
+    retryAfter:
+      typeof retryAfterValue === "number"
+        ? retryAfterValue
+        : null,
+    details,
   });
 }
 

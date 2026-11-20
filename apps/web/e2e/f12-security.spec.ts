@@ -152,3 +152,59 @@ test("login buttons start the server OAuth route", async ({ page }) => {
 
   await startRequest;
 });
+
+
+test("settings can sign out all active sessions", async ({ page }) => {
+  await createAuthenticatedSession(page);
+  await page.goto("/settings");
+
+  const origin = new URL(page.url()).origin;
+  await page.context().addCookies([
+    {
+      name: "research_ai_access",
+      value: "deliberately-stale-access-token",
+      url: origin,
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ]);
+
+  await page.getByRole("button", { name: "Sign out all" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+
+  const meAfterLogout = await page.request.get("/api/v1/auth/me");
+  expect(meAfterLogout.status()).toBe(401);
+
+  const authCookies = (await page.context().cookies()).filter((cookie) =>
+    ["research_ai_access", "research_ai_refresh"].includes(cookie.name),
+  );
+  expect(authCookies).toHaveLength(0);
+});
+
+test("authenticated shell can sign out and clears the session", async ({ page }) => {
+  await createAuthenticatedSession(page);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+
+  const meAfterLogout = await page.request.get("/api/v1/auth/me");
+  expect(meAfterLogout.status()).toBe(401);
+});
+
+
+test("settings token revoke handles a 204 response without surfacing a JSON error", async ({ page }) => {
+  await createAuthenticatedSession(page);
+  await page.goto("/settings");
+
+  const section = page.locator("section").filter({ hasText: "Personal API tokens" }).first();
+  await page.getByLabel("Token name").fill("F14 UI " + randomUUID());
+  await page.getByRole("button", { name: "Create token" }).click();
+
+  await expect(section.getByText("Copy this token now")).toBeVisible();
+  await section.getByRole("button", { name: "Revoke" }).click();
+
+  await expect(
+    page.getByRole("status").getByText("API token revoked.", { exact: true }),
+  ).toBeVisible();
+});

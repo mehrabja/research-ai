@@ -2,31 +2,19 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiErrorFromResponse } from "@/lib/api/errors";
+import {
+  changeSubscription,
+  createWorkspaceCheckout,
+  getWorkspacePlan,
+  getWorkspaceSubscription,
+  getWorkspaceUsage,
+  listBillingPlans,
+  switchWorkspacePlan,
+  type Plan,
+  type Subscription,
+} from "@/lib/api/billing";
 import { useResearchContext } from "@/lib/research-context";
-
-type Plan = { id: string; code: string; name: string; description: string | null };
-type Entitlement = { feature: string; limit_value: number | null; unit: string };
-type WorkspacePlan = Plan & { entitlements: Entitlement[] };
-type UsageItem = { metric: string; current: number; limit: number | null; unit: string };
-type UsageResponse = { workspace_id: string; period_start: string; period_end: string; items: UsageItem[] };
-type Subscription = {
-  id: string; workspace_id: string; plan_id: string; plan_code: string; status: string;
-  current_period_start: string | null; current_period_end: string | null;
-  provider: string; cancel_at_period_end: boolean; created_at: string;
-};
-
-async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    credentials: "include",
-    headers: { Accept: "application/json", ...(init?.body ? { "Content-Type": "application/json" } : {}), ...(init?.headers ?? {}) },
-    ...init,
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "Billing request failed.");
-  }
-  return (await response.json()) as T;
-}
+import { queryKeys } from "@/lib/query-keys";
 
 function formatBytes(value: number): string {
   if (value < 1024) return value + " B";
@@ -68,25 +56,23 @@ export function UsageBillingView() {
   const workspaceId = contextWorkspaceId ?? "";
 
   const plansQuery = useQuery({
-    queryKey: ["billing-plans"],
-    queryFn: () => readJson<Plan[]>("/api/v1/billing/plans"),
+    queryKey: queryKeys.billingPlans,
+    queryFn: listBillingPlans,
     enabled: Boolean(workspaceId),
   });
   const usageQuery = useQuery({
-    queryKey: ["workspace-usage", workspaceId],
-    queryFn: () => readJson<UsageResponse>("/api/v1/workspaces/" + workspaceId + "/usage"),
+    queryKey: queryKeys.workspaceUsage(workspaceId),
+    queryFn: () => getWorkspaceUsage(workspaceId),
     enabled: Boolean(workspaceId),
   });
   const planQuery = useQuery({
-    queryKey: ["workspace-plan", workspaceId],
-    queryFn: () => readJson<WorkspacePlan>("/api/v1/workspaces/" + workspaceId + "/plan"),
+    queryKey: queryKeys.workspacePlan(workspaceId),
+    queryFn: () => getWorkspacePlan(workspaceId),
     enabled: Boolean(workspaceId),
   });
   const subscriptionQuery = useQuery({
-    queryKey: ["workspace-subscription", workspaceId],
-    queryFn: () => readJson<{ subscription: Record<string, unknown> }>(
-      "/api/v1/billing/workspaces/" + workspaceId + "/subscription",
-    ),
+    queryKey: queryKeys.workspaceSubscription(workspaceId),
+    queryFn: () => getWorkspaceSubscription(workspaceId),
     enabled: Boolean(workspaceId),
   });
 
@@ -95,42 +81,33 @@ export function UsageBillingView() {
     .find((value): value is Error => value instanceof Error);
   const usage = usageQuery.data ?? null;
   const currentPlan = planQuery.data ?? null;
-  const rawSubscription = subscriptionQuery.data?.subscription;
-  const subscription = rawSubscription && Object.keys(rawSubscription).length > 0
-    ? (rawSubscription as unknown as Subscription)
-    : null;
+  const subscription: Subscription | null = subscriptionQuery.data ?? null;
 
   const busyPlan = useMutation({
-    mutationFn: async (plan: Plan) => readJson(
-      "/api/v1/billing/workspaces/" + workspaceId + "/plan",
-      { method: "POST", body: JSON.stringify({ plan_code: plan.code }) },
-    ),
+    mutationFn: async (plan: Plan) =>
+      switchWorkspacePlan(workspaceId, plan.code),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["workspace-usage", workspaceId] }),
-        queryClient.invalidateQueries({ queryKey: ["workspace-plan", workspaceId] }),
-        queryClient.invalidateQueries({ queryKey: ["workspace-subscription", workspaceId] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.workspaceUsage(workspaceId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.workspacePlan(workspaceId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.workspaceSubscription(workspaceId) }),
       ]);
     },
   });
 
   const checkout = useMutation({
-    mutationFn: async (plan: Plan) => readJson<{ session_id: string; checkout_url: string | null }>(
-      "/api/v1/billing/workspaces/" + workspaceId + "/checkout",
-      { method: "POST", body: JSON.stringify({ plan_code: plan.code }) },
-    ),
+    mutationFn: async (plan: Plan) =>
+      createWorkspaceCheckout(workspaceId, plan.code),
     onSuccess: (result) => {
       if (result.checkout_url) window.location.assign(result.checkout_url);
     },
   });
 
   const subscriptionAction = useMutation({
-    mutationFn: async (action: "cancel" | "resume") => readJson(
-      "/api/v1/billing/workspaces/" + workspaceId + "/" + action,
-      { method: "POST", body: JSON.stringify({}) },
-    ),
+    mutationFn: async (action: "cancel" | "resume") =>
+      changeSubscription(workspaceId, action),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["workspace-subscription", workspaceId] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.workspaceSubscription(workspaceId) });
     },
   });
 

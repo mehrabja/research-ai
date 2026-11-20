@@ -36,8 +36,10 @@ class RetrieveRequest(BaseModel):
 class RetrievedChunkRead(BaseModel):
     model_config = ConfigDict(extra="forbid")
     rank: int
+    evidence_key: str | None = None
     chunk_id: uuid.UUID | None
     source_id: uuid.UUID | None
+    project_file_id: uuid.UUID | None
     final_score: float
     vector_score: float | None
     lexical_score: float | None

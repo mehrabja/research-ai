@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   useMutation,
@@ -8,6 +9,10 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { apiErrorFromResponse } from "@/lib/api/errors";
+import { logout } from "@/lib/api/auth";
+import { clearSessionUserCache } from "@/lib/session-cache";
+import { queryKeys } from "@/lib/query-keys";
+import { ROUTES } from "@/lib/routes";
 import { useResearchContext } from "@/lib/research-context";
 import { ResearchContextSwitcher } from "./ResearchContextSwitcher";
 import { CommandPalette } from "@/components/CommandPalette";
@@ -27,9 +32,13 @@ type NotificationResponse = {
   total: number;
 };
 
-async function readNotifications(): Promise<NotificationResponse> {
+async function readNotifications(
+  workspaceId?: string,
+): Promise<NotificationResponse> {
+  const params = new URLSearchParams({ limit: "10" });
+  if (workspaceId) params.set("workspace_id", workspaceId);
   const response = await fetch(
-    "/api/v1/notifications?limit=10",
+    "/api/v1/notifications?" + params.toString(),
     {
       credentials: "include",
       headers: { Accept: "application/json" },
@@ -65,9 +74,12 @@ async function markRead(id: string): Promise<void> {
   }
 }
 
-async function markAllRead(): Promise<void> {
+async function markAllRead(workspaceId?: string): Promise<void> {
+  const params = workspaceId
+    ? "?workspace_id=" + encodeURIComponent(workspaceId)
+    : "";
   const response = await fetch(
-    "/api/v1/notifications/read-all",
+    "/api/v1/notifications/read-all" + params,
     {
       method: "POST",
       credentials: "include",
@@ -116,12 +128,13 @@ export function Topbar({
   const notificationsRef =
     useRef<HTMLDivElement | null>(null);
   const queryClient = useQueryClient();
-  const { user, project, contextHref } =
+  const router = useRouter();
+  const { user, project, workspaceId, contextHref } =
     useResearchContext();
 
   const notificationsQuery = useQuery({
-    queryKey: ["notifications", 10],
-    queryFn: readNotifications,
+    queryKey: queryKeys.notifications(10, workspaceId),
+    queryFn: () => readNotifications(workspaceId ?? undefined),
     refetchInterval: 30_000,
   });
 
@@ -188,7 +201,7 @@ export function Topbar({
     mutationFn: markRead,
     onSuccess: () =>
       void queryClient.invalidateQueries({
-        queryKey: ["notifications"],
+        queryKey: queryKeys.notifications(10, workspaceId),
       }),
   });
 
@@ -198,6 +211,14 @@ export function Topbar({
       void queryClient.invalidateQueries({
         queryKey: ["notifications"],
       }),
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      clearSessionUserCache(queryClient, false);
+      router.replace("/login");
+    },
   });
 
   return (
@@ -247,7 +268,7 @@ export function Topbar({
 
           <Link
             className="btn ghost"
-            href={contextHref("/jobs")}
+            href={contextHref(ROUTES.jobs)}
             aria-label="Open job center"
             title="Job center"
           >
@@ -309,7 +330,7 @@ export function Topbar({
                         markAllReadMutation.isPending
                       }
                       onClick={() =>
-                        markAllReadMutation.mutate()
+                        markAllReadMutation.mutate(workspaceId ?? undefined)
                       }
                     >
                       {markAllReadMutation.isPending
@@ -401,7 +422,7 @@ export function Topbar({
           </div>
 
           <Link
-            href={contextHref("/settings")}
+            href={contextHref(ROUTES.settings)}
             className="user-chip"
             title={user.email}
           >
@@ -413,6 +434,17 @@ export function Topbar({
               <span>Account settings</span>
             </span>
           </Link>
+
+          <button
+            className="btn ghost"
+            type="button"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            {logoutMutation.isPending ? "…" : "↪"}
+          </button>
         </div>
       </header>
 

@@ -77,3 +77,35 @@ def test_record_provider_usage_maps_provider_metadata(
     assert metadata["request_id"] == "req-1"
     assert metadata["provider_request_id"] == "openai-1"
     assert metadata["temperature"] == 0.2
+
+
+def test_record_provider_usage_preserves_metric_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_record_event(db: object, **kwargs: object) -> object:
+        captured.update(kwargs)
+        return "event"
+
+    monkeypatch.setattr("app.services.usage.record_event", fake_record_event)
+
+    usage = ProviderUsage(
+        capability="source_discovery",
+        operation="source_search",
+        provider="openalex",
+        metric="search_requests",
+        units=1,
+    )
+
+    usage_contract.record_provider_usage(
+        object(),
+        workspace_id=uuid.uuid4(),
+        user_id=uuid.uuid4(),
+        source_id=None,
+        usage=usage,
+        idempotency_key="search-call:1",
+    )
+
+    assert captured["metric"] == "search_requests"
+    assert captured["quantity"] == 1

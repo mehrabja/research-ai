@@ -37,12 +37,15 @@ export function AppGroupShell({
       }
     >
       <ResearchContextProvider>
+        <a className="skip-link" href="#main-content">
+          Skip to main content
+        </a>
         <div className="app">
           <Sidebar
             open={mobileOpen}
             onClose={() => setMobileOpen(false)}
           />
-          <main className="main">
+          <main className="main" id="main-content">
             <Topbar
               mobileMenuOpen={mobileOpen}
               onMenuClick={() =>

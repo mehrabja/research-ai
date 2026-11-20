@@ -17,12 +17,22 @@ async function parseSuccess<T>(response: Response, fallback: string): Promise<T>
   return parseResponse<T>(response);
 }
 
-export async function register(email: string, password: string): Promise<UserResponse> {
+export async function register(
+  email: string,
+  password: string,
+  fullName?: string,
+  workspaceName?: string,
+): Promise<UserResponse> {
   const response = await fetch("/api/v1/auth/register", {
     method: "POST",
     credentials: "include",
     headers: {"Content-Type":"application/json",Accept:"application/json"},
-    body: JSON.stringify({email,password}),
+    body: JSON.stringify({
+      email,
+      password,
+      ...(fullName?.trim() ? { full_name: fullName.trim() } : {}),
+      ...(workspaceName?.trim() ? { workspace_name: workspaceName.trim() } : {}),
+    }),
   });
   return parseSuccess<UserResponse>(response, "Registration request failed.");
 }
@@ -50,6 +60,17 @@ export async function refresh(): Promise<AuthSuccess> {
     body: JSON.stringify({}),
   });
   return parseSuccess<AuthSuccess>(response, "Session refresh failed.");
+}
+
+export async function logoutAll(): Promise<void> {
+  const response = await fetch("/api/v1/auth/logout-all", {
+    method: "POST",
+    credentials: "include",
+    headers: {Accept:"application/json"},
+    body: JSON.stringify({}),
+  });
+  await parseSuccess<unknown>(response, "Logout all sessions failed.");
+  broadcastSessionEvent("logout");
 }
 
 export async function logout(): Promise<void> {

@@ -8,9 +8,24 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.db.models.experiment_result import ExperimentResult
+from app.db.models.metric import Metric
 from app.db.models.project_file import ProjectFile
+from app.db.models.report import Report
 from app.db.models.source import Chunk, Source
+from app.db.models.technical_fact import TechnicalFact
+from app.schemas.evidence import (
+    CanonicalProjectEvidenceKind,
+    EvidenceRecord,
+)
 from app.services.artifact_evidence import sync_ready_project_files_for_report
+from app.services.evidence_contract import (
+    from_chunk,
+    from_experiment_result,
+    from_metric,
+    from_project_file,
+    from_technical_fact,
+)
 from app.services.projects import get_project
 from app.services.reports import get_report
 
@@ -150,3 +165,153 @@ def _list_active_files(
         ).scalars().all()
     )
     return files, total
+
+
+def list_canonical_project_evidence(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    project_id: uuid.UUID,
+    kind: CanonicalProjectEvidenceKind | None = None,
+    file_id: uuid.UUID | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> tuple[list[EvidenceRecord], int]:
+    """List canonical evidence records visible in a project."""
+    get_project(db, user_id=user_id, project_id=project_id)
+
+    active_file_ids = list(
+        db.execute(
+            select(ProjectFile.id).where(
+                ProjectFile.project_id == project_id,
+                ProjectFile.deleted_at.is_(None),
+            )
+        ).scalars().all()
+    )
+
+    if file_id is not None and file_id not in active_file_ids:
+        from app.core.exceptions import FileNotFound
+        raise FileNotFound()
+
+    files: list[EvidenceRecord] = []
+    if kind in (None, "project_file"):
+        file_stmt = select(ProjectFile).where(
+            ProjectFile.project_id == project_id,
+            ProjectFile.deleted_at.is_(None),
+        )
+        if file_id is not None:
+            file_stmt = file_stmt.where(ProjectFile.id == file_id)
+        file_rows = list(
+            db.execute(
+                file_stmt.order_by(
+                    ProjectFile.created_at.asc(),
+                    ProjectFile.id.asc(),
+                )
+            ).scalars().all()
+        )
+        files = [from_project_file(row) for row in file_rows]
+
+    chunks: list[EvidenceRecord] = []
+    if kind in (None, "retrieval_chunk"):
+        report_ids_stmt = select(Report.id).where(
+            Report.project_id == project_id
+        )
+        chunk_stmt = (
+            select(Chunk)
+            .join(Source, Chunk.source_id == Source.id)
+            .where(
+                Source.report_id.in_(report_ids_stmt),
+                Source.source_api == "project_file",
+            )
+        )
+        chunk_file_ids = [file_id] if file_id is not None else active_file_ids
+        chunk_stmt = chunk_stmt.where(
+            Source.external_source_id.in_([str(fid) for fid in chunk_file_ids])
+        )
+        chunk_rows = list(
+            db.execute(
+                chunk_stmt.order_by(Chunk.created_at.asc(), Chunk.id.asc())
+            ).scalars().all()
+        )
+        chunks = [from_chunk(row) for row in chunk_rows]
+
+    technical_facts: list[EvidenceRecord] = []
+    if kind in (None, "m29_technical_fact"):
+        fact_stmt = select(TechnicalFact).where(
+            TechnicalFact.project_id == project_id,
+            TechnicalFact.project_file_id.in_(active_file_ids),
+        )
+        if file_id is not None:
+            fact_stmt = fact_stmt.where(TechnicalFact.project_file_id == file_id)
+        fact_rows = list(
+            db.execute(
+                fact_stmt.order_by(
+                    TechnicalFact.created_at.asc(),
+                    TechnicalFact.id.asc(),
+                )
+            ).scalars().all()
+        )
+        technical_facts = [from_technical_fact(row) for row in fact_rows]
+
+    experiment_results: list[EvidenceRecord] = []
+    if kind in (None, "m29_experiment_result"):
+        result_stmt = select(ExperimentResult).where(
+            ExperimentResult.project_id == project_id,
+            ExperimentResult.project_file_id.in_(active_file_ids),
+        )
+        if file_id is not None:
+            result_stmt = result_stmt.where(
+                ExperimentResult.project_file_id == file_id
+            )
+        result_rows = list(
+            db.execute(
+                result_stmt.order_by(
+                    ExperimentResult.created_at.asc(),
+                    ExperimentResult.id.asc(),
+                )
+            ).scalars().all()
+        )
+        experiment_results = [
+            from_experiment_result(row) for row in result_rows
+        ]
+
+    metrics: list[EvidenceRecord] = []
+    if kind in (None, "m29_metric"):
+        metric_stmt = (
+            select(Metric, ExperimentResult.project_file_id)
+            .join(
+                ExperimentResult,
+                Metric.experiment_result_id == ExperimentResult.id,
+            )
+            .where(
+                Metric.project_id == project_id,
+                ExperimentResult.project_id == project_id,
+                ExperimentResult.project_file_id.in_(active_file_ids),
+            )
+        )
+        if file_id is not None:
+            metric_stmt = metric_stmt.where(
+                ExperimentResult.project_file_id == file_id
+            )
+        metric_rows = list(
+            db.execute(
+                metric_stmt.order_by(Metric.created_at.asc(), Metric.id.asc())
+            ).all()
+        )
+        metrics = [
+            from_metric(metric).model_copy(
+                update={"project_file_id": project_file_id}
+            )
+            for metric, project_file_id in metric_rows
+        ]
+
+    merged = sorted(
+        files + chunks + technical_facts + experiment_results + metrics,
+        key=lambda item: (
+            item.created_at is None,
+            item.created_at,
+            item.evidence_key,
+        ),
+    )
+    total = len(merged)
+    return merged[offset : offset + limit], total

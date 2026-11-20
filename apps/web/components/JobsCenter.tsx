@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useResearchContext } from "@/lib/research-context";
 import {
   useMutation,
   useQuery,
@@ -34,10 +35,13 @@ function statusLabel(status: string): string {
 }
 
 export function JobsCenter() {
+  const { user } = useResearchContext();
   const queryClient = useQueryClient();
   const jobsQuery = useQuery({
-    queryKey: ["jobs", "all"],
-    queryFn: () => listJobs(),
+    queryKey: ["jobs", user.id, "all"],
+    queryFn: () => listJobs({ limit: 100 }),
+    enabled: Boolean(user.id),
+    refetchOnMount: "always",
     refetchInterval: (query) => {
       const jobs = (query.state.data ?? []) as Job[];
       return jobs.some((job) => isActiveJobStatus(job.status))
@@ -166,7 +170,7 @@ export function JobsCenter() {
               </tr>
             ) : (
               jobs.map((job) => (
-                <tr key={job.id}>
+                <tr key={job.id} data-job-id={job.id}>
                   <td>
                     <div className="strong">{job.job_type}</div>
                     {job.last_error_message && (

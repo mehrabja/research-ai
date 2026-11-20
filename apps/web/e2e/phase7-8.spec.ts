@@ -86,6 +86,11 @@ test("F07 plan revision history saves an immutable revision and restores a prior
     .first();
   await expect(revised).toBeVisible({ timeout: 10_000 });
 
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(
+    page.getByLabel("Research objective", { exact: true }),
+  ).toHaveValue(/F07 revised objective/);
+
   const original = page
     .locator(".list-item")
     .filter({ hasText: "Version " + originalPlan.version })

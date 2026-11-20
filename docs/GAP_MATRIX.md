@@ -17,7 +17,7 @@ Baseline commit: 106ca1fd2b5b1b86e4e9521ffa9c33f3d8ddfa91
 | G-10 | API token subsystem missing | P1 | hashed personal API tokens with create/list/revoke and X-API-Key auth | F12 | Implemented |
 | G-11 | Notifications missing | P1 | persisted in-app notifications with read/unread APIs and membership event emission | F03/F11 | Implemented |
 | G-12 | Workspace suspend/reactivate API missing | P1 | owner-only lifecycle routes and state transitions | F03 | Implemented |
-| G-13 | Production object storage missing | P0 | S3-compatible provider with multipart upload and configurable backend | F04/F20 | Implemented |
+| G-13 | Production object storage missing | P0 | S3-compatible provider with multipart upload and configurable backend | F04/F20 | Implemented in code; staging intentionally uses local backend |
 | G-14 | File size mismatch | P0 | document_max_bytes aligned to 500 MB and generic body buffering bypassed for streaming file uploads | F04/F13 | Implemented |
 | G-15 | File folders missing | P1 | folder tree model, CRUD, file placement and move routes | F04 | Implemented |
 | G-16 | Storage quota accounting incomplete | P0 | authoritative active-byte aggregation and upload-time quota reservation | F04 | Implemented |
@@ -28,7 +28,7 @@ Baseline commit: 106ca1fd2b5b1b86e4e9521ffa9c33f3d8ddfa91
 | G-21 | Research plan mutation/restore missing | P1 | immutable revision save/restore with copied dependency graph | F07 | Implemented |
 | G-22 | Manuscript autosave/conflict API missing | P1 | mutable draft buffer, optimistic revision checks, commit/discard endpoints | F08 | Implemented |
 | G-23 | Job retry endpoint missing | P1 | manual retry resets terminal job state through the durable queue service | F10 | Implemented |
-| G-24 | Real billing provider missing | P0 | Stripe REST adapter, checkout, cancel/resume and plan-change surface | F11/F20 | Implemented |
+| G-24 | Real billing provider missing | P0 | Stripe REST adapter, checkout, cancel/resume and plan-change surface | F11/F20 | Implemented in code; billing disabled in staging |
 | G-25 | Billing webhook verification missing | P0 | Stripe signature verification, idempotent billing inbox, subscription reconciliation | F11/F20 | Implemented |
 | G-26 | Email provider/workflows missing | P0 | Resend adapter plus idempotent delivery records wired to auth flows | F11/F20 | Implemented |
 | G-27 | Unified billable metering incomplete | P0 | authoritative workspace UsageEvent is populated by generation, embedding, translation, source search, global search, and legacy humanization adapters; UsageLog remains compatibility history | F11/F15 | Implemented (legacy compatibility retained) |
@@ -37,8 +37,15 @@ Baseline commit: 106ca1fd2b5b1b86e4e9521ffa9c33f3d8ddfa91
 | G-30 | Migration graph has static multi-head condition | P0 | explicit merge revision 0042 joins legacy report branch into the production chain | F16 | Implemented |
 | G-31 | Root product/developer docs absent | P1 | root README and Makefile now document setup and verification commands | F16/F19 | Implemented |
 | G-32 | Real OpenRouter provider adapter not activated | P0 | OpenRouter generation/embedding/translation adapters registered in provider registry | F20 | Implemented |
-| G-33 | Production AI detection provider missing | P1 | configurable external HTTP detection adapter registered alongside heuristic fallback | F09/F20 | Implemented |
+| G-33 | Production AI detection provider missing | P1 | concrete Sapling and Originality.ai adapters registered behind the detection provider abstraction; heuristic remains explicit local/test provider | F09/F20 | Implemented; Sapling staging activation verified |
 | G-34 | Frontend integration hardening incomplete | P1 | session-scoped query cache reset, typed status-aware API errors/retry, provider matrix UI, durable Job Center polling/retry/cancel, and BFF tenant-isolation acceptance | F14 | Implemented |
+
+## Current operational status
+
+- F20 provider activation on the self-hosted Windows runner: PASS.
+- Staging deployment stack, F17 smoke, F18 live recovery, and backup/restore are executable through the self-hosted workflows.
+- F19 release evidence is complete only after the staging evidence workflow succeeds.
+- Production object storage, Semantic Scholar, Stripe billing, and public deployment remain intentionally deferred.
 
 ## Unified legacy Phase 12-14 status
 

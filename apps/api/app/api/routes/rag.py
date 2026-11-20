@@ -45,6 +45,9 @@ router = APIRouter(prefix="/projects", tags=["advanced-rag"])
 def _result_row_to_read(r: RetrievalResult) -> RetrievedChunkRead:
     return RetrievedChunkRead(
         rank=r.rank,
+        evidence_key=(
+            f"retrieval_chunk:{r.chunk_id}" if r.chunk_id is not None else None
+        ),
         chunk_id=r.chunk_id,
         source_id=r.source_id,
         final_score=float(r.final_score),
@@ -74,7 +77,19 @@ def _result_row_to_read(r: RetrievalResult) -> RetrievedChunkRead:
         retrieval_reason=list(r.retrieval_reason or []),
         graph_distance=r.graph_distance,
         memory_match=r.memory_match,
+        project_file_id=_project_file_id_from_result(r),
     )
+
+
+def _project_file_id_from_result(r: RetrievalResult) -> uuid.UUID | None:
+    metadata = r.result_meta or {}
+    raw = metadata.get("project_file_id")
+    if raw is None:
+        return None
+    try:
+        return uuid.UUID(str(raw))
+    except (TypeError, ValueError):
+        return None
 
 
 @router.post(

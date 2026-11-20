@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.db.models.user import User
 from app.db.session import get_db
+from app.schemas.evidence import (
+    CanonicalProjectEvidenceKind,
+    EvidenceListResponse,
+)
 from app.schemas.project_file_evidence import (
     ProjectFileEvidenceListResponse,
     ProjectFileEvidenceRead,
@@ -20,6 +24,36 @@ from app.services.projects import get_project
 from app.services.reports import list_reports
 
 router = APIRouter(prefix="/projects", tags=["file-evidence"])
+
+
+@router.get(
+    "/{project_id}/evidence",
+    response_model=EvidenceListResponse,
+)
+def list_canonical_evidence(
+    project_id: uuid.UUID,
+    kind: CanonicalProjectEvidenceKind | None = Query(default=None),
+    file_id: uuid.UUID | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> EvidenceListResponse:
+    items, total = evidence_service.list_canonical_project_evidence(
+        db,
+        user_id=current_user.id,
+        project_id=project_id,
+        kind=kind,
+        file_id=file_id,
+        limit=limit,
+        offset=offset,
+    )
+    return EvidenceListResponse(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get(

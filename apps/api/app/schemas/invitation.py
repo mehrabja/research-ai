@@ -38,6 +38,8 @@ class InvitationListResponse(BaseModel):
 class MemberRead(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
+    email: str | None = None
+    full_name: str | None = None
     role: str
     status: str
     created_at: datetime
@@ -50,6 +52,10 @@ class MemberRoleUpdate(BaseModel):
 class MemberListResponse(BaseModel):
     items: list[MemberRead]
     total: int
+
+
+class InvitationAcceptRequest(BaseModel):
+    token: str = Field(..., min_length=32, max_length=512)
 
 
 class InvitationAcceptResponse(BaseModel):

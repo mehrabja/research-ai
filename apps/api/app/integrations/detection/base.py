@@ -19,7 +19,11 @@ class DetectionProviderError(ProviderError):
 
 
 class DetectionRateLimitError(ProviderRetryableError, DetectionProviderError):
-    """Retryable."""
+    """Retryable rate limit failure."""
+
+    def __init__(self, message: str, *, retry_after: float | None = None) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
 
 
 class DetectionTimeoutError(ProviderRetryableError, DetectionProviderError):
@@ -32,6 +36,10 @@ class DetectionProviderUnavailableError(ProviderRetryableError, DetectionProvide
 
 class DetectionAuthenticationError(ProviderAuthenticationError, DetectionProviderError):
     """Non-retryable."""
+
+
+class DetectionQuotaExceededError(DetectionProviderError):
+    """Provider account has insufficient quota/credits; do not retry."""
 
 
 class DetectionInvalidRequestError(ProviderInvalidRequestError, DetectionProviderError):
@@ -60,6 +68,7 @@ __all__ = [
     "DetectionInvalidResponseError",
     "DetectionProvider",
     "DetectionProviderError",
+    "DetectionQuotaExceededError",
     "DetectionProviderUnavailableError",
     "DetectionRateLimitError",
     "DetectionTimeoutError",

@@ -6,7 +6,10 @@
 # ---------------------------------------------------------------------
 FROM python:3.11-slim AS builder
 
-ENV PIP_NO_CACHE_DIR=1 \
+ARG PIP_INDEX_URL=https://pypi.org/simple
+
+ENV PIP_INDEX_URL=${PIP_INDEX_URL} \
+    PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONDONTWRITEBYTECODE=1
 

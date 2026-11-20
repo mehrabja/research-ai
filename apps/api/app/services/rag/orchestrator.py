@@ -43,6 +43,7 @@ from app.domain.retrieval_advanced import (
 )
 from app.integrations.embeddings.base import EmbeddingProvider
 from app.integrations.generation.base import GenerationProvider
+from app.services.evidence_contract import from_chunk
 from app.services.generation_profile import build_generation_provider
 from app.services.projects import get_project
 from app.services.rag import candidates as cand_svc
@@ -586,7 +587,28 @@ def retrieve_research_context(
 
         # ---- Persist results ----
         result_dicts: list[dict] = []
+        final_chunk_ids = {sc.candidate.chunk_id for sc in final}
+        final_chunks = {
+            chunk.id: chunk
+            for chunk in db.execute(
+                select(Chunk).where(Chunk.id.in_(final_chunk_ids))
+            ).scalars().all()
+        }
         for rank, sc in enumerate(final, start=1):
+            chunk = final_chunks.get(sc.candidate.chunk_id)
+            evidence = from_chunk(chunk) if chunk is not None else None
+            result_meta = (
+                {
+                    "evidence_key": evidence.evidence_key,
+                    "project_file_id": (
+                        str(evidence.project_file_id)
+                        if evidence.project_file_id is not None
+                        else None
+                    ),
+                }
+                if evidence is not None
+                else None
+            )
             rr = RetrievalResult(
                 retrieval_run_id=run.id,
                 project_id=ctx.project_id,
@@ -604,7 +626,7 @@ def retrieve_research_context(
                 retrieval_reason=list(sc.reasons),
                 graph_distance=sc.graph_distance,
                 memory_match=None,
-                result_meta=None,
+                result_meta=result_meta,
             )
             db.add(rr)
             result_dicts.append({
@@ -622,6 +644,12 @@ def retrieve_research_context(
                 "retrieval_reason": list(sc.reasons),
                 "graph_distance": sc.graph_distance,
                 "memory_match": None,
+                "evidence_key": (
+                    evidence.evidence_key if evidence is not None else None
+                ),
+                "project_file_id": (
+                    evidence.project_file_id if evidence is not None else None
+                ),
             })
 
         coverage = cov_svc.compute_intent_coverage(
@@ -765,6 +793,7 @@ def _apply_memory_hints(
 
 
 def _result_to_dict(r: RetrievalResult) -> dict:
+    result_meta = r.result_meta or {}
     return {
         "rank": r.rank,
         "chunk_id": r.chunk_id,
@@ -793,6 +822,8 @@ def _result_to_dict(r: RetrievalResult) -> dict:
         "retrieval_reason": list(r.retrieval_reason or []),
         "graph_distance": r.graph_distance,
         "memory_match": r.memory_match,
+        "evidence_key": result_meta.get("evidence_key"),
+        "project_file_id": result_meta.get("project_file_id"),
     }
 
 
