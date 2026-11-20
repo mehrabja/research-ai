@@ -32,6 +32,7 @@ class OpenAIGenerationProvider:
         *,
         model: str,
         base_url: str | None = None,
+        provider_name: str = "openai",
         api_key: str | None = None,
         timeout_seconds: float | None = None,
         max_retries: int | None = None,
@@ -43,6 +44,7 @@ class OpenAIGenerationProvider:
     ) -> None:
         s = get_settings()
         self.model_name = model
+        self.provider_name = provider_name
         self._base_url = (
             base_url or s.generation_openai_base_url
         ).rstrip("/")
@@ -119,7 +121,7 @@ class OpenAIGenerationProvider:
     ) -> GenerationProviderResult:
         if not self._api_key:
             raise GenerationAuthenticationError(
-                "OpenAI API key is not configured"
+                f"{self.provider_name} API key is not configured"
             )
 
         payload: dict[str, Any] = {
@@ -132,13 +134,20 @@ class OpenAIGenerationProvider:
             "max_tokens": max_output_tokens,
         }
         try:
+            headers = {
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json",
+            }
+            settings = get_settings()
+            if self.provider_name == "openrouter":
+                if settings.openrouter_http_referer.strip():
+                    headers["HTTP-Referer"] = settings.openrouter_http_referer.strip()
+                if settings.openrouter_app_title.strip():
+                    headers["X-Title"] = settings.openrouter_app_title.strip()
             response = httpx.post(
                 f"{self._base_url}/chat/completions",
                 json=payload,
-                headers={
-                    "Authorization": f"Bearer {self._api_key}",
-                    "Content-Type": "application/json",
-                },
+                headers=headers,
                 timeout=self._timeout,
             )
         except httpx.TimeoutException as exc:

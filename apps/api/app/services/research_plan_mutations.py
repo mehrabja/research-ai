@@ -275,6 +275,34 @@ def save_research_plan(
                 upstream_section_id=new_sections[dep_data.upstream_section_key].id,
                 downstream_section_id=new_sections[dep_data.downstream_section_key].id,
                 dependency_type=dep_data.dependency_type,
+    for requirement_data in req_writes:
+        db.add(
+            ResearchEvidenceRequirement(
+                plan_id=plan.id,
+                section_id=new_sections[requirement_data.section_key].id,
+                requirement_key=requirement_data.requirement_key,
+                requirement_type=requirement_data.requirement_type,
+                description=requirement_data.description,
+                required=requirement_data.required,
+                priority=requirement_data.priority,
+                min_sources=requirement_data.min_sources,
+                max_sources=requirement_data.max_sources,
+                preferred_paper_types=requirement_data.preferred_paper_types,
+                preferred_research_designs=requirement_data.preferred_research_designs,
+                max_age_years=requirement_data.max_age_years,
+                full_text_required=requirement_data.full_text_required,
+                min_relevance_score=requirement_data.min_relevance_score,
+                coverage_weight=requirement_data.coverage_weight,
+            )
+        )
+
+    for dependency_data in dependencies_writes:
+        db.add(
+            ResearchPlanDependency(
+                plan_id=plan.id,
+                upstream_section_id=new_sections[dependency_data.upstream_section_key].id,
+                downstream_section_id=new_sections[dependency_data.downstream_section_key].id,
+                dependency_type=dependency_data.dependency_type,
             )
         )
 

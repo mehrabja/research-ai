@@ -206,6 +206,7 @@ function Jobs(){
   const q=useQuery({queryKey:["jobs",ws.workspaceId],queryFn:()=>api.jobs(ws.workspaceId??undefined),enabled:Boolean(ws.workspaceId),refetchInterval:5000});
   const retry=useMutation({mutationFn:(id:string)=>api.retryJob(id),onSuccess:()=>qc.invalidateQueries({queryKey:["jobs",ws.workspaceId]})});
   const cancel=useMutation({mutationFn:(id:string)=>api.cancelJob(id),onSuccess:()=>qc.invalidateQueries({queryKey:["jobs",ws.workspaceId]})});
+  const operationError=retry.error??cancel.error;
   return <><Head route="jobs"/>
     <Card>
       {q.isError&&<State title="Jobs unavailable" description={q.error instanceof Error?q.error.message:"The job service could not be reached."} error/>}
@@ -216,6 +217,7 @@ function Jobs(){
         return <tr key={job.id}><td><div className="strong">{job.job_type}</div><div className="meta">{job.report_id?"Report "+job.report_id:"Project/workspace job"}</div></td><td>{job.status}</td><td>{job.attempt_count}/{job.max_attempts}</td><td><div>{job.created_at?new Date(job.created_at).toLocaleString():"—"}</div><div className="meta">{job.completed_at?new Date(job.completed_at).toLocaleString():job.started_at?"Started "+new Date(job.started_at).toLocaleString():"Queued"}</div></td><td style={{overflowWrap:"anywhere"}}>{job.last_error_message??job.last_error_code??"—"}</td><td>{job.status==="failed"?<button className="btn" disabled={retry.isPending} onClick={()=>retry.mutate(job.id)}>{retrying?"Retrying…":"Retry"}</button>:["queued","processing","retrying"].includes(job.status)?<button className="btn" disabled={cancel.isPending} onClick={()=>cancel.mutate(job.id)}>{cancelling?"Cancelling…":"Cancel"}</button>:<span className="tag">Done</span>}</td></tr>;
       })}</tbody></table></div>}
       {(retry.isError||cancel.isError)&&<div className="notice error" style={{marginTop:12}}>{errorMessage(retry.error??cancel.error,"Job operation failed. Retry the action.")}</div>}
+      {operationError&&<div className="notice error" style={{marginTop:12}}>{operationError instanceof Error?operationError.message:"Job operation failed. Retry the action."}</div>}
     </Card>
   </>;
 }
@@ -323,6 +325,7 @@ function Billing(){
   const cancel=useMutation({mutationFn:()=>api.billingCancel(ws.workspaceId!),onSuccess:()=>void qc.invalidateQueries({queryKey:["subscription",ws.workspaceId]}),});
   const resume=useMutation({mutationFn:()=>api.billingResume(ws.workspaceId!),onSuccess:()=>void qc.invalidateQueries({queryKey:["subscription",ws.workspaceId]}),});
   const usageItems=u.data?.items??[];
+  const subscriptionError=changePlan.error??cancel.error??resume.error;
   return <><Head route="usage-billing"/>
     {(p.isError||s.isError||u.isError||i.isError)&&<div className="notice error" style={{marginBottom:14}}>{p.isError?(p.error instanceof Error?p.error.message:"Plan data could not be loaded."):s.isError?(s.error instanceof Error?s.error.message:"Subscription data could not be loaded."):u.isError?(u.error instanceof Error?u.error.message:"Usage data could not be loaded."):i.error instanceof Error?i.error.message:"Invoice data could not be loaded."}</div>}
     <div className="grid grid-4">
@@ -344,6 +347,7 @@ function Billing(){
         </div>
         {checkout.isError&&<div className="notice error" style={{marginTop:10}}>{checkout.error instanceof Error?checkout.error.message:"Checkout failed."}</div>}
         {(changePlan.isError||cancel.isError||resume.isError)&&<div className="notice error" style={{marginTop:10}}>{errorMessage(changePlan.error??cancel.error??resume.error,"Subscription update failed. Retry the action.")}</div>}
+        {subscriptionError&&<div className="notice error" style={{marginTop:10}}>{subscriptionError instanceof Error?subscriptionError.message:"Subscription update failed. Retry the action."}</div>}
         {checkout.data&&<div className="notice success" style={{marginTop:10}}>Checkout session created. <a href={checkout.data.checkout_url} target="_blank" rel="noreferrer">Continue to payment ↗</a></div>}
       </Card>
       <Card><h3>Invoices</h3>{i.data?.items.length===0&&!i.isPending?<State title="No invoices" description="Invoices will appear after billing activity is recorded."/>:<div className="table-wrap" style={{marginTop:10}}><table className="table"><thead><tr><th>Status</th><th>Amount</th><th>Created</th><th>Open</th></tr></thead><tbody>{i.data?.items.map(inv=><tr key={inv.id??inv.provider_invoice_id}><td>{inv.status}</td><td>{inv.amount_due===null?"—":String(inv.amount_due)+" "+(inv.currency??"")}</td><td>{inv.provider_created_at?new Date(inv.provider_created_at).toLocaleDateString():"—"}</td><td>{inv.hosted_invoice_url?<a href={inv.hosted_invoice_url} target="_blank" rel="noreferrer">Invoice ↗</a>:inv.invoice_pdf_url?<a href={inv.invoice_pdf_url} target="_blank" rel="noreferrer">PDF ↗</a>:"—"}</td></tr>)}</tbody></table></div>}</Card>
@@ -352,11 +356,13 @@ function Billing(){
 }
 function Settings(){
   const {ws}=useCtx();
+  const workspaceId=ws.workspaceId??undefined;
   const qc=useQueryClient();
   const sessions=useQuery({queryKey:["sessions"],queryFn:api.sessions});
   const tokens=useQuery({queryKey:["tokens"],queryFn:api.apiTokens});
   const tf=useQuery({queryKey:["2fa"],queryFn:api.twoFactor});
   const preferences=useQuery({queryKey:["notification-preferences",ws.workspaceId],queryFn:()=>api.notificationPreferences(ws.workspaceId??undefined),enabled:Boolean(ws.workspaceId)});
+  const preferences=useQuery({queryKey:["notification-preferences",ws.workspaceId],queryFn:()=>api.notificationPreferences(workspaceId),enabled:Boolean(workspaceId)});
   const [tokenName,setTokenName]=useState("");
   const [tokenScopes,setTokenScopes]=useState("read");
   const [createdToken,setCreatedToken]=useState("");
@@ -376,8 +382,10 @@ function Settings(){
   const begin2fa=useMutation({mutationFn:()=>api.beginTwoFactor(),onSuccess:setTwoFaSetup});
   const confirm2fa=useMutation({mutationFn:()=>api.confirmTwoFactor(twoFaCode),onSuccess:()=>{setTwoFaSetup(null);setTwoFaCode("");void qc.invalidateQueries({queryKey:["2fa"]});}});
   const disable2fa=useMutation({mutationFn:()=>api.disableTwoFactor(twoFaCode),onSuccess:()=>{setTwoFaCode("");void qc.invalidateQueries({queryKey:["2fa"]});}});
+  const twoFaError=begin2fa.error??confirm2fa.error??disable2fa.error;
   const savePreferences=useMutation({
     mutationFn:()=>api.updateNotificationPreferences({channel:preferences.data?.channel??"in_app",preferences:prefValues},ws.workspaceId??undefined),
+    mutationFn:()=>api.updateNotificationPreferences({channel:preferences.data?.channel??"in_app",preferences:prefValues},workspaceId),
     onSuccess:r=>{setPrefValues(r.preferences);setPrefError("");void qc.invalidateQueries({queryKey:["notification-preferences",ws.workspaceId]});},
     onError:e=>setPrefError(e instanceof Error?e.message:"Notification preferences could not be saved."),
   });
@@ -390,6 +398,7 @@ function Settings(){
         {twoFaSetup&&<div className="notice" style={{marginTop:12}}><div><b>Authenticator setup</b></div><div className="tiny" style={{marginTop:6}}>Secret: <span className="mono" style={{overflowWrap:"anywhere"}}>{twoFaSetup.secret}</span></div><div className="tiny" style={{marginTop:4}}>Provisioning URI: <span className="mono" style={{overflowWrap:"anywhere"}}>{twoFaSetup.provisioning_uri}</span></div><div className="tiny" style={{marginTop:4}}>Recovery codes: {twoFaSetup.recovery_codes.join(", ")}</div><div className="row" style={{marginTop:10}}><input className="input" aria-label="2FA confirmation code" inputMode="numeric" maxLength={6} value={twoFaCode} onChange={e=>setTwoFaCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code"/><button className="btn" disabled={twoFaCode.length!==6||confirm2fa.isPending} onClick={()=>confirm2fa.mutate()}>{confirm2fa.isPending?"Confirming…":"Confirm"}</button></div></div>}
         {tf.data?.enabled&&<div className="row" style={{marginTop:12}}><input className="input" aria-label="2FA disable code" inputMode="numeric" maxLength={6} value={twoFaCode} onChange={e=>setTwoFaCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code"/><button className="btn" disabled={twoFaCode.length!==6||disable2fa.isPending} onClick={()=>disable2fa.mutate()}>{disable2fa.isPending?"Disabling…":"Disable 2FA"}</button></div>}
         {(begin2fa.isError||confirm2fa.isError||disable2fa.isError)&&<div className="notice error" style={{marginTop:10}}>{errorMessage(begin2fa.error??confirm2fa.error??disable2fa.error,"2FA operation failed.")}</div>}
+        {twoFaError&&<div className="notice error" style={{marginTop:10}}>{twoFaError instanceof Error?twoFaError.message:"2FA operation failed."}</div>}
       </Card>
       <Card><div className="row"><div><h3>Sessions</h3><div className="muted small">Revoke access from individual sessions or all other sessions.</div></div><button className="btn" disabled={revokeOthers.isPending} onClick={()=>revokeOthers.mutate()}>{revokeOthers.isPending?"Revoking…":"Revoke others"}</button></div>
         <div className="list" style={{marginTop:10}}>{sessions.isError?<State title="Sessions unavailable" description={sessions.error instanceof Error?sessions.error.message:"Session list could not be loaded."} error/>:sessions.data?.items.map(s=><div className="list-item" key={s.id}><div className="row"><div><div className="title">{s.user_agent||"Unknown client"}</div><div className="meta">Created {new Date(s.created_at).toLocaleString()} · Expires {new Date(s.expires_at).toLocaleString()}</div></div><button className="btn" disabled={revokeSession.isPending} onClick={()=>revokeSession.mutate(s.id)}>Revoke</button></div></div>)}</div>
@@ -413,7 +422,27 @@ function Settings(){
 function Workspace(){
   const {ws,projects}=useCtx();
   const [name,setName]=useState("");
+  const [workspaceName,setWorkspaceName]=useState("");
   const qc=useQueryClient();
+  const current=ws.workspaces.find(w=>w.id===ws.workspaceId);
+  const detail=useQuery({
+    queryKey:["workspace",ws.workspaceId],
+    queryFn:()=>api.workspace(ws.workspaceId!),
+    enabled:Boolean(ws.workspaceId),
+  });
+  useEffect(()=>{
+    const next=detail.data?.name??current?.name??"";
+    setWorkspaceName(next);
+  },[current?.name,detail.data?.name]);
+
+  const update=useMutation({
+    mutationFn:()=>api.updateWorkspace(ws.workspaceId!,{name:workspaceName.trim()}),
+    onSuccess:async workspace=>{
+      setWorkspaceName(workspace.name);
+      await qc.invalidateQueries({queryKey:["workspaces"]});
+      await qc.invalidateQueries({queryKey:["workspace",ws.workspaceId]});
+    },
+  });
   const create=useMutation({
     mutationFn:()=>api.createWorkspace(name.trim()),
     onSuccess:async workspace=>{
@@ -422,15 +451,20 @@ function Workspace(){
       await qc.invalidateQueries({queryKey:["workspaces"]});
     },
   });
-  const current=ws.workspaces.find(w=>w.id===ws.workspaceId);
   return <><Head route="workspace" actions={<Link className="btn primary" href="/projects">Create project →</Link>}/>
     <div className="grid grid-2">
       <Card>
-        <h3>Current workspace</h3>
+        <div className="row"><h3>Current workspace</h3>{detail.isPending&&<span className="tag">Loading</span>}</div>
         {current ? (
           <>
-            <div className="title" style={{marginTop:10,fontSize:15}}>{current.name}</div>
-            <div className="meta">{current.slug} · {current.status} · Role: {current.role}</div>
+            <div className="field" style={{marginTop:10}}>
+              <label htmlFor="workspace-name">Workspace name</label>
+              <input id="workspace-name" className="input" value={workspaceName} onChange={e=>setWorkspaceName(e.target.value)} disabled={update.isPending}/>
+            </div>
+            <div className="meta" style={{marginTop:7}}>{detail.data?.slug??current.slug} · {detail.data?.status??current.status} · Role: {current.role}</div>
+            <button className="btn primary" style={{marginTop:12}} disabled={!workspaceName.trim()||update.isPending||workspaceName.trim()===(detail.data?.name??current.name)} onClick={()=>update.mutate()}>{update.isPending?"Saving…":"Save workspace"}</button>
+            {update.isError&&<div className="notice error" style={{marginTop:10}}>{update.error instanceof Error?update.error.message:"Workspace update failed."}</div>}
+            {detail.isError&&<div className="notice error" style={{marginTop:10}}>{detail.error instanceof Error?detail.error.message:"Workspace detail could not be loaded."}</div>}
             <div className="notice" style={{marginTop:14}}>
               <b>Workspace is the tenant boundary.</b>
               <div className="muted tiny" style={{marginTop:4}}>Membership, access, usage and billing belong here. Research work belongs in projects.</div>
@@ -636,6 +670,12 @@ function RAG(){
   const {projectId,reportId,projects,reports}=useCtx();
   const readiness=useQuery({queryKey:["rag-readiness",projectId],queryFn:()=>api.ragReadiness(projectId!),enabled:Boolean(projectId),refetchInterval:5000});
   const runs=useQuery({queryKey:["rag-runs",projectId],queryFn:()=>api.ragRuns(projectId!,25,0),enabled:Boolean(projectId),refetchInterval:5000});
+  const memory=useQuery({
+    queryKey:["rag-memory",projectId],
+    queryFn:()=>api.ragMemory(projectId!,undefined,100),
+    enabled:Boolean(projectId),
+    refetchInterval:10000,
+  });
   const [query,setQuery]=useState("");
   const [mode,setMode]=useState<"lexical"|"semantic"|"hybrid">("hybrid");
   const [maxResults,setMaxResults]=useState(10);
@@ -676,10 +716,41 @@ function RAG(){
     {projectId&&<Card style={{marginTop:16}}><div className="row"><div><h3>Retrieval history</h3><div className="muted small">Persisted retrieval runs for this project. Selecting one reloads its stored results.</div></div><span className="tag">{runs.data?.total??0} runs</span></div>
       {runs.isError?<State title="Run history unavailable" description={runs.error instanceof Error?runs.error.message:"Retrieval history could not be loaded."} error/>:runs.isPending?<State title="Loading retrieval history" description="Reading persisted retrieval runs."/>:runs.data?.items.length===0?<State title="No retrieval runs" description="Completed retrieval requests will appear here."/>:<div className="list" style={{marginTop:10}}>{runs.data.items.map(run=><button className="list-item" style={{textAlign:"left",width:"100%",cursor:"pointer",background:run.id===selectedRunId?"var(--surface)":"transparent"}} key={run.id} onClick={()=>setSelectedRunId(run.id)}><div className="row"><div><div className="title">{run.query}</div><div className="meta">{run.status} · {run.final_result_count} results · {new Date(run.started_at).toLocaleString()}</div></div><span className="tag">{run.duration_ms===null?"Duration —":run.duration_ms+" ms"}</span></div></button>)}</div>}
     </Card>}
+    {projectId&&<Card style={{marginTop:16}}>
+      <div className="row"><div><h3>Research memory</h3><div className="muted small">Persisted memory records available to advanced retrieval for this project.</div></div><span className="tag">{memory.data?.total??0} records</span></div>
+      {memory.isPending?<State title="Loading research memory" description="Reading persisted memory records."/>:
+       memory.isError?<State title="Research memory unavailable" description={memory.error instanceof Error?memory.error.message:"The memory store could not be loaded."} error/>:
+       memory.data?.items.length===0?<State title="No research memory yet" description="Memory records appear as research workflows persist reusable context."/>:
+       <div className="list" style={{marginTop:10}}>{memory.data.items.map(item=><div className="list-item" key={item.id}>
+         <div className="row"><div><div className="title">{item.memory_type}</div><div className="meta">{item.status} · reuse {item.reuse_count}</div></div><span className="tag">{Math.round(item.confidence*100)}% confidence</span></div>
+         <div className="muted small" style={{marginTop:5}}>{item.summary}</div>
+       </div>)}</div>}
+    </Card>}
   </>;
 }
 function Knowledge(){
   const {projectId}=useCtx();
+  const qc=useQueryClient();
+  const [jobId,setJobId]=useState("");
+  const job=useQuery({
+    queryKey:["kg-generate-job",jobId],
+    queryFn:()=>api.job(jobId),
+    enabled:Boolean(jobId),
+    refetchInterval:3000,
+  });
+  const generate=useMutation({
+    mutationFn:()=>api.knowledgeGraphGenerate(projectId!,{force:true,async:true}),
+    onSuccess:async response=>{
+      if(response.job_id){
+        setJobId(response.job_id);
+        return;
+      }
+      await Promise.all([
+        qc.invalidateQueries({queryKey:["kg-summary",projectId]}),
+        qc.invalidateQueries({queryKey:["kg-nodes",projectId]}),
+      ]);
+    },
+  });
   const summary=useQuery({queryKey:["kg-summary",projectId],queryFn:()=>api.knowledgeGraphSummary(projectId!),enabled:Boolean(projectId)});
   const [search,setSearch]=useState("");
   const [nodeType,setNodeType]=useState("");
@@ -710,6 +781,19 @@ function Knowledge(){
       <button className="btn" disabled={!projectId||ex.isPending} onClick={()=>void exportGraph("json")}>{ex.isPending?"Exporting…":"Export JSON"}</button>
       <button className="btn" disabled={!projectId||ex.isPending} onClick={()=>void exportGraph("csv")}>Export CSV</button>
     </>}/>
+  useEffect(()=>{
+    const status=job.data?.status;
+    if(status==="completed"||status==="failed"||status==="cancelled"){
+      setJobId("");
+      void Promise.all([
+        qc.invalidateQueries({queryKey:["kg-summary",projectId]}),
+        qc.invalidateQueries({queryKey:["kg-nodes",projectId]}),
+      ]);
+    }
+  },[job.data?.status,qc,projectId]);
+  return <><Head route="knowledge" actions={<><button className="btn" disabled={!projectId||ex.isPending} onClick={()=>void exportGraph("json")}>{ex.isPending?"Exporting…":"Export JSON"}</button><button className="btn" disabled={!projectId||ex.isPending} onClick={()=>void exportGraph("csv")}>Export CSV</button><button className="btn primary" disabled={!projectId||generate.isPending||Boolean(jobId)} onClick={()=>generate.mutate()}>{generate.isPending?"Queueing…":jobId?"Building…":"Generate / rebuild graph"}</button></>}/>
+    {jobId&&<Card><div className="notice">Knowledge graph job: <b>{job.data?.status??"queued"}</b></div></Card>}
+    {generate.isError&&<div className="notice error" style={{marginTop:12}}>{generate.error instanceof Error?generate.error.message:"Knowledge graph generation failed."}</div>}
     {!projectId&&<Card><State title="No active project" description="Create a project before inspecting the knowledge graph."/></Card>}
     {exportError&&<div className="notice error" style={{marginTop:12}}>{exportError}</div>}
     {projectId&&summary.isError&&<Card><State title="Knowledge graph unavailable" description={summary.error instanceof Error?summary.error.message:"No ready knowledge graph is available. Generate the graph after literature and planning inputs are ready."} error/></Card>}
@@ -744,6 +828,12 @@ function Knowledge(){
     </>}
   </>;
 }
+    </>}
+  </>}
+  </>;
+}
+
+// File/folder controls are kept in a separate component to isolate mutations.
 function FolderTools({projectId,folders,onChanged}:{projectId:string|undefined;folders:FileFolder[];onChanged:()=>void}){
   const [name,setName]=useState("");const [error,setError]=useState("");const [busyId,setBusyId]=useState("");
   const create=useMutation({mutationFn:()=>api.createFolder(projectId!,{name}),onSuccess:()=>{setName("");setError("");onChanged();},onError:e=>setError(e instanceof Error?e.message:"Folder creation failed.")});
@@ -881,7 +971,7 @@ function Files(){
   }
 
   const bytes=(n:number)=>n<1024?String(n)+" B":n<1024*1024?(n/1024).toFixed(1)+" KB":(n/1024/1024).toFixed(1)+" MB";
-  const files=rows(q.data?.items);
+  const files=q.data?.items??[];
 
   return <><Head route="files"/>
     <div className="grid grid-3">
@@ -1030,8 +1120,9 @@ function Manuscript(){
   },[draft.data,prose.data]);
 
   const saveDraft=useMutation({
-    mutationFn:()=>api.autosaveManuscript(reportId!,{revision,content:{sections:sectionDrafts},base_version_id:baseVersionId}),
-    onSuccess:res=>{
+    mutationFn:(snapshot:{revision:number;content:{sections:Record<string,string>};base_version_id:string|undefined})=>
+      api.autosaveManuscript(reportId!,snapshot),
+    onSuccess:(res,snapshot)=>{
       if(res.conflict){
         setConflictDraft(res.draft);
         setSavingError("Draft changed elsewhere. Your local edits were not accepted.");
@@ -1039,7 +1130,9 @@ function Manuscript(){
       }
       setRevision(res.draft.revision);
       setBaseVersionId(res.draft.base_version_id??undefined);
-      setDirty(false);
+      const currentSnapshot={sections:sectionDrafts};
+      const unchanged=JSON.stringify(currentSnapshot)===JSON.stringify(snapshot.content);
+      setDirty(!unchanged);
       setSavingError("");
       setConflictDraft(null);
       void qc.invalidateQueries({queryKey:["draft",reportId]});
@@ -1048,10 +1141,15 @@ function Manuscript(){
   });
 
   useEffect(()=>{
-    if(!dirty||!reportId)return;
-    const timer=window.setTimeout(()=>{void saveDraft.mutateAsync();},700);
+    if(!dirty||!reportId||saveDraft.isPending)return;
+    const snapshot={
+      revision,
+      content:{sections:{...sectionDrafts}},
+      base_version_id:baseVersionId,
+    };
+    const timer=window.setTimeout(()=>{void saveDraft.mutateAsync(snapshot);},700);
     return()=>window.clearTimeout(timer);
-  },[dirty,reportId,sectionDrafts]);
+  },[dirty,reportId,revision,baseVersionId,sectionDrafts,saveDraft.isPending]);
 
   const saveVersion=useMutation({
     mutationFn:()=>api.saveManuscriptVersion(reportId!,{expected_revision:revision}),
@@ -1104,19 +1202,199 @@ function Manuscript(){
   </>;
 }
 function Generate(){
-  const {reportId}=useCtx();const [brief,setBrief]=useState("");const m=useMutation({mutationFn:()=>api.enqueueJob("generate_report",{report_id:reportId,brief},reportId)});
-  return <><Head route="generate"/><div className="grid grid-2"><Card><div className="field"><label>Generation brief</label><textarea className="input textarea" value={brief} onChange={e=>setBrief(e.target.value)} placeholder="Draft Methods, Discussion, Abstract or Reviewer Response…"/></div><div className="pillbar" style={{marginTop:12}}><span className="tag primary">Evidence grounded</span><span className="tag">Verified evidence</span><span className="tag">Unsupported claim flag</span></div><button className="btn primary" style={{marginTop:14}} disabled={!reportId||m.isPending} onClick={()=>m.mutate()}>{m.isPending?"Queueing…":"Generate"}</button>{m.isError&&<div className="notice error" style={{marginTop:12}}>Generation request failed.</div>}{Boolean(m.data)&&<div className="notice success" style={{marginTop:12}}>Job queued: {value((m.data as Obj).id??(m.data as Obj).job_id)}</div>}</Card><Card><h3>Context</h3><div className="list"><div className="list-item">Evidence matrix</div><div className="list-item">Research plan</div><div className="list-item">Current report</div><div className="list-item">Durable job state</div></div></Card></div></>;
+  const {reportId}=useCtx();
+  const qc=useQueryClient();
+  const [brief,setBrief]=useState("");
+  const [jobId,setJobId]=useState("");
+  const current=useQuery({queryKey:["generation-current",reportId],queryFn:()=>api.generationCurrent(reportId!),enabled:Boolean(reportId),retry:false});
+  const job=useQuery({queryKey:["generation-job",jobId],queryFn:()=>api.job(jobId),enabled:Boolean(jobId),refetchInterval:jobId?3000:false});
+  const m=useMutation({mutationFn:()=>api.generate(reportId!,{brief:brief.trim()||undefined}),onSuccess:data=>{setBrief("");setJobId(data.id);}});
+  useEffect(()=>{
+    const status=job.data?.status;
+    if(status==="completed"||status==="failed"||status==="cancelled"){
+      setJobId("");
+      void qc.invalidateQueries({queryKey:["reports"]});
+      void qc.invalidateQueries({queryKey:["project-reports"]});
+      void qc.invalidateQueries({queryKey:["generation-current",reportId]});
+    }
+  },[job.data?.status,qc,reportId]);
+  const status=job.data?.status;
+  const running=Boolean(jobId&&["queued","processing","retrying"].includes(status??""));
+  return <>
+    <Head route="generate"/>
+    <div className="grid grid-2">
+      <Card><div className="row"><div><div className="kicker">AI Studio</div><h3>Evidence-grounded generation</h3><div className="muted small">Generate only from retrieved evidence and inspect the durable result.</div></div>{current.data?.status&&<span className={"tag "+(current.data.status==="success"?"success":"")}>{current.data.status}</span>}</div>
+        <div className="field" style={{marginTop:12}}><label>Generation brief</label><textarea className="input textarea" value={brief} onChange={e=>setBrief(e.target.value)} placeholder="Draft Methods, Discussion, Abstract or Reviewer Response…"/></div>
+        <div className="pillbar" style={{marginTop:12}}><span className="tag primary">Evidence grounded</span><span className="tag">Verified evidence</span><span className="tag">Unsupported claim flag</span></div>
+        <button className="btn primary" style={{marginTop:14}} disabled={!reportId||m.isPending||running} onClick={()=>m.mutate()}>{m.isPending||running?"Generating…":"Generate"}</button>
+        {m.isError&&<div className="notice error" style={{marginTop:12}}>{m.error instanceof Error?m.error.message:"Generation request failed."}</div>}
+        {jobId&&<div className={"notice "+(status==="completed"?"success":status==="failed"?"error":"")} style={{marginTop:12}}>Generation job <span className="mono">{jobId}</span>: {status??"queued"}{job.data?.last_error_message&&" · "+job.data.last_error_message}</div>}
+      </Card>
+      <Card><h3>Persisted result</h3>
+        {current.isError?<State title="Generation result unavailable" description={current.error instanceof Error?current.error.message:"The generation result could not be loaded."} error/>:
+        current.data?.text?<><div className="grid grid-3"><Metric label="Provider" value={current.data.provider}/><Metric label="Model" value={current.data.model}/><Metric label="Evidence markers" value={current.data.cited_markers.length}/></div><div className="notice" style={{marginTop:10}}>Context fingerprint: <span className="mono">{current.data.context_hash??"—"}</span></div><pre className="code" style={{whiteSpace:"pre-wrap",fontSize:12,marginTop:12}}>{current.data.text}</pre><div className="muted tiny" style={{marginTop:8}}>Bound evidence records: {current.data.evidence.length}</div></>:<State title="No persisted generation yet" description="Submit a brief to create the first durable generation job."/>}
+      </Card>
+    </div>
+  </>;
 }
-
 function Humanize(){
-  const {reportId}=useCtx();const [versionId,setVersionId]=useState("");const [detectionRunId,setDetectionRunId]=useState("");const [policyVersion,setPolicyVersion]=useState("");
-  const m=useMutation({mutationFn:()=>api.humanize(reportId!,{version_id:versionId,detection_run_id:detectionRunId,...(policyVersion.trim()?{policy_version:policyVersion.trim()}: {})})});
-  return <><Head route="humanize"/><div className="grid grid-2"><Card><div className="field"><label>Report version UUID</label><input className="input" value={versionId} onChange={e=>setVersionId(e.target.value)} placeholder="Approved version"/></div><div className="field" style={{marginTop:12}}><label>Detection run UUID</label><input className="input" value={detectionRunId} onChange={e=>setDetectionRunId(e.target.value)} placeholder="Completed detection run"/></div><div className="field" style={{marginTop:12}}><label>Policy version</label><input className="input" value={policyVersion} onChange={e=>setPolicyVersion(e.target.value)}/></div><button className="btn primary" style={{marginTop:14}} disabled={!reportId||!versionId||!detectionRunId||m.isPending} onClick={()=>m.mutate()}>{m.isPending?"Queueing…":"Rewrite"}</button></Card><Card><h3>Preservation controls</h3>{["Claim integrity","Evidence markers","Citations","URLs / DOIs","Numbers"].map(x=><div className="row list-item" key={x}><span>{x}</span><span className="tag success">Protected</span></div>)}</Card></div></>;
+  const {reportId,activeReport}=useCtx();
+  const qc=useQueryClient();
+  const review=useQuery({
+    queryKey:["pre-translation-review",reportId],
+    queryFn:()=>api.preTranslationReview(reportId!),
+    enabled:Boolean(reportId),
+  });
+  const versionId=review.data?.version_id;
+  const detection=useQuery({
+    queryKey:["detection",reportId,versionId],
+    queryFn:()=>api.detection(reportId!,versionId!),
+    enabled:Boolean(reportId&&versionId),
+    retry:false,
+  });
+  const [jobId,setJobId]=useState("");
+  const job=useQuery({
+    queryKey:["humanize-job",jobId],
+    queryFn:()=>api.job(jobId),
+    enabled:Boolean(jobId),
+    refetchInterval:jobId?3000:false,
+  });
+  const current=useQuery({
+    queryKey:["humanization-current",reportId],
+    queryFn:()=>api.humanizationCurrent(reportId!),
+    enabled:Boolean(reportId),
+    retry:false,
+  });
+  const detect=useMutation({
+    mutationFn:()=>api.enqueueDetection(reportId!,versionId!),
+    onSuccess:data=>setJobId(data.job_id),
+  });
+  const m=useMutation({
+    mutationFn:()=>api.humanize(reportId!,{version_id:versionId!,detection_run_id:detection.data!.run_id}),
+    onSuccess:data=>setJobId(data.job_id),
+  });
+  useEffect(()=>{
+    if(job.data?.status==="completed"||job.data?.status==="failed"||job.data?.status==="cancelled"){
+      void qc.invalidateQueries({queryKey:["detection",reportId,versionId]});
+      void qc.invalidateQueries({queryKey:["humanization-current",reportId]});
+    }
+  },[job.data?.status,qc,reportId,versionId]);
+  const run=current.data?.run;
+  const output=current.data?.output_version;
+  const statusReady=activeReport?.status==="humanizing";
+  const controls=[
+    ["Claim integrity",Boolean(run&&run.status==="success"&&!run.skipped_preservation.length)],
+    ["Evidence markers",Boolean(run&&run.status==="success"&&!run.skipped_preservation.length)],
+    ["Citations",Boolean(run&&run.status==="success"&&!run.skipped_preservation.length)],
+    ["URLs / DOIs",Boolean(run&&run.status==="success"&&!run.skipped_preservation.length)],
+    ["Numbers",Boolean(run&&run.status==="success"&&!run.skipped_preservation.length)],
+  ] as const;
+  return <><Head route="humanize"/>
+    {!reportId&&<Card><State title="No active report" description="Humanization is scoped to a report."/></Card>}
+    {reportId&&<><Card>
+      <div className="row"><div><h3>Approved source</h3><div className="muted small">The M15-approved report version is resolved from the backend review state. No UUID entry is required.</div></div><span className="tag">{review.data?.status??activeReport?.status??"—"}</span></div>
+      {review.isPending?<State title="Loading approved version" description="Reading the authoritative pre-translation review context."/>:review.isError?<State title="Approved version unavailable" description={review.error instanceof Error?review.error.message:"Complete pre-translation review before humanization."} error/>:review.data&&<div className="grid grid-2" style={{marginTop:12}}><div className="list-item"><div className="meta">Version</div><div className="strong">v{review.data.version_number} · {review.data.language}</div><div className="mono tiny">{review.data.version_id}</div></div><div className="list-item"><div className="meta">Content</div><div>{review.data.content.length.toLocaleString()} characters</div><div className="muted tiny" style={{marginTop:4}}>{review.data.change_type??"No change type recorded"}</div></div></div>}
+      {versionId&&<div className="actions" style={{marginTop:12}}>
+        {detection.isError&&<button className="btn" disabled={detect.isPending} onClick={()=>detect.mutate()}>{detect.isPending?"Queueing detection…":"Run detection"}</button>}
+        {detection.data&&<span className="tag primary">Detection: {detection.data.label} · {(detection.data.probability===null?"—":Math.round(detection.data.probability*100)+"%")}</span>}
+        {detect.isSuccess&&<span className="tag">Detection job: {job.data?.status??"queued"}</span>}
+      </div>}
+    </Card>
+    {versionId&&detection.data&&<Card style={{marginTop:16}}>
+      <div className="row"><div><h3>Humanization</h3><div className="muted small">Uses the detected approved version and the persisted humanization pipeline.</div></div><span className="tag">{run?.status??"Not run"}</span></div>
+      {!statusReady&&<div className="notice" style={{marginTop:12}}>Backend gate: report status is <b>{activeReport?.status??"unknown"}</b>. Humanization can only be enqueued while the report is in <b>humanizing</b>.</div>}
+      <button className="btn primary" style={{marginTop:12}} disabled={!statusReady||m.isPending||Boolean(jobId&&job.data?.status==="processing")||Boolean(jobId&&job.data?.status==="queued")} onClick={()=>m.mutate()}>{m.isPending||job.data?.status==="processing"||job.data?.status==="queued"?"Processing…":"Rewrite approved version"}</button>
+      {m.isError&&<div className="notice error" style={{marginTop:12}}>{m.error instanceof Error?m.error.message:"Humanization request failed."}</div>}
+      {output&&<div className="notice success" style={{marginTop:12}}>Humanized version v{output.version_number} is persisted. Source version: {output.source_version_id??"—"}.</div>}
+      {output&&<div className="field" style={{marginTop:12}}><label>Persisted humanized content</label><textarea className="input textarea" value={output.content} readOnly style={{minHeight:260}}/></div>}
+    </Card>}
+    <Card style={{marginTop:16}}><div className="row"><div><h3>Preservation controls</h3><div className="muted small">Status below is derived from the persisted humanization run, not a static UI promise.</div></div><span className="tag">{run?.status??"Not run"}</span></div>
+      {controls.map(([label,passed])=><div className="row list-item" key={label}><span>{label}</span><span className={"tag "+(passed?"success":"")}>{run?"Passed":"Pending"}</span></div>)}
+      {run?.skipped_preservation.length?<div className="notice error" style={{marginTop:10}}>Preservation exceptions: {run.skipped_preservation.map(item=>value(row(item).segment_id)+" / "+value(row(item).layer)).join(", ")}</div>:null}
+    </Card></>}
+  </>;
 }
 
 function Translate(){
-  const {reportId}=useCtx();const [version,setVersion]=useState("");const [lang,setLang]=useState("fa");const m=useMutation({mutationFn:()=>api.translate(reportId!,{source_version_id:version,target_language:lang})});
-  return <><Head route="translate"/><Card><div className="grid grid-3"><div className="field"><label>Approved source version</label><input className="input" value={version} onChange={e=>setVersion(e.target.value)} placeholder="Version UUID"/></div><div className="field"><label>Target language</label><select className="input" value={lang} onChange={e=>setLang(e.target.value)}><option value="fa">Persian</option><option value="en">English</option><option value="de">German</option><option value="fr">French</option></select></div><div className="actions" style={{alignItems:"end"}}><button className="btn primary" disabled={!reportId||!version||m.isPending} onClick={()=>m.mutate()}>{m.isPending?"Queueing…":"Translate"}</button></div></div>{m.isError&&<div className="notice error" style={{marginTop:12}}>Translation request failed; verify the source version is the approved version.</div>}</Card></>;
+  const {reportId,activeReport}=useCtx();
+  const qc=useQueryClient();
+  const review=useQuery({
+    queryKey:["pre-translation-review",reportId],
+    queryFn:()=>api.preTranslationReview(reportId!),
+    enabled:Boolean(reportId),
+  });
+  const sourceVersionId=review.data?.version_id;
+  const [lang,setLang]=useState("");
+  useEffect(()=>{if(!lang&&activeReport?.output_language)setLang(activeReport.output_language);},[activeReport?.output_language,lang]);
+  const [jobId,setJobId]=useState("");
+  const job=useQuery({
+    queryKey:["translation-job",jobId],
+    queryFn:()=>api.job(jobId),
+    enabled:Boolean(jobId),
+    refetchInterval:jobId?3000:false,
+  });
+  const current=useQuery({
+    queryKey:["translation-current",reportId],
+    queryFn:()=>api.translationCurrent(reportId!),
+    enabled:Boolean(reportId),
+    retry:false,
+  });
+  const [postJobId,setPostJobId]=useState("");
+  const postJob=useQuery({
+    queryKey:["post-translation-humanization-job",postJobId],
+    queryFn:()=>api.job(postJobId),
+    enabled:Boolean(postJobId),
+    refetchInterval:postJobId?3000:false,
+  });
+  const postHumanize=useMutation({
+    mutationFn:()=>api.postTranslationHumanization(reportId!,{
+      translation_run_id:current.data!.run.id,
+      translation_version_id:current.data!.version.id,
+    }),
+    onSuccess:data=>setPostJobId(data.job_id??""),
+  });
+  const m=useMutation({
+    mutationFn:()=>api.translate(reportId!,{source_version_id:sourceVersionId!,target_language:lang.trim()}),
+    onSuccess:data=>setJobId(data.job_id),
+  });
+  useEffect(()=>{
+    if(job.data?.status==="completed"||job.data?.status==="failed"||job.data?.status==="cancelled"){
+      void qc.invalidateQueries({queryKey:["translation-current",reportId]});
+    }
+  },[job.data?.status,qc,reportId]);
+  useEffect(()=>{
+    const status=postJob.data?.status;
+    if(status==="completed"||status==="failed"||status==="cancelled"){
+      setPostJobId("");
+      void qc.invalidateQueries({queryKey:["translation-current",reportId]});
+    }
+  },[postJob.data?.status,qc,reportId]);
+  const translated=current.data?.version;
+  const statusReady=activeReport?.status==="translating";
+  const preservationPassed=current.data?.version.preservation_check_status==="passed";
+  return <><Head route="translate"/>
+    {!reportId&&<Card><State title="No active report" description="Translation is scoped to a report."/></Card>}
+    {reportId&&<><Card>
+      <div className="row"><div><h3>Approved source</h3><div className="muted small">Source version is resolved from the backend pre-translation approval state.</div></div><span className="tag">{review.data?.status??activeReport?.status??"—"}</span></div>
+      {review.isPending?<State title="Loading approved version" description="Reading the authoritative review context."/>:review.isError?<State title="Approved version unavailable" description={review.error instanceof Error?review.error.message:"Complete pre-translation review before translation."} error/>:review.data&&<div className="grid grid-2" style={{marginTop:12}}><div className="list-item"><div className="meta">Source version</div><div className="strong">v{review.data.version_number} · {review.data.language}</div><div className="mono tiny">{review.data.version_id}</div></div><div className="field"><label>Target language</label><input className="input" value={lang} onChange={e=>setLang(e.target.value)} placeholder="e.g. fa, en-US, de"/></div></div>}
+      {!statusReady&&<div className="notice" style={{marginTop:12}}>Backend gate: report status is <b>{activeReport?.status??"unknown"}</b>. Translation can only be enqueued while the report is in <b>translating</b>.</div>}
+      <button className="btn primary" style={{marginTop:12}} disabled={!sourceVersionId||!lang.trim()||!statusReady||m.isPending||Boolean(jobId&&(job.data?.status==="queued"||job.data?.status==="processing"))} onClick={()=>m.mutate()}>{m.isPending||job.data?.status==="queued"||job.data?.status==="processing"?"Translating…":"Translate approved version"}</button>
+      {m.isError&&<div className="notice error" style={{marginTop:12}}>{m.error instanceof Error?m.error.message:"Translation request failed."}</div>}
+      {job.data?.status==="failed"&&<div className="notice error" style={{marginTop:12}}>Translation job failed: {job.data.last_error_message??job.data.last_error_code??"unknown error"}.</div>}
+    </Card>
+    {current.isSuccess&&<Card style={{marginTop:16}}>
+      <div className="row"><div><h3>Latest persisted translation</h3><div className="muted small">{current.data.run.source_lang} → {current.data.run.target_lang} · {current.data.run.provider}</div></div><span className={"tag "+(preservationPassed?"success":"")}>{current.data.version.preservation_check_status}</span></div>
+      <div className="field" style={{marginTop:12}}><label>Translated content</label><textarea className="input textarea" value={current.data?.version.content ?? ""} readOnly style={{minHeight:320}}/></div>
+      <div className="actions" style={{marginTop:12}}>
+        <button className="btn primary" disabled={!preservationPassed||postHumanize.isPending||Boolean(postJobId)} onClick={()=>postHumanize.mutate()}>{postHumanize.isPending?"Queueing…":postJobId?"Humanizing…":"Post-translation humanize"}</button>
+        {postJobId&&<span className="tag">Job: {postJob.data?.status??"queued"}</span>}
+      </div>
+      {postHumanize.isError&&<div className="notice error" style={{marginTop:10}}>{postHumanize.error instanceof Error?postHumanize.error.message:"Post-translation humanization failed."}</div>}
+      {postJob.data?.status==="failed"&&<div className="notice error" style={{marginTop:10}}>Post-translation humanization job failed: {postJob.data.last_error_message??postJob.data.last_error_code??"unknown error"}.</div>}
+    </Card>}
+    {current.isError&&current.error instanceof Error&&/404|not found/i.test(current.error.message)&&<Card style={{marginTop:16}}><State title="No completed translation" description="The latest successful translation will appear here after the worker finishes."/></Card>}
+    </>}
+  </>;
 }
 
 function Collaboration(){

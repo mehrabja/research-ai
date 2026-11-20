@@ -1,4 +1,6 @@
 import type {APIToken,APITokenCreateResponse,BillingInvoice,Citation,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,Job,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,ManuscriptComment,ManuscriptReviewTask,ManuscriptVersion,Member,NotificationPreference,Session,Plan,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace} from "./generated";
+import type {APIToken,APITokenCreateResponse,BillingInvoice,DetectionResult,EvidenceClaim,EvidenceLink,EvidenceMatrixItem,FileFolder,Invitation,Job,KnowledgeGraphNeighbor,KnowledgeGraphNodeList,KnowledgeGraphSummary,LiteratureCluster,LiteratureGap,LiteratureItem,LiteratureRun,Manuscript,ManuscriptVersion,Member,NotificationPreference,Session,Plan,PreTranslationReview,Project,ProjectFileList,ProjectList,ProjectFile,QA,RAGResponse,Report,ResearchPlan,ResearchPlanCoverage,ResearchPlanValidation,Source,SourceCandidate,SourceEmbedding,SourceExtraction,Subscription,TwoFactorEnrollment,Usage,User,Workspace,TechnicalFact,ExperimentResult,TechnicalMetric,TechnicalIntelligenceCurrent,TechnicalIntelligenceRunList,TechnicalFactList,ExperimentResultList,TechnicalMetricList,TechnicalIntelligenceValidation,TechnicalIntelligenceGenerateResponse,SectionResearchCurrent,SectionResearchGenerateResponse,SectionResearchRunList,SectionResearchValidation,PublicationTarget,PublicationTargetList,PublicationTargetSelection,PublicationComplianceCurrent,PublicationComplianceRunList,PublicationComplianceFindingList,PublicationChecklist,PublicationComplianceValidation,PublicationComplianceResponse,OrchestrationRunDetail,OrchestrationRunList,OrchestrationNodeList,OrchestrationRunResponse,OrchestrationPauseResponse,OrchestrationCancelResponse,OrchestrationToolList,OrchestrationValidation,CitationCurrent,CitationGenerateResponse,CitationValidation,CitationRunList,Bibliography,AcademicQACurrent,AcademicQAGenerateResponse,AcademicQAValidation,AcademicQARunList,AcademicQAFindingList,Classification,ClassificationEvidenceList,ClassificationHistory,ClassificationExplanation} from "./generated";
+import {routes} from "./routes";
 
 type ApiErrorBody={detail?:unknown;message?:unknown;error?:unknown};
 
@@ -133,72 +135,80 @@ export type SearchResponse={query:string;items:Array<{
 }>;total:number;limit:number;offset:number};
 
 export const api={
-  me:()=>request<User>("auth/me"),
-  workspaces:()=>request<{items:Workspace[];total:number}>("workspaces"),
-  createWorkspace:(name:string)=>request<Workspace>("workspaces",{method:"POST",body:JSON.stringify({name})}),
-  dashboard:(w?:string)=>request<DashboardStats>("dashboard"+(w?"?workspace_id="+encodeURIComponent(w):"")),
-  notifications:(w?:string)=>request<NotificationList>("notifications"+(w?"?workspace_id="+encodeURIComponent(w):"")),
-  markNotificationRead:(id:string)=>request<void>("notifications/"+id+"/read",{method:"POST"}),
-  readAllNotifications:(w?:string)=>request<void>("notifications/read-all"+(w?"?workspace_id="+encodeURIComponent(w):""),{method:"POST"}),
-  notificationPreferences:(w?:string)=>request<NotificationPreference>("notifications/preferences"+(w?"?workspace_id="+encodeURIComponent(w):"")),
-  updateNotificationPreferences:(body:{channel:string;preferences:Record<string,boolean>},w?:string)=>request<NotificationPreference>("notifications/preferences"+(w?"?workspace_id="+encodeURIComponent(w):""),{method:"PUT",body:JSON.stringify(body)}),
+  me:()=>request<User>(routes.me()),
+  workspaces:()=>request<{items:Workspace[];total:number}>(routes.workspaces()),
+  workspace:(w:string)=>request<Workspace>(routes.workspace(w)),
+  updateWorkspace:(w:string,b:{name?:string|null;settings?:Record<string,unknown>|null})=>request<Workspace>(routes.workspace(w),{method:"PATCH",body:JSON.stringify(b)}),
+  createWorkspace:(name:string)=>request<Workspace>(routes.createWorkspace(),{method:"POST",body:JSON.stringify({name})}),
+  dashboard:(w?:string)=>request<DashboardStats>(routes.dashboard(w)),
+  notifications:(w?:string)=>request<NotificationList>(routes.notifications(w)),
+  markNotificationRead:(id:string)=>request<void>(routes.notificationRead(id),{method:"POST"}),
+  readAllNotifications:(w?:string)=>request<void>(routes.notificationsReadAll(w),{method:"POST"}),
+  notificationPreferences:(w?:string)=>request<NotificationPreference>(routes.notificationPreferences(w)),
+  updateNotificationPreferences:(body:{channel:string;preferences:Record<string,boolean>},w?:string)=>request<NotificationPreference>(routes.notificationPreferences(w),{method:"PUT",body:JSON.stringify(body)}),
 
-  globalSearch:(q:string,w?:string,limit=50,offset=0)=>request<SearchResponse>(
-    "search?q="+encodeURIComponent(q)+(w?"&workspace_id="+encodeURIComponent(w):"")+"&limit="+limit+"&offset="+offset
-  ),
+  globalSearch:(q:string,w?:string,limit=50,offset=0)=>request<SearchResponse>(routes.search(q,w,limit,offset)),
 
-  projects:(w:string)=>request<ProjectList>("projects?workspace_id="+encodeURIComponent(w)),
-  project:(p:string,w:string)=>request<Project>("projects/"+p+"?workspace_id="+encodeURIComponent(w)),
-  createProject:(w:string,b:object)=>request<Project>("projects?workspace_id="+encodeURIComponent(w),{method:"POST",body:JSON.stringify(b)}),
-  updateProject:(p:string,w:string,b:object)=>request<Project>("projects/"+p+"?workspace_id="+encodeURIComponent(w),{method:"PATCH",body:JSON.stringify(b)}),
-  projectReports:(p:string,w:string)=>request<{items:Array<{id:string;topic:string;status:string;output_language:string;updated_at:string}>;total:number}>("projects/"+p+"/reports?workspace_id="+encodeURIComponent(w)),
-  createReport:(w:string,b:object)=>request<Report>("reports?workspace_id="+encodeURIComponent(w),{method:"POST",body:JSON.stringify(b)}),
-  reports:(w:string)=>request<Report[]>("reports?workspace_id="+encodeURIComponent(w)),
-  report:(r:string)=>request<Report>("reports/"+r),
+  projects:(w:string)=>request<ProjectList>(routes.projects(w)),
+  project:(p:string,w:string)=>request<Project>(routes.project(p,w)),
+  archiveProject:(p:string,w:string)=>request<Project>(routes.projectArchive(p,w),{method:"POST"}),
+  createProject:(w:string,b:object)=>request<Project>(routes.projects(w),{method:"POST",body:JSON.stringify(b)}),
+  updateProject:(p:string,w:string,b:object)=>request<Project>(routes.project(p,w),{method:"PATCH",body:JSON.stringify(b)}),
+  projectReports:(p:string,w:string)=>request<{items:Array<{id:string;topic:string;status:string;output_language:string;updated_at:string}>;total:number}>(routes.projectReports(p,w)),
+  createReport:(w:string,b:object)=>request<Report>(routes.reports(w),{method:"POST",body:JSON.stringify(b)}),
+  reports:(w:string)=>request<Report[]>(routes.reports(w)),
+  report:(r:string)=>request<Report>(routes.report(r)),
+  reportVersion:(r:string,v:string)=>request<{id:string;report_id:string;version_number:number;language:string;content:string;created_by_user:boolean;change_type:string|null;created_at:string}>(routes.reportVersion(r,v)),
+  generationCurrent:(r:string)=>request<import("./generated").GenerationCurrent>(routes.generationCurrent(r)),
+  preTranslationReview:(r:string)=>request<PreTranslationReview>(routes.preTranslationReview(r)),
 
-  sources:(r:string)=>request<{items:Source[]}>("reports/"+r+"/sources"),
-  searchSources:(r:string,q:string,limit=25,year?:number,openAccess=false)=>request<{query:string;limit:number;candidates:SourceCandidate[]}>("reports/"+r+"/sources/search?q="+encodeURIComponent(q)+"&limit="+Math.max(1,Math.min(1000,Math.floor(limit)))+(year?"&year="+year:"")+(openAccess?"&open_access=true":"")),
-  createSource:(r:string,c:SourceCandidate)=>request<Source>("reports/"+r+"/sources",{method:"POST",body:JSON.stringify(c)}),
-  extractSource:(r:string,id:string)=>request<SourceExtraction>("reports/"+r+"/sources/"+id+"/extract",{method:"POST"}),
-  embedSource:(r:string,id:string)=>request<SourceEmbedding>("reports/"+r+"/sources/"+id+"/embed",{method:"POST"}),
+  sources:(r:string)=>request<{items:Source[]}>(routes.sources(r)),
+  searchSources:(r:string,q:string,limit=25,year?:number,openAccess=false)=>request<{query:string;limit:number;candidates:SourceCandidate[]}>(routes.searchSources(r,q,limit,year,openAccess)),
+  createSource:(r:string,c:SourceCandidate)=>request<Source>(routes.sources(r),{method:"POST",body:JSON.stringify(c)}),
+  extractSource:(r:string,id:string)=>request<SourceExtraction>(routes.extractSource(r,id),{method:"POST"}),
+  embedSource:(r:string,id:string)=>request<SourceEmbedding>(routes.embedSource(r,id),{method:"POST"}),
 
-  literature:(p:string)=>request<{items:LiteratureItem[];total:number;limit:number;offset:number}>("projects/"+p+"/literature"),
-  literatureAnalyze:(p:string,force=false)=>request<{status:string;job_id:string|null;run:LiteratureRun|null}>("projects/"+p+"/literature/analyze",{method:"POST",body:JSON.stringify({force})}),
-  literatureClusters:(p:string)=>request<{items:LiteratureCluster[];total:number}>("projects/"+p+"/literature/clusters"),
-  literatureGaps:(p:string)=>request<{items:LiteratureGap[];total:number}>("projects/"+p+"/literature/gaps"),
-  literatureRuns:(p:string)=>request<{items:LiteratureRun[];total:number;limit:number;offset:number}>("projects/"+p+"/literature/runs"),
-  updateLiteratureItem:(p:string,id:string,b:{screening_status:"discovered"|"candidate"|"included"|"excluded"|"uncertain";reason?:string|null})=>request<LiteratureItem>("projects/"+p+"/literature/"+id,{method:"PATCH",body:JSON.stringify(b)}),
-  knowledgeGraph:(p:string)=>request<{id:string;project_id:string;version:number;status:string;graph_version:string;context_hash:string;source_literature_run_id:string|null;research_plan_id:string|null;node_count:number;edge_count:number;graph_meta:Record<string,unknown>|null;created_by:string|null;created_at:string;updated_at:string}>("projects/"+p+"/knowledge-graph"),
-  knowledgeGraphSummary:(p:string)=>request<KnowledgeGraphSummary>("projects/"+p+"/knowledge-graph/summary"),
-  knowledgeGraphNodes:(p:string,search="",nodeType="",limit=100,offset=0)=>request<KnowledgeGraphNodeList>("projects/"+p+"/knowledge-graph/nodes?limit="+limit+"&offset="+offset+(search?"&search="+encodeURIComponent(search):"")+(nodeType?"&node_type="+encodeURIComponent(nodeType):"")),
-  knowledgeGraphNeighbors:(p:string,nodeId:string)=>request<KnowledgeGraphNeighbor[]>("projects/"+p+"/knowledge-graph/nodes/"+nodeId+"/neighbors?limit=50"),
-  knowledgeGraphQuery:(p:string,b:{start_node_id:string;max_depth?:number;max_nodes?:number;relation_types?:string[]})=>request<import("./generated").KnowledgeGraphQueryResponse>("projects/"+p+"/knowledge-graph/query",{method:"POST",body:JSON.stringify(b)}),
+  literature:(p:string)=>request<{items:LiteratureItem[];total:number;limit:number;offset:number}>(routes.literature(p)),
+  literatureAnalyze:(p:string,force=false)=>request<{status:string;job_id:string|null;run:LiteratureRun|null}>(routes.literatureAnalyze(p),{method:"POST",body:JSON.stringify({force})}),
+  literatureClusters:(p:string)=>request<{items:LiteratureCluster[];total:number}>(routes.literatureClusters(p)),
+  literatureGaps:(p:string)=>request<{items:LiteratureGap[];total:number}>(routes.literatureGaps(p)),
+  literatureRuns:(p:string)=>request<{items:LiteratureRun[];total:number;limit:number;offset:number}>(routes.literatureRuns(p)),
+  updateLiteratureItem:(p:string,id:string,b:{screening_status:"discovered"|"candidate"|"included"|"excluded"|"uncertain";reason?:string|null})=>request<LiteratureItem>(routes.literatureItem(p,id),{method:"PATCH",body:JSON.stringify(b)}),
+  knowledgeGraph:(p:string)=>request<{id:string;project_id:string;version:number;status:string;graph_version:string;context_hash:string;source_literature_run_id:string|null;research_plan_id:string|null;node_count:number;edge_count:number;graph_meta:Record<string,unknown>|null;created_by:string|null;created_at:string;updated_at:string}>(routes.knowledgeGraph(p)),
+  knowledgeGraphGenerate:(p:string,b:{force?:boolean;async?:boolean}={})=>request<import("./generated").KnowledgeGraphBuildResponse>(routes.knowledgeGraphGenerate(p),{method:"POST",body:JSON.stringify({...b,async:b.async??true})}),
+  knowledgeGraphSummary:(p:string)=>request<KnowledgeGraphSummary>(routes.knowledgeGraphSummary(p)),
+  knowledgeGraphNodes:(p:string,search="",nodeType="",limit=100,offset=0)=>request<KnowledgeGraphNodeList>(routes.knowledgeGraphNodes(p)+"?limit="+limit+"&offset="+offset+(search?"&search="+encodeURIComponent(search):"")+(nodeType?"&node_type="+encodeURIComponent(nodeType):"")),
+  knowledgeGraphNeighbors:(p:string,nodeId:string)=>request<KnowledgeGraphNeighbor[]>(routes.knowledgeGraphNodeNeighbors(p,nodeId)+"?limit=50"),
+  knowledgeGraphQuery:(p:string,b:{start_node_id:string;max_depth?:number;max_nodes?:number;relation_types?:string[]})=>request<import("./generated").KnowledgeGraphQueryResponse>(routes.knowledgeGraphQuery(p),{method:"POST",body:JSON.stringify(b)}),
   knowledgeGraphExport:async(p:string,format:"json"|"csv"):Promise<Blob>=>{
-    const response=await fetch("/api/backend/projects/"+p+"/knowledge-graph/export?format="+format,{credentials:"same-origin",cache:"no-store"});
+    const response=await fetch("/api/backend/"+routes.knowledgeGraphExport(p)+"?format="+encodeURIComponent(format),{credentials:"same-origin",cache:"no-store"});
     if(!response.ok)throw new Error("Knowledge graph export failed ("+response.status+").");
     return response.blob();
   },
-  ragReadiness:(p:string)=>request<import("./generated").RAGReadiness>("projects/"+p+"/rag/readiness"),
-  ragRetrieve:(p:string,b:object)=>request<RAGResponse>("projects/"+p+"/rag/retrieve",{method:"POST",body:JSON.stringify(b)}),
-  ragRuns:(p:string,limit=25,offset=0)=>request<{items:import("./generated").RetrievalRun[];total:number;limit:number;offset:number}>("projects/"+p+"/rag/runs?limit="+limit+"&offset="+offset),
-  ragRun:(p:string,id:string)=>request<RAGResponse>("projects/"+p+"/rag/runs/"+id),
+  detection:(r:string,v:string)=>request<DetectionResult>(routes.detection(r,v)),
+  enqueueDetection:(r:string,v:string)=>request<{job_id:string;report_id:string;version_id:string;status:"queued"}>(routes.detectionGenerate(r,v),{method:"POST"}),
+  ragReadiness:(p:string)=>request<import("./generated").RAGReadiness>(routes.ragReadiness(p)),
+  ragRetrieve:(p:string,b:object)=>request<RAGResponse>(routes.ragRetrieve(p),{method:"POST",body:JSON.stringify(b)}),
+  ragRuns:(p:string,limit=25,offset=0)=>request<{items:import("./generated").RetrievalRun[];total:number;limit:number;offset:number}>(routes.ragRuns(p,limit,offset)),
+  ragRun:(p:string,id:string)=>request<RAGResponse>(routes.ragRun(p,id)),
+  ragMemory:(p:string,memoryType?:string,limit=100)=>request<import("./generated").ResearchMemoryList>(routes.ragMemory(p,memoryType,limit)),
 
-  evidenceMatrix:(r:string)=>request<EvidenceMatrixItem[]>("reports/"+r+"/evidence-matrix"),
-  createEvidenceClaim:(r:string,b:object)=>request<EvidenceClaim>("reports/"+r+"/evidence/claims",{method:"POST",body:JSON.stringify(b)}),
-  linkEvidence:(r:string,claimId:string,b:object)=>request<EvidenceLink>("reports/"+r+"/evidence/claims/"+claimId+"/links",{method:"POST",body:JSON.stringify(b)}),
-  unlinkEvidence:(r:string,claimId:string,linkId:string)=>request<void>("reports/"+r+"/evidence/claims/"+claimId+"/links/"+linkId,{method:"DELETE"}),
+  evidenceMatrix:(r:string)=>request<EvidenceMatrixItem[]>(routes.evidenceMatrix(r)),
+  createEvidenceClaim:(r:string,b:object)=>request<EvidenceClaim>(routes.evidenceClaims(r),{method:"POST",body:JSON.stringify(b)}),
+  linkEvidence:(r:string,claimId:string,b:object)=>request<EvidenceLink>(routes.evidenceLinks(r,claimId),{method:"POST",body:JSON.stringify(b)}),
+  unlinkEvidence:(r:string,claimId:string,linkId:string)=>request<void>(routes.evidenceLink(r,claimId,linkId),{method:"DELETE"}),
 
-  folders:(p:string)=>request<FileFolder[]>("projects/"+p+"/file-folders"),
-  createFolder:(p:string,b:object)=>request<FileFolder>("projects/"+p+"/file-folders",{method:"POST",body:JSON.stringify(b)}),
-  updateFolder:(p:string,id:string,b:object)=>request<FileFolder>("projects/"+p+"/file-folders/"+id,{method:"PATCH",body:JSON.stringify(b)}),
-  deleteFolder:(p:string,id:string)=>request<void>("projects/"+p+"/file-folders/"+id,{method:"DELETE"}),
-  files:(p:string)=>request<ProjectFileList>("projects/"+p+"/files"),
+  folders:(p:string)=>request<FileFolder[]>(routes.folders(p)),
+  createFolder:(p:string,b:object)=>request<FileFolder>(routes.folders(p),{method:"POST",body:JSON.stringify(b)}),
+  updateFolder:(p:string,id:string,b:object)=>request<FileFolder>(routes.folder(p,id),{method:"PATCH",body:JSON.stringify(b)}),
+  deleteFolder:(p:string,id:string)=>request<void>(routes.folder(p,id),{method:"DELETE"}),
+  files:(p:string)=>request<ProjectFileList>(routes.files(p)),
   uploadFile:(p:string,file:File,folderIdOrOptions?:string|UploadOptions,maybeOptions?:UploadOptions):Promise<ProjectFile>=>{
     const options:UploadOptions=typeof folderIdOrOptions==="string"
       ? {...(maybeOptions??{}),folderId:folderIdOrOptions}
       : (folderIdOrOptions??{});
     const query=options.folderId?"?folder_id="+encodeURIComponent(options.folderId):"";
-    const path="/api/backend/projects/"+encodeURIComponent(p)+"/files"+query;
+    const path="/api/backend/"+routes.files(p)+query;
 
     return new Promise<ProjectFile>((resolve,reject)=>{
       if(options.signal?.aborted){reject(new UploadCancelledError());return;}
@@ -215,6 +225,14 @@ export const api={
           if(percent!==lastProgressPercent){
             lastProgressPercent=percent;
             options.onProgress?.({loaded:event.loaded,total,percent});
+      const handleProgress=(event:ProgressEvent<XMLHttpRequestEventTarget>)=>{
+        const total=event.total;
+        const loaded=event.loaded;
+        if(total>0){
+          const percent=Math.min(100,(loaded/total)*100);
+          if(percent!==lastProgressPercent){
+            lastProgressPercent=percent;
+            options.onProgress?.({loaded,total,percent});
           }
         }
       };
@@ -347,4 +365,128 @@ export const api={
 
   citations:(r:string)=>request<Citation>("reports/"+r+"/citations/current"),
   qa:(r:string)=>request<QA>("reports/"+r+"/academic-qa/current"),
+  downloadFile:(id:string)=>fetch("/api/backend/"+routes.fileContent(id),{credentials:"same-origin",cache:"no-store"}),
+  updateFile:(id:string,b:object)=>request<ProjectFile>(routes.file(id),{method:"PATCH",body:JSON.stringify(b)}),
+  deleteFile:(id:string)=>request<void>(routes.file(id),{method:"DELETE"}),
+
+  plan:(p:string)=>request<ResearchPlan>(routes.plan(p)),
+  planVersions:(p:string)=>request<{items:ResearchPlan[];total:number;limit:number;offset:number}>(routes.planVersions(p)),
+  savePlan:(p:string,b:object)=>request<ResearchPlan>(routes.plan(p),{method:"PATCH",body:JSON.stringify(b)}),
+  validatePlan:(p:string)=>request<ResearchPlanValidation>(routes.planValidate(p)),
+  planCoverage:(p:string)=>request<ResearchPlanCoverage>(routes.planCoverage(p)),
+
+  manuscript:(r:string)=>request<Manuscript>(routes.manuscript(r)),
+  manuscriptVersions:(r:string)=>request<{items:ManuscriptVersion[];total:number;limit:number;offset:number}>(routes.manuscriptVersions(r)),
+  manuscriptProseCurrent:(r:string)=>request<import("./generated").ManuscriptProseCurrent>(routes.manuscriptProseCurrent(r)),
+  manuscriptProseGenerate:(r:string,b:{base_manuscript_version_id:string;mode?:string;force?:boolean;async?:boolean})=>request<{status:string;job_id:string|null;run_id:string|null;context_hash:string|null;section_count:number|null;word_count:number|null}>(routes.manuscriptProseGenerate(r),{method:"POST",body:JSON.stringify(b)}),
+  manuscriptProseValidate:(r:string)=>request<import("./generated").ManuscriptValidation>(routes.manuscriptProseValidate(r)),
+  manuscriptDraft:(r:string)=>request<{revision:number;base_version_id:string|null;content:unknown}>(routes.manuscriptDraft(r)),
+  autosaveManuscript:(r:string,b:object)=>request<{conflict?:boolean;draft:{revision:number;base_version_id:string|null;content:unknown}}>(routes.manuscriptDraftAutosave(r),{method:"PUT",body:JSON.stringify(b)}),
+  saveManuscriptVersion:(r:string,b:object)=>request<unknown>(routes.manuscriptSaveVersion(r),{method:"POST",body:JSON.stringify(b)}),
+  restoreManuscriptVersion:(r:string,v:string,b:{expected_revision:number})=>request<{saved:boolean;conflict:boolean;draft:{revision:number;base_version_id:string|null;content:unknown}}>(routes.manuscriptRestoreVersion(r,v),{method:"POST",body:JSON.stringify(b)}),
+
+  generate:(r:string,b:{brief?:string})=>request<Job>(routes.jobsEnqueue(),{method:"POST",body:JSON.stringify({job_type:"generate_report",payload:{report_id:r,...b},report_id:r})}),
+  humanize:(r:string,b:{version_id:string;detection_run_id:string;policy_version?:string})=>request<{job_id:string;status:"queued"}>(routes.humanizationEnqueue(r),{method:"POST",body:JSON.stringify(b)}),
+  humanizationCurrent:(r:string)=>request<import("./generated").HumanizationCurrent>(routes.humanizationCurrent(r)),
+  translate:(r:string,b:{source_version_id:string;target_language:string})=>request<{job_id:string;status:"queued"}>(routes.translationEnqueue(r),{method:"POST",body:JSON.stringify(b)}),
+  translationCurrent:(r:string)=>request<import("./generated").TranslationCurrent>(routes.translationCurrent(r)),
+  postTranslationHumanization:(r:string,b:{translation_run_id:string;translation_version_id:string})=>request<import("./generated").PostTranslationHumanizationResponse>(routes.postTranslationHumanization(r),{method:"POST",body:JSON.stringify(b)}),
+
+  jobs:(w?:string)=>request<Job[]>(routes.jobs(w)),
+  job:(id:string)=>request<Job>(routes.job(id)),
+  enqueueJob:(jobType:string,payload:object,reportId?:string)=>request<Job>(routes.jobsEnqueue(),{method:"POST",body:JSON.stringify({job_type:jobType,payload,report_id:reportId})}),
+
+  retryJob:(id:string)=>request<Job>(routes.jobsRetry(id),{method:"POST"}),
+  cancelJob:(id:string)=>request<{job:Job}>(routes.jobsCancel(id),{method:"POST"}),
+
+  sessions:()=>request<{items:Session[];total:number}>(routes.sessions()),
+  revokeSession:(id:string)=>request<void>(routes.session(id),{method:"DELETE"}),
+  revokeOtherSessions:()=>request<void>(routes.sessionsRevokeOthers(),{method:"POST"}),
+  apiTokens:()=>request<APIToken[]>(routes.apiTokens()),
+  createApiToken:(body:object)=>request<APITokenCreateResponse>(routes.apiTokens(),{method:"POST",body:JSON.stringify(body)}),
+  revokeApiToken:(id:string)=>request<void>(routes.apiToken(id),{method:"DELETE"}),
+  twoFactor:()=>request<{enabled:boolean}>(routes.twoFactor()),
+  beginTwoFactor:()=>request<TwoFactorEnrollment>(routes.twoFactorEnroll(),{method:"POST"}),
+  confirmTwoFactor:(code:string)=>request<{enabled:boolean}>(routes.twoFactorConfirm(),{method:"POST",body:JSON.stringify({code})}),
+  disableTwoFactor:(code:string)=>request<{enabled:boolean}>(routes.twoFactorDisable(),{method:"POST",body:JSON.stringify({code})}),
+  members:(w:string)=>request<{items:Member[];total:number}>(routes.members(w)),
+  manuscriptComments:(r:string,v:string)=>request<import("./generated").ManuscriptCommentList>(routes.manuscriptComments(r,v)),
+  addManuscriptComment:(r:string,v:string,body:object)=>request<unknown>(routes.manuscriptComments(r,v),{method:"POST",body:JSON.stringify(body)}),
+  resolveComment:(r:string,id:string)=>request<unknown>(routes.resolveComment(r,id),{method:"POST"}),
+  reopenComment:(r:string,id:string)=>request<unknown>(routes.reopenComment(r,id),{method:"POST"}),
+  reviewTasks:(r:string,v:string)=>request<import("./generated").ManuscriptReviewTaskList>(routes.reviewTasks(r,v)),
+  createReviewTask:(r:string,v:string,body:object)=>request<unknown>(routes.reviewTasks(r,v),{method:"POST"}),
+  updateReviewTask:(r:string,id:string,body:object)=>request<unknown>(routes.updateReviewTask(r,id),{method:"PATCH",body:JSON.stringify(body)}),
+  changeMemberRole:(w:string,u:string,role:string)=>request<Member>(routes.member(w,u),{method:"PATCH",body:JSON.stringify({role})}),
+  removeMember:(w:string,u:string)=>request<null>(routes.member(w,u),{method:"DELETE"}),
+  invitations:(w:string)=>request<{items:Invitation[];total:number}>(routes.invitations(w)),
+  invite:(w:string,b:object)=>request<{invitation:Invitation;token:string}>(routes.invitations(w),{method:"POST",body:JSON.stringify(b)}),
+  acceptInvitation:(token:string)=>request<{workspace_id:string;user_id:string;role:string;status:string}>(routes.acceptInvitation(token),{method:"POST"}),
+  revokeInvitation:(w:string,i:string)=>request<null>(routes.invitation(w,i),{method:"DELETE"}),
+  transferOwnership:(w:string,u:string)=>request<Workspace>(routes.transferOwnership(w),{method:"POST",body:JSON.stringify({target_user_id:u})}),
+
+  usage:(w:string)=>request<Usage>(routes.usage(w)),
+  subscription:(w:string)=>request<Subscription>(routes.subscription(w)),
+  planSubscription:(w:string)=>request<Plan>(routes.planSubscription(w)),
+  billingInvoices:(w:string)=>request<{items:BillingInvoice[];total:number}>(routes.billingInvoices(w)),
+  billingCheckout:(w:string,planCode:string)=>request<{provider:string;checkout_session_id:string;checkout_url:string}>(routes.billingCheckout(w),{method:"POST",body:JSON.stringify({plan_code:planCode})}),
+  billingChangePlan:(w:string,planCode:string)=>request<Subscription>(routes.billingChangePlan(w),{method:"POST",body:JSON.stringify({plan_code:planCode})}),
+  billingCancel:(w:string)=>request<Subscription>(routes.billingCancel(w),{method:"POST"}),
+  billingResume:(w:string)=>request<Subscription>(routes.billingResume(w),{method:"POST"}),
+
+  citations:(r:string)=>request<CitationCurrent>(routes.citationsCurrent(r)),
+  citationsGenerate:(r:string,b:{manuscript_version_id:string;citation_style:"numeric"|"author_year";force?:boolean;async?:boolean})=>request<CitationGenerateResponse>(routes.citationsGenerate(r),{method:"POST",body:JSON.stringify({...b,async:b.async??true})}),
+  citationsHistory:(r:string)=>request<CitationRunList>(routes.citationsHistory(r)),
+  citationsBibliography:(r:string,style:"numeric"|"author_year")=>request<Bibliography>(routes.citationsBibliography(r)+"?citation_style="+encodeURIComponent(style)),
+  citationsValidate:(r:string)=>request<CitationValidation>(routes.citationsValidate(r)),
+  qa:(r:string)=>request<AcademicQACurrent>(routes.qaCurrent(r)),
+  qaGenerate:(r:string,b:{manuscript_version_id:string;force?:boolean;async?:boolean})=>request<AcademicQAGenerateResponse>(routes.qaGenerate(r),{method:"POST",body:JSON.stringify({...b,async:b.async??true})}),
+  qaRuns:(r:string)=>request<AcademicQARunList>(routes.qaRuns(r)),
+  qaFindings:(r:string,b?:{category?:string;severity?:string})=>{const q=new URLSearchParams();if(b?.category)q.set("category",b.category);if(b?.severity)q.set("severity",b.severity);const suffix=q.toString()?("?"+q.toString()):"";return request<AcademicQAFindingList>(routes.qaFindings(r)+suffix);},
+  qaValidate:(r:string)=>request<AcademicQAValidation>(routes.qaValidate(r)),
+  classification:(p:string)=>request<Classification>(routes.classification(p)),
+  classificationRecompute:(p:string)=>request<Classification>(routes.classificationRecompute(p),{method:"POST"}),
+  classificationEvidence:(p:string)=>request<ClassificationEvidenceList>(routes.classificationEvidence(p)),
+  classificationHistory:(p:string)=>request<ClassificationHistory>(routes.classificationHistory(p)),
+  classificationExplanation:(p:string)=>request<ClassificationExplanation>(routes.classificationExplanation(p)),
+  classificationOverride:(p:string,b:{domain_code?:string|null;paper_type_code?:string|null;research_design_code?:string|null})=>request<Classification>(routes.classification(p),{method:"PATCH",body:JSON.stringify(b)}),
+  technicalIntelligence:(p:string)=>request<TechnicalIntelligenceCurrent>(routes.technicalIntelligence(p)),
+  technicalIntelligenceGenerate:(p:string,b:{force?:boolean;async?:boolean})=>request<TechnicalIntelligenceGenerateResponse>(routes.technicalIntelligenceGenerate(p),{method:"POST",body:JSON.stringify({...b,async:b.async??true})}),
+  technicalIntelligenceRuns:(p:string)=>request<TechnicalIntelligenceRunList>(routes.technicalIntelligenceRuns(p)),
+  technicalIntelligenceFacts:(p:string)=>request<TechnicalFactList>(routes.technicalIntelligenceFacts(p)),
+  technicalIntelligenceResults:(p:string)=>request<ExperimentResultList>(routes.technicalIntelligenceResults(p)),
+  technicalIntelligenceMetrics:(p:string)=>request<TechnicalMetricList>(routes.technicalIntelligenceMetrics(p)),
+  technicalIntelligenceValidate:(p:string)=>request<TechnicalIntelligenceValidation>(routes.technicalIntelligenceValidate(p),{method:"POST"}),
+  sectionResearch:(r:string,s:string)=>request<SectionResearchCurrent>(routes.sectionResearch(r,s)),
+  sectionResearchGenerate:(r:string,s:string,b:{force?:boolean;async?:boolean})=>request<SectionResearchGenerateResponse>(routes.sectionResearchGenerate(r,s),{method:"POST",body:JSON.stringify({...b,async:b.async??true})}),
+  sectionResearchRuns:(r:string,s:string)=>request<SectionResearchRunList>(routes.sectionResearchRuns(r,s)),
+  sectionResearchValidate:(r:string,s:string)=>request<SectionResearchValidation>(routes.sectionResearchValidate(r,s),{method:"POST"}),
+  publicationTargets:(activeOnly=true)=>request<PublicationTargetList>(routes.publicationTargets()+"?active_only="+String(activeOnly)),
+  publicationTarget:(id:string)=>request<PublicationTarget>(routes.publicationTarget(id)),
+  publicationSelect:(r:string,b:{target_id:string;selection_note?:string|null})=>request<PublicationTargetSelection>(routes.publicationSelect(r),{method:"POST",body:JSON.stringify(b)}),
+  publicationCurrent:(r:string)=>request<PublicationTargetSelection>(routes.publicationCurrent(r)),
+  publicationComplianceGenerate:(r:string,b:{manuscript_version_id:string;target_id:string;force?:boolean;async?:boolean})=>request<PublicationComplianceResponse>(routes.publicationComplianceGenerate(r),{method:"POST",body:JSON.stringify({...b,async:b.async??true})}),
+  publicationComplianceCurrent:(r:string)=>request<PublicationComplianceCurrent>(routes.publicationComplianceCurrent(r)),
+  publicationComplianceRuns:(r:string)=>request<PublicationComplianceRunList>(routes.publicationComplianceRuns(r)),
+  publicationComplianceFindings:(r:string,b?:{category?:string;severity?:string})=>{
+    const q=new URLSearchParams();
+    if(b?.category)q.set("category",b.category);
+    if(b?.severity)q.set("severity",b.severity);
+    const suffix=q.toString()?"?"+q.toString():"";
+    return request<PublicationComplianceFindingList>(routes.publicationComplianceFindings(r)+suffix);
+  },
+  publicationComplianceChecklist:(r:string)=>request<PublicationChecklist>(routes.publicationComplianceChecklist(r)),
+  publicationComplianceValidate:(r:string)=>request<PublicationComplianceValidation>(routes.publicationComplianceValidate(r),{method:"POST"}),
+  orchestrationRun:(r:string,b:{goal:string;strategy:string;payload?:Record<string,unknown>|null;force?:boolean;async?:boolean})=>request<OrchestrationRunResponse>(routes.orchestrationRun(r),{method:"POST",body:JSON.stringify({...b,async:b.async??true})}),
+  orchestrationCurrent:(r:string)=>request<OrchestrationRunDetail>(routes.orchestrationCurrent(r)),
+  orchestrationStrategies:(r:string)=>request<import("./generated").OrchestrationStrategyListResponse>(routes.orchestrationStrategies(r)),
+  orchestrationRuns:(r:string)=>request<OrchestrationRunList>(routes.orchestrationRuns(r)),
+  orchestrationRunDetail:(r:string,id:string)=>request<OrchestrationRunDetail>(routes.orchestrationRunDetail(r,id)),
+  orchestrationNodes:(r:string,id:string)=>request<OrchestrationNodeList>(routes.orchestrationNodes(r,id)),
+  orchestrationPause:(r:string,id:string)=>request<OrchestrationPauseResponse>(routes.orchestrationPause(r,id),{method:"POST"}),
+  orchestrationCancel:(r:string,id:string)=>request<OrchestrationCancelResponse>(routes.orchestrationCancel(r,id),{method:"POST"}),
+  orchestrationApproveNode:(r:string,runId:string,nodeId:string)=>request<import("./generated").OrchestrationApprovalResponse>(routes.orchestrationApproveNode(r,runId,nodeId),{method:"POST"}),
+  orchestrationResume:(r:string,runId:string)=>request<import("./generated").OrchestrationResumeResponse>(routes.orchestrationResume(r,runId),{method:"POST"}),
+  orchestrationTools:(r:string)=>request<OrchestrationToolList>(routes.orchestrationTools(r)),
+  orchestrationValidate:(r:string,id:string)=>request<OrchestrationValidation>(routes.orchestrationValidate(r,id),{method:"POST"}),
 };

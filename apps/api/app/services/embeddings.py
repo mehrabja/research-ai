@@ -19,6 +19,7 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from functools import partial
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -113,6 +114,16 @@ def build_embedding_batch_idempotency_key(
 ) -> str:
     """Build a deterministic key from report/source/profile and chunk content."""
     identities = sorted(f"{c.id}:{_sha256_hex(c.content)}" for c in batch)
+    """Deterministic key with per-chunk content hash.
+
+    Each member contributes ``chunk_id:content_hash`` so a retry that
+    reuses the same chunk ids with new content produces a different
+    key. Sorting by the identity string gives stable output regardless
+    of batch iteration order.
+    """
+    identities = sorted(
+        f"{c.id}:{_sha256_hex(c.content)}" for c in batch
+    )
     material = "|".join(
         [
             str(report_id),
@@ -126,6 +137,9 @@ def build_embedding_batch_idempotency_key(
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
 
 
+# ---------------------------------------------------------------------------
+# Claiming
+# ---------------------------------------------------------------------------
 def claim_embedding_batch(
     db: Session,
     *,
@@ -177,6 +191,18 @@ def _compute_safe_item_cap(
     provider: EmbeddingProvider, max_items: int
 ) -> int:
     """Return a conservative item cap when token counting is unavailable."""
+# ---------------------------------------------------------------------------
+# Token-aware batching (provider limits authoritative)
+# ---------------------------------------------------------------------------
+def _compute_safe_item_cap(
+    provider: EmbeddingProvider, max_items: int
+) -> int:
+    """Fallback item cap when token counting is not available.
+
+    Uses ``max_input_tokens_per_request`` / ``max_input_tokens_per_item``
+    to guarantee that the worst-case request cannot exceed the
+    provider's request budget, without inventing token counts.
+    """
     if (
         provider.max_input_tokens_per_request is None
         or provider.max_input_tokens_per_item is None
@@ -197,6 +223,15 @@ def _build_batches(
     max_items: int,
 ) -> list[list[Chunk]]:
     """Split into batches respecting provider item and token limits."""
+    """Split into batches respecting provider limits.
+
+    The token-aware path is only used when the provider's limits are
+    declared AND the provider can actually count tokens for this
+    content. A provider that declares limits but returns ``None``
+    from ``estimate_input_tokens`` (e.g. unknown model, tiktoken
+    unavailable) falls back to the item-count path with a
+    conservative ``safe_item_cap``.
+    """
     if not chunks:
         return []
 
@@ -226,12 +261,30 @@ def _build_batches(
     current_tokens = 0
     for chunk in chunks:
         tokens = provider.estimate_input_tokens(chunk.content)
+        batches: list[list[Chunk]] = []
+        current: list[Chunk] = []
+        for c in chunks:
+            if len(current) >= hard_max:
+                batches.append(current)
+                current = []
+            current.append(c)
+        if current:
+            batches.append(current)
+        return batches
+
+    hard_max_items = min(max_items, provider.max_batch_size)
+    batches = []
+    current = []
+    current_tokens = 0
+    for c in chunks:
+        tokens = provider.estimate_input_tokens(c.content)
         if tokens is None:
             if current and len(current) >= hard_max_items:
                 batches.append(current)
                 current = []
                 current_tokens = 0
             current.append(chunk)
+            current.append(c)
             continue
 
         if tokens > (provider.max_input_tokens_per_item or 0):
@@ -249,6 +302,7 @@ def _build_batches(
             current = []
             current_tokens = 0
         current.append(chunk)
+        current.append(c)
         current_tokens += tokens
 
     if current:
@@ -256,6 +310,14 @@ def _build_batches(
     return batches
 
 
+def _embed_documents_for_batch(
+    provider: EmbeddingProvider, batch: Sequence[Chunk]
+) -> EmbeddingBatchResult:
+    return provider.embed_documents([chunk.content for chunk in batch])
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 def embed_source(
     db: Session,
     *,
@@ -290,6 +352,9 @@ def embed_source(
         db.execute(select(Chunk).where(Chunk.source_id == source.id))
         .scalars()
         .all()
+        db.execute(
+            select(Chunk).where(Chunk.source_id == source.id)
+        ).scalars().all()
     )
     total = len(all_chunks)
     if total == 0:
@@ -306,6 +371,7 @@ def embed_source(
 
     already_current = sum(
         1 for chunk in all_chunks if _chunk_current(chunk, profile)
+        1 for c in all_chunks if _chunk_current(c, profile)
     )
     if already_current == total:
         return EmbeddingRunResult(
@@ -345,6 +411,8 @@ def embed_source(
 
         batched_ids = {chunk.id for batch in batches for chunk in batch}
         oversized = [chunk for chunk in claimed if chunk.id not in batched_ids]
+        batched_ids = {c.id for b in batches for c in b}
+        oversized = [c for c in claimed if c.id not in batched_ids]
         if oversized:
             _mark_failed(db, oversized, "input_too_large")
             failed_count += len(oversized)
@@ -356,6 +424,13 @@ def embed_source(
 
                 result = execute_metered_provider_call(
                     _call_embedding_provider,
+                embed_call: Callable[[], EmbeddingBatchResult] = partial(
+                    _embed_documents_for_batch, provider, batch
+                )
+                def input_units(value: EmbeddingBatchResult) -> int:
+                    return value.usage.input_tokens
+                result = execute_metered_provider_call(
+                    embed_call,
                     workspace_id=workspace_id,
                     user_id=user_id,
                     operation="source.embedding.provider_call",
@@ -365,6 +440,7 @@ def embed_source(
                     project_id=report.project_id,
                     report_id=report_id,
                     input_units=_embedding_input_tokens,
+                    input_units=input_units,
                 )
             except EmbeddingInputTooLargeError as exc:
                 _mark_failed(db, batch, "input_too_large")
@@ -432,11 +508,23 @@ def embed_source(
         if status in (None, _STATUS_PENDING, _STATUS_PROCESSING)
     )
     failed_now = sum(1 for status, _ in final_rows if status == _STATUS_FAILED)
+        select(
+            Chunk.embedding_status, Chunk.embedding.is_not(None)
+        ).where(Chunk.source_id == source.id)
+    ).all()
+    pending_now = sum(
+        1 for st, _ in final_rows
+        if st in (None, _STATUS_PENDING, _STATUS_PROCESSING)
+    )
+    failed_now = sum(1 for st, _ in final_rows if st == _STATUS_FAILED)
 
     if aborted_by_provider is not None and embedded_count == 0:
         if isinstance(aborted_by_provider, EmbeddingRateLimitError):
             raise EmbeddingRateLimitAppError() from aborted_by_provider
         raise EmbeddingProviderUnavailableAppError() from aborted_by_provider
+        raise EmbeddingProviderUnavailableAppError() from (
+            aborted_by_provider
+        )
 
     return EmbeddingRunResult(
         source_id=source.id,
@@ -450,6 +538,9 @@ def embed_source(
     )
 
 
+# ---------------------------------------------------------------------------
+# Persistence
+# ---------------------------------------------------------------------------
 def _persist_batch_atomic(
     db: Session,
     *,

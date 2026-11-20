@@ -48,10 +48,10 @@ describe("upload transport",()=>{
       upload={
         loaded:0,
         total:0,
-        addEventListener:(_:string,handler:()=>void)=>{this.progressHandler=handler;},
-        removeEventListener:(_:string,_handler:()=>void)=>{},
+        addEventListener:(_:string,handler:(event:ProgressEvent<XMLHttpRequestEventTarget>)=>void)=>{this.progressHandler=handler;},
+        removeEventListener:(_:string,_handler:(event:ProgressEvent<XMLHttpRequestEventTarget>)=>void)=>{},
       };
-      progressHandler=()=>{};
+      progressHandler=(_event:ProgressEvent<XMLHttpRequestEventTarget>)=>{};
       status=201;
       responseText=JSON.stringify({
         id:"f1",
@@ -95,7 +95,7 @@ describe("upload transport",()=>{
         expect(body.get("file")).toBeInstanceOf(File);
         this.upload.total=7;
         this.upload.loaded=7;
-        this.progressHandler();
+        this.progressHandler({total:7,loaded:7} as ProgressEvent<XMLHttpRequestEventTarget>);
         this.listeners.get("load")?.();
       }
       abort(){this.listeners.get("abort")?.();}
@@ -189,6 +189,96 @@ describe("rag and collaboration transport",()=>{
     const init=spy.mock.calls[0]?.[1] as RequestInit;
     expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/invitations/invite-token/accept");
     expect(init.method).toBe("POST");
+    spy.mockRestore();
+  });
+});
+
+describe("AI Studio generation transport",()=>{
+  it("reads the persisted generation result and provenance",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({report_id:"r1",run_id:"g1",status:"success",prompt_version:"m12.1",provider:"openrouter",model:"openai/gpt-4o-mini",input_tokens:12,output_tokens:8,language:"en",text:"Grounded result [E1].",context_hash:"a".repeat(64),evidence:[{marker:"[E1]",evidence_id:"e1"}],cited_markers:["[E1]"],created_at:"2026-10-08T00:00:00Z",completed_at:"2026-10-08T00:00:02Z"}),{status:200})
+    );
+    const current=await api.generationCurrent("r1");
+    expect(current.status).toBe("success");
+    expect(current.provider).toBe("openrouter");
+    expect(current.cited_markers).toEqual(["[E1]"]);
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/reports/r1/generation/current");
+    spy.mockRestore();
+  });
+});
+
+describe("phase 2B quality transport",()=>{
+  it("generates and reads persisted citations",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({status:"queued",job_id:"job1",run_id:null,context_hash:null,claim_count:null,citation_count:null,unsupported_count:null,coverage_score:null}),{status:202}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({run:{id:"run1",report_id:"r1",manuscript_id:null,manuscript_version_id:"v1",context_hash:"ch",m30_version:"m30",citation_style:"author_year",status:"completed",claim_count:2,citation_count:2,unsupported_count:0,mixed_support_count:0,duplicate_reference_count:0,coverage_score:1,warnings:null,error_message:null,duration_ms:10,created_at:"2026-10-08T00:00:00Z",completed_at:"2026-10-08T00:00:01Z"},claims:[]}),{status:200}));
+    const queued=await api.citationsGenerate("r1",{manuscript_version_id:"v1",citation_style:"author_year",force:true,async:true});
+    expect(queued.job_id).toBe("job1");
+    const current=await api.citations("r1");
+    expect(current.run.coverage_score).toBe(1);
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/reports/r1/citations/generate");
+    spy.mockRestore();
+  });
+
+  it("runs academic QA and classification through persisted contracts",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({status:"completed",job_id:null,run_id:"qa1",context_hash:"ch",gate:"pass",finding_count:1,blocking_count:0}),{status:200}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({id:"p1",project_id:"p1",domain:{code:"cs",name:"Computer Science",confidence:0.9,source:"inferred",method:"heuristic",reason:"signals",alternatives:[]},paper_type:{code:"empirical",name:"Empirical",confidence:0.8,source:"inferred",method:"heuristic",reason:"signals",alternatives:[],secondary:[]},research_design:{code:"experimental",name:"Experimental",confidence:0.7,source:"inferred",method:"heuristic",reason:"signals",alternatives:[]},status:"completed",needs_review:false,error_message:null,classifier_version:"m1",taxonomy_version:"t1",context_meta:null,created_at:"2026-10-08T00:00:00Z",updated_at:"2026-10-08T00:00:00Z"}),{status:200}));
+    const qa=await api.qaGenerate("r1",{manuscript_version_id:"v1",async:false,force:true});
+    expect(qa.run_id).toBe("qa1");
+    const cls=await api.classification("p1");
+    expect(cls.domain.code).toBe("cs");
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/reports/r1/academic-qa/generate");
+    expect(spy.mock.calls[1]?.[0]).toBe("/api/backend/projects/p1/classification");
+    spy.mockRestore();
+  });
+});
+
+describe("phase 2C intelligence transport",()=>{
+  it("generates and reads technical intelligence",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({status:"queued",job_id:"job-ti",run_id:null,context_hash:null,fact_count:null,result_count:null,metric_count:null}),{status:202}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({run:{id:"run-ti",project_id:"p1",report_id:null,context_hash:"ch",m29_version:"m29",status:"completed",fact_count:2,result_count:1,metric_count:1,warnings:null,error_message:null,duration_ms:12,created_at:"2026-10-08T00:00:00Z",completed_at:"2026-10-08T00:00:01Z"},fact_count:2,result_count:1,metric_count:1}),{status:200}));
+    expect((await api.technicalIntelligenceGenerate("p1",{force:true,async:true})).job_id).toBe("job-ti");
+    expect((await api.technicalIntelligence("p1")).fact_count).toBe(2);
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/projects/p1/technical-intelligence/generate");
+    expect(spy.mock.calls[1]?.[0]).toBe("/api/backend/projects/p1/technical-intelligence");
+    spy.mockRestore();
+  });
+  it("generates and reads section research",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({status:"completed",job_id:null,run_id:"sr1",context_hash:"ch",contract_hash:"ct",evidence_count:1,coverage_score:0.8,coverage_state:"partial"}),{status:200}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({run:{id:"sr1",project_id:"p1",report_id:"r1",manuscript_id:"m1",manuscript_version_id:"v1",manuscript_section_id:"s1",context_hash:"ch",contract_hash:"ct",m28_version:"m28",status:"completed",primary_query:"query",query_plan:{},retrieval_config:{},retrieval_run_id:null,candidate_count:2,selected_evidence_count:1,coverage_score:0.8,coverage_state:"partial",coverage_summary:null,warnings:null,error_message:null,duration_ms:8,created_at:"2026-10-08T00:00:00Z",completed_at:"2026-10-08T00:00:01Z"},evidence:[],coverage:null}),{status:200}));
+    expect((await api.sectionResearchGenerate("r1","s1",{force:true,async:false})).run_id).toBe("sr1");
+    expect((await api.sectionResearch("r1","s1")).run.id).toBe("sr1");
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/reports/r1/manuscript/sections/s1/research");
+    expect(spy.mock.calls[1]?.[0]).toBe("/api/backend/reports/r1/manuscript/sections/s1/research");
+    spy.mockRestore();
+  });
+});
+
+describe("phase 2D publication and orchestration transport",()=>{
+  it("selects a publication target and reads compliance",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({id:"sel1",report_id:"r1",target_id:"t1",selected_by:"u1",selection_note:null,created_at:"2026-10-08T00:00:00Z"}),{status:200}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({run:{id:"pc1",project_id:"p1",report_id:"r1",manuscript_id:null,manuscript_version_id:"v1",target_id:"t1",context_hash:"ch",m33_version:"m33",rules_version:"r1",target_profile_version:"v1",status:"completed",finding_count:1,blocking_count:0,error_count:0,warning_count:1,info_count:0,gate:"pass",checklist_state:{passed:3},formatting_summary:null,warnings:null,error_message:null,duration_ms:4,created_at:"2026-10-08T00:00:00Z",completed_at:"2026-10-08T00:00:01Z"} }),{status:200}));
+    const selection=await api.publicationSelect("r1",{target_id:"t1"});
+    expect(selection.target_id).toBe("t1");
+    const current=await api.publicationComplianceCurrent("r1");
+    expect(current.run.gate).toBe("pass");
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/reports/r1/publication-target/select");
+    expect(spy.mock.calls[1]?.[0]).toBe("/api/backend/reports/r1/publication-compliance/current");
+    spy.mockRestore();
+  });
+
+  it("starts orchestration and reads the current node graph",async()=>{
+    const spy=vi.spyOn(globalThis,"fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({status:"queued",job_id:"job-o",run_id:null,context_hash:null,node_count:null,completed_node_count:null,failed_node_count:null}),{status:202}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({run:{id:"or1",project_id:"p1",report_id:"r1",user_id:"u1",goal:"Build evidence",context_hash:"ch",orchestration_version:"m35",planner_version:"p1",tool_registry_version:"t1",strategy:"research_pipeline",status:"running",current_node_key:"research",budget:{},budget_used:null,approvals_required:null,approvals_received:null,summary:null,errors:null,checkpoint_state:null,last_checkpoint_at:null,node_count:2,completed_node_count:1,failed_node_count:0,error_message:null,duration_ms:null,started_at:"2026-10-08T00:00:00Z",completed_at:null,failed_at:null,cancelled_at:null,created_at:"2026-10-08T00:00:00Z"},nodes:[]}),{status:200}));
+    expect((await api.orchestrationRun("r1",{goal:"Build evidence",strategy:"research_pipeline",async:true})).job_id).toBe("job-o");
+    expect((await api.orchestrationCurrent("r1")).run.current_node_key).toBe("research");
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/backend/reports/r1/orchestration/run");
+    expect(spy.mock.calls[1]?.[0]).toBe("/api/backend/reports/r1/orchestration/current");
     spy.mockRestore();
   });
 });

@@ -1,4 +1,5 @@
 """Executable worker entry point."""
+from app.workers.runner import main
 
 from app.workers.runner import main
 

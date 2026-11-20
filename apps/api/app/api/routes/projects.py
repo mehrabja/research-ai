@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -37,10 +37,20 @@ def create_project(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ProjectRead:
+    if (
+        workspace_id is not None
+        and body.workspace_id is not None
+        and workspace_id != body.workspace_id
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="workspace_id query parameter conflicts with request body",
+        )
+    effective_workspace_id = workspace_id or body.workspace_id
     project = projects_service.create_project(
         db,
         user_id=current_user.id,
-        workspace_id=workspace_id,
+        workspace_id=effective_workspace_id,
         name=body.name,
         description=body.description,
         domain=body.domain,

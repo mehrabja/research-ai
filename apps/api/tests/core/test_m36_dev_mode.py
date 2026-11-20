@@ -65,3 +65,14 @@ def test_dev_no_paid_api_required() -> None:
 def test_dev_file_storage_local() -> None:
     s = _dev()
     assert s.file_storage_backend == "local"
+
+
+def test_provider_defaults_use_openrouter() -> None:
+    s = _dev()
+    assert s.provider_generation_chain == "openrouter"
+    assert s.provider_embedding_chain == "openrouter"
+    assert s.provider_translation_chain == "openrouter"
+    assert s.generation_provider == "openrouter"
+    assert s.embedding_provider == "openrouter"
+    assert s.translation_provider == "openrouter"
+    assert s.openrouter_base_url == "https://openrouter.ai/api/v1"
