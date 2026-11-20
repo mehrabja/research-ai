@@ -27,6 +27,11 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
     with SessionLocal() as db:
         pids = select(Project.id).where(Project.user_id.in_(uids))
         db.execute(delete(ProjectEvent).where(ProjectEvent.project_id.in_(pids)))
+        file_ids = select(ProjectFile.id).where(ProjectFile.project_id.in_(pids))
+        db.execute(
+            delete(ProjectFileEvent).where(
+                ProjectFileEvent.project_file_id.in_(file_ids)
+            )
         pfids = select(ProjectFile.id).where(ProjectFile.project_id.in_(pids))
         db.execute(
             delete(ProjectFileEvent).where(ProjectFileEvent.project_file_id.in_(pfids))
@@ -145,7 +150,8 @@ def test_usage_includes_active_file_storage(cleanup_users):
     project = client.post(
         "/api/v1/projects",
         headers=_auth(token),
-        json={"workspace_id": wid, "name": "P"},
+        params={"workspace_id": wid},
+        json={"name": "P"},
     )
     assert project.status_code == 201, project.text
     pid = project.json()["id"]

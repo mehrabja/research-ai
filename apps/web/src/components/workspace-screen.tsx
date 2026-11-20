@@ -32,6 +32,7 @@ const META:Record<string,{eyebrow:string;title:string;description:string}>={
 function row(v:unknown):Obj{ return v&&typeof v==="object"&&!Array.isArray(v)?v as Obj:{}; }
 function rows(v:unknown):Obj[]{ return Array.isArray(v)?v.filter(x=>x&&typeof x==="object") as Obj[]:[]; }
 function value(v:unknown,fallback="—"):string{ if(typeof v==="string"&&v.trim())return v; if(typeof v==="number"||typeof v==="boolean")return String(v); return fallback; }
+function errorMessage(v:unknown,fallback:string):string{ return v instanceof Error?v.message:fallback; }
 function Head({route,actions}:{route:string;actions?:React.ReactNode}){const m=META[route]??{eyebrow:"Research AI",title:"Page",description:""};return <div className="page-head"><div><div className="eyebrow">{m.eyebrow}</div><h1>{m.title}</h1><p>{m.description}</p></div>{actions&&<div className="actions">{actions}</div>}</div>}
 function Card({children,style,id}:{children:React.ReactNode;style?:React.CSSProperties;id?:string}){return <section className="card pad" style={style} id={id}>{children}</section>}
 function State({title,description,error=false,children}:{title:string;description:string;error?:boolean;children?:React.ReactNode}){return <div className={"state"+(error?" error":"")}><h3>{title}</h3><p>{description}</p>{children&&<div className="actions" style={{justifyContent:"center",marginTop:14}}>{children}</div>}</div>}
@@ -215,6 +216,7 @@ function Jobs(){
         const retrying=retry.isPending&&retry.variables===job.id;const cancelling=cancel.isPending&&cancel.variables===job.id;
         return <tr key={job.id}><td><div className="strong">{job.job_type}</div><div className="meta">{job.report_id?"Report "+job.report_id:"Project/workspace job"}</div></td><td>{job.status}</td><td>{job.attempt_count}/{job.max_attempts}</td><td><div>{job.created_at?new Date(job.created_at).toLocaleString():"—"}</div><div className="meta">{job.completed_at?new Date(job.completed_at).toLocaleString():job.started_at?"Started "+new Date(job.started_at).toLocaleString():"Queued"}</div></td><td style={{overflowWrap:"anywhere"}}>{job.last_error_message??job.last_error_code??"—"}</td><td>{job.status==="failed"?<button className="btn" disabled={retry.isPending} onClick={()=>retry.mutate(job.id)}>{retrying?"Retrying…":"Retry"}</button>:["queued","processing","retrying"].includes(job.status)?<button className="btn" disabled={cancel.isPending} onClick={()=>cancel.mutate(job.id)}>{cancelling?"Cancelling…":"Cancel"}</button>:<span className="tag">Done</span>}</td></tr>;
       })}</tbody></table></div>}
+      {(retry.isError||cancel.isError)&&<div className="notice error" style={{marginTop:12}}>{errorMessage(retry.error??cancel.error,"Job operation failed. Retry the action.")}</div>}
       {operationError&&<div className="notice error" style={{marginTop:12}}>{operationError instanceof Error?operationError.message:"Job operation failed. Retry the action."}</div>}
     </Card>
   </>;
@@ -344,6 +346,7 @@ function Billing(){
           {s.data?.cancel_at_period_end?<button className="btn" onClick={()=>resume.mutate()} disabled={resume.isPending}>{resume.isPending?"Resuming…":"Resume subscription"}</button>:<button className="btn" onClick={()=>cancel.mutate()} disabled={cancel.isPending}>{cancel.isPending?"Cancelling…":"Cancel at period end"}</button>}
         </div>
         {checkout.isError&&<div className="notice error" style={{marginTop:10}}>{checkout.error instanceof Error?checkout.error.message:"Checkout failed."}</div>}
+        {(changePlan.isError||cancel.isError||resume.isError)&&<div className="notice error" style={{marginTop:10}}>{errorMessage(changePlan.error??cancel.error??resume.error,"Subscription update failed. Retry the action.")}</div>}
         {subscriptionError&&<div className="notice error" style={{marginTop:10}}>{subscriptionError instanceof Error?subscriptionError.message:"Subscription update failed. Retry the action."}</div>}
         {checkout.data&&<div className="notice success" style={{marginTop:10}}>Checkout session created. <a href={checkout.data.checkout_url} target="_blank" rel="noreferrer">Continue to payment ↗</a></div>}
       </Card>
@@ -358,6 +361,7 @@ function Settings(){
   const sessions=useQuery({queryKey:["sessions"],queryFn:api.sessions});
   const tokens=useQuery({queryKey:["tokens"],queryFn:api.apiTokens});
   const tf=useQuery({queryKey:["2fa"],queryFn:api.twoFactor});
+  const preferences=useQuery({queryKey:["notification-preferences",ws.workspaceId],queryFn:()=>api.notificationPreferences(ws.workspaceId??undefined),enabled:Boolean(ws.workspaceId)});
   const preferences=useQuery({queryKey:["notification-preferences",ws.workspaceId],queryFn:()=>api.notificationPreferences(workspaceId),enabled:Boolean(workspaceId)});
   const [tokenName,setTokenName]=useState("");
   const [tokenScopes,setTokenScopes]=useState("read");
@@ -380,6 +384,7 @@ function Settings(){
   const disable2fa=useMutation({mutationFn:()=>api.disableTwoFactor(twoFaCode),onSuccess:()=>{setTwoFaCode("");void qc.invalidateQueries({queryKey:["2fa"]});}});
   const twoFaError=begin2fa.error??confirm2fa.error??disable2fa.error;
   const savePreferences=useMutation({
+    mutationFn:()=>api.updateNotificationPreferences({channel:preferences.data?.channel??"in_app",preferences:prefValues},ws.workspaceId??undefined),
     mutationFn:()=>api.updateNotificationPreferences({channel:preferences.data?.channel??"in_app",preferences:prefValues},workspaceId),
     onSuccess:r=>{setPrefValues(r.preferences);setPrefError("");void qc.invalidateQueries({queryKey:["notification-preferences",ws.workspaceId]});},
     onError:e=>setPrefError(e instanceof Error?e.message:"Notification preferences could not be saved."),
@@ -392,6 +397,7 @@ function Settings(){
         {!tf.data?.enabled&&!twoFaSetup&&<button className="btn primary" style={{marginTop:12}} disabled={begin2fa.isPending} onClick={()=>begin2fa.mutate()}>{begin2fa.isPending?"Preparing…":"Set up 2FA"}</button>}
         {twoFaSetup&&<div className="notice" style={{marginTop:12}}><div><b>Authenticator setup</b></div><div className="tiny" style={{marginTop:6}}>Secret: <span className="mono" style={{overflowWrap:"anywhere"}}>{twoFaSetup.secret}</span></div><div className="tiny" style={{marginTop:4}}>Provisioning URI: <span className="mono" style={{overflowWrap:"anywhere"}}>{twoFaSetup.provisioning_uri}</span></div><div className="tiny" style={{marginTop:4}}>Recovery codes: {twoFaSetup.recovery_codes.join(", ")}</div><div className="row" style={{marginTop:10}}><input className="input" aria-label="2FA confirmation code" inputMode="numeric" maxLength={6} value={twoFaCode} onChange={e=>setTwoFaCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code"/><button className="btn" disabled={twoFaCode.length!==6||confirm2fa.isPending} onClick={()=>confirm2fa.mutate()}>{confirm2fa.isPending?"Confirming…":"Confirm"}</button></div></div>}
         {tf.data?.enabled&&<div className="row" style={{marginTop:12}}><input className="input" aria-label="2FA disable code" inputMode="numeric" maxLength={6} value={twoFaCode} onChange={e=>setTwoFaCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code"/><button className="btn" disabled={twoFaCode.length!==6||disable2fa.isPending} onClick={()=>disable2fa.mutate()}>{disable2fa.isPending?"Disabling…":"Disable 2FA"}</button></div>}
+        {(begin2fa.isError||confirm2fa.isError||disable2fa.isError)&&<div className="notice error" style={{marginTop:10}}>{errorMessage(begin2fa.error??confirm2fa.error??disable2fa.error,"2FA operation failed.")}</div>}
         {twoFaError&&<div className="notice error" style={{marginTop:10}}>{twoFaError instanceof Error?twoFaError.message:"2FA operation failed."}</div>}
       </Card>
       <Card><div className="row"><div><h3>Sessions</h3><div className="muted small">Revoke access from individual sessions or all other sessions.</div></div><button className="btn" disabled={revokeOthers.isPending} onClick={()=>revokeOthers.mutate()}>{revokeOthers.isPending?"Revoking…":"Revoke others"}</button></div>
@@ -756,8 +762,25 @@ function Knowledge(){
   const [nodeCap,setNodeCap]=useState(100);
   const [exportError,setExportError]=useState("");
   const ex=useMutation({mutationFn:(f:"json"|"csv")=>api.knowledgeGraphExport(projectId!,f),onError:e=>setExportError(e instanceof Error?e.message:"Knowledge graph export failed. Retry.")});
-  async function exportGraph(format:"json"|"csv"){try{const blob=await ex.mutateAsync(format);const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download="knowledge-graph-"+projectId+"."+format;document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){setExportError(e instanceof Error?e.message:"Knowledge graph export failed. Retry.");}}
+  async function exportGraph(format:"json"|"csv"){
+    try{
+      const blob=await ex.mutateAsync(format);
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement("a");
+      link.href=url;
+      link.download="knowledge-graph-"+projectId+"."+format;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }catch(e){setExportError(e instanceof Error?e.message:"Knowledge graph export failed. Retry.");}
+  }
   const nodeTypes=Object.keys(summary.data?.node_type_counts??{});
+  return <>
+    <Head route="knowledge" actions={<>
+      <button className="btn" disabled={!projectId||ex.isPending} onClick={()=>void exportGraph("json")}>{ex.isPending?"Exporting…":"Export JSON"}</button>
+      <button className="btn" disabled={!projectId||ex.isPending} onClick={()=>void exportGraph("csv")}>Export CSV</button>
+    </>}/>
   useEffect(()=>{
     const status=job.data?.status;
     if(status==="completed"||status==="failed"||status==="cancelled"){
@@ -774,44 +797,37 @@ function Knowledge(){
     {!projectId&&<Card><State title="No active project" description="Create a project before inspecting the knowledge graph."/></Card>}
     {exportError&&<div className="notice error" style={{marginTop:12}}>{exportError}</div>}
     {projectId&&summary.isError&&<Card><State title="Knowledge graph unavailable" description={summary.error instanceof Error?summary.error.message:"No ready knowledge graph is available. Generate the graph after literature and planning inputs are ready."} error/></Card>}
-    {projectId&&summary.data&&<><div className="grid grid-4"><Metric label="Nodes" value={summary.data.node_count}/><Metric label="Edges" value={summary.data.edge_count}/><Metric label="Node types" value={nodeTypes.length}/><Metric label="Version" value={summary.data.version}/></div>
-      <Card style={{marginTop:16}}><div className="grid grid-2"><div className="field"><label>Search nodes</label><input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="label or node key"/></div><div className="field"><label>Node type</label><select className="input" value={nodeType} onChange={e=>setNodeType(e.target.value)}><option value="">All types</option>{nodeTypes.map(t=><option key={t} value={t}>{t} ({summary.data.node_type_counts[t]})</option>)}</select></div></div>
-        {nodes.isPending?<State title="Loading nodes" description="Reading the active graph version."/>:nodes.isError?<State title="Nodes unavailable" description={nodes.error instanceof Error?nodes.error.message:"The node list could not be loaded."} error/>:nodes.data?.items.length===0?<State title="No nodes match" description="Try a broader search or another node type."/>:<div className="table-wrap" style={{marginTop:12}}><table className="table"><thead><tr><th>Type</th><th>Label</th><th>Entity</th></tr></thead><tbody>{nodes.data?.items.map(node=><tr key={node.id} onClick={()=>setSelectedId(node.id)} style={{cursor:"pointer"}}><td>{node.node_type}</td><td style={{overflowWrap:"anywhere"}}>{node.label||node.node_key}</td><td className="mono">{node.entity_id}</td></tr>)}</tbody></table></div>}
-      </Card>
-      <Card style={{marginTop:16}}>{!selectedId?<State title="Select a node" description="Choose a row above to inspect connected relationships and bounded traversal."/>:neighbors.isPending?<State title="Loading neighbors" description="Reading graph relationships."/>:neighbors.isError?<State title="Neighbor lookup failed" description={neighbors.error instanceof Error?neighbors.error.message:"The selected node relationships could not be loaded."} error/>:neighbors.data?.length===0?<State title="No neighbors" description="This node has no connected relationships."/>:<div><h3>Neighbors</h3><div className="list" style={{marginTop:10}}>{neighbors.data.map(n=><div className="list-item" key={n.edge_id}><div className="row"><div><div className="title">{n.neighbor.label||n.neighbor.node_key}</div><div className="meta">{n.direction} · {n.relation_type} · {n.provenance_type}</div></div><span className="tag">{n.confidence===null?"Confidence unavailable":Math.round(n.confidence*100)+"%"}</span></div></div>)}</div></div>}</Card>
-      {selectedId&&neighbors.data&&neighbors.data.length>0&&<><Card style={{marginTop:16}}><div className="row"><div><h3>Graph view</h3><div className="muted small">Interactive local neighborhood for the selected node. Click a node to inspect its neighbors.</div></div><span className="tag">{Math.min(neighbors.data.length,12)} neighbors</span></div>
-        <div style={{overflowX:"auto",marginTop:12}}>
-          <svg role="img" aria-label="Knowledge graph local neighborhood" viewBox="0 0 720 360" width="100%" height="360" style={{minWidth:560,border:"1px solid var(--border)",borderRadius:12,background:"var(--surface)"}}>
-            {neighbors.data.slice(0,12).map((edge,index)=>{
-              const angle=(Math.PI*2*index)/Math.max(1,Math.min(12,neighbors.data.length));
-              const cx=360+Math.cos(angle)*230;
-              const cy=180+Math.sin(angle)*120;
-              return <line key={"edge-"+edge.edge_id} x1="360" y1="180" x2={cx} y2={cy} stroke="currentColor" strokeOpacity="0.25"/>;
-            })}
-            <g>
-              <circle cx="360" cy="180" r="42" fill="var(--primary)" opacity="0.14" stroke="var(--primary)"/>
-              <text x="360" y="176" textAnchor="middle" fontSize="11" fontWeight="700">Selected</text>
-              <text x="360" y="193" textAnchor="middle" fontSize="8">{selectedId.slice(0,8)}…</text>
-            </g>
-            {neighbors.data.slice(0,12).map((edge,index)=>{
-              const angle=(Math.PI*2*index)/Math.max(1,Math.min(12,neighbors.data.length));
-              const cx=360+Math.cos(angle)*230;
-              const cy=180+Math.sin(angle)*120;
-              const label=(edge.neighbor.label||edge.neighbor.node_key||"Node").slice(0,28);
-              return <g key={edge.edge_id} role="button" tabIndex={0} onClick={()=>setSelectedId(edge.neighbor.id)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" ")setSelectedId(edge.neighbor.id);}} style={{cursor:"pointer"}}>
-                <circle cx={cx} cy={cy} r="30" fill="var(--surface)" stroke="var(--border)"/>
-                <text x={cx} y={cy-2} textAnchor="middle" fontSize="8" fontWeight="600">{label}</text>
-                <text x={cx} y={cy+11} textAnchor="middle" fontSize="7" opacity="0.65">{edge.relation_type.slice(0,20)}</text>
-              </g>;
-            })}
-          </svg>
+    {projectId&&summary.data&&<>
+      <div className="grid grid-4">
+        <Metric label="Nodes" value={summary.data.node_count}/><Metric label="Edges" value={summary.data.edge_count}/><Metric label="Node types" value={nodeTypes.length}/><Metric label="Version" value={summary.data.version}/>
+      </div>
+      <Card style={{marginTop:16}}>
+        <div className="grid grid-2">
+          <div className="field"><label>Search nodes</label><input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="label or node key"/></div>
+          <div className="field"><label>Node type</label><select className="input" value={nodeType} onChange={e=>setNodeType(e.target.value)}><option value="">All types</option>{nodeTypes.map(t=><option key={t} value={t}>{t} ({summary.data.node_type_counts[t]})</option>)}</select></div>
         </div>
-      </Card> 
-      <Card style={{marginTop:16}}><div className="row"><div><h3>Bounded query</h3><div className="muted small">Traverse from the selected node without exceeding the configured depth/node limits.</div></div>{query.data&&<span className="tag">{query.data.nodes.length} nodes · {query.data.edges.length} edges</span>}</div>
-        {!selectedId?<State title="Select a start node" description="Select a node above, then run a bounded graph query."/>:<div className="row" style={{marginTop:12}}><div className="field"><label>Max depth</label><input className="input" type="number" min={1} max={10} value={depth} onChange={e=>setDepth(Math.max(1,Math.min(10,Number(e.target.value)||1)))}/></div><div className="field"><label>Max nodes</label><input className="input" type="number" min={1} max={10000} value={nodeCap} onChange={e=>setNodeCap(Math.max(1,Math.min(10000,Number(e.target.value)||1)))}/></div><button className="btn primary" style={{marginTop:24}} disabled={query.isPending} onClick={()=>query.mutate({start_node_id:selectedId,max_depth:depth,max_nodes:nodeCap})}>{query.isPending?"Querying…":"Run query"}</button></div>}
-        {query.isError&&<div className="notice error" style={{marginTop:12}}>{query.error instanceof Error?query.error.message:"Graph query failed. Retry the traversal."}</div>}
-        {query.data&&<div className="table-wrap" style={{marginTop:12}}><table className="table"><thead><tr><th>Node</th><th>Type</th><th>Depth</th></tr></thead><tbody>{query.data.nodes.slice(0,100).map((node,index)=><tr key={String(node.id??index)}><td style={{overflowWrap:"anywhere"}}>{value(node.label??node.node_key??node.id,"Node")}</td><td>{value(node.node_type)}</td><td>{value(node.depth)}</td></tr>)}</tbody></table></div>}
+        {nodes.isPending?<State title="Loading nodes" description="Reading the active graph version."/>:nodes.isError?<State title="Nodes unavailable" description={nodes.error instanceof Error?nodes.error.message:"The node list could not be loaded."} error/>:nodes.data?.items.length===0?<State title="No nodes match" description="Try a broader search or another node type."/>:<div className="table-wrap" style={{marginTop:12}}><table className="table"><thead><tr><th>Type</th><th>Label</th><th>Entity</th></tr></thead><tbody>{nodes.data.items.map(node=><tr key={node.id} onClick={()=>setSelectedId(node.id)} style={{cursor:"pointer"}}><td>{node.node_type}</td><td style={{overflowWrap:"anywhere"}}>{node.label||node.node_key}</td><td className="mono">{node.entity_id}</td></tr>)}</tbody></table></div>}
       </Card>
+      <Card style={{marginTop:16}}>
+        {!selectedId?<State title="Select a node" description="Choose a row above to inspect connected relationships and bounded traversal."/>:neighbors.isPending?<State title="Loading neighbors" description="Reading graph relationships."/>:neighbors.isError?<State title="Neighbor lookup failed" description={neighbors.error instanceof Error?neighbors.error.message:"The selected node relationships could not be loaded."} error/>:neighbors.data?.length===0?<State title="No neighbors" description="This node has no connected relationships."/>:<div><h3>Neighbors</h3><div className="list" style={{marginTop:10}}>{neighbors.data.map(n=><div className="list-item" key={n.edge_id}><div className="row"><div><div className="title">{n.neighbor.label||n.neighbor.node_key}</div><div className="meta">{n.direction} · {n.relation_type} · {n.provenance_type}</div></div><span className="tag">{n.confidence===null?"Confidence unavailable":Math.round(n.confidence*100)+"%"}</span></div></div>)}</div></div>}
+      </Card>
+      {selectedId&&neighbors.data&&neighbors.data.length>0&&<>
+        <Card style={{marginTop:16}}><div className="row"><div><h3>Graph view</h3><div className="muted small">Interactive local neighborhood for the selected node. Click a node to inspect its neighbors.</div></div><span className="tag">{Math.min(neighbors.data.length,12)} neighbors</span></div>
+          <div style={{overflowX:"auto",marginTop:12}}><svg role="img" aria-label="Knowledge graph local neighborhood" viewBox="0 0 720 360" width="100%" height="360" style={{minWidth:560,border:"1px solid var(--border)",borderRadius:12,background:"var(--surface)"}}>
+            {neighbors.data.slice(0,12).map((edge,index)=>{const angle=(Math.PI*2*index)/Math.max(1,Math.min(12,neighbors.data.length));const cx=360+Math.cos(angle)*230;const cy=180+Math.sin(angle)*120;return <line key={"edge-"+edge.edge_id} x1="360" y1="180" x2={cx} y2={cy} stroke="currentColor" strokeOpacity="0.25"/>;})}
+            <g><circle cx="360" cy="180" r="42" fill="var(--primary)" opacity="0.14" stroke="var(--primary)"/><text x="360" y="176" textAnchor="middle" fontSize="11" fontWeight="700">Selected</text><text x="360" y="193" textAnchor="middle" fontSize="8">{selectedId.slice(0,8)}…</text></g>
+            {neighbors.data.slice(0,12).map((edge,index)=>{const angle=(Math.PI*2*index)/Math.max(1,Math.min(12,neighbors.data.length));const cx=360+Math.cos(angle)*230;const cy=180+Math.sin(angle)*120;const label=(edge.neighbor.label||edge.neighbor.node_key||"Node").slice(0,28);return <g key={edge.edge_id} role="button" tabIndex={0} onClick={()=>setSelectedId(edge.neighbor.id)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" ")setSelectedId(edge.neighbor.id);}} style={{cursor:"pointer"}}><circle cx={cx} cy={cy} r="30" fill="var(--surface)" stroke="var(--border)"/><text x={cx} y={cy-2} textAnchor="middle" fontSize="8" fontWeight="600">{label}</text><text x={cx} y={cy+11} textAnchor="middle" fontSize="7" opacity="0.65">{edge.relation_type.slice(0,20)}</text></g>;})}
+          </svg></div>
+        </Card>
+        <Card style={{marginTop:16}}><div className="row"><div><h3>Bounded query</h3><div className="muted small">Traverse from the selected node without exceeding the configured depth/node limits.</div></div>{query.data&&<span className="tag">{query.data.nodes.length} nodes · {query.data.edges.length} edges</span>}</div>
+          <div className="row" style={{marginTop:12}}><div className="field"><label>Max depth</label><input className="input" type="number" min={1} max={10} value={depth} onChange={e=>setDepth(Math.max(1,Math.min(10,Number(e.target.value)||1)))}/></div><div className="field"><label>Max nodes</label><input className="input" type="number" min={1} max={10000} value={nodeCap} onChange={e=>setNodeCap(Math.max(1,Math.min(10000,Number(e.target.value)||1)))}/></div><button className="btn primary" style={{marginTop:24}} disabled={query.isPending} onClick={()=>query.mutate({start_node_id:selectedId,max_depth:depth,max_nodes:nodeCap})}>{query.isPending?"Querying…":"Run query"}</button></div>
+          {query.isError&&<div className="notice error" style={{marginTop:12}}>{query.error instanceof Error?query.error.message:"Graph query failed. Retry the traversal."}</div>}
+          {query.data&&<div className="table-wrap" style={{marginTop:12}}><table className="table"><thead><tr><th>Node</th><th>Type</th><th>Depth</th></tr></thead><tbody>{query.data.nodes.slice(0,100).map((node,index)=><tr key={String(node.id??index)}><td style={{overflowWrap:"anywhere"}}>{value(node.label??node.node_key??node.id,"Node")}</td><td>{value(node.node_type)}</td><td>{value(node.depth)}</td></tr>)}</tbody></table></div>}
+        </Card>
+      </>}
+    </>}
+  </>;
+}
     </>}
   </>}
   </>;
@@ -1016,7 +1032,7 @@ function Files(){
                 <td><div>{value(f.status)}</div><div className="meta">{value(f.extraction_status)}</div></td>
                 <td>{typeof f.size_bytes==="number"?bytes(f.size_bytes):"—"}</td>
                 <td><div className="actions">
-                  <select className="input" aria-label={"Move "+name} value={f.folder_id??""} disabled={busy} onChange={async e=>{try{setBusyId(id);await api.updateFile(id,{folder_id:e.target.value||null});await qc.invalidateQueries({queryKey:["files",projectId]});}catch(err){setError(err instanceof Error?err.message:"File move failed.");}finally{setBusyId("");}}}><option value="">Root</option>{(folders.data??[]).map(folder=><option key={folder.id} value={folder.id}>{folder.name}</option>)}</select>
+                  <select className="input" aria-label={"Move "+name} value={String(f.folder_id??"")} disabled={busy} onChange={async e=>{try{setBusyId(id);await api.updateFile(id,{folder_id:e.target.value||null});await qc.invalidateQueries({queryKey:["files",projectId]});}catch(err){setError(err instanceof Error?err.message:"File move failed.");}finally{setBusyId("");}}}><option value="">Root</option>{(folders.data??[]).map(folder=><option key={folder.id} value={folder.id}>{folder.name}</option>)}</select>
                   <button className="btn" disabled={busy} onClick={()=>void openFile(id)}>{busy?"Working…":"Open"}</button>
                   <button className="btn" disabled={busy} onClick={()=>void download(id,name)}>Download</button>
                   <button className="btn" disabled={busy} onClick={()=>void remove(id)}>Delete</button>
@@ -1175,7 +1191,7 @@ function Manuscript(){
     {savingError&&<div className="notice error" style={{marginBottom:14}}>{savingError}{conflictDraft&&<button className="btn" style={{marginLeft:10}} onClick={()=>applyDraft(conflictDraft)}>Reload authoritative draft</button>}</div>}
     {!reportId&&<Card><State title="No active report" description="Manuscript editing is scoped to a report."/></Card>}
     {reportId&&current.isError&&<Card><State title="Manuscript unavailable" description={current.error instanceof Error?current.error.message:"Generate a manuscript architecture before editing prose."} error/></Card>}
-    {reportId&&current.data&&<><Card><div className="row"><div><div className="title">{version?.title??"Untitled manuscript"}</div><div className="meta">Architecture {value(version?.architecture_version)} · Current version {value(version?.version?.toString())}</div></div><Link className="btn" href={"/evidence?reportId="+reportId}>Evidence</Link></div>{validate.data&&<div className="notice" style={{marginTop:12}}>Validation: {validate.data.validation_status}{validate.data.validation_errors.length?" · "+validate.data.validation_errors.join(" "):""}{validate.data.warnings.length?" · Warnings: "+validate.data.warnings.join(" "):""}</div>}</Card>
+    {reportId&&current.data&&<><Card><div className="row"><div><div className="title">{version?.title??"Untitled manuscript"}</div><div className="meta">Architecture {value((version as import("@/lib/api/generated").ManuscriptVersion|undefined)?.architecture_version)} · Current version {value(version?.version?.toString())}</div></div><Link className="btn" href={"/evidence?reportId="+reportId}>Evidence</Link></div>{validate.data&&<div className="notice" style={{marginTop:12}}>Validation: {validate.data.validation_status}{validate.data.validation_errors.length?" · "+validate.data.validation_errors.join(" "):""}{validate.data.warnings.length?" · Warnings: "+validate.data.warnings.join(" "):""}</div>}</Card>
       <Card style={{marginTop:16}}><div className="row"><div><h3>Manuscript prose</h3><div className="muted small">Each section is edited independently and autosaved against the current draft revision.</div></div><span className="tag">{prose.data?.run.status??"Not generated"}</span></div>
         {prose.isError?<State title="Prose unavailable" description={prose.error instanceof Error?prose.error.message:"Generate manuscript prose before editing sections."} error/>:prose.isPending?<State title="Loading prose" description="Reading the latest persisted prose run."/>:prose.data?.sections.length===0?<State title="No prose sections yet" description="Use Regenerate prose to run the persisted manuscript prose pipeline."/>:<div className="list" style={{marginTop:12}}>{prose.data.sections.map(section=>{const architectureSection=current.data.sections.find(s=>s.section_key===section.section_key);return <div className="list-item" key={section.id}><div className="row"><div><div className="title">{section.display_order+1}. {section.title}</div><div className="meta">{section.word_count} words · {section.status}</div></div><span className="tag">{architectureSection?.citation_required?"Citations required":"Citations optional"}</span></div><textarea className="input textarea" style={{marginTop:10,minHeight:180}} aria-label={"Edit "+section.title} value={sectionDrafts[section.section_key]??section.text} onChange={event=>{setSectionDrafts(prev=>({...prev,[section.section_key]:event.target.value}));setDirty(true);setSavingError("");}}/>{section.error_message&&<div className="notice error" style={{marginTop:8}}>{section.error_message}</div>}</div>;})}</div>}
       </Card>

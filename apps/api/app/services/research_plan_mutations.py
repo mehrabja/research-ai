@@ -247,6 +247,34 @@ def save_research_plan(
         db.flush()
         new_sections[section_data.section_key] = row
 
+    for req_data in req_writes:
+        db.add(
+            ResearchEvidenceRequirement(
+                plan_id=plan.id,
+                section_id=new_sections[req_data.section_key].id,
+                requirement_key=req_data.requirement_key,
+                requirement_type=req_data.requirement_type,
+                description=req_data.description,
+                required=req_data.required,
+                priority=req_data.priority,
+                min_sources=req_data.min_sources,
+                max_sources=req_data.max_sources,
+                preferred_paper_types=req_data.preferred_paper_types,
+                preferred_research_designs=req_data.preferred_research_designs,
+                max_age_years=req_data.max_age_years,
+                full_text_required=req_data.full_text_required,
+                min_relevance_score=req_data.min_relevance_score,
+                coverage_weight=req_data.coverage_weight,
+            )
+        )
+
+    for dep_data in dependencies_writes:
+        db.add(
+            ResearchPlanDependency(
+                plan_id=plan.id,
+                upstream_section_id=new_sections[dep_data.upstream_section_key].id,
+                downstream_section_id=new_sections[dep_data.downstream_section_key].id,
+                dependency_type=dep_data.dependency_type,
     for requirement_data in req_writes:
         db.add(
             ResearchEvidenceRequirement(

@@ -67,8 +67,8 @@ export default function RegisterPage(){
         {error&&<div className="notice error" style={{marginTop:14}}>{error}</div>}
         <form className="auth-form" onSubmit={submit}>
           <div className="grid grid-2">
-            <div className="field"><label>First name</label><input className="input" value={firstName} onChange={e=>setFirstName(e.target.value)} autoComplete="given-name"/></div>
-            <div className="field"><label>Last name</label><input className="input" value={lastName} onChange={e=>setLastName(e.target.value)} autoComplete="family-name"/></div>
+            <div className="field"><label htmlFor="first-name">First name</label><input id="first-name" className="input" value={firstName} onChange={e=>setFirstName(e.target.value)} autoComplete="given-name"/></div>
+            <div className="field"><label htmlFor="last-name">Last name</label><input id="last-name" className="input" value={lastName} onChange={e=>setLastName(e.target.value)} autoComplete="family-name"/></div>
           </div>
           <div className="field"><label htmlFor="work-email">Work email</label><input id="work-email" className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" required/></div>
           <div className="field"><label htmlFor="register-password">Password</label><input id="register-password" className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="new-password" minLength={15} required/><div className="muted tiny">Minimum 15 characters.</div></div>

@@ -6,6 +6,7 @@ import uuid
 import pytest
 from sqlalchemy import text
 
+from app.db.models.jobs import Job
 from app.db.models.pipeline import GenerationRun
 from app.db.session import SessionLocal
 from app.domain.generation import (
@@ -35,6 +36,21 @@ def _mk_report(*, uid: uuid.UUID, topic: str = "T") -> uuid.UUID:
         ), {"u": uid, "t": topic}).scalar()
         db.commit()
     return rid
+
+
+def _mk_job(*, uid: uuid.UUID, rid: uuid.UUID) -> uuid.UUID:
+    job_id = uuid.uuid4()
+    with SessionLocal() as db:
+        db.add(
+            Job(
+                id=job_id,
+                job_type="generate_report",
+                user_id=uid,
+                report_id=rid,
+            )
+        )
+        db.commit()
+    return job_id
 
 
 def _rc(rid):  # type: ignore[no-untyped-def]
@@ -69,7 +85,7 @@ def test_success_no_markers(monkeypatch) -> None:
     )
     with SessionLocal() as db:
         r = generate_report(
-            db, job_id=uuid.uuid4(), user_id=uid, report_id=rid,
+            db, job_id=_mk_job(uid=uid, rid=rid), user_id=uid, report_id=rid,
             provider=_FakeProvider(text="A short draft."),
         )
     assert r.text == "A short draft."
@@ -94,7 +110,7 @@ def test_empty_output_rejected(monkeypatch) -> None:
     )
     with SessionLocal() as db, pytest.raises(EmptyGenerationError):
         generate_report(
-            db, job_id=uuid.uuid4(), user_id=uid, report_id=rid,
+            db, job_id=_mk_job(uid=uid, rid=rid), user_id=uid, report_id=rid,
             provider=_FakeProvider(text="   "),
         )
 
@@ -108,6 +124,6 @@ def test_unknown_marker_rejected(monkeypatch) -> None:
     )
     with SessionLocal() as db, pytest.raises(UnknownEvidenceMarkerError):
         generate_report(
-            db, job_id=uuid.uuid4(), user_id=uid, report_id=rid,
+            db, job_id=_mk_job(uid=uid, rid=rid), user_id=uid, report_id=rid,
             provider=_FakeProvider(text="claim [E99]"),
         )

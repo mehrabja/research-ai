@@ -16,7 +16,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from functools import partial
@@ -76,6 +76,17 @@ class EmbeddingRunResult:
     usage_input_tokens: int
 
 
+def _embed_documents_for_batch(
+    provider: EmbeddingProvider, batch: list[Chunk]
+) -> EmbeddingBatchResult:
+    """Invoke the provider with exactly the chunks in the requested batch."""
+    return provider.embed_documents([chunk.content for chunk in batch])
+
+
+def _embedding_input_tokens(result: EmbeddingBatchResult) -> int:
+    return result.usage.input_tokens
+
+
 def _sha256_hex(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -101,6 +112,8 @@ def build_embedding_batch_idempotency_key(
     profile_id: str,
     batch: Sequence[Chunk],
 ) -> str:
+    """Build a deterministic key from report/source/profile and chunk content."""
+    identities = sorted(f"{c.id}:{_sha256_hex(c.content)}" for c in batch)
     """Deterministic key with per-chunk content hash.
 
     Each member contributes ``chunk_id:content_hash`` so a retry that
@@ -174,6 +187,10 @@ def claim_embedding_batch(
         raise
 
 
+def _compute_safe_item_cap(
+    provider: EmbeddingProvider, max_items: int
+) -> int:
+    """Return a conservative item cap when token counting is unavailable."""
 # ---------------------------------------------------------------------------
 # Token-aware batching (provider limits authoritative)
 # ---------------------------------------------------------------------------
@@ -205,6 +222,7 @@ def _build_batches(
     provider: EmbeddingProvider,
     max_items: int,
 ) -> list[list[Chunk]]:
+    """Split into batches respecting provider item and token limits."""
     """Split into batches respecting provider limits.
 
     The token-aware path is only used when the provider's limits are
@@ -226,6 +244,23 @@ def _build_batches(
 
     if not tokenizer_works:
         hard_max = _compute_safe_item_cap(provider, max_items)
+        fallback_batches: list[list[Chunk]] = []
+        fallback_current: list[Chunk] = []
+        for chunk in chunks:
+            if len(fallback_current) >= hard_max:
+                fallback_batches.append(fallback_current)
+                fallback_current = []
+            fallback_current.append(chunk)
+        if fallback_current:
+            fallback_batches.append(fallback_current)
+        return fallback_batches
+
+    hard_max_items = min(max_items, provider.max_batch_size)
+    batches: list[list[Chunk]] = []
+    current: list[Chunk] = []
+    current_tokens = 0
+    for chunk in chunks:
+        tokens = provider.estimate_input_tokens(chunk.content)
         batches: list[list[Chunk]] = []
         current: list[Chunk] = []
         for c in chunks:
@@ -248,6 +283,7 @@ def _build_batches(
                 batches.append(current)
                 current = []
                 current_tokens = 0
+            current.append(chunk)
             current.append(c)
             continue
 
@@ -265,6 +301,7 @@ def _build_batches(
             batches.append(current)
             current = []
             current_tokens = 0
+        current.append(chunk)
         current.append(c)
         current_tokens += tokens
 
@@ -296,6 +333,7 @@ def embed_source(
         workspace_id = project.workspace_id
     else:
         from app.services.workspaces import get_default_workspace_for_user
+
         workspace = get_default_workspace_for_user(db, user_id=user_id)
         if workspace is None:
             raise RuntimeError("embedding source has no workspace context")
@@ -311,6 +349,9 @@ def embed_source(
     settings = get_settings()
 
     all_chunks = list(
+        db.execute(select(Chunk).where(Chunk.source_id == source.id))
+        .scalars()
+        .all()
         db.execute(
             select(Chunk).where(Chunk.source_id == source.id)
         ).scalars().all()
@@ -329,6 +370,7 @@ def embed_source(
         )
 
     already_current = sum(
+        1 for chunk in all_chunks if _chunk_current(chunk, profile)
         1 for c in all_chunks if _chunk_current(c, profile)
     )
     if already_current == total:
@@ -367,6 +409,8 @@ def embed_source(
             max_items=settings.embedding_batch_size,
         )
 
+        batched_ids = {chunk.id for batch in batches for chunk in batch}
+        oversized = [chunk for chunk in claimed if chunk.id not in batched_ids]
         batched_ids = {c.id for b in batches for c in b}
         oversized = [c for c in claimed if c.id not in batched_ids]
         if oversized:
@@ -375,6 +419,11 @@ def embed_source(
 
         for batch in batches:
             try:
+                def _call_embedding_provider() -> EmbeddingBatchResult:
+                    return _embed_documents_for_batch(provider, batch)
+
+                result = execute_metered_provider_call(
+                    _call_embedding_provider,
                 embed_call: Callable[[], EmbeddingBatchResult] = partial(
                     _embed_documents_for_batch, provider, batch
                 )
@@ -390,6 +439,7 @@ def embed_source(
                     model=profile.model,
                     project_id=report.project_id,
                     report_id=report_id,
+                    input_units=_embedding_input_tokens,
                     input_units=input_units,
                 )
             except EmbeddingInputTooLargeError as exc:
@@ -448,6 +498,16 @@ def embed_source(
             break
 
     final_rows = db.execute(
+        select(Chunk.embedding_status, Chunk.embedding.is_not(None)).where(
+            Chunk.source_id == source.id
+        )
+    ).all()
+    pending_now = sum(
+        1
+        for status, _ in final_rows
+        if status in (None, _STATUS_PENDING, _STATUS_PROCESSING)
+    )
+    failed_now = sum(1 for status, _ in final_rows if status == _STATUS_FAILED)
         select(
             Chunk.embedding_status, Chunk.embedding.is_not(None)
         ).where(Chunk.source_id == source.id)
@@ -461,6 +521,7 @@ def embed_source(
     if aborted_by_provider is not None and embedded_count == 0:
         if isinstance(aborted_by_provider, EmbeddingRateLimitError):
             raise EmbeddingRateLimitAppError() from aborted_by_provider
+        raise EmbeddingProviderUnavailableAppError() from aborted_by_provider
         raise EmbeddingProviderUnavailableAppError() from (
             aborted_by_provider
         )

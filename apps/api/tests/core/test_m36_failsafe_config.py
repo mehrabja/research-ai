@@ -9,6 +9,10 @@ from app.core.config import Settings
 
 def _base(**overrides) -> dict:
     base = {
+        "_env_file": None,
+        "debug": False,
+        "cors_allowed_origins": "",
+        "two_factor_encryption_key": "x" * 32,
         "database_url": (
             "postgresql+psycopg://t:t@localhost/t"
         ),
