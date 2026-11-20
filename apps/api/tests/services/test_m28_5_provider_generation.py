@@ -16,7 +16,16 @@ class _FakeProvider:
 
     def generate(self, *, system_prompt, user_prompt, temperature, max_output_tokens):
         return GenerationProviderResult(
-            text=f'{{"paragraphs":[{{"paragraph":0,"sentences":[{{"index":0,"text":"Evidence-backed wording.","evidence_refs":["{self.evidence_id}"]}}]}}]}}',
+            text=(
+                '{"paragraphs":['
+                '{"paragraph":0,"sentences":['
+                '{"index":0,"text":"Objective wording.","evidence_refs":[]}'
+                ']},'
+                '{"paragraph":1,"sentences":['
+                f'{{"index":0,"text":"Evidence-backed wording.","evidence_refs":["{self.evidence_id}"]}}'
+                ']}'
+                ']}'
+            ),
             provider=self.provider_name,
             model=self.model_name,
             input_tokens=12,
@@ -83,5 +92,6 @@ def test_provider_assisted_generation_keeps_evidence_refs(monkeypatch):
         report_id=uuid.uuid4(),
     )
     assert result.mode_used == "provider_assisted"
-    assert result.unit.paragraphs[0].sentences[0].evidence_refs == [str(evidence_id)]
-    assert result.unit.paragraphs[0].sentences[0].text == "Evidence-backed wording."
+    assert result.unit.paragraphs[0].sentences[0].evidence_refs == []
+    assert result.unit.paragraphs[1].sentences[0].evidence_refs == [str(evidence_id)]
+    assert result.unit.paragraphs[1].sentences[0].text == "Evidence-backed wording."
