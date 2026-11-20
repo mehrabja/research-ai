@@ -1,5 +1,6 @@
 """Source discovery integrations."""
 from app.integrations.sources.arxiv import ArxivProvider
+from app.integrations.sources.crossref import CrossrefProvider
 from app.integrations.sources.base import (
     SourceProviderAuthError,
     SourceProviderError,
@@ -17,6 +18,7 @@ from app.integrations.sources.semantic_scholar import (
 
 __all__ = [
     "ArxivProvider",
+    "CrossrefProvider",
     "OpenAlexProvider",
     "PubMedProvider",
     "SemanticScholarProvider",
