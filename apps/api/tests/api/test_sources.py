@@ -15,7 +15,7 @@ from app.db.models.user import User
 from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
 from app.domain.source import SourceCandidate
-from app.integrations.sources import PubMedProvider
+from app.integrations.sources import OpenAlexProvider, PubMedProvider
 from app.main import app
 from app.services.rate_limit import set_login_rate_limiter
 
@@ -168,6 +168,25 @@ def test_default_provider_selects_pubmed(
         lambda: settings,
     )
     assert isinstance(_default_provider(), PubMedProvider)
+
+
+def test_default_provider_selects_openalex(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from types import SimpleNamespace
+
+    settings = SimpleNamespace(
+        source_search_provider="openalex",
+        openalex_api_key="",
+        openalex_timeout_seconds=15.0,
+        openalex_max_retries=2,
+        openalex_min_interval_seconds=0.15,
+    )
+    monkeypatch.setattr(
+        "app.api.routes.sources.get_settings",
+        lambda: settings,
+    )
+    assert isinstance(_default_provider(), OpenAlexProvider)
 
 
 def test_search_requires_auth() -> None:
