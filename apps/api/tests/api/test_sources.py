@@ -15,7 +15,7 @@ from app.db.models.user import User
 from app.db.models.workspace import Workspace
 from app.db.session import SessionLocal
 from app.domain.source import SourceCandidate
-from app.integrations.sources import OpenAlexProvider, PubMedProvider
+from app.integrations.sources import ArxivProvider, OpenAlexProvider, PubMedProvider
 from app.main import app
 from app.services.rate_limit import set_login_rate_limiter
 
@@ -148,6 +148,26 @@ def _payload(ext: str = "P1") -> dict:
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
+def test_default_provider_selects_arxiv(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from types import SimpleNamespace
+
+    settings = SimpleNamespace(
+        source_search_provider="arxiv",
+        arxiv_timeout_seconds=20.0,
+        arxiv_max_retries=2,
+        arxiv_min_interval_seconds=3.0,
+    )
+    monkeypatch.setattr(
+        "app.api.routes.sources.get_settings",
+        lambda: settings,
+    )
+    provider = _default_provider()
+    assert isinstance(provider, ArxivProvider)
+    assert provider.provider_name == "arxiv"
+
+
 def test_default_provider_selects_pubmed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
