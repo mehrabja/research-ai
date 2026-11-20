@@ -9,17 +9,17 @@ This document records a repository-level pre-release review. It is not a legal o
 
 ## Project license decision
 
-The proposed project license is **Apache License 2.0**.
+The proposed project license is the **MIT License**.
 
 Rationale:
 
-- It is a widely used OSI-approved permissive license.
-- It includes an express contributor patent grant and a patent-litigation termination clause.
-- It permits use, modification, and redistribution subject to retaining the license and required notices.
+- It is a short, widely used, OSI-approved permissive license.
+- It permits use, modification, distribution, sublicensing, and sale, subject to including the copyright and permission notice.
+- Unlike MIT, MIT does not include an express patent-license grant. The project owner should choose MIT with that distinction understood.
 
-The root LICENSE file and the API package license file are added on the preparation branch. The API package metadata is changed from Proprietary to the SPDX expression Apache-2.0.
+The root LICENSE file and the API package license file are set to MIT on the preparation branch. The API package metadata uses the SPDX expression MIT.
 
-Before merging, confirm that all project-owned code and documentation may be released under Apache-2.0 and keep the root and apps/api license copies identical.
+Before merging, confirm that all project-owned code and documentation may be released under MIT and keep the root and apps/api license copies identical.
 
 ## Material license issue found and remediation proposed
 
@@ -76,7 +76,7 @@ For each future image, logo, font, dataset, or test fixture, record the source, 
 
 ## Required before public release
 
-- [ ] Confirm Apache-2.0 is the intended license for the entire project.
+- [ ] Confirm MIT is the intended license for the entire project, including acceptance of its lack of an express patent grant.
 - [ ] Verify root LICENSE and apps/api/LICENSE are byte-identical.
 - [ ] Run the PDF regression suite after the pypdf migration.
 - [ ] Generate a full Python and npm transitive dependency license report.
