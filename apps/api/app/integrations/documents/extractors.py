@@ -1,26 +1,24 @@
 """Document text extractors.
 
-Each extractor returns an ``ExtractedDocument`` (defined in the domain
-layer) containing raw, un-normalized page text. Normalization and
-canonical offsets are the domain's responsibility.
+Each extractor returns an ExtractedDocument containing raw,
+un-normalized page text. Normalization and canonical offsets belong to
+the domain layer.
 
 Supported content types in this milestone:
-  * application/pdf  (pymupdf)
-  * text/html, application/xhtml+xml  (BeautifulSoup + html.parser)
-  * text/plain       (UTF-8 first, replacement fallback)
+  * application/pdf (pypdf)
+  * text/html, application/xhtml+xml (BeautifulSoup + html.parser)
+  * text/plain (UTF-8 first, replacement fallback)
 """
 from __future__ import annotations
 
 import logging
+from io import BytesIO
 from typing import Protocol
 
-import fitz  # pymupdf
 from bs4 import BeautifulSoup
+from pypdf import PdfReader
 
-from app.domain.extraction_types import (
-    ExtractedDocument,
-    ExtractedPage,
-)
+from app.domain.extraction_types import ExtractedDocument, ExtractedPage
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +43,6 @@ class DocumentExtractor(Protocol):
     ) -> ExtractedDocument: ...
 
 
-# ---------------------------------------------------------------------------
-# PDF
-# ---------------------------------------------------------------------------
 class PdfExtractor:
     supported_content_types: tuple[str, ...] = ("application/pdf",)
 
@@ -55,19 +50,14 @@ class PdfExtractor:
         self, *, content: bytes, content_type: str
     ) -> ExtractedDocument:
         try:
-            doc = fitz.open(stream=content, filetype="pdf")
-        except Exception as exc:
-            raise ParseFetcherError("failed to open PDF") from exc
-
-        try:
-            if doc.is_encrypted:
+            reader = PdfReader(BytesIO(content), strict=False)
+            if reader.is_encrypted:
                 raise ParseFetcherError("encrypted PDF")
+
             pages: list[ExtractedPage] = []
-            for page_index in range(doc.page_count):
+            for page_index, page in enumerate(reader.pages):
                 try:
-                    page_text = (
-                        doc.load_page(page_index).get_text("text") or ""
-                    )
+                    page_text = page.extract_text() or ""
                 except Exception as exc:
                     raise ParseFetcherError(
                         f"failed to extract page {page_index + 1}"
@@ -78,8 +68,10 @@ class PdfExtractor:
                         raw_text=page_text,
                     )
                 )
-        finally:
-            doc.close()
+        except ParseFetcherError:
+            raise
+        except Exception as exc:
+            raise ParseFetcherError("failed to open or read PDF") from exc
 
         return ExtractedDocument(
             content_type=content_type,
@@ -88,9 +80,6 @@ class PdfExtractor:
         )
 
 
-# ---------------------------------------------------------------------------
-# HTML
-# ---------------------------------------------------------------------------
 class HtmlExtractor:
     supported_content_types: tuple[str, ...] = (
         "text/html",
@@ -125,9 +114,6 @@ class HtmlExtractor:
         )
 
 
-# ---------------------------------------------------------------------------
-# Plain text
-# ---------------------------------------------------------------------------
 class PlainTextExtractor:
     supported_content_types: tuple[str, ...] = ("text/plain",)
 
@@ -147,9 +133,6 @@ class PlainTextExtractor:
         )
 
 
-# ---------------------------------------------------------------------------
-# Dispatch
-# ---------------------------------------------------------------------------
 _EXTRACTORS: tuple[DocumentExtractor, ...] = (
     PdfExtractor(),
     HtmlExtractor(),
@@ -160,9 +143,9 @@ _EXTRACTORS: tuple[DocumentExtractor, ...] = (
 def get_extractor(content_type: str) -> DocumentExtractor | None:
     """Return the extractor for a normalized content type, or None.
 
-    Normalization strips parameters such as ``; charset=utf-8`` and
-    lower-cases the result. Unknown types return ``None`` — never a
-    silent fallback to plain text.
+    Normalization strips parameters such as '; charset=utf-8' and
+    lower-cases the result. Unknown types return None — never a silent
+    fallback to plain text.
     """
     normalized = content_type.split(";", 1)[0].strip().lower()
     for extractor in _EXTRACTORS:
