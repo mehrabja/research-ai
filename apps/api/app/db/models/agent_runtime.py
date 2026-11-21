@@ -64,6 +64,12 @@ class AgentRuntimeSession(Base, UUIDPKMixin, TimestampMixin):
         DateTime(timezone=True), nullable=True
     )
     last_error_code: Mapped[str | None] = mapped_column(Text, nullable=True)
+    next_event_sequence: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    next_checkpoint_sequence: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    context_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    context_summary_through_sequence: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("-1"))
+    compaction_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    last_checkpoint_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         CheckConstraint(
@@ -78,6 +84,10 @@ class AgentRuntimeSession(Base, UUIDPKMixin, TimestampMixin):
             "revision >= 0",
             name="ck_agent_runtime_sessions_revision",
         ),
+        CheckConstraint("next_event_sequence >= 0", name="ck_agent_runtime_sessions_event_sequence"),
+        CheckConstraint("next_checkpoint_sequence >= 0", name="ck_agent_runtime_sessions_checkpoint_sequence"),
+        CheckConstraint("context_summary_through_sequence >= -1", name="ck_agent_runtime_sessions_context_sequence"),
+        CheckConstraint("compaction_count >= 0", name="ck_agent_runtime_sessions_compaction_count"),
         Index(
             "ix_agent_runtime_sessions_user_updated",
             "user_id",
@@ -249,4 +259,60 @@ class AgentRuntimeToolCall(Base, UUIDPKMixin, TimestampMixin):
             "job_id",
             postgresql_where=text("job_id IS NOT NULL"),
         ),
+    )
+
+
+class AgentRuntimeEvent(Base, UUIDPKMixin, CreatedAtMixin):
+    """Append-only events used to replay a running turn over SSE."""
+
+    __tablename__ = "agent_runtime_events"
+
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("agent_runtime_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    event_type: Mapped[str] = mapped_column(Text, nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+
+    __table_args__ = (
+        CheckConstraint("sequence >= 1", name="ck_agent_runtime_events_sequence"),
+        CheckConstraint("char_length(event_type) BETWEEN 1 AND 80", name="ck_agent_runtime_events_type_length"),
+        CheckConstraint("jsonb_typeof(payload) = 'object'", name="ck_agent_runtime_events_payload_object"),
+        UniqueConstraint("session_id", "sequence", name="ux_agent_runtime_events_session_sequence"),
+        Index("ix_agent_runtime_events_session_sequence", "session_id", "sequence"),
+    )
+
+
+class AgentRuntimeCheckpoint(Base, UUIDPKMixin, CreatedAtMixin):
+    """Durable session checkpoint with optional compacted conversation context."""
+
+    __tablename__ = "agent_runtime_checkpoints"
+
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("agent_runtime_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    checkpoint_type: Mapped[str] = mapped_column(Text, nullable=False)
+    through_message_sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    context_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    state_snapshot: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+
+    __table_args__ = (
+        CheckConstraint("sequence >= 1", name="ck_agent_runtime_checkpoints_sequence"),
+        CheckConstraint("through_message_sequence >= -1", name="ck_agent_runtime_checkpoints_message_sequence"),
+        CheckConstraint(
+            "checkpoint_type IN ('turn_started','turn_completed','context_compaction','approval_pending','tool_approved','tool_rejected','tool_completed','turn_failed')",
+            name="ck_agent_runtime_checkpoints_type",
+        ),
+        CheckConstraint("jsonb_typeof(state_snapshot) = 'object'", name="ck_agent_runtime_checkpoints_state_object"),
+        UniqueConstraint("session_id", "sequence", name="ux_agent_runtime_checkpoints_session_sequence"),
+        Index("ix_agent_runtime_checkpoints_session_created", "session_id", "created_at"),
     )

@@ -4,6 +4,8 @@ from app.db.models.academic_qa import (
     AcademicQARun,
 )
 from app.db.models.agent_runtime import (
+    AgentRuntimeCheckpoint,
+    AgentRuntimeEvent,
     AgentRuntimeMessage,
     AgentRuntimeSession,
     AgentRuntimeToolCall,
@@ -275,6 +277,8 @@ __all__ = [
     "AgentRuntimeSession",
     "AgentRuntimeMessage",
     "AgentRuntimeToolCall",
+    "AgentRuntimeEvent",
+    "AgentRuntimeCheckpoint",
     "Notification",
     "NotificationPreference",
     "OAuthState",

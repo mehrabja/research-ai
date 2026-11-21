@@ -77,6 +77,10 @@ class Settings(BaseSettings):
     agent_runtime_max_history_messages: int = Field(default=12, ge=0, le=12)
     agent_runtime_max_prompt_chars: int = Field(default=24000, ge=1000, le=100000)
     agent_runtime_max_output_tokens: int = Field(default=1600, ge=128, le=8192)
+    agent_runtime_compaction_trigger_chars: int = Field(default=16000, ge=4000, le=80000)
+    agent_runtime_compaction_target_chars: int = Field(default=5000, ge=1000, le=20000)
+    agent_runtime_recent_messages_after_compaction: int = Field(default=6, ge=2, le=20)
+    agent_runtime_max_context_messages: int = Field(default=200, ge=12, le=1000)
 
     app_env: str = "development"
     debug: bool = False
