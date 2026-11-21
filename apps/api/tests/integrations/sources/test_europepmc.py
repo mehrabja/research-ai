@@ -235,18 +235,6 @@ def test_provider_uses_bounded_100_record_pages_for_large_limit(
     assert params["pageSize"] == ["100"]
 
 
-@pytest.mark.parametrize(
-    ("status", "error_type"),
-    [
-        (401, SourceProviderAuthError),
-        (403, SourceProviderAuthError),
-        (429, SourceProviderRateLimitError),
-        (500, SourceProviderUnavailableError),
-        (503, SourceProviderUnavailableError),
-        (408, SourceProviderTimeoutError),
-        (400, SourceProviderInvalidResponseError),
-    ],
-)
 def test_search_follows_cursor_and_combines_pages(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -316,6 +304,18 @@ def test_search_returns_up_to_1000_records_over_ten_pages(
         assert params["pageSize"] == ["100"]
 
 
+@pytest.mark.parametrize(
+    ("status", "error_type"),
+    [
+        (401, SourceProviderAuthError),
+        (403, SourceProviderAuthError),
+        (429, SourceProviderRateLimitError),
+        (500, SourceProviderUnavailableError),
+        (503, SourceProviderUnavailableError),
+        (408, SourceProviderTimeoutError),
+        (400, SourceProviderInvalidResponseError),
+    ],
+)
 def test_http_errors_are_typed(
     monkeypatch: pytest.MonkeyPatch,
     status: int,
