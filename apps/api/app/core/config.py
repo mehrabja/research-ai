@@ -72,6 +72,15 @@ class Settings(BaseSettings):
     )
     orchestration_require_approval: bool = True
 
+    # --- M42: Workspace-scoped MCP discovery ----------------------------
+    mcp_server_profiles_json: str = Field(default="", repr=False)
+    mcp_connect_timeout_seconds: float = Field(default=5.0, ge=1.0, le=30.0)
+    mcp_read_timeout_seconds: float = Field(default=45.0, ge=5.0, le=180.0)
+    mcp_write_timeout_seconds: float = Field(default=15.0, ge=1.0, le=60.0)
+    mcp_discovery_timeout_seconds: float = Field(default=60.0, ge=5.0, le=180.0)
+    mcp_discovery_max_items: int = Field(default=100, ge=1, le=500)
+    mcp_discovery_rate_limit_per_minute: int = Field(default=5, ge=1, le=100)
+
     # --- M40: Evidence-grounded Agent Runtime -------------------------
     agent_runtime_enabled: bool = True
     agent_runtime_max_history_messages: int = Field(default=12, ge=0, le=12)

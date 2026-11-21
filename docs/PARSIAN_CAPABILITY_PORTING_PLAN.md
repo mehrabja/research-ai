@@ -33,14 +33,16 @@ The current Agent Runtime remains a single model-proposed tool per user turn. It
 - Do not accept client-supplied server URLs, endpoint overrides, credentials, or MCP tool names.
 - Do not add catalog entries to the model-callable Agent Runtime allowlist.
 
-### 1B — Secure MCP transport
+### 1B — Secure MCP transport (initial foundation implemented)
 
-- Implement a supported MCP client transport (start with Streamable HTTP); do not launch arbitrary user-supplied stdio processes inside the API or worker.
-- Discover and normalize tools, resources, and prompts; validate server schemas before presenting a capability.
-- Bind connections to workspace/project ownership and store only secret references in application rows.
-- Apply destination/egress allowlists, DNS/IP revalidation, redirect controls, TLS verification, timeouts, payload limits, concurrency quotas, and audit events.
-- Treat connector output as untrusted data. Every mutating or sensitive operation must have a narrowly scoped grant and an explicit approval path.
-- Keep connector invocation behind the host registry; discovery must never auto-expose a remote tool to the model.
+- Uses the official MCP Python SDK v2 over Streamable HTTP; arbitrary stdio/subprocess servers are not launched by the API or worker.
+- MCP server profiles are deployment-owned JSON configuration. API clients can select a profile key only; they cannot submit endpoint URLs, host allowlists, or credential references.
+- Profiles require HTTPS, an exact hostname allowlist, no URL userinfo/query/fragment, and the standard HTTPS port. Discovery rejects DNS answers containing non-public IP addresses; production deployments must additionally enforce outbound egress allowlists at the network/container layer to close DNS-rebinding races.
+- Workspace-scoped registrations store only the deployment profile key and bounded discovery metadata. Endpoint URLs, auth secret references and secret values are never persisted in the connection table or returned by the API.
+- Credentials resolve through the existing environment-backed SecretResolver. This is a deployment-level secret reference, not per-workspace Vault/KMS or OAuth credential storage; managed secret backends and per-workspace OAuth grants remain follow-on work.
+- Discovery is read-only: tools, resources, resource templates and prompts are normalized into a bounded snapshot. Remote tool entries are tagged `untrusted_remote`, `requires_approval=true` and `executable=false`; discovery never adds them to the Agent Runtime allowlist.
+- Owner/admin-only enable, disable and discovery endpoints are workspace-scoped and emit audit events. Discovery has bounded timeouts, pagination, item counts, event sizes and stored snapshot size. Network I/O is performed outside the database transaction.
+- Remaining 1B hardening before broad rollout: network-level egress enforcement and DNS pinning, managed Vault/KMS credential resolution, per-workspace OAuth, server health/quotas and concurrency controls.
 
 ### 1C — Connector onboarding
 

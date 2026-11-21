@@ -30,6 +30,7 @@ from app.api.routes.knowledge_graph import (
     router as knowledge_graph_router,
 )
 from app.api.routes.literature import router as literature_router
+from app.api.routes.mcp_connections import router as mcp_connections_router
 from app.api.routes.manuscript import router as manuscript_router
 from app.api.routes.manuscript_humanization import (
     router as manuscript_humanization_router,
@@ -97,6 +98,7 @@ api_router.include_router(publication_router)
 api_router.include_router(collaboration_router)
 api_router.include_router(orchestration_router)
 api_router.include_router(workspaces_router)
+api_router.include_router(mcp_connections_router)
 api_router.include_router(invitations_router)
 
 api_router.include_router(notifications_router)
