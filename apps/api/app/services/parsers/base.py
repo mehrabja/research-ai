@@ -40,3 +40,4 @@ class CodeParseResult:
     module_docstring: str | None
     error: str | None
     complexity_score: float | None = None
+    analysis_meta: dict = field(default_factory=dict)

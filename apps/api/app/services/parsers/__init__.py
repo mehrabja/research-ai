@@ -13,6 +13,7 @@ from app.services.parsers.base import (
 )
 from app.services.parsers.fallback_parser import parse_fallback
 from app.services.parsers.python_parser import parse_python
+from app.services.parsers.notebook_parser import parse_notebook
 
 __all__ = [
     "CodeParseResult",
@@ -23,7 +24,11 @@ __all__ = [
 
 
 def parse_source(
-    *, source: str, language: Language
+    *,
+    source: str,
+    language: Language,
+    notebook_max_cells: int = 2000,
+    notebook_max_cell_source_chars: int = 250_000,
 ) -> CodeParseResult:
     support = language_support(language)
     if support is LanguageSupport.UNSUPPORTED:
@@ -41,4 +46,10 @@ def parse_source(
         )
     if language is Language.PYTHON:
         return parse_python(source)
+    if language is Language.NOTEBOOK:
+        return parse_notebook(
+            source,
+            max_cells=notebook_max_cells,
+            max_cell_source_chars=notebook_max_cell_source_chars,
+        )
     return parse_fallback(source=source, language=language)

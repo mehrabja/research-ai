@@ -114,7 +114,14 @@ def analyze_file(
         raise CodeAnalysisResourceLimit(
             "source exceeds code_max_source_bytes"
         )
-    result = parse_source(source=source, language=language)
+    result = parse_source(
+        source=source,
+        language=language,
+        notebook_max_cells=settings.notebook_max_cells,
+        notebook_max_cell_source_chars=(
+            settings.notebook_max_cell_source_chars
+        ),
+    )
 
     status = (
         ParseStatus.COMPLETED.value
@@ -161,6 +168,7 @@ def analyze_file(
     analysis.import_count = len(deps)
     analysis.complexity_score = result.complexity_score
     analysis.analysis_meta = {
+        **result.analysis_meta,
         "module_docstring": result.module_docstring,
         "language_support": support.value,
     }

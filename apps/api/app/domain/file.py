@@ -168,6 +168,7 @@ _MIME_TO_KIND: dict[str, FileKind] = {
     "text/markdown": FileKind.TEXT,
     "text/csv": FileKind.STRUCTURED_DATA,
     "application/json": FileKind.STRUCTURED_DATA,
+    "application/x-ipynb+json": FileKind.CODE,
     "application/xml": FileKind.STRUCTURED_DATA,
     "text/xml": FileKind.STRUCTURED_DATA,
     "text/html": FileKind.DOCUMENT,
@@ -210,6 +211,7 @@ _EXT_TO_KIND: dict[str, FileKind] = {
     ".ppt": FileKind.PRESENTATION,
     ".pptx": FileKind.PRESENTATION,
     ".odp": FileKind.PRESENTATION,
+    ".ipynb": FileKind.CODE,
     ".py": FileKind.CODE,
     ".js": FileKind.CODE,
     ".ts": FileKind.CODE,
@@ -231,7 +233,25 @@ def classify(
     client_mime: str | None,
     extension: str | None,
 ) -> FileKind:
-    """Priority: detected content type > client MIME > extension > unknown."""
+    """Priority: verified content type > notebook JSON extension > MIME > extension."""
+    normalized_extension = extension.lower() if extension else ""
+    if normalized_extension and not normalized_extension.startswith("."):
+        normalized_extension = "." + normalized_extension
+    detected_base = (
+        detected_mime.split(";", 1)[0].strip().lower()
+        if detected_mime
+        else None
+    )
+    if (
+        normalized_extension == ".ipynb"
+        and detected_base in (
+            None,
+            "application/json",
+            "application/x-ipynb+json",
+        )
+    ):
+        return FileKind.CODE
+
     for candidate in (detected_mime, client_mime):
         if candidate:
             base = candidate.split(";", 1)[0].strip().lower()

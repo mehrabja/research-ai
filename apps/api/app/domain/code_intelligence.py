@@ -6,6 +6,7 @@ from enum import StrEnum
 
 class Language(StrEnum):
     PYTHON = "python"
+    NOTEBOOK = "notebook"
     JAVASCRIPT = "javascript"
     TYPESCRIPT = "typescript"
     JAVA = "java"
@@ -61,6 +62,7 @@ ALL_DEPENDENCY_TYPES: tuple[str, ...] = tuple(
 _EXT_TO_LANG: dict[str, Language] = {
     ".py": Language.PYTHON,
     ".pyi": Language.PYTHON,
+    ".ipynb": Language.NOTEBOOK,
     ".js": Language.JAVASCRIPT,
     ".mjs": Language.JAVASCRIPT,
     ".cjs": Language.JAVASCRIPT,
@@ -85,6 +87,7 @@ _EXT_TO_LANG: dict[str, Language] = {
 
 _SUPPORT: dict[Language, LanguageSupport] = {
     Language.PYTHON: LanguageSupport.FULL,
+    Language.NOTEBOOK: LanguageSupport.FULL,
     Language.JAVASCRIPT: LanguageSupport.FALLBACK,
     Language.TYPESCRIPT: LanguageSupport.FALLBACK,
     Language.SQL: LanguageSupport.FALLBACK,
