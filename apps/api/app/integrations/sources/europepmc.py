@@ -41,7 +41,7 @@ _RETRY_BASE_SECONDS = 0.5
 _RETRY_MAX_SECONDS = 8.0
 _RATE_LOCK = threading.Lock()
 _LAST_REQUEST_AT = 0.0
-_YEAR_RE = re.compile(r"^(?:19|20|21)\d{2}$")
+_YEAR_RE = re.compile(r"^\d{4}$")
 _SOURCE_RE = re.compile(r"^[A-Za-z0-9_-]{1,16}$")
 _ID_RE = re.compile(rf"^[A-Za-z0-9._-]{{1,{_MAX_SOURCE_ID_CHARS}}}$")
 
