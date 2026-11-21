@@ -24,6 +24,7 @@ from app.db.session import get_db
 from app.domain.source import SourceCandidate
 from app.integrations.sources import (
     ArxivProvider,
+    ClinicalTrialsGovProvider,
     CrossrefProvider,
     EuropePMCProvider,
     OpenAlexProvider,
@@ -46,7 +47,6 @@ router = APIRouter(
     prefix="/reports",
     tags=["sources"],
 )
-
 
 # ---------------------------------------------------------------------------
 # Provider dependency (overridable in tests)
@@ -81,6 +81,13 @@ def _default_provider() -> SourceSearchProvider:
             max_retries=settings.europepmc_max_retries,
             min_interval_seconds=settings.europepmc_min_interval_seconds,
         )
+
+    if settings.source_search_provider == "clinicaltrials":
+        return ClinicalTrialsGovProvider(
+            timeout_seconds=settings.clinicaltrials_timeout_seconds,
+            max_retries=settings.clinicaltrials_max_retries,
+            min_interval_seconds=settings.clinicaltrials_min_interval_seconds,
+        )
     if settings.source_search_provider == "pubmed":
         return PubMedProvider(
             api_key=settings.pubmed_api_key,
@@ -97,7 +104,6 @@ def _default_provider() -> SourceSearchProvider:
         timeout_seconds=settings.semantic_scholar_timeout_seconds,
         max_retries=settings.semantic_scholar_max_retries,
     )
-
 
 # ---------------------------------------------------------------------------
 # M8 — extraction (unchanged)
@@ -129,7 +135,6 @@ def extract_source(
         extracted_at=result.extracted_at,
         pipeline_version=result.pipeline_version,
     )
-
 
 # ---------------------------------------------------------------------------
 # M7 — discovery
@@ -184,7 +189,6 @@ def search_sources(
         ],
     )
 
-
 @router.get(
     "/{report_id}/sources",
     response_model=SourceListResponse,
@@ -203,7 +207,6 @@ def list_sources(
     return SourceListResponse(
         items=[SourceRead.model_validate(r) for r in rows]
     )
-
 
 @router.post(
     "/{report_id}/sources",
@@ -237,7 +240,6 @@ def create_source(
         candidate=candidate,
     )
     return SourceRead.model_validate(source)
-
 
 @router.get(
     "/{report_id}/sources/{source_id}",

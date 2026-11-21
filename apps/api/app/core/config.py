@@ -8,7 +8,6 @@ from typing import Literal
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 def _resolve_repo_root() -> Path:
     current = Path(__file__).resolve()
 
@@ -17,7 +16,6 @@ def _resolve_repo_root() -> Path:
             return parent
 
     return current.parents[2]
-
 
 REPO_ROOT: Path = _resolve_repo_root()
 DEV_JWT_SECRET: str = "dev-insecure-secret-change-me-before-production"
@@ -32,10 +30,8 @@ _PLACEHOLDER_SECRETS = frozenset({
     "placeholder",
 })
 
-
 def _is_placeholder_secret(value: str) -> bool:
     return value.strip().lower() in _PLACEHOLDER_SECRETS
-
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -740,7 +736,7 @@ class Settings(BaseSettings):
     )
 
     # --- Scientific source discovery ---------------------------------------
-    source_search_provider: Literal["semantic_scholar", "pubmed", "openalex", "arxiv", "crossref", "europepmc"] = "semantic_scholar"
+    source_search_provider: Literal["semantic_scholar", "pubmed", "openalex", "arxiv", "crossref", "europepmc", "clinicaltrials"] = "semantic_scholar"
     semantic_scholar_api_key: str = Field(default="", repr=False)
     semantic_scholar_base_url: str = (
         "https://api.semanticscholar.org/graph/v1"
@@ -794,6 +790,13 @@ class Settings(BaseSettings):
     europepmc_max_retries: int = Field(default=2, ge=0, le=10)
     europepmc_min_interval_seconds: float = Field(
         default=0.34, ge=0.0, le=10.0
+    )
+    clinicaltrials_timeout_seconds: float = Field(
+        default=20.0, ge=1.0, le=120.0
+    )
+    clinicaltrials_max_retries: int = Field(default=2, ge=0, le=10)
+    clinicaltrials_min_interval_seconds: float = Field(
+        default=1.0, ge=0.0, le=30.0
     )
     source_search_limit_default: int = Field(default=25, ge=1, le=1000)
     source_search_limit_max: int = Field(default=1000, ge=1, le=1000)
@@ -1144,7 +1147,6 @@ class Settings(BaseSettings):
         if not self.backup_directory.strip():
             raise ValueError("backup_directory must not be empty")
         return self
-
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

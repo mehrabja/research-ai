@@ -17,6 +17,7 @@ from app.db.session import SessionLocal
 from app.domain.source import SourceCandidate
 from app.integrations.sources import (
     ArxivProvider,
+    ClinicalTrialsGovProvider,
     CrossrefProvider,
     OpenAlexProvider,
     PubMedProvider,
@@ -26,13 +27,11 @@ from app.services.rate_limit import set_login_rate_limiter
 
 client = TestClient(app)
 
-
 @pytest.fixture(autouse=True)
 def _fresh_limiter() -> Iterator[None]:
     set_login_rate_limiter(None)
     yield
     set_login_rate_limiter(None)
-
 
 @pytest.fixture()
 def cleanup_users() -> Iterator[list[uuid.UUID]]:
@@ -68,7 +67,6 @@ def cleanup_users() -> Iterator[list[uuid.UUID]]:
         db.execute(delete(User).where(User.id.in_(ids)))
         db.commit()
 
-
 class _FakeProvider:
     provider_name = "fake"
 
@@ -93,7 +91,6 @@ class _FakeProvider:
             raise self._error
         return list(self._candidates)
 
-
 @pytest.fixture()
 def override_provider() -> Iterator[dict]:
     holder: dict = {"provider": _FakeProvider()}
@@ -103,10 +100,8 @@ def override_provider() -> Iterator[dict]:
     finally:
         app.dependency_overrides.pop(_default_provider, None)
 
-
 def _auth(t: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {t}"}
-
 
 def _register(ids: list[uuid.UUID]) -> tuple[uuid.UUID, str]:
     email = f"srca-{uuid.uuid4().hex}@example.com"
@@ -125,7 +120,6 @@ def _register(ids: list[uuid.UUID]) -> tuple[uuid.UUID, str]:
     assert r.status_code == 200, r.text
     return uid, r.json()["access_token"]
 
-
 def _create_report(token: str, topic: str = "T") -> dict:
     r = client.post(
         "/api/v1/reports",
@@ -134,7 +128,6 @@ def _create_report(token: str, topic: str = "T") -> dict:
     )
     assert r.status_code == 201, r.text
     return r.json()
-
 
 def _payload(ext: str = "P1") -> dict:
     return {
@@ -148,7 +141,6 @@ def _payload(ext: str = "P1") -> dict:
         "abstract": "abs",
         "citation_count": 5,
     }
-
 
 # ---------------------------------------------------------------------------
 # Auth
@@ -174,7 +166,6 @@ def test_default_provider_selects_crossref(
     assert isinstance(provider, CrossrefProvider)
     assert provider.provider_name == "crossref"
 
-
 def test_default_provider_selects_arxiv(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -193,7 +184,6 @@ def test_default_provider_selects_arxiv(
     provider = _default_provider()
     assert isinstance(provider, ArxivProvider)
     assert provider.provider_name == "arxiv"
-
 
 def test_default_provider_selects_pubmed(
     monkeypatch: pytest.MonkeyPatch,
@@ -216,6 +206,25 @@ def test_default_provider_selects_pubmed(
     )
     assert isinstance(_default_provider(), PubMedProvider)
 
+def test_default_provider_selects_clinicaltrials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from types import SimpleNamespace
+
+    settings = SimpleNamespace(
+        source_search_provider="clinicaltrials",
+        clinicaltrials_timeout_seconds=20.0,
+        clinicaltrials_max_retries=2,
+        clinicaltrials_min_interval_seconds=1.0,
+    )
+    monkeypatch.setattr(
+        "app.api.routes.sources.get_settings",
+        lambda: settings,
+    )
+
+    provider = _default_provider()
+    assert isinstance(provider, ClinicalTrialsGovProvider)
+    assert provider.provider_name == "clinicaltrials"
 
 def test_default_provider_selects_openalex(
     monkeypatch: pytest.MonkeyPatch,
@@ -235,20 +244,17 @@ def test_default_provider_selects_openalex(
     )
     assert isinstance(_default_provider(), OpenAlexProvider)
 
-
 def test_search_requires_auth() -> None:
     r = client.get(
         f"/api/v1/reports/{uuid.uuid4()}/sources/search?q=x"
     )
     assert r.status_code == 401
 
-
 def test_create_requires_auth() -> None:
     r = client.post(
         f"/api/v1/reports/{uuid.uuid4()}/sources", json=_payload()
     )
     assert r.status_code == 401
-
 
 # ---------------------------------------------------------------------------
 # Search
@@ -278,7 +284,6 @@ def test_search_returns_candidates(
     assert len(body["candidates"]) == 1
     assert body["candidates"][0]["external_source_id"] == "P1"
 
-
 def test_search_foreign_report_404(
     cleanup_users: list[uuid.UUID],
     override_provider: dict,
@@ -292,7 +297,6 @@ def test_search_foreign_report_404(
     )
     assert r.status_code == 404
 
-
 def test_search_empty_query_422(
     cleanup_users: list[uuid.UUID],
     override_provider: dict,
@@ -304,7 +308,6 @@ def test_search_empty_query_422(
         headers=_auth(token),
     )
     assert r.status_code == 422
-
 
 # ---------------------------------------------------------------------------
 # Create / List / Get
@@ -326,7 +329,6 @@ def test_create_source_201(
     assert "full_text" not in body
     assert "source_meta" not in body
 
-
 def test_create_duplicate_is_idempotent(
     cleanup_users: list[uuid.UUID],
 ) -> None:
@@ -345,7 +347,6 @@ def test_create_duplicate_is_idempotent(
     assert r1.status_code == 201
     assert r2.status_code == 201
     assert r1.json()["id"] == r2.json()["id"]
-
 
 def test_list_sources(cleanup_users: list[uuid.UUID]) -> None:
     _, token = _register(cleanup_users)
@@ -367,7 +368,6 @@ def test_list_sources(cleanup_users: list[uuid.UUID]) -> None:
     assert r.status_code == 200
     assert len(r.json()["items"]) == 2
 
-
 def test_get_source(cleanup_users: list[uuid.UUID]) -> None:
     _, token = _register(cleanup_users)
     rep = _create_report(token)
@@ -383,7 +383,6 @@ def test_get_source(cleanup_users: list[uuid.UUID]) -> None:
     )
     assert r2.status_code == 200
     assert r2.json()["id"] == sid
-
 
 def test_get_source_foreign_user_404(
     cleanup_users: list[uuid.UUID],
@@ -403,7 +402,6 @@ def test_get_source_foreign_user_404(
     )
     assert r2.status_code == 404
 
-
 def test_deleted_report_404(
     cleanup_users: list[uuid.UUID],
 ) -> None:
@@ -417,7 +415,6 @@ def test_deleted_report_404(
         headers=_auth(token),
     )
     assert r.status_code == 404
-
 
 def test_search_provider_error_maps_502(
     cleanup_users: list[uuid.UUID],
@@ -438,7 +435,6 @@ def test_search_provider_error_maps_502(
     )
     assert r.status_code == 502
     assert r.json()["error"]["code"] == "SOURCE_PROVIDER_UNAVAILABLE"
-
 
 # ---------------------------------------------------------------------------
 # Extraction regression — M8 endpoint still works

@@ -44,9 +44,15 @@ The current Agent Runtime remains a single model-proposed tool per user turn. It
 - Owner/admin-only enable, disable and discovery endpoints are workspace-scoped and emit audit events. Discovery has bounded timeouts, pagination, item counts, event sizes and stored snapshot size. Network I/O is performed outside the database transaction.
 - Remaining 1B hardening before broad rollout: network-level egress enforcement and DNS pinning, managed Vault/KMS credential resolution, per-workspace OAuth, server health/quotas and concurrency controls.
 
-### 1C — Connector onboarding
+### 1C — Connector onboarding (first read-only provider implemented)
 
-Prioritize a small, testable vertical slice (KEGG, ChEMBL, ClinicalTrials.gov, Monarch, and BioSamples are initial candidates), then onboard the remaining catalog in domain batches. For each connector require documented upstream API/protocol, license/terms review, authentication model, rate limits, error taxonomy, provenance fields, fixture-based tests, and an explicit status of available/partial/not configured.
+- ClinicalTrials.gov API v2 is the first live SourceSearchProvider adapter. It searches public study records using the API v2 studies endpoint, maps stable NCT identifiers and canonical study URLs, and preserves study status, type, phase, conditions, interventions, sponsor, first-posted date, and brief summary in the candidate's bounded abstract field.
+- Search is read-only; no study registration, modification, or result submission is supported.
+- The adapter caps each page at 100 records and each search at 500 records, traverses at most five page tokens, deduplicates NCT identifiers, limits response bytes, paces requests at a conservative 1-second default, applies bounded retry/backoff and typed provider errors.
+- Each stored candidate includes source attribution, the UTC processing date, and a transformation notice; it links back to the canonical NCT record. The mapped brief summary is a bounded registry-provided description, not publisher full text.
+- Enable it with `SOURCE_SEARCH_PROVIDER=clinicaltrials`. The existing source-search route, ownership checks, provider-call metering, and idempotent source registration are reused.
+- Next candidate adapters remain ChEMBL, Monarch and BioSamples. KEGG requires an explicit institution/user and application licensing gate before activation; its REST API should not be enabled indiscriminately for commercial deployments.
+- For each remaining connector require documented upstream API/protocol, license/terms review, authentication model, rate limits, error taxonomy, provenance fields, fixture-based tests, and an explicit status of available/partial/not configured.
 
 ## Cross-cutting acceptance gates
 
