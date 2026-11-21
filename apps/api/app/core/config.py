@@ -328,7 +328,7 @@ class Settings(BaseSettings):
     file_extraction_max_attempts: int = Field(default=3, ge=1, le=10)
 
     # --- Code & Data Intelligence (Milestone 20) --------------------------
-    intelligence_analysis_version: str = "m20.1"
+    intelligence_analysis_version: str = "m21.1"
 
     # Code intelligence
     code_max_source_bytes: int = Field(
@@ -337,6 +337,10 @@ class Settings(BaseSettings):
     code_max_symbols: int = Field(default=10_000, ge=100, le=100_000)
     code_max_dependencies: int = Field(
         default=5_000, ge=100, le=50_000
+    )
+    notebook_max_cells: int = Field(default=2_000, ge=1, le=10_000)
+    notebook_max_cell_source_chars: int = Field(
+        default=250_000, ge=1_000, le=2_000_000
     )
 
     # Data intelligence
@@ -970,6 +974,12 @@ class Settings(BaseSettings):
         if self.code_max_source_bytes > self.document_max_bytes:
             raise ValueError(
                 "code_max_source_bytes must be <= document_max_bytes"
+            )
+        if (
+            self.notebook_max_cell_source_chars > self.code_max_source_bytes
+        ):
+            raise ValueError(
+                "notebook_max_cell_source_chars must be <= code_max_source_bytes"
             )
         if self.data_profile_sample_rows > self.data_profile_max_rows_scanned:
             raise ValueError(

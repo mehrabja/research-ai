@@ -121,6 +121,14 @@ Official references:
 - https://help.openalex.org/api/paging/
 - https://help.openalex.org/api/errors/
 
+## Static Jupyter Notebook intelligence
+
+Research AI recognizes `.ipynb` uploads as code-intelligence inputs and stores a bounded structural analysis in the existing `CodeAnalysis` record. This phase reads notebook JSON only. It records cell counts/types, notebook format and kernel labels, execution-count diagnostics, output-type counts, selected Python AST symbols/dependencies, notebook magics and limited static execution indicators.
+
+**No notebook cell, shell command, magic command, output, kernel or external process is executed.** Cell source and output payloads are not copied into `analysis_meta`; the database keeps bounded summaries and source-code symbol/dependency metadata only. The existing source-byte limit is supplemented by `NOTEBOOK_MAX_CELLS` and `NOTEBOOK_MAX_CELL_SOURCE_CHARS`. Only Python/IPython code cells are parsed with the Python AST parser; other kernels receive structural metadata only. Extracted symbol line coordinates are cell-local and each symbol records its cell index.
+
+This is a static-analysis slice inspired by Parsian's notebook lineage/evidence model, not a port of its Node REPL, Python/R kernels, runtime execution or dependency-lineage cache. Those require a separately supervised, tenant-authorized compute service before they can be enabled in the SaaS product.
+
 ## Scientific source connector: Europe PMC
 
 Research AI supports Europe PMC through the existing report-scoped source-search provider contract. Set `SOURCE_SEARCH_PROVIDER=europepmc`; no API key is required. The adapter uses the Europe PMC REST search endpoint with `resultType=core`, one bounded page (maximum 100 records), optional `PUB_YEAR` filtering and the provider's `OPEN_ACCESS:Y` filter. It maps Europe PMC source/id identity, title, author list, publication year, DOI, citation count and the canonical Europe PMC article URL into `SourceCandidate`.

@@ -8,7 +8,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict
 
 LanguageLiteral = Literal[
-    "python", "javascript", "typescript", "java", "c", "cpp", "go",
+    "python", "notebook", "javascript", "typescript", "java", "c", "cpp", "go",
     "rust", "sql", "shell", "unknown",
 ]
 ParseStatusLiteral = Literal[
@@ -49,6 +49,7 @@ class CodeAnalysisRead(BaseModel):
     class_count: int
     import_count: int
     complexity_score: float | None
+    analysis_meta: dict[str, Any] | None
     created_at: datetime
     updated_at: datetime
 
