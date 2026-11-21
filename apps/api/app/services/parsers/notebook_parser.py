@@ -43,7 +43,7 @@ def _failed(source: str, error: str) -> CodeParseResult:
         supported=True,
         symbols=(),
         dependencies=(),
-        line_count=source.count("\\n") + (0 if source.endswith("\\n") else 1),
+        line_count=source.count("\n") + (0 if source.endswith("\n") else 1),
         character_count=len(source),
         module_docstring=None,
         error=error[:500],
@@ -78,7 +78,6 @@ def _strip_ipython_lines(source: str) -> tuple[str, int, int, bool]:
     magic_lines = 0
     shell_escape_lines = 0
     skip_cell = False
-    first_non_empty = True
 
     for line in source.splitlines():
         stripped = line.lstrip()
@@ -95,20 +94,17 @@ def _strip_ipython_lines(source: str) -> tuple[str, int, int, bool]:
                 skip_cell = True
             elif magic_name not in _PYTHON_CELL_MAGICS:
                 skip_cell = True
-            first_non_empty = False
             continue
 
         if stripped.startswith(("%", "!")):
             magic_lines += 1
             if stripped.startswith("!"):
                 shell_escape_lines += 1
-            first_non_empty = False
             continue
 
         kept.append(line)
-        first_non_empty = False
 
-    return "\\n".join(kept), magic_lines, shell_escape_lines, skip_cell
+    return "\n".join(kept), magic_lines, shell_escape_lines, skip_cell
 
 
 def _static_indicators(source: str) -> dict[str, int]:
@@ -168,7 +164,7 @@ def parse_notebook(
             supported=False,
             symbols=(),
             dependencies=(),
-            line_count=source.count("\\n") + (0 if source.endswith("\\n") else 1),
+            line_count=source.count("\n") + (0 if source.endswith("\n") else 1),
             character_count=len(source),
             module_docstring=None,
             error=None,
@@ -248,8 +244,8 @@ def parse_notebook(
             source_truncated = True
         total_source_chars += len(cell_source)
         total_lines += (
-            cell_source.count("\\n")
-            + (1 if cell_source and not cell_source.endswith("\\n") else 0)
+            cell_source.count("\n")
+            + (1 if cell_source and not cell_source.endswith("\n") else 0)
         )
 
         if cell_type != "code":
