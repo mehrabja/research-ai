@@ -253,7 +253,7 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
     system_prompt += (
         "\n\nServer-registered tool catalog (all calls require approval):\n"
         + json.dumps(tool_catalog, ensure_ascii=False, separators=(",", ":"))
-        + "\\nReturn only one strict tool_call JSON object when requesting a tool."
+        + "\nReturn only one strict tool_call JSON object when requesting a tool."
     )
     profile = get_current_generation_profile()
     effective_profile = replace(
