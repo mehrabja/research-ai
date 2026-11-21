@@ -89,3 +89,17 @@ describe("phase 2D publication and orchestration routes",()=>{
     expect(routes.orchestrationResume("r 1","run/1")).toBe("reports/r%201/orchestration/runs/run%2F1/resume");
   });
 });
+
+
+describe("Agent Runtime routes",()=>{
+  it("builds report-scoped session and message routes",()=>{
+    expect(routes.agentRuntimeSessions("report/1")).toBe("reports/report%2F1/agent-runtime/sessions");
+    expect(routes.agentRuntimeSession("report/1","session 1")).toBe("reports/report%2F1/agent-runtime/sessions/session%201");
+    expect(routes.agentRuntimeMessages("report/1","session 1")).toBe("reports/report%2F1/agent-runtime/sessions/session%201/messages");
+  });
+  it("builds tool request, approve and reject routes",()=>{
+    expect(routes.agentRuntimeToolCalls("r 1","s/1")).toBe("reports/r%201/agent-runtime/sessions/s%2F1/tool-calls");
+    expect(routes.agentRuntimeToolApprove("r 1","s/1","tool 1")).toBe("reports/r%201/agent-runtime/sessions/s%2F1/tool-calls/tool%201/approve");
+    expect(routes.agentRuntimeToolReject("r 1","s/1","tool 1")).toBe("reports/r%201/agent-runtime/sessions/s%2F1/tool-calls/tool%201/reject");
+  });
+});
