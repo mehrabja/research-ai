@@ -36,10 +36,10 @@ def get_agent_tool_spec(key: str) -> ToolSpec:
 
 
 def available_agent_tools(*, project_bound: bool = True) -> list[dict[str, Any]]:
+    if not project_bound:
+        return []
     catalog: list[dict[str, Any]] = []
     for key in sorted(AGENT_TOOL_ALLOWLIST):
-        if not project_bound and key in {"build_plan", "technical_intelligence"}:
-            continue
         try:
             spec = get_agent_tool_spec(key)
         except Exception:

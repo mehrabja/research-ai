@@ -21,23 +21,23 @@ from app.db.models.project import Project
 from app.db.models.source import Source
 from app.db.session import SessionLocal
 from app.domain.jobs import JobContext, JobTypes
+from app.schemas.orchestration import build_orchestration_output_preview
 from app.services import ai_metering, retrieval
 from app.services.agent_runtime import (
     build_agent_runtime_prompts,
     constrain_citations,
     recent_history,
 )
-from app.services.embedding_profile import get_current_embedding_profile
-from app.services.generation_profile import (
-    build_generation_provider,
-    get_current_generation_profile,
-)
-from app.schemas.orchestration import build_orchestration_output_preview
 from app.services.agent_runtime_tools import (
     available_agent_tools,
     get_agent_tool_spec,
     parse_agent_tool_request,
     validate_agent_tool_arguments,
+)
+from app.services.embedding_profile import get_current_embedding_profile
+from app.services.generation_profile import (
+    build_generation_provider,
+    get_current_generation_profile,
 )
 from app.services.orchestration.executor import execute_node
 from app.services.reports import get_report
@@ -294,6 +294,8 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
     )
     tool_request = parse_agent_tool_request(result.text)
     if tool_request is not None:
+        if session_snapshot["project_id"] is None:
+            raise ValueError("Agent Runtime tools require a project-bound report")
         with SessionLocal() as db:
             current_job = db.execute(
                 select(Job).where(Job.id == ctx.job_id).with_for_update()
@@ -541,14 +543,14 @@ def handle_agent_runtime_tool_execution(ctx: JobContext) -> dict[str, Any]:
 
     with SessionLocal() as db:
         job = db.execute(
-            select(Job).where(Job.id == ctx.job_id).with_for_update()
+            select(Job).where(
+                Job.id == ctx.job_id,
+                Job.status == "processing",
+                Job.worker_id == ctx.worker_id,
+                Job.attempt_count == ctx.attempt_count,
+            )
         ).scalar_one_or_none()
-        if (
-            job is None
-            or job.status != "processing"
-            or job.worker_id != ctx.worker_id
-            or job.attempt_count != ctx.attempt_count
-        ):
+        if job is None:
             raise ValueError("agent runtime tool worker lease was lost before execution")
 
         output = execute_node(
@@ -571,6 +573,17 @@ def handle_agent_runtime_tool_execution(ctx: JobContext) -> dict[str, Any]:
             f"Approved tool '{snapshot['tool_key']}' completed. "
             f"Result preview: {output_json}"
         )
+        current_job = db.execute(
+            select(Job).where(
+                Job.id == ctx.job_id,
+                Job.status == "processing",
+                Job.worker_id == ctx.worker_id,
+                Job.attempt_count == ctx.attempt_count,
+            )
+        ).scalar_one_or_none()
+        if current_job is None:
+            raise ValueError("agent runtime tool worker lease was lost before result persistence")
+
         current_call = db.execute(
             select(AgentRuntimeToolCall)
             .where(AgentRuntimeToolCall.id == tool_call_id)
