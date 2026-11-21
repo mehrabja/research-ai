@@ -306,10 +306,11 @@ def conversation_messages(
                 AgentRuntimeMessage.sequence > after_sequence,
                 AgentRuntimeMessage.sequence < before_sequence,
             )
-            .order_by(AgentRuntimeMessage.sequence.asc())
+            .order_by(AgentRuntimeMessage.sequence.desc())
             .limit(max(1, min(limit, 1000)))
         ).scalars().all()
     )
+    rows.reverse()
     return [
         {
             "sequence": row.sequence,

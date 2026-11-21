@@ -24,8 +24,12 @@ from app.domain.jobs import JobContext, JobTypes
 from app.schemas.orchestration import build_orchestration_output_preview
 from app.services import ai_metering, retrieval
 from app.services.agent_runtime import (
+    add_agent_runtime_checkpoint,
+    add_agent_runtime_event,
     build_agent_runtime_prompts,
+    build_context_compaction_prompt,
     constrain_citations,
+    conversation_messages,
     recent_history,
 )
 from app.services.agent_runtime_tools import (
@@ -53,6 +57,55 @@ def _uuid(value: Any, field: str) -> uuid.UUID:
         return uuid.UUID(str(value))
     except (ValueError, TypeError, AttributeError) as exc:
         raise ValueError(f"agent runtime payload has invalid {field}") from exc
+
+
+def _persist_agent_runtime_event(
+    ctx: JobContext,
+    *,
+    session_id: uuid.UUID,
+    event_type: str,
+    payload: dict[str, Any],
+) -> None:
+    """Persist a stream event only while this worker still owns the session lease."""
+    with SessionLocal() as db:
+        job = db.execute(
+            select(Job).where(Job.id == ctx.job_id).with_for_update()
+        ).scalar_one_or_none()
+        session = db.execute(
+            select(AgentRuntimeSession)
+            .where(AgentRuntimeSession.id == session_id)
+            .with_for_update()
+        ).scalar_one_or_none()
+        if (
+            job is None
+            or job.status != "processing"
+            or job.worker_id != ctx.worker_id
+            or job.attempt_count != ctx.attempt_count
+            or session is None
+            or session.status != "running"
+            or session.active_job_id != ctx.job_id
+        ):
+            raise ValueError("agent runtime stream lease was lost")
+        add_agent_runtime_event(
+            db, session, event_type=event_type, payload=payload
+        )
+        db.commit()
+
+
+def _persist_stream_delta(
+    ctx: JobContext,
+    *,
+    session_id: uuid.UUID,
+    delta: str,
+) -> None:
+    # Keep each durable event bounded so replay and polling stay cheap.
+    for offset in range(0, len(delta), 300):
+        _persist_agent_runtime_event(
+            ctx,
+            session_id=session_id,
+            event_type="text_delta",
+            payload={"text": delta[offset:offset + 300]},
+        )
 
 
 def _load_evidence(
@@ -200,12 +253,41 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
         session.active_job_id = ctx.job_id
         session.last_error_code = None
         session.revision += 1
+        add_agent_runtime_checkpoint(
+            db,
+            session,
+            checkpoint_type="turn_started",
+            through_message_sequence=user_message.sequence,
+            state_snapshot={
+                "job_id": str(ctx.job_id),
+                "attempt_count": ctx.attempt_count,
+                "user_message_id": str(user_message.id),
+            },
+        )
+        add_agent_runtime_event(
+            db,
+            session,
+            event_type="turn_started",
+            payload={
+                "job_id": str(ctx.job_id),
+                "attempt_count": ctx.attempt_count,
+                "user_message_id": str(user_message.id),
+            },
+        )
         db.commit()
 
+        compactable_messages = conversation_messages(
+            db,
+            session_id=session_id,
+            after_sequence=session.context_summary_through_sequence,
+            before_sequence=user_message.sequence,
+            limit=settings.agent_runtime_max_context_messages,
+        )
         history = recent_history(
             db,
             session_id=session_id,
             before_sequence=user_message.sequence,
+            after_sequence=session.context_summary_through_sequence,
             limit=settings.agent_runtime_max_history_messages,
         )
         session_snapshot = {
@@ -217,6 +299,9 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
             "message_sequence": user_message.sequence,
             "content": user_message.content,
             "history": history,
+            "compaction_messages": compactable_messages,
+            "context_summary": session.context_summary,
+            "context_summary_through_sequence": session.context_summary_through_sequence,
         }
 
     with SessionLocal() as db:
@@ -239,22 +324,6 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
         ):
             raise ValueError("agent runtime worker lease was lost before generation")
 
-    system_prompt, user_prompt = build_agent_runtime_prompts(
-        report_topic=session_snapshot["topic"],
-        report_domain=session_snapshot["domain"],
-        history=session_snapshot["history"],
-        current_message=session_snapshot["content"],
-        evidence=evidence,
-        max_prompt_chars=settings.agent_runtime_max_prompt_chars,
-    )
-    tool_catalog = available_agent_tools(
-        project_bound=session_snapshot["project_id"] is not None
-    )
-    system_prompt += (
-        "\n\nServer-registered tool catalog (all calls require approval):\n"
-        + json.dumps(tool_catalog, ensure_ascii=False, separators=(",", ":"))
-        + "\nReturn only one strict tool_call JSON object when requesting a tool."
-    )
     profile = get_current_generation_profile()
     effective_profile = replace(
         profile,
@@ -265,12 +334,158 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
         ),
     )
     provider = build_generation_provider(effective_profile)
+
+    compactable = session_snapshot["compaction_messages"]
+    keep_count = settings.agent_runtime_recent_messages_after_compaction
+    older_messages = compactable[:-keep_count] if len(compactable) > keep_count else []
+    older_chars = sum(len(str(item.get("content") or "")) for item in older_messages)
+    should_compact = bool(
+        older_messages
+        and (
+            older_chars >= settings.agent_runtime_compaction_trigger_chars
+            or len(compactable) >= settings.agent_runtime_max_context_messages
+        )
+    )
+    if should_compact:
+        compact_system, compact_prompt = build_context_compaction_prompt(
+            existing_summary=session_snapshot["context_summary"],
+            messages=older_messages,
+            target_chars=settings.agent_runtime_compaction_target_chars,
+        )
+        compact_result = ai_metering.execute_metered_provider_call(
+            call=lambda: provider.generate(
+                system_prompt=compact_system,
+                user_prompt=compact_prompt,
+                temperature=0.0,
+                max_output_tokens=min(1024, effective_profile.max_output_tokens),
+            ),
+            workspace_id=session_snapshot["workspace_id"],
+            user_id=user_id,
+            operation="agent_runtime_context_compaction",
+            capability="generation",
+            provider=provider,
+            model=effective_profile.model,
+            project_id=session_snapshot["project_id"],
+            report_id=report_id,
+            job_id=ctx.job_id,
+            request_id=f"agent-runtime-compaction:{session_id}:{user_message_id}:{session_snapshot['context_summary_through_sequence']}",
+            input_units=lambda value: value.input_tokens,
+            output_units=lambda value: value.output_tokens,
+            metadata={
+                "protocol": _PROTOCOL_VERSION,
+                "session_id": str(session_id),
+                "user_message_id": str(user_message_id),
+                "messages_compacted": len(older_messages),
+                "input_characters": older_chars,
+            },
+        )
+        compacted_summary = compact_result.text.strip()[:settings.agent_runtime_compaction_target_chars]
+        if compacted_summary:
+            compacted_through = max(int(item["sequence"]) for item in older_messages)
+            with SessionLocal() as db:
+                current_job = db.execute(
+                    select(Job).where(Job.id == ctx.job_id).with_for_update()
+                ).scalar_one_or_none()
+                session = db.execute(
+                    select(AgentRuntimeSession)
+                    .where(AgentRuntimeSession.id == session_id)
+                    .with_for_update()
+                ).scalar_one_or_none()
+                if (
+                    current_job is None
+                    or current_job.status != "processing"
+                    or current_job.worker_id != ctx.worker_id
+                    or current_job.attempt_count != ctx.attempt_count
+                    or session is None
+                    or session.status != "running"
+                    or session.active_job_id != ctx.job_id
+                    or session.context_summary_through_sequence != session_snapshot["context_summary_through_sequence"]
+                ):
+                    raise ValueError("agent runtime compaction lease changed before persistence")
+                session.context_summary = compacted_summary
+                session.context_summary_through_sequence = compacted_through
+                session.compaction_count += 1
+                add_agent_runtime_checkpoint(
+                    db,
+                    session,
+                    checkpoint_type="context_compaction",
+                    through_message_sequence=compacted_through,
+                    state_snapshot={
+                        "messages_compacted": len(older_messages),
+                        "input_characters": older_chars,
+                        "summary_provider": compact_result.provider,
+                        "summary_model": compact_result.model,
+                    },
+                )
+                add_agent_runtime_event(
+                    db,
+                    session,
+                    event_type="context_compacted",
+                    payload={
+                        "through_message_sequence": compacted_through,
+                        "messages_compacted": len(older_messages),
+                        "compaction_count": session.compaction_count,
+                    },
+                )
+                db.commit()
+            session_snapshot["context_summary"] = compacted_summary
+            session_snapshot["context_summary_through_sequence"] = compacted_through
+            session_snapshot["history"] = [
+                item for item in session_snapshot["history"]
+                if int(item.get("sequence", -1)) > compacted_through
+            ]
+
+    system_prompt, user_prompt = build_agent_runtime_prompts(
+        report_topic=session_snapshot["topic"],
+        report_domain=session_snapshot["domain"],
+        history=session_snapshot["history"],
+        current_message=session_snapshot["content"],
+        evidence=evidence,
+        max_prompt_chars=settings.agent_runtime_max_prompt_chars,
+        context_summary=session_snapshot["context_summary"],
+    )
+    tool_catalog = available_agent_tools(
+        project_bound=session_snapshot["project_id"] is not None
+    )
+    system_prompt += (
+        "\n\nServer-registered tool catalog (all calls require approval):\n"
+        + json.dumps(tool_catalog, ensure_ascii=False, separators=(",", ":"))
+        + "\nReturn only one strict tool_call JSON object when requesting a tool."
+    )
+    stream_prefix: list[str] = []
+    stream_pending = ""
+    stream_decided = False
+
+    def on_delta(delta: str) -> None:
+        nonlocal stream_pending, stream_decided
+        stream_prefix.append(delta)
+        if not stream_decided:
+            prefix = "".join(stream_prefix)
+            significant = prefix.lstrip()
+            if not significant:
+                return
+            if significant.startswith("{"):
+                return
+            stream_decided = True
+            stream_pending += prefix
+            stream_prefix.clear()
+        else:
+            stream_pending += delta
+        while len(stream_pending) >= 300:
+            _persist_stream_delta(
+                ctx,
+                session_id=session_id,
+                delta=stream_pending[:300],
+            )
+            stream_pending = stream_pending[300:]
+
     result = ai_metering.execute_metered_provider_call(
-        call=lambda: provider.generate(
+        call=lambda: provider.generate_stream(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             temperature=effective_profile.temperature,
             max_output_tokens=effective_profile.max_output_tokens,
+            on_delta=on_delta,
         ),
         workspace_id=session_snapshot["workspace_id"],
         user_id=user_id,
@@ -293,6 +508,21 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
         },
     )
     tool_request = parse_agent_tool_request(result.text)
+    if tool_request is not None:
+        stream_pending = ""
+        stream_prefix.clear()
+    else:
+        if not stream_decided:
+            # JSON-shaped non-tool answers are released only after validation.
+            stream_pending = result.text
+            stream_decided = True
+        if stream_pending:
+            _persist_stream_delta(
+                ctx,
+                session_id=session_id,
+                delta=stream_pending,
+            )
+            stream_pending = ""
     if tool_request is not None:
         if session_snapshot["project_id"] is None:
             raise ValueError("Agent Runtime tools require a project-bound report")
@@ -350,6 +580,23 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
             session.last_error_code = None
             session.last_message_at = datetime.now(UTC)
             session.revision += 1
+            add_agent_runtime_checkpoint(
+                db,
+                session,
+                checkpoint_type="approval_pending",
+                through_message_sequence=user_message.sequence,
+                state_snapshot={"tool_call_id": str(tool_call.id), "tool_key": spec.key},
+            )
+            add_agent_runtime_event(
+                db,
+                session,
+                event_type="tool_approval_required",
+                payload={
+                    "tool_call_id": str(tool_call.id),
+                    "tool_key": spec.key,
+                    "tool_version": spec.version,
+                },
+            )
             db.commit()
             db.refresh(tool_call)
         return {
@@ -413,6 +660,30 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
         session.last_error_code = None
         session.last_message_at = datetime.now(UTC)
         session.revision += 1
+        db.flush()
+        add_agent_runtime_checkpoint(
+            db,
+            session,
+            checkpoint_type="turn_completed",
+            through_message_sequence=user_message.sequence,
+            state_snapshot={
+                "assistant_message_id": str(reply.id) if existing is None else str(existing.id),
+                "user_message_id": str(user_message_id),
+                "provider": result.provider,
+                "model": result.model,
+            },
+        )
+        add_agent_runtime_event(
+            db,
+            session,
+            event_type="turn_completed",
+            payload={
+                "user_message_id": str(user_message_id),
+                "assistant_message_id": str(reply.id) if existing is None else str(existing.id),
+                "provider": result.provider,
+                "model": result.model,
+            },
+        )
         db.commit()
 
     return {
@@ -856,6 +1127,29 @@ def mark_agent_runtime_turn_failed(ctx: JobContext, exc: BaseException) -> None:
         session.active_job_id = ctx.job_id if should_retry else None
         session.last_error_code = error_code[:80]
         session.revision += 1
+        add_agent_runtime_checkpoint(
+            db,
+            session,
+            checkpoint_type="turn_failed",
+            through_message_sequence=max(-1, session.next_sequence - 1),
+            state_snapshot={
+                "job_id": str(ctx.job_id),
+                "attempt_count": ctx.attempt_count,
+                "error_code": error_code[:80],
+                "will_retry": should_retry,
+            },
+        )
+        add_agent_runtime_event(
+            db,
+            session,
+            event_type="turn_failed",
+            payload={
+                "job_id": str(ctx.job_id),
+                "attempt_count": ctx.attempt_count,
+                "error_code": error_code[:80],
+                "will_retry": should_retry,
+            },
+        )
         db.commit()
 
 
