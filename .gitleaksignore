@@ -1,0 +1,27 @@
+# Reviewed historical generic-api-key false positives in local-only test fixtures.
+# These are commit-scoped fingerprints; do not replace them with global path/rule/line ignores.
+# E2E fixtures are local browser tests; API entries are local security-regression tests.
+490c62508509839612b903dd0f0c652719511e8f:apps/web/e2e/f10-job-retry.spec.ts:generic-api-key:4
+04044240c26f6cbf0ebe4e8d80450cc07afc11f6:apps/web/e2e/phase6.spec.ts:generic-api-key:4
+04044240c26f6cbf0ebe4e8d80450cc07afc11f6:apps/web/e2e/phase5.spec.ts:generic-api-key:4
+9564791c05eca5b2f4feb75637b3ed49a10d6a94:apps/web/e2e/f02-auth-signup.spec.ts:generic-api-key:40
+8bb3ec29673975548e9eede4513524b74a67671d:apps/api/tests/security/test_m37_invitation_abuse.py:generic-api-key:195
+105acab47e5e5ab1e140d42786acb22fa57403a1:apps/web/e2e/phase7-8.spec.ts:generic-api-key:4
+76b022447380449870b620e9bf6b4ef5a9f3f7da:apps/web/e2e/phase5-6.spec.ts:generic-api-key:4
+8bb6173ba8153ac34905697cab3bc321ec120eae:apps/web/e2e/phase3-4.spec.ts:generic-api-key:4
+aae9a8a2fcff2260eb71d03e9d7aaed0b2f77929:apps/api/tests/api/test_phase15_17.py:generic-api-key:48
+a47c54ef99c2997101fbdcef9fd2ba74a293f562:apps/web/e2e/phase12-14-persistence.spec.ts:generic-api-key:4
+d4d156601eae52acc5ea4595c66ef004c12e8ffa:apps/web/e2e/f14-integration-hardening.spec.ts:generic-api-key:4
+076830c65f4e341dd6690bf59de75c2938cfc156:apps/web/e2e/f13-frontend-port.spec.ts:generic-api-key:3
+06f048744ee62268ba8e2171695607b2e991b252:apps/web/e2e/f11-billing-notifications.spec.ts:generic-api-key:4
+7948643cbe4939c8380c4190f99806acb8e28afb:apps/web/e2e/f12-security.spec.ts:generic-api-key:4
+742063b0db3f9d0941360b7705f66632fa872cf6:apps/web/e2e/phase4-slice1.spec.ts:generic-api-key:3
+fb598ba81d4bd51a4f10ba9d8330fed140436815:apps/web/e2e/smoke.spec.ts:generic-api-key:3
+fb598ba81d4bd51a4f10ba9d8330fed140436815:apps/web/lib/validation/auth.test.ts:generic-api-key:16
+fb598ba81d4bd51a4f10ba9d8330fed140436815:apps/web/lib/validation/auth.test.ts:generic-api-key:27
+48085b1e3a45b0310ad686dd55c3b913f2e6951a:apps/api/tests/security/test_m36_request_id_not_auth.py:generic-api-key:17
+48085b1e3a45b0310ad686dd55c3b913f2e6951a:apps/api/tests/security/test_m36_request_id_not_auth.py:generic-api-key:22
+48085b1e3a45b0310ad686dd55c3b913f2e6951a:apps/api/tests/security/test_m36_cross_tenant.py:generic-api-key:22
+48085b1e3a45b0310ad686dd55c3b913f2e6951a:apps/api/tests/security/test_m36_cross_tenant.py:generic-api-key:27
+48085b1e3a45b0310ad686dd55c3b913f2e6951a:apps/api/tests/services/test_m36_storage_hardening.py:generic-api-key:22
+48085b1e3a45b0310ad686dd55c3b913f2e6951a:apps/api/tests/services/test_m36_storage_hardening.py:generic-api-key:27
