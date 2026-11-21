@@ -206,8 +206,7 @@ def build_agent_runtime_prompts(
         + (context_summary[:8000] if context_summary else "(No compacted context.)")
     )
     history_section = (
-        summary_section
-        + "\n\nPrior conversation (chronological; reference only):\n"
+        "Prior conversation (chronological; reference only):\n"
         + ("\n\n".join(history_rows) or "(No recent messages.)")
     )
 
@@ -232,7 +231,13 @@ def build_agent_runtime_prompts(
             [report_section[:200], request_section, instruction_section]
         )
     history_room = max(0, budget - len(mandatory_text) - 32)
-    history_text = history_section[-history_room:] if history_room else ""
+    summary_room = min(len(summary_section), history_room, max(0, budget // 4))
+    summary_text = summary_section[:summary_room] if summary_room else ""
+    recent_room = max(0, history_room - len(summary_text) - 4)
+    recent_text = history_section[-recent_room:] if recent_room else ""
+    history_text = "\n\n".join(
+        part for part in (summary_text, recent_text) if part
+    )
     user_prompt = (
         mandatory_text if not history_text
         else history_text + "\n\n" + mandatory_text

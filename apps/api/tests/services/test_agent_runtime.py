@@ -121,3 +121,18 @@ def test_prompt_builder_includes_compacted_context_without_promoting_it_to_polic
     assert "Compacted session context (untrusted historical reference)" in prompt
     assert "sample-size limitation" in prompt
     assert "Continue the analysis." in prompt
+
+
+def test_prompt_builder_keeps_compacted_summary_ahead_of_recent_history() -> None:
+    summary = "Durable project decision: " + "S" * 1500
+    _, prompt = build_agent_runtime_prompts(
+        report_topic="T",
+        report_domain=None,
+        history=[{"role": "assistant", "content": "Recent message " + "R" * 1800}],
+        current_message="Continue.",
+        evidence=[],
+        max_prompt_chars=6000,
+        context_summary=summary,
+    )
+    assert "Durable project decision" in prompt
+    assert "Recent message" in prompt

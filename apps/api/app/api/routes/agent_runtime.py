@@ -16,7 +16,6 @@ from app.api.rate_limit_deps import enforce_user_rate_limit
 from app.core.config import get_settings
 from app.core.exceptions import AppError
 from app.db.models.agent_runtime import (
-    AgentRuntimeCheckpoint,
     AgentRuntimeEvent,
     AgentRuntimeMessage,
     AgentRuntimeSession,
@@ -26,11 +25,11 @@ from app.db.models.user import User
 from app.db.session import SessionLocal, get_db
 from app.domain.jobs import JobTypes
 from app.schemas.agent_runtime import (
+    AgentRuntimeCheckpointListResponse,
+    AgentRuntimeCheckpointRead,
     AgentRuntimeMessageCreate,
     AgentRuntimeMessageListResponse,
     AgentRuntimeMessageRead,
-    AgentRuntimeCheckpointListResponse,
-    AgentRuntimeCheckpointRead,
     AgentRuntimeSessionCreate,
     AgentRuntimeSessionRead,
     AgentRuntimeToolCallDecision,
