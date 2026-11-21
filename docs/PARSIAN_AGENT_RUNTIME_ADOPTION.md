@@ -33,7 +33,7 @@ The upstream Parsian package is Apache-2.0 licensed and requires Node.js 22.13 o
 - Agent tool proposals are limited to a hard-coded allowlist of registered ToolSpec entries. The server revalidates tool version, permission, idempotency and JSON arguments both when proposed and immediately before execution.
 - Every tool call is stored as `pending` and is not executable until its authenticated session owner explicitly approves it. Rejection is persisted; approval is bound to the same session, user and report. Each approved execution job is configured for one attempt.
 - Non-idempotent orchestration tools are excluded. Worker execution uses the existing orchestration executor and cannot run arbitrary code, SQL, shell or MCP methods.
-- A bounded, secret-filtered output preview is exposed to the session owner. Raw output stays server-side; the result is persisted before an optional model explanation is generated.
+- Only the bounded, secret-filtered output preview is persisted in the tool-call record and exposed to its owner; tool-created artifacts continue to use their existing ownership controls. The preview is stored before an optional model explanation is generated.
 - Turns are serialized per session. Duplicate message replies are guarded by a unique assistant reply reference to their source user message. Tool-call rows are unique per session/user message.
 
 ## API surface

@@ -251,7 +251,7 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
         project_bound=session_snapshot["project_id"] is not None
     )
     system_prompt += (
-        "\\n\\nServer-registered tool catalog (all calls require approval):\\n"
+        "\n\nServer-registered tool catalog (all calls require approval):\n"
         + json.dumps(tool_catalog, ensure_ascii=False, separators=(",", ":"))
         + "\\nReturn only one strict tool_call JSON object when requesting a tool."
     )
@@ -618,7 +618,7 @@ def handle_agent_runtime_tool_execution(ctx: JobContext) -> dict[str, Any]:
             db.add(assistant_message)
             current_session.next_sequence += 1
 
-        current_call.output_snapshot = output
+        current_call.output_snapshot = output_preview
         current_call.status = "completed"
         current_call.completed_at = datetime.now(UTC)
         current_call.error_code = None

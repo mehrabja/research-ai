@@ -61,6 +61,10 @@ def test_non_idempotent_tools_are_rejected_even_if_allowlisted(monkeypatch) -> N
         agent_runtime_tools.get_agent_tool_spec(spec.key)
 
 
+def test_non_project_sessions_receive_no_tool_catalog() -> None:
+    assert agent_runtime_tools.available_agent_tools(project_bound=False) == []
+
+
 def test_tool_call_parser_ignores_normal_prose() -> None:
     assert agent_runtime_tools.parse_agent_tool_request(
         "Here is the evidence-based answer."
