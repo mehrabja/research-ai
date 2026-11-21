@@ -67,7 +67,7 @@ class AgentRuntimeSession(Base, UUIDPKMixin, TimestampMixin):
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('idle','queued','running','failed','archived')",
+            "status IN ('idle','queued','running','awaiting_approval','failed','archived')",
             name="ck_agent_runtime_sessions_status",
         ),
         CheckConstraint(
@@ -144,5 +144,109 @@ class AgentRuntimeMessage(Base, UUIDPKMixin, CreatedAtMixin):
             "in_reply_to_message_id",
             unique=True,
             postgresql_where=text("in_reply_to_message_id IS NOT NULL"),
+        ),
+    )
+
+
+
+class AgentRuntimeToolCall(Base, UUIDPKMixin, TimestampMixin):
+    """A model-proposed operation that remains inert until user approval."""
+
+    __tablename__ = "agent_runtime_tool_calls"
+
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("agent_runtime_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    report_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("reports.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_message_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("agent_runtime_messages.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    tool_key: Mapped[str] = mapped_column(Text, nullable=False)
+    tool_version: Mapped[str] = mapped_column(Text, nullable=False)
+    tool_description: Mapped[str] = mapped_column(Text, nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    arguments: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    status: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default=text("'pending'")
+    )
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    rejected_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    job_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("jobs.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    output_snapshot: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONB, nullable=True
+    )
+    error_code: Mapped[str | None] = mapped_column(Text, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    rejected_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending','queued','running','completed','failed','rejected')",
+            name="ck_agent_runtime_tool_calls_status",
+        ),
+        CheckConstraint(
+            "char_length(tool_key) BETWEEN 1 AND 100",
+            name="ck_agent_runtime_tool_calls_key_length",
+        ),
+        CheckConstraint(
+            "char_length(reason) BETWEEN 1 AND 500",
+            name="ck_agent_runtime_tool_calls_reason_length",
+        ),
+        CheckConstraint(
+            "jsonb_typeof(arguments) = 'object'",
+            name="ck_agent_runtime_tool_calls_arguments_object",
+        ),
+        UniqueConstraint(
+            "session_id",
+            "user_message_id",
+            name="ux_agent_runtime_tool_calls_turn",
+        ),
+        Index(
+            "ix_agent_runtime_tool_calls_session_created",
+            "session_id",
+            "created_at",
+        ),
+        Index(
+            "ix_agent_runtime_tool_calls_status_created",
+            "status",
+            "created_at",
+        ),
+        Index(
+            "ix_agent_runtime_tool_calls_job",
+            "job_id",
+            postgresql_where=text("job_id IS NOT NULL"),
         ),
     )

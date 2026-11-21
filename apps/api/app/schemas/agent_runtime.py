@@ -80,3 +80,37 @@ class AgentRuntimeTurnAccepted(BaseModel):
     job_id: uuid.UUID
     user_message_id: uuid.UUID
     revision: int
+
+
+
+class AgentRuntimeToolCallRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+    id: uuid.UUID
+    session_id: uuid.UUID
+    user_message_id: uuid.UUID
+    tool_key: str
+    tool_version: str
+    tool_description: str
+    reason: str
+    arguments: dict[str, Any]
+    status: str
+    output_preview: dict[str, Any] | None = None
+    error_code: str | None
+    created_at: datetime
+    approved_at: datetime | None
+    rejected_at: datetime | None
+    completed_at: datetime | None
+
+
+class AgentRuntimeToolCallListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[AgentRuntimeToolCallRead]
+    limit: int
+
+
+class AgentRuntimeToolCallDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: str
+    tool_call_id: uuid.UUID
+    session_id: uuid.UUID
+    job_id: uuid.UUID | None = None
