@@ -25,6 +25,7 @@ from app.domain.source import SourceCandidate
 from app.integrations.sources import (
     ArxivProvider,
     CrossrefProvider,
+    EuropePMCProvider,
     OpenAlexProvider,
     PubMedProvider,
     SemanticScholarProvider,
@@ -72,6 +73,13 @@ def _default_provider() -> SourceSearchProvider:
             timeout_seconds=settings.crossref_timeout_seconds,
             max_retries=settings.crossref_max_retries,
             min_interval_seconds=settings.crossref_min_interval_seconds,
+        )
+    if settings.source_search_provider == "europepmc":
+        return EuropePMCProvider(
+            base_url=settings.europepmc_base_url,
+            timeout_seconds=settings.europepmc_timeout_seconds,
+            max_retries=settings.europepmc_max_retries,
+            min_interval_seconds=settings.europepmc_min_interval_seconds,
         )
     if settings.source_search_provider == "pubmed":
         return PubMedProvider(

@@ -720,7 +720,7 @@ class Settings(BaseSettings):
     )
 
     # --- Scientific source discovery ---------------------------------------
-    source_search_provider: Literal["semantic_scholar", "pubmed", "openalex", "arxiv", "crossref"] = "semantic_scholar"
+    source_search_provider: Literal["semantic_scholar", "pubmed", "openalex", "arxiv", "crossref", "europepmc"] = "semantic_scholar"
     semantic_scholar_api_key: str = Field(default="", repr=False)
     semantic_scholar_base_url: str = (
         "https://api.semanticscholar.org/graph/v1"
@@ -764,6 +764,16 @@ class Settings(BaseSettings):
     crossref_max_retries: int = Field(default=2, ge=0, le=10)
     crossref_min_interval_seconds: float = Field(
         default=1.0, ge=0.34, le=30.0
+    )
+    europepmc_base_url: str = (
+        "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+    )
+    europepmc_timeout_seconds: float = Field(
+        default=15.0, ge=1.0, le=120.0
+    )
+    europepmc_max_retries: int = Field(default=2, ge=0, le=10)
+    europepmc_min_interval_seconds: float = Field(
+        default=0.34, ge=0.0, le=10.0
     )
     source_search_limit_default: int = Field(default=25, ge=1, le=1000)
     source_search_limit_max: int = Field(default=1000, ge=1, le=1000)
@@ -939,6 +949,8 @@ class Settings(BaseSettings):
             raise ValueError(
                 "crossref_min_interval_seconds must be >= 1.0 without a mailto address"
             )
+        if not self.europepmc_base_url.startswith(("http://", "https://")):
+            raise ValueError("europepmc_base_url must start with http(s)://")
         return self
 
     @model_validator(mode="after")
