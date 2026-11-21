@@ -30,7 +30,8 @@ from app.integrations.sources.base import (
 _DEFAULT_BASE_URL = (
     "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
 )
-_MAX_RESULTS = 100
+_MAX_RESULTS = 1000
+_PAGE_SIZE = 100
 _MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 _MAX_AUTHORS = 100
 _MAX_TITLE_CHARS = 2000
@@ -110,46 +111,67 @@ class EuropePMCProvider:
             query_parts.append("OPEN_ACCESS:Y")
 
         effective_limit = min(limit, _MAX_RESULTS)
-        payload = self._request_json(
-            {
-                "query": " AND ".join(query_parts),
-                "format": "json",
-                "resultType": "core",
-                "pageSize": str(effective_limit),
-                "cursorMark": "*",
-            }
-        )
-        if payload.get("errCode") or payload.get("errMsg"):
-            raise SourceProviderInvalidResponseError(
-                "Europe PMC rejected the search query"
-            )
-
-        result_list = payload.get("resultList")
-        if not isinstance(result_list, dict):
-            raise SourceProviderInvalidResponseError(
-                "Europe PMC response is missing resultList"
-            )
-        records = result_list.get("result")
-        if not isinstance(records, list):
-            raise SourceProviderInvalidResponseError(
-                "Europe PMC response is missing the result array"
-            )
-
         candidates: list[SourceCandidate] = []
         seen: set[str] = set()
-        for record in records:
-            if not isinstance(record, dict):
-                continue
-            candidate = self._to_candidate(record)
-            if candidate is None:
-                continue
-            identity = candidate.external_source_id.casefold()
-            if identity in seen:
-                continue
-            seen.add(identity)
-            candidates.append(candidate)
-            if len(candidates) >= effective_limit:
+        cursor = "*"
+        pages = 0
+
+        while len(candidates) < effective_limit and pages < 10:
+            page_size = min(_PAGE_SIZE, effective_limit - len(candidates))
+            payload = self._request_json(
+                {
+                    "query": " AND ".join(query_parts),
+                    "format": "json",
+                    "resultType": "core",
+                    "pageSize": str(page_size),
+                    "cursorMark": cursor,
+                }
+            )
+            if payload.get("errCode") or payload.get("errMsg"):
+                raise SourceProviderInvalidResponseError(
+                    "Europe PMC rejected the search query"
+                )
+
+            result_list = payload.get("resultList")
+            if not isinstance(result_list, dict):
+                raise SourceProviderInvalidResponseError(
+                    "Europe PMC response is missing resultList"
+                )
+            records = result_list.get("result")
+            if not isinstance(records, list):
+                raise SourceProviderInvalidResponseError(
+                    "Europe PMC response is missing the result array"
+                )
+            next_cursor = payload.get("nextCursorMark")
+            if next_cursor is not None and not isinstance(next_cursor, str):
+                raise SourceProviderInvalidResponseError(
+                    "Europe PMC response contains an invalid next cursor"
+                )
+
+            for record in records:
+                if not isinstance(record, dict):
+                    continue
+                candidate = self._to_candidate(record)
+                if candidate is None:
+                    continue
+                identity = candidate.external_source_id.casefold()
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                candidates.append(candidate)
+                if len(candidates) >= effective_limit:
+                    break
+
+            pages += 1
+            if (
+                not records
+                or not next_cursor
+                or next_cursor == cursor
+                or pages >= 10
+            ):
                 break
+            cursor = next_cursor
+
         return candidates
 
     def _request_json(self, params: dict[str, str]) -> dict[str, Any]:
