@@ -30,7 +30,8 @@ from app.integrations.sources.base import (
 _DEFAULT_BASE_URL = (
     "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
 )
-_MAX_RESULTS = 100
+_MAX_RESULTS = 1000
+_PAGE_SIZE = 100
 _MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 _MAX_AUTHORS = 100
 _MAX_TITLE_CHARS = 2000
@@ -116,7 +117,7 @@ class EuropePMCProvider:
         pages = 0
 
         while len(candidates) < effective_limit and pages < 10:
-            page_size = min(_MAX_RESULTS, effective_limit - len(candidates))
+            page_size = min(_PAGE_SIZE, effective_limit - len(candidates))
             payload = self._request_json(
                 {
                     "query": " AND ".join(query_parts),

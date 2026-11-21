@@ -283,7 +283,7 @@ def test_search_follows_cursor_and_combines_pages(
     assert first["query"] == second["query"]
 
 
-def test_search_stops_at_ten_pages_even_when_cursor_keeps_advancing(
+def test_search_returns_up_to_1000_records_over_ten_pages(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     requests: list[object] = []
@@ -291,12 +291,17 @@ def test_search_stops_at_ten_pages_even_when_cursor_keeps_advancing(
     def handler(request: object, timeout: float) -> _Response:
         requests.append(request)
         page = len(requests)
+        records = [
+            _record(
+                identifier=f"{page}-{index}",
+                doi=f"10.1234/{page}-{index}",
+            )
+            for index in range(100)
+        ]
         return _Response(
             json.dumps(
                 {
-                    "resultList": {
-                        "result": [_record(identifier=str(page))]
-                    },
+                    "resultList": {"result": records},
                     "nextCursorMark": f"cursor-{page + 1}",
                 }
             ).encode()
@@ -304,8 +309,11 @@ def test_search_stops_at_ten_pages_even_when_cursor_keeps_advancing(
 
     _install(monkeypatch, handler)
     results = _provider().search(query="page cap", limit=1000)
-    assert len(results) == 10
+    assert len(results) == 1000
     assert len(requests) == 10
+    for request in requests:
+        params = parse_qs(urlparse(request.full_url).query)  # type: ignore[attr-defined]
+        assert params["pageSize"] == ["100"]
 
 
 def test_http_errors_are_typed(
