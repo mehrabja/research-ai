@@ -128,3 +128,7 @@
 .wb-agent-empty .btn{font-size:9px}
 @media(max-width:780px){.wb-agent-heading{display:block}.wb-agent-heading-actions{margin-top:10px;justify-content:space-between}.wb-agent-message{max-width:100%}.wb-agent-compose-footer{align-items:flex-start;flex-direction:column}.wb-agent-compose-footer .btn{width:100%}.wb-agent-session-picker{align-items:flex-start;flex-direction:column}.wb-agent-session-picker .input{width:100%}}
 @media(prefers-reduced-motion:reduce){.wb-agent-pulse{animation:none}}
+
+.wb-agent-message.is-streaming{border-color:var(--primary);box-shadow:0 0 0 1px color-mix(in srgb,var(--primary) 12%,transparent)}
+.wb-agent-stream-cursor{display:inline-block;margin-left:2px;animation:wb-agent-cursor 850ms steps(2,start) infinite;color:var(--primary)}
+@keyframes wb-agent-cursor{to{visibility:hidden}}

@@ -30,6 +30,9 @@ export function AgentRuntimePanel({reportId}:Props) {
   const queryClient=useQueryClient();
   const [selectedSessionId,setSelectedSessionId]=useState<string|null>(null);
   const [draft,setDraft]=useState("");
+  const [liveAssistantText,setLiveAssistantText]=useState("");
+  const [liveStreamFailed,setLiveStreamFailed]=useState(false);
+  const [liveContextNotice,setLiveContextNotice]=useState("");
 
   const sessions=useQuery({
     queryKey:["agent-runtime-sessions",reportId],
@@ -81,6 +84,13 @@ export function AgentRuntimePanel({reportId}:Props) {
     },
   });
 
+  const checkpoints=useQuery({
+    queryKey:["agent-runtime-checkpoints",reportId,selectedSessionId],
+    queryFn:()=>api.agentRuntimeCheckpoints(reportId,selectedSessionId!),
+    enabled:Boolean(reportId&&selectedSessionId),
+    retry:false,
+  });
+
   const refreshSession=()=>{
     void queryClient.invalidateQueries({queryKey:["agent-runtime-sessions",reportId]});
     if(!selectedSessionId) return;
@@ -88,6 +98,58 @@ export function AgentRuntimePanel({reportId}:Props) {
     void queryClient.invalidateQueries({queryKey:["agent-runtime-messages",reportId,selectedSessionId]});
     void queryClient.invalidateQueries({queryKey:["agent-runtime-tool-calls",reportId,selectedSessionId]});
   };
+
+  useEffect(()=>{
+    if(!selectedSessionId||!session||!ACTIVE_SESSION_STATES.has(session.status)) return;
+    const stream=new EventSource(api.agentRuntimeEventStreamUrl(reportId,selectedSessionId));
+    stream.onmessage=message=>{
+      let event:unknown;
+      try{event=JSON.parse(message.data) as unknown;}catch{return;}
+      if(!event||typeof event!=="object"||Array.isArray(event)) return;
+      const record=event as Record<string,unknown>;
+      const payload=record.payload&&typeof record.payload==="object"&&!Array.isArray(record.payload)
+        ?record.payload as Record<string,unknown>:{};
+      switch(record.type){
+        case "turn_started":
+          setLiveAssistantText("");
+          setLiveStreamFailed(false);
+          setLiveContextNotice("");
+          break;
+        case "text_delta":
+          if(typeof payload.text==="string") setLiveAssistantText(previous=>previous+payload.text);
+          break;
+        case "context_compacted":
+          setLiveContextNotice(
+            "Long-session context was compacted through message "+
+            String(payload.through_message_sequence??"unknown")+
+            ". The original transcript remains available."
+          );
+          void queryClient.invalidateQueries({queryKey:["agent-runtime-checkpoints",reportId,selectedSessionId]});
+          break;
+        case "checkpoint_created":
+          void queryClient.invalidateQueries({queryKey:["agent-runtime-checkpoints",reportId,selectedSessionId]});
+          break;
+        case "tool_approval_required":
+          setLiveAssistantText("");
+          void queryClient.invalidateQueries({queryKey:["agent-runtime-tool-calls",reportId,selectedSessionId]});
+          void queryClient.invalidateQueries({queryKey:["agent-runtime-session",reportId,selectedSessionId]});
+          break;
+        case "turn_completed":
+          setLiveAssistantText("");
+          setLiveStreamFailed(false);
+          void queryClient.invalidateQueries({queryKey:["agent-runtime-messages",reportId,selectedSessionId]});
+          void queryClient.invalidateQueries({queryKey:["agent-runtime-sessions",reportId]});
+          void queryClient.invalidateQueries({queryKey:["agent-runtime-session",reportId,selectedSessionId]});
+          break;
+        case "turn_failed":
+          setLiveStreamFailed(true);
+          void queryClient.invalidateQueries({queryKey:["agent-runtime-session",reportId,selectedSessionId]});
+          break;
+      }
+    };
+    // EventSource reconnects with Last-Event-ID and replays persisted turn events.
+    return ()=>stream.close();
+  },[reportId,selectedSessionId,session?.status,queryClient]);
 
   const createSession=useMutation({
     mutationFn:()=>api.agentRuntimeCreateSession(reportId,{title:"Research assistant"}),
@@ -183,13 +245,19 @@ export function AgentRuntimePanel({reportId}:Props) {
               {message.evidence_refs.length>0&&<small>{message.evidence_refs.length} validated evidence reference{message.evidence_refs.length===1?"":"s"}</small>}
               {message.token_usage?.total_tokens!==undefined&&message.token_usage.total_tokens!==null&&<small>{message.token_usage.total_tokens.toLocaleString()} tokens · {message.model_name??"configured model"}</small>}
             </article>)}
+          {liveAssistantText&&<article className="wb-agent-message is-assistant is-streaming" aria-live="polite">
+            <header><strong>Research Agent · live response</strong></header>
+            <p>{liveAssistantText}<span className="wb-agent-stream-cursor" aria-hidden="true">▍</span></p>
+            {liveStreamFailed&&<small className="wb-agent-error">Stream interrupted. The saved session state is being recovered.</small>}
+          </article>}
+          {liveContextNotice&&<p className="wb-agent-muted">{liveContextNotice}</p>}
           {(session.status==="queued"||session.status==="running")&&<div className="wb-agent-pending"><span className="wb-agent-pulse"/> Agent turn {session.status==="queued"?"queued":"running"}…</div>}
         </div>
 
         <div className="wb-agent-tool-list">
           <div className="wb-agent-subhead">
             <strong>Tool requests and execution</strong>
-            <span>{toolCalls.data?.items.length??0} recorded</span>
+            <span>{toolCalls.data?.items.length??0} tool requests · {checkpoints.data?.total??0} checkpoints</span>
           </div>
           {toolCalls.isError?<div className="notice error">{errorText(toolCalls.error)}</div>:
             orderedToolCalls.length===0?<p className="wb-agent-muted">No tool requests have been made in this session.</p>:

@@ -563,24 +563,31 @@ def stream_agent_events(
                     limit=100,
                 )
                 terminal_status = active.status not in {"queued", "running"}
-                terminal_event_seen = False
-                for event in events:
-                    payload = {
-                        "id": event.sequence,
-                        "type": event.event_type,
-                        "payload": dict(event.payload or {}),
-                        "created_at": event.created_at.isoformat(),
-                    }
-                    yield (
-                        f"id: {event.sequence}\n"
-                        "data: "
-                        + json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-                        + "\n\n"
+                wire_events = [
+                    (
+                        event.sequence,
+                        event.event_type,
+                        {
+                            "id": event.sequence,
+                            "type": event.event_type,
+                            "payload": dict(event.payload or {}),
+                            "created_at": event.created_at.isoformat(),
+                        },
                     )
-                    cursor = event.sequence
-                    if event.event_type in terminal_events:
-                        terminal_event_seen = True
-            if terminal_event_seen or (terminal_status and not events):
+                    for event in events
+                ]
+            terminal_event_seen = False
+            for sequence, event_type, payload in wire_events:
+                yield (
+                    f"id: {sequence}\n"
+                    "data: "
+                    + json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+                    + "\n\n"
+                )
+                cursor = sequence
+                if event_type in terminal_events:
+                    terminal_event_seen = True
+            if terminal_event_seen or (terminal_status and not wire_events):
                 break
             if not events and time.monotonic() - heartbeat_at >= 15:
                 yield ": keep-alive\\n\\n"

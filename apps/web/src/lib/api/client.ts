@@ -410,6 +410,8 @@ export const api={
   },
   publicationComplianceChecklist:(r:string)=>request<PublicationChecklist>(routes.publicationComplianceChecklist(r)),
   publicationComplianceValidate:(r:string)=>request<PublicationComplianceValidation>(routes.publicationComplianceValidate(r),{method:"POST"}),
+  agentRuntimeEventStreamUrl:(r:string,s:string)=>"/api/backend/"+routes.agentRuntimeEvents(r,s),
+  agentRuntimeCheckpoints:(r:string,s:string)=>request<{items:Array<{id:string;sequence:number;checkpoint_type:string;through_message_sequence:number;context_summary:string|null;state_snapshot:Record<string,unknown>;created_at:string}>;total:number;limit:number}>(routes.agentRuntimeCheckpoints(r,s)),
   agentRuntimeSessions:(r:string)=>request<import("./generated").AgentRuntimeSessionRead[]>(routes.agentRuntimeSessions(r)),
   agentRuntimeCreateSession:(r:string,b:{title?:string|null})=>request<import("./generated").AgentRuntimeSessionRead>(routes.agentRuntimeSessions(r),{method:"POST",body:JSON.stringify(b)}),
   agentRuntimeSession:(r:string,s:string)=>request<import("./generated").AgentRuntimeSessionRead>(routes.agentRuntimeSession(r,s)),
