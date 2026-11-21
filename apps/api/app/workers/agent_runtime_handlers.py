@@ -374,13 +374,19 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
             messages=older_messages,
             target_chars=settings.agent_runtime_compaction_target_chars,
         )
-        compact_result = ai_metering.execute_metered_provider_call(
-            call=lambda: provider.generate(
-                system_prompt=compact_system,
-                user_prompt=compact_prompt,
+        def compact_generation_call(
+            system_prompt: str = compact_system,
+            user_prompt: str = compact_prompt,
+        ) -> Any:
+            return provider.generate(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
                 temperature=0.0,
                 max_output_tokens=min(1024, effective_profile.max_output_tokens),
-            ),
+            )
+
+        compact_result = ai_metering.execute_metered_provider_call(
+            call=compact_generation_call,
             workspace_id=session_snapshot["workspace_id"],
             user_id=user_id,
             operation="agent_runtime_context_compaction",
