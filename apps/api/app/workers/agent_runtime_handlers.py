@@ -483,14 +483,29 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
             )
             stream_pending = stream_pending[300:]
 
-    result = ai_metering.execute_metered_provider_call(
-        call=lambda: provider.generate_stream(
+    stream_generate = getattr(provider, "generate_stream", None)
+    if callable(stream_generate):
+        generation_call = lambda: stream_generate(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             temperature=effective_profile.temperature,
             max_output_tokens=effective_profile.max_output_tokens,
             on_delta=on_delta,
-        ),
+        )
+    else:
+        # Preserve compatibility with older/non-streaming provider adapters.
+        def generation_call():
+            generated = provider.generate(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=effective_profile.temperature,
+                max_output_tokens=effective_profile.max_output_tokens,
+            )
+            on_delta(generated.text)
+            return generated
+
+    result = ai_metering.execute_metered_provider_call(
+        call=generation_call,
         workspace_id=session_snapshot["workspace_id"],
         user_id=user_id,
         operation="agent_runtime_turn",
