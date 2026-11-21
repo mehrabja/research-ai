@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from app.services.scientific_connectors import (
-    get_scientific_connector,
-    list_scientific_connectors,
-)
+from app.services.scientific_connectors import get_scientific_connector, list_scientific_connectors
 
 
 EXPECTED_CONNECTOR_IDS = {
