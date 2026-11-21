@@ -8,6 +8,21 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+class AgentRuntimeConnectorRead(BaseModel):
+    """Catalog metadata; catalog entries are not executable tools."""
+
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    display_name: str
+    category: str
+    category_name: str
+    description: str
+    integration_status: str
+    transport: str
+    requires_approval: bool
+    executable: bool
+
+
 class AgentRuntimeSessionCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     title: str | None = Field(default=None, max_length=120)

@@ -26,6 +26,7 @@ from app.db.session import SessionLocal, get_db
 from app.domain.jobs import JobTypes
 from app.schemas.agent_runtime import (
     AgentRuntimeCheckpointListResponse,
+    AgentRuntimeConnectorRead,
     AgentRuntimeCheckpointRead,
     AgentRuntimeMessageCreate,
     AgentRuntimeMessageListResponse,
@@ -44,6 +45,7 @@ from app.services.agent_runtime_tools import (
     validate_agent_tool_arguments,
 )
 from app.services.jobs import enqueue_job
+from app.services.scientific_connectors import list_scientific_connectors
 
 router = APIRouter(prefix="/reports", tags=["agent-runtime"])
 
@@ -69,6 +71,28 @@ class AgentRuntimeToolConflict(AppError):
 def _require_enabled() -> None:
     if not get_settings().agent_runtime_enabled:
         raise AgentRuntimeDisabled()
+
+
+
+@router.get(
+    "/{report_id}/agent-runtime/connectors",
+    response_model=list[AgentRuntimeConnectorRead],
+)
+def list_agent_runtime_connectors(
+    report_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[AgentRuntimeConnectorRead]:
+    """List planned scientific connectors without exposing executable endpoints."""
+    _require_enabled()
+    resolved = runtime_service.resolve_report_workspace(
+        db,
+        user_id=current_user.id,
+        report_id=report_id,
+    )
+    project = resolved[1]
+    entries = list_scientific_connectors(project_bound=project is not None)
+    return [AgentRuntimeConnectorRead.model_validate(item) for item in entries]
 
 
 @router.post(
