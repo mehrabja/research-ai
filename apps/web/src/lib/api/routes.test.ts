@@ -97,6 +97,10 @@ describe("Agent Runtime routes",()=>{
     expect(routes.agentRuntimeSession("report/1","session 1")).toBe("reports/report%2F1/agent-runtime/sessions/session%201");
     expect(routes.agentRuntimeMessages("report/1","session 1")).toBe("reports/report%2F1/agent-runtime/sessions/session%201/messages");
   });
+  it("builds durable event-stream and checkpoint routes",()=>{
+    expect(routes.agentRuntimeEvents("r 1","s/1")).toBe("reports/r%201/agent-runtime/sessions/s%2F1/events");
+    expect(routes.agentRuntimeCheckpoints("r 1","s/1")).toBe("reports/r%201/agent-runtime/sessions/s%2F1/checkpoints");
+  });
   it("builds tool request, approve and reject routes",()=>{
     expect(routes.agentRuntimeToolCalls("r 1","s/1")).toBe("reports/r%201/agent-runtime/sessions/s%2F1/tool-calls");
     expect(routes.agentRuntimeToolApprove("r 1","s/1","tool 1")).toBe("reports/r%201/agent-runtime/sessions/s%2F1/tool-calls/tool%201/approve");
