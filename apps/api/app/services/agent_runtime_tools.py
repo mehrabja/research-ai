@@ -58,8 +58,12 @@ def available_agent_tools(*, project_bound: bool = True) -> list[dict[str, Any]]
 
 def _validate_schema_value(schema: dict[str, Any], value: Any, path: str) -> None:
     expected = schema.get("type")
-    expected_types = expected if isinstance(expected, list) else [expected]
-    expected_types = [item for item in expected_types if item is not None]
+    if isinstance(expected, str):
+        expected_types: list[str] = [expected]
+    elif isinstance(expected, list):
+        expected_types = [item for item in expected if isinstance(item, str)]
+    else:
+        expected_types = []
 
     if expected_types:
         def matches(type_name: str) -> bool:
@@ -164,6 +168,9 @@ def parse_agent_tool_request(response_text: str) -> dict[str, Any] | None:
         raise ValueError("tool-call name must be a string")
     if not isinstance(reason, str) or not reason.strip() or len(reason.strip()) > 500:
         raise ValueError("tool-call reason must contain 1 to 500 characters")
+
+    if not isinstance(arguments, dict):
+        raise ValueError("tool-call arguments must be a JSON object")
 
     spec = get_agent_tool_spec(key)
     clean_arguments = validate_agent_tool_arguments(spec, arguments)
