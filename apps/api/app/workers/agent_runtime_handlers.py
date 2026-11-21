@@ -235,7 +235,7 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
         max_prompt_chars=settings.agent_runtime_max_prompt_chars,
     )
     profile = get_current_generation_profile()
-        effective_profile = replace(
+    effective_profile = replace(
         profile,
         temperature=min(profile.temperature, 0.3),
         max_output_tokens=min(

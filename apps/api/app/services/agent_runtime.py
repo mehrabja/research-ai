@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, select
@@ -17,7 +16,7 @@ from app.db.models.workspace import Workspace
 from app.services.reports import get_report
 from app.services.workspaces import ensure_default_workspace
 
-_CITATION_RE = re.compile(r"\[E([1-9][0-9]*)\]")
+_CITATION_RE = re.compile(r"\[E(\d+)\]")
 _MAX_HISTORY_ITEM_CHARS = 1800
 _MAX_EVIDENCE_ITEM_CHARS = 1200
 _SYSTEM_PROMPT = """You are Research AI, an evidence-grounded scientific research assistant.
