@@ -4,6 +4,7 @@ from app.db.models.academic_qa import (
     AcademicQARun,
 )
 from app.db.models.ai_operation import AIOperation
+from app.db.models.agent_runtime import AgentRuntimeMessage, AgentRuntimeSession
 from app.db.models.auth_tokens import (
     EmailVerificationToken,
     PasswordResetToken,
@@ -267,6 +268,8 @@ __all__ = [
     "APIToken",
     "UserTwoFactor",
     "AIOperation",
+    "AgentRuntimeSession",
+    "AgentRuntimeMessage",
     "Notification",
     "NotificationPreference",
     "OAuthState",

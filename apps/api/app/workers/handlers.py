@@ -848,6 +848,11 @@ def register_all_handlers() -> None:
             "literature_analyze", handle_literature_analyze
         )
 
+    from app.workers.agent_runtime_handlers import safe_agent_runtime_handler
+
+    if JobTypes.AGENT_RUNTIME_TURN not in registered_types():
+        register_handler(JobTypes.AGENT_RUNTIME_TURN, safe_agent_runtime_handler)
+
 __all__ = [
     "EXECUTABLE_JOB_TYPES",
     "InvalidEmbeddingPayloadError",
