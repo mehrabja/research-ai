@@ -276,13 +276,6 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
         )
         db.commit()
 
-        compactable_messages = conversation_messages(
-            db,
-            session_id=session_id,
-            after_sequence=session.context_summary_through_sequence,
-            before_sequence=user_message.sequence,
-            limit=settings.agent_runtime_max_context_messages,
-        )
         history = recent_history(
             db,
             session_id=session_id,
@@ -299,7 +292,6 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
             "message_sequence": user_message.sequence,
             "content": user_message.content,
             "history": history,
-            "compaction_messages": compactable_messages,
             "context_summary": session.context_summary,
             "context_summary_through_sequence": session.context_summary_through_sequence,
         }
@@ -350,9 +342,6 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
         batch_size = settings.agent_runtime_max_context_messages
         has_more = len(pending_messages) > batch_size
         compactable = pending_messages[:batch_size]
-        compactable_chars = sum(
-            len(str(item.get("content") or "")) for item in compactable
-        )
         older_messages = (
             compactable
             if has_more

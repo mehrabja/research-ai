@@ -315,7 +315,6 @@ def conversation_messages(
             .limit(max(1, min(limit, 1001)))
         ).scalars().all()
     )
-    rows.reverse()
     return [
         {
             "sequence": row.sequence,
