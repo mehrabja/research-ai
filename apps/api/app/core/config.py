@@ -72,6 +72,12 @@ class Settings(BaseSettings):
     )
     orchestration_require_approval: bool = True
 
+    # --- M40: Evidence-grounded Agent Runtime -------------------------
+    agent_runtime_enabled: bool = True
+    agent_runtime_max_history_messages: int = Field(default=12, ge=0, le=12)
+    agent_runtime_max_prompt_chars: int = Field(default=24000, ge=1000, le=100000)
+    agent_runtime_max_output_tokens: int = Field(default=1600, ge=128, le=8192)
+
     app_env: str = "development"
     debug: bool = False
     project_name: str = "research-ai"
