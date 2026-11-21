@@ -26,8 +26,8 @@ from app.db.session import SessionLocal, get_db
 from app.domain.jobs import JobTypes
 from app.schemas.agent_runtime import (
     AgentRuntimeCheckpointListResponse,
-    AgentRuntimeConnectorRead,
     AgentRuntimeCheckpointRead,
+    AgentRuntimeConnectorRead,
     AgentRuntimeMessageCreate,
     AgentRuntimeMessageListResponse,
     AgentRuntimeMessageRead,
@@ -71,7 +71,6 @@ class AgentRuntimeToolConflict(AppError):
 def _require_enabled() -> None:
     if not get_settings().agent_runtime_enabled:
         raise AgentRuntimeDisabled()
-
 
 
 @router.get(

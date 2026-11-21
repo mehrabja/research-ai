@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -17,10 +17,10 @@ class AgentRuntimeConnectorRead(BaseModel):
     category: str
     category_name: str
     description: str
-    integration_status: str
-    transport: str
-    requires_approval: bool
-    executable: bool
+    integration_status: Literal["catalog_only"]
+    transport: Literal["mcp_candidate"]
+    requires_approval: Literal[True]
+    executable: Literal[False]
 
 
 class AgentRuntimeSessionCreate(BaseModel):
