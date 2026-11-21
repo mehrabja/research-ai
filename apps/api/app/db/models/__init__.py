@@ -78,13 +78,13 @@ from app.db.models.manuscript import (
     ManuscriptVersion,
 )
 from app.db.models.manuscript_draft import ManuscriptDraft, ManuscriptDraftHistory
-from app.db.models.mcp_connection import WorkspaceMCPConnection
 from app.db.models.manuscript_prose import (
     ManuscriptProseParagraph,
     ManuscriptProseRun,
     ManuscriptProseSection,
     ManuscriptProseSentence,
 )
+from app.db.models.mcp_connection import WorkspaceMCPConnection
 from app.db.models.membership import WorkspaceMembership  # noqa: F401
 from app.db.models.metric import Metric
 from app.db.models.notifications import Notification, NotificationPreference

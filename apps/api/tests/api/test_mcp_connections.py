@@ -3,12 +3,13 @@ from __future__ import annotations
 import uuid
 from collections.abc import Iterator
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 
 import app.api.routes.mcp_connections as mcp_routes
-from app.db.models.membership import WorkspaceMembership
 from app.db.models.mcp_connection import WorkspaceMCPConnection
+from app.db.models.membership import WorkspaceMembership
 from app.db.models.project import Project, ProjectEvent
 from app.db.models.report import Report
 from app.db.session import SessionLocal

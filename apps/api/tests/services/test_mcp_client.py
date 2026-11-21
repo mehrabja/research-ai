@@ -9,6 +9,7 @@ from app.services.mcp_client import (
     build_capability_snapshot,
 )
 
+
 def test_discovered_tool_metadata_is_always_inert_and_marked_untrusted() -> None:
     snapshot = build_capability_snapshot(
         protocol_version="2026-07-28",

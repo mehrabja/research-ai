@@ -30,7 +30,6 @@ from app.api.routes.knowledge_graph import (
     router as knowledge_graph_router,
 )
 from app.api.routes.literature import router as literature_router
-from app.api.routes.mcp_connections import router as mcp_connections_router
 from app.api.routes.manuscript import router as manuscript_router
 from app.api.routes.manuscript_humanization import (
     router as manuscript_humanization_router,
@@ -38,6 +37,7 @@ from app.api.routes.manuscript_humanization import (
 from app.api.routes.manuscript_prose import (
     router as manuscript_prose_router,
 )
+from app.api.routes.mcp_connections import router as mcp_connections_router
 from app.api.routes.notifications import router as notifications_router
 from app.api.routes.orchestration import (
     router as orchestration_router,

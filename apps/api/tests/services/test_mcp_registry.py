@@ -7,6 +7,7 @@ import pytest
 
 from app.services import mcp_registry
 
+
 def _settings(profiles: object):
     return SimpleNamespace(mcp_server_profiles_json=json.dumps(profiles))
 
