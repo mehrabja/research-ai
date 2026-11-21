@@ -121,6 +121,18 @@ Official references:
 - https://help.openalex.org/api/paging/
 - https://help.openalex.org/api/errors/
 
+## Scientific source connector: Europe PMC
+
+Research AI supports Europe PMC through the existing report-scoped source-search provider contract. Set `SOURCE_SEARCH_PROVIDER=europepmc`; no API key is required. The adapter uses the Europe PMC REST search endpoint with `resultType=core`, one bounded page (maximum 100 records), optional `PUB_YEAR` filtering and the provider's `OPEN_ACCESS:Y` filter. It maps Europe PMC source/id identity, title, author list, publication year, DOI, citation count and the canonical Europe PMC article URL into `SourceCandidate`.
+
+Abstract text is returned only when the record carries an explicit reusable licence (CC BY, CC BY-SA, CC0 or public-domain marker). An Open Access flag alone is not treated as a text-reuse licence. Unknown, NC, ND or missing licences retain bibliographic metadata but omit the abstract. The adapter does not retrieve PDFs or claim that full text has been read; acquisition and extraction remain in the existing controlled ingestion pipeline.
+
+The adapter applies response-size, result-count, timeout, retry and per-process pacing limits. The current provider interface returns one page and does not expose Europe PMC cursor continuation; result counts above 100 are therefore intentionally capped rather than silently presenting a page as exhaustive.
+
+Official references:
+- https://europepmc.org/RestfulWebService
+- https://dev.europepmc.org/docs
+
 ## Round-table review capability
 
 The `roundtable_review` strategy is exposed by the existing orchestration API and Workbench strategy selector. It retrieves lexical report-scoped chunks, binds source references to existing source/chunk IDs, runs three role-specific reviewer calls, then synthesizes consensus, disagreements, priority actions and evidence gaps. Provider calls are recorded in the existing AI operation/usage ledger. The model-assisted node follows the configured human-approval policy.
