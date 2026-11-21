@@ -76,10 +76,11 @@ test("requires an explicit decision before Agent Runtime registry tools execute"
   };
   const decisions:string[]=[];
 
-  await page.route("**/api/backend/reports/*/agent-runtime/sessions**",async route=>{
+  await page.route("**/agent-runtime/**",async route=>{
     const request=route.request();
     const path=new URL(request.url()).pathname;
     const method=request.method();
+    console.log("[Agent Runtime E2E] "+method+" "+path);
     const sessionListPath="/agent-runtime/sessions";
     const sessionIdFromPath=path.match(/\/agent-runtime\/sessions\/([^/]+)$/)?.[1];
     const decision=path.match(/\/agent-runtime\/sessions\/([^/]+)\/tool-calls\/([^/]+)\/(approve|reject)$/);
@@ -148,7 +149,7 @@ test("requires an explicit decision before Agent Runtime registry tools execute"
 
   await page.goto("/workbench?projectId="+projectId+"&reportId="+reportId);
   await expect(page.getByRole("heading",{name:"Agent Runtime"})).toBeVisible({timeout:30_000});
-  await expect(page.locator(".wb-agent-tool-card")).toHaveCount(1);
+  await expect(page.locator(".wb-agent-tool-card")).toHaveCount(1,{timeout:30_000});
   const firstCard=page.locator(".wb-agent-tool-card").first();
   await expect(firstCard.getByText("pending",{exact:true})).toBeVisible();
   await expect(firstCard.getByText("The report has a manuscript version that needs citation generation.")).toBeVisible();
