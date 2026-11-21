@@ -177,7 +177,7 @@ test("requires an explicit decision before Agent Runtime registry tools execute"
 
   await firstCard.getByRole("button",{name:"Approve and run"}).click();
   await expect.poll(async()=>firstCard.locator(".wb-status").textContent()).toContain("queued");
-  await expect(page.getByText(/Streaming response from mocked model\\./)).toBeVisible({timeout:15_000});
+  await expect(page.getByText("Streaming response from mocked model.",{exact:false})).toBeVisible({timeout:15_000});
   expect(eventStreamRequests).toBeGreaterThan(0);
 
   await page.getByLabel("Conversation").selectOption(sessionIds[1]);
