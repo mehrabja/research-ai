@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import Literal, cast
 
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy import select, text
@@ -94,8 +95,8 @@ def _read_connection(row: WorkspaceMCPConnection) -> MCPConnectionRead:
         workspace_id=row.workspace_id,
         profile_key=row.profile_key,
         profile_name=profile_name,
-        status=row.status,
-        discovery_status=row.discovery_status,
+        status=cast(Literal["enabled", "disabled"], row.status),
+        discovery_status=cast(Literal["never", "success", "failed"], row.discovery_status),
         protocol_version=row.protocol_version,
         server_name=row.server_name,
         server_version=row.server_version,
