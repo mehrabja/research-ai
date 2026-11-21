@@ -75,6 +75,7 @@ test("requires an explicit decision before Agent Runtime registry tools execute"
     [toolCallIds[1]]:"pending",
   };
   const decisions:string[]=[];
+  let eventStreamRequests=0;
 
   await page.route("**/agent-runtime/**",async route=>{
     const request=route.request();
@@ -93,6 +94,24 @@ test("requires an explicit decision before Agent Runtime registry tools execute"
         last_error_code:null,created_at:createdAt,updated_at:createdAt,
       }));
       await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(items)});
+      return;
+    }
+
+    if(method==="GET"&&path.endsWith("/events")){
+      eventStreamRequests+=1;
+      const events=[
+        "retry: 3600000",
+        'id: 1\\ndata: '+JSON.stringify({id:1,type:"turn_started",payload:{}}),
+        "",
+        'id: 2\\ndata: '+JSON.stringify({id:2,type:"text_delta",payload:{text:"Streaming response from mocked model."}}),
+        "",
+      ].join("\\n");
+      await route.fulfill({
+        status:200,
+        contentType:"text/event-stream",
+        headers:{"cache-control":"no-cache"},
+        body:events,
+      });
       return;
     }
 
@@ -158,6 +177,8 @@ test("requires an explicit decision before Agent Runtime registry tools execute"
 
   await firstCard.getByRole("button",{name:"Approve and run"}).click();
   await expect.poll(async()=>firstCard.locator(".wb-status").textContent()).toContain("queued");
+  await expect(page.getByText(/Streaming response from mocked model\\./)).toBeVisible({timeout:15_000});
+  expect(eventStreamRequests).toBeGreaterThan(0);
 
   await page.getByLabel("Conversation").selectOption(sessionIds[1]);
   const secondCard=page.locator(".wb-agent-tool-card").first();

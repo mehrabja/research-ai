@@ -7,6 +7,7 @@ import {ApiRequestError,api} from "@/lib/api/client";
 
 type Props={reportId:string};
 const ACTIVE_SESSION_STATES=new Set(["queued","running","awaiting_approval"]);
+const STREAMING_SESSION_STATES=new Set(["queued","running"]);
 const BUSY_SESSION_STATES=new Set(["queued","running","awaiting_approval","archived"]);
 const LIVE_TOOL_STATES=new Set(["pending","queued","running"]);
 
@@ -100,7 +101,13 @@ export function AgentRuntimePanel({reportId}:Props) {
   };
 
   useEffect(()=>{
-    if(!selectedSessionId||!session||!ACTIVE_SESSION_STATES.has(session.status)) return;
+    setLiveAssistantText("");
+    setLiveStreamFailed(false);
+    setLiveContextNotice("");
+  },[selectedSessionId]);
+
+  useEffect(()=>{
+    if(!selectedSessionId||!session||!STREAMING_SESSION_STATES.has(session.status)) return;
     const stream=new EventSource(api.agentRuntimeEventStreamUrl(reportId,selectedSessionId));
     stream.onmessage=message=>{
       let event:unknown;
