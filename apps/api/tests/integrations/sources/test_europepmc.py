@@ -314,6 +314,13 @@ def test_query_validation_and_custom_base_url() -> None:
     assert provider._base_url == "https://custom.example/rest/search"
 
 
-def test_empty_search_is_valid() -> None:
-    _install_placeholder = _Response(b'{"resultList":{"result":[]}}')
-    assert _install_placeholder.read()
+def test_empty_search_is_valid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(
+        monkeypatch,
+        lambda request, timeout: _Response(
+            b'{"resultList":{"result":[]}}'
+        ),
+    )
+    assert _provider().search(query="no matching records", limit=10) == []
