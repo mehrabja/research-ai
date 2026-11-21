@@ -56,7 +56,6 @@ def test_agent_runtime_session_schema_exposes_checkpoint_cursors() -> None:
     assert session.compaction_count == 1
 
 
-
 def test_scientific_connector_schema_locks_catalog_only_contract() -> None:
     payload = {
         "id": "europepmc",
