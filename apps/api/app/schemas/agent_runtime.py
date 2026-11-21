@@ -34,6 +34,11 @@ class AgentRuntimeSessionRead(BaseModel):
     revision: int
     last_message_at: datetime | None
     last_error_code: str | None
+    next_event_sequence: int
+    next_checkpoint_sequence: int
+    context_summary_through_sequence: int
+    compaction_count: int
+    last_checkpoint_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
@@ -114,3 +119,22 @@ class AgentRuntimeToolCallDecision(BaseModel):
     tool_call_id: uuid.UUID
     session_id: uuid.UUID
     job_id: uuid.UUID | None = None
+
+
+class AgentRuntimeCheckpointRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+    id: uuid.UUID
+    session_id: uuid.UUID
+    sequence: int
+    checkpoint_type: str
+    through_message_sequence: int
+    context_summary: str | None
+    state_snapshot: dict[str, Any]
+    created_at: datetime
+
+
+class AgentRuntimeCheckpointListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[AgentRuntimeCheckpointRead]
+    total: int
+    limit: int

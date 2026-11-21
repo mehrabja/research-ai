@@ -430,10 +430,14 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
                 db.commit()
             session_snapshot["context_summary"] = compacted_summary
             session_snapshot["context_summary_through_sequence"] = compacted_through
-            session_snapshot["history"] = [
-                item for item in session_snapshot["history"]
-                if int(item.get("sequence", -1)) > compacted_through
-            ]
+            with SessionLocal() as db:
+                session_snapshot["history"] = recent_history(
+                    db,
+                    session_id=session_id,
+                    before_sequence=session_snapshot["message_sequence"],
+                    after_sequence=compacted_through,
+                    limit=settings.agent_runtime_max_history_messages,
+                )
 
     system_prompt, user_prompt = build_agent_runtime_prompts(
         report_topic=session_snapshot["topic"],

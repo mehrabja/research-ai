@@ -1,10 +1,13 @@
 """M40 — report-scoped durable Agent Runtime API."""
 from __future__ import annotations
 
+import json
+import time
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Header, Query, Response
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -13,17 +16,21 @@ from app.api.rate_limit_deps import enforce_user_rate_limit
 from app.core.config import get_settings
 from app.core.exceptions import AppError
 from app.db.models.agent_runtime import (
+    AgentRuntimeCheckpoint,
+    AgentRuntimeEvent,
     AgentRuntimeMessage,
     AgentRuntimeSession,
     AgentRuntimeToolCall,
 )
 from app.db.models.user import User
-from app.db.session import get_db
+from app.db.session import SessionLocal, get_db
 from app.domain.jobs import JobTypes
 from app.schemas.agent_runtime import (
     AgentRuntimeMessageCreate,
     AgentRuntimeMessageListResponse,
     AgentRuntimeMessageRead,
+    AgentRuntimeCheckpointListResponse,
+    AgentRuntimeCheckpointRead,
     AgentRuntimeSessionCreate,
     AgentRuntimeSessionRead,
     AgentRuntimeToolCallDecision,
@@ -485,4 +492,133 @@ def reject_agent_tool_call(
         status="rejected",
         tool_call_id=tool_call.id,
         session_id=session.id,
+    )
+
+
+@router.get(
+    "/{report_id}/agent-runtime/sessions/{session_id}/events",
+    response_class=StreamingResponse,
+)
+def stream_agent_events(
+    report_id: uuid.UUID,
+    session_id: uuid.UUID,
+    after: int | None = Query(default=None, ge=0),
+    last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """Replay persisted session events as authenticated server-sent events."""
+    _require_enabled()
+    initial = runtime_service.get_owned_session(
+        db,
+        user_id=current_user.id,
+        report_id=report_id,
+        session_id=session_id,
+    )
+    cursor: int
+    if last_event_id is not None:
+        try:
+            cursor = int(last_event_id)
+        except ValueError as exc:
+            raise AppError("invalid Last-Event-ID", code="AGENT_RUNTIME_EVENT_CURSOR") from exc
+        if cursor < 0:
+            raise AppError("invalid Last-Event-ID", code="AGENT_RUNTIME_EVENT_CURSOR")
+    elif after is not None:
+        cursor = after
+    elif initial.status in {"queued", "running"}:
+        with SessionLocal() as stream_db:
+            latest_start = stream_db.execute(
+                select(AgentRuntimeEvent.sequence)
+                .where(
+                    AgentRuntimeEvent.session_id == session_id,
+                    AgentRuntimeEvent.event_type == "turn_started",
+                )
+                .order_by(AgentRuntimeEvent.sequence.desc())
+                .limit(1)
+            ).scalar_one_or_none()
+        cursor = max(0, int(latest_start or initial.next_event_sequence) - (1 if latest_start else 0))
+    else:
+        cursor = initial.next_event_sequence
+
+    def event_body():
+        nonlocal cursor
+        heartbeat_at = time.monotonic()
+        terminal_events = {
+            "turn_completed",
+            "tool_approval_required",
+            "turn_failed",
+        }
+        while True:
+            with SessionLocal() as stream_db:
+                active = runtime_service.get_owned_session(
+                    stream_db,
+                    user_id=current_user.id,
+                    report_id=report_id,
+                    session_id=session_id,
+                )
+                events = runtime_service.list_events_after(
+                    stream_db,
+                    session_id=session_id,
+                    after_sequence=cursor,
+                    limit=100,
+                )
+                terminal_status = active.status not in {"queued", "running"}
+                terminal_event_seen = False
+                for event in events:
+                    payload = {
+                        "id": event.sequence,
+                        "type": event.event_type,
+                        "payload": dict(event.payload or {}),
+                        "created_at": event.created_at.isoformat(),
+                    }
+                    yield (
+                        f"id: {event.sequence}\n"
+                        "data: "
+                        + json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+                        + "\n\n"
+                    )
+                    cursor = event.sequence
+                    if event.event_type in terminal_events:
+                        terminal_event_seen = True
+            if terminal_event_seen or (terminal_status and not events):
+                break
+            if not events and time.monotonic() - heartbeat_at >= 15:
+                yield ": keep-alive\\n\\n"
+                heartbeat_at = time.monotonic()
+            time.sleep(0.4)
+
+    return StreamingResponse(
+        event_body(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.get(
+    "/{report_id}/agent-runtime/sessions/{session_id}/checkpoints",
+    response_model=AgentRuntimeCheckpointListResponse,
+)
+def list_agent_checkpoints(
+    report_id: uuid.UUID,
+    session_id: uuid.UUID,
+    limit: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AgentRuntimeCheckpointListResponse:
+    _require_enabled()
+    items, total = runtime_service.list_checkpoints(
+        db,
+        user_id=current_user.id,
+        report_id=report_id,
+        session_id=session_id,
+        limit=limit,
+    )
+    return AgentRuntimeCheckpointListResponse(
+        items=[AgentRuntimeCheckpointRead.model_validate(item) for item in items],
+        total=total,
+        limit=limit,
     )
