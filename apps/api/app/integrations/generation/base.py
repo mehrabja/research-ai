@@ -1,6 +1,7 @@
 """Generation provider contract + typed errors."""
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Protocol
 
 from app.domain.generation import GenerationProviderResult
@@ -49,6 +50,16 @@ class GenerationProvider(Protocol):
         user_prompt: str,
         temperature: float,
         max_output_tokens: int,
+    ) -> GenerationProviderResult: ...
+
+    def generate_stream(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float,
+        max_output_tokens: int,
+        on_delta: Callable[[str], None],
     ) -> GenerationProviderResult: ...
 
 
