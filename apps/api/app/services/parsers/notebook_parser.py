@@ -89,7 +89,10 @@ def _strip_ipython_lines(source: str) -> tuple[str, int, int, bool]:
             magic_lines += 1
             match = _CELL_MAGIC_RE.match(stripped)
             magic_name = match.group(1).lower() if match else ""
-            if magic_name in {"bash", "sh", "script", "javascript", "js", "html", "sql", "r"}:
+            if magic_name in {
+                "bash", "sh", "script", "javascript", "js",
+                "html", "sql", "r",
+            }:
                 shell_escape_lines += int(magic_name in {"bash", "sh", "script"})
                 skip_cell = True
             elif magic_name not in _PYTHON_CELL_MAGICS:
@@ -157,7 +160,11 @@ def parse_notebook(
         return _failed(source, "notebook root must be a JSON object")
 
     nbformat = notebook.get("nbformat")
-    if isinstance(nbformat, bool) or nbformat != 4:
+    if (
+        isinstance(nbformat, bool)
+        or not isinstance(nbformat, int)
+        or nbformat != 4
+    ):
         return CodeParseResult(
             parser=PARSER_NAME,
             parser_version=PARSER_VERSION,

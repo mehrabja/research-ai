@@ -176,3 +176,37 @@ def test_notebook_marks_unknown_nbformat_unsupported() -> None:
     result = parse_notebook(json.dumps({"nbformat": 3, "worksheets": []}))
     assert result.supported is False
     assert result.analysis_meta["notebook"]["unsupported_nbformat"] == 3
+
+
+
+def test_notebook_tolerates_untrusted_cell_and_output_type_values() -> None:
+    source = _notebook(
+        [
+            {
+                "cell_type": [],
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": "unknown cell",
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [{"output_type": []}],
+                "source": "",
+            },
+        ]
+    )
+    result = parse_notebook(source)
+    assert result.error is None
+    metadata = result.analysis_meta["notebook"]
+    assert metadata["cell_type_counts"]["unknown"] == 1
+    assert metadata["outputs"]["output_type_counts"]["other"] == 1
+
+
+def test_notebook_requires_integer_nbformat_version() -> None:
+    result = parse_notebook(
+        json.dumps({"nbformat": 4.0, "cells": []})
+    )
+    assert result.supported is False
