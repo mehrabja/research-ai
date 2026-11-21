@@ -81,6 +81,7 @@ class Settings(BaseSettings):
     agent_runtime_compaction_target_chars: int = Field(default=5000, ge=1000, le=20000)
     agent_runtime_recent_messages_after_compaction: int = Field(default=6, ge=2, le=20)
     agent_runtime_max_context_messages: int = Field(default=200, ge=12, le=1000)
+    agent_runtime_max_compaction_batches: int = Field(default=5, ge=1, le=20)
 
     app_env: str = "development"
     debug: bool = False

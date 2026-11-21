@@ -335,18 +335,51 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
     )
     provider = build_generation_provider(effective_profile)
 
-    compactable = session_snapshot["compaction_messages"]
     keep_count = settings.agent_runtime_recent_messages_after_compaction
-    older_messages = compactable[:-keep_count] if len(compactable) > keep_count else []
-    older_chars = sum(len(str(item.get("content") or "")) for item in older_messages)
-    should_compact = bool(
-        older_messages
-        and (
-            older_chars >= settings.agent_runtime_compaction_trigger_chars
-            or len(compactable) >= settings.agent_runtime_max_context_messages
+    compacted_batches = 0
+    while True:
+        with SessionLocal() as db:
+            pending_messages = conversation_messages(
+                db,
+                session_id=session_id,
+                after_sequence=session_snapshot["context_summary_through_sequence"],
+                before_sequence=session_snapshot["message_sequence"],
+                limit=settings.agent_runtime_max_context_messages + 1,
+            )
+
+        batch_size = settings.agent_runtime_max_context_messages
+        has_more = len(pending_messages) > batch_size
+        compactable = pending_messages[:batch_size]
+        compactable_chars = sum(
+            len(str(item.get("content") or "")) for item in compactable
         )
-    )
-    if should_compact:
+        older_messages = (
+            compactable
+            if has_more
+            else (
+                compactable[:-keep_count]
+                if len(compactable) > keep_count
+                else []
+            )
+        )
+        older_chars = sum(
+            len(str(item.get("content") or "")) for item in older_messages
+        )
+        should_compact = bool(
+            older_messages
+            and (
+                has_more
+                or len(compactable) > settings.agent_runtime_max_history_messages
+                or older_chars >= settings.agent_runtime_compaction_trigger_chars
+            )
+        )
+        if not should_compact:
+            break
+        if compacted_batches >= settings.agent_runtime_max_compaction_batches:
+            raise ValueError(
+                "agent runtime history exceeds the configured compaction batch budget"
+            )
+
         compact_system, compact_prompt = build_context_compaction_prompt(
             existing_summary=session_snapshot["context_summary"],
             messages=older_messages,
@@ -368,7 +401,10 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
             project_id=session_snapshot["project_id"],
             report_id=report_id,
             job_id=ctx.job_id,
-            request_id=f"agent-runtime-compaction:{session_id}:{user_message_id}:{session_snapshot['context_summary_through_sequence']}",
+            request_id=(
+                f"agent-runtime-compaction:{session_id}:{user_message_id}:"
+                f"{session_snapshot['context_summary_through_sequence']}"
+            ),
             input_units=lambda value: value.input_tokens,
             output_units=lambda value: value.output_tokens,
             metadata={
@@ -377,67 +413,80 @@ def handle_agent_runtime_turn(ctx: JobContext) -> dict[str, Any]:
                 "user_message_id": str(user_message_id),
                 "messages_compacted": len(older_messages),
                 "input_characters": older_chars,
+                "batch_number": compacted_batches + 1,
+                "batch_has_more": has_more,
             },
         )
-        compacted_summary = compact_result.text.strip()[:settings.agent_runtime_compaction_target_chars]
-        if compacted_summary:
-            compacted_through = max(int(item["sequence"]) for item in older_messages)
-            with SessionLocal() as db:
-                current_job = db.execute(
-                    select(Job).where(Job.id == ctx.job_id).with_for_update()
-                ).scalar_one_or_none()
-                session = db.execute(
-                    select(AgentRuntimeSession)
-                    .where(AgentRuntimeSession.id == session_id)
-                    .with_for_update()
-                ).scalar_one_or_none()
-                if (
-                    current_job is None
-                    or current_job.status != "processing"
-                    or current_job.worker_id != ctx.worker_id
-                    or current_job.attempt_count != ctx.attempt_count
-                    or session is None
-                    or session.status != "running"
-                    or session.active_job_id != ctx.job_id
-                    or session.context_summary_through_sequence != session_snapshot["context_summary_through_sequence"]
-                ):
-                    raise ValueError("agent runtime compaction lease changed before persistence")
-                session.context_summary = compacted_summary
-                session.context_summary_through_sequence = compacted_through
-                session.compaction_count += 1
-                add_agent_runtime_checkpoint(
-                    db,
-                    session,
-                    checkpoint_type="context_compaction",
-                    through_message_sequence=compacted_through,
-                    state_snapshot={
-                        "messages_compacted": len(older_messages),
-                        "input_characters": older_chars,
-                        "summary_provider": compact_result.provider,
-                        "summary_model": compact_result.model,
-                    },
-                )
-                add_agent_runtime_event(
-                    db,
-                    session,
-                    event_type="context_compacted",
-                    payload={
-                        "through_message_sequence": compacted_through,
-                        "messages_compacted": len(older_messages),
-                        "compaction_count": session.compaction_count,
-                    },
-                )
-                db.commit()
-            session_snapshot["context_summary"] = compacted_summary
-            session_snapshot["context_summary_through_sequence"] = compacted_through
-            with SessionLocal() as db:
-                session_snapshot["history"] = recent_history(
-                    db,
-                    session_id=session_id,
-                    before_sequence=session_snapshot["message_sequence"],
-                    after_sequence=compacted_through,
-                    limit=settings.agent_runtime_max_history_messages,
-                )
+        compacted_summary = compact_result.text.strip()[
+            :settings.agent_runtime_compaction_target_chars
+        ]
+        if not compacted_summary:
+            raise ValueError("agent runtime context compaction returned an empty summary")
+
+        compacted_through = max(int(item["sequence"]) for item in older_messages)
+        with SessionLocal() as db:
+            current_job = db.execute(
+                select(Job).where(Job.id == ctx.job_id).with_for_update()
+            ).scalar_one_or_none()
+            session = db.execute(
+                select(AgentRuntimeSession)
+                .where(AgentRuntimeSession.id == session_id)
+                .with_for_update()
+            ).scalar_one_or_none()
+            if (
+                current_job is None
+                or current_job.status != "processing"
+                or current_job.worker_id != ctx.worker_id
+                or current_job.attempt_count != ctx.attempt_count
+                or session is None
+                or session.status != "running"
+                or session.active_job_id != ctx.job_id
+                or session.context_summary_through_sequence
+                != session_snapshot["context_summary_through_sequence"]
+            ):
+                raise ValueError("agent runtime compaction lease changed before persistence")
+            session.context_summary = compacted_summary
+            session.context_summary_through_sequence = compacted_through
+            session.compaction_count += 1
+            add_agent_runtime_checkpoint(
+                db,
+                session,
+                checkpoint_type="context_compaction",
+                through_message_sequence=compacted_through,
+                state_snapshot={
+                    "messages_compacted": len(older_messages),
+                    "input_characters": older_chars,
+                    "summary_provider": compact_result.provider,
+                    "summary_model": compact_result.model,
+                    "batch_number": compacted_batches + 1,
+                    "batch_has_more": has_more,
+                },
+            )
+            add_agent_runtime_event(
+                db,
+                session,
+                event_type="context_compacted",
+                payload={
+                    "through_message_sequence": compacted_through,
+                    "messages_compacted": len(older_messages),
+                    "compaction_count": session.compaction_count,
+                    "batch_number": compacted_batches + 1,
+                    "batch_has_more": has_more,
+                },
+            )
+            db.commit()
+        session_snapshot["context_summary"] = compacted_summary
+        session_snapshot["context_summary_through_sequence"] = compacted_through
+        compacted_batches += 1
+
+    with SessionLocal() as db:
+        session_snapshot["history"] = recent_history(
+            db,
+            session_id=session_id,
+            before_sequence=session_snapshot["message_sequence"],
+            after_sequence=session_snapshot["context_summary_through_sequence"],
+            limit=settings.agent_runtime_max_history_messages,
+        )
 
     system_prompt, user_prompt = build_agent_runtime_prompts(
         report_topic=session_snapshot["topic"],
