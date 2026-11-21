@@ -34,6 +34,7 @@ test("renders completed protected capability surfaces",async({page})=>{
 
   const routes=[
     ["/workspace","Research workspace"],
+    ["/workbench","Scientific Workbench"],
     ["/research","Research discovery"],
     ["/sources","Source library"],
     ["/literature","Literature intelligence"],
