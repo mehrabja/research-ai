@@ -22,14 +22,7 @@ from app.core.config import get_settings
 from app.db.models.user import User
 from app.db.session import get_db
 from app.domain.source import SourceCandidate
-from app.integrations.sources import (
-    ArxivProvider,
-    CrossrefProvider,
-    EuropePMCProvider,
-    OpenAlexProvider,
-    PubMedProvider,
-    SemanticScholarProvider,
-)
+from app.integrations.sources import PubMedProvider, SemanticScholarProvider
 from app.integrations.sources.base import SourceSearchProvider
 from app.schemas.source_extraction import SourceExtractionResponse
 from app.schemas.sources import (
@@ -53,34 +46,6 @@ router = APIRouter(
 # ---------------------------------------------------------------------------
 def _default_provider() -> SourceSearchProvider:
     settings = get_settings()
-    if settings.source_search_provider == "openalex":
-        return OpenAlexProvider(
-            api_key=settings.openalex_api_key,
-            timeout_seconds=settings.openalex_timeout_seconds,
-            max_retries=settings.openalex_max_retries,
-            min_interval_seconds=settings.openalex_min_interval_seconds,
-        )
-    if settings.source_search_provider == "arxiv":
-        return ArxivProvider(
-            timeout_seconds=settings.arxiv_timeout_seconds,
-            max_retries=settings.arxiv_max_retries,
-            min_interval_seconds=settings.arxiv_min_interval_seconds,
-        )
-    if settings.source_search_provider == "crossref":
-        return CrossrefProvider(
-            mailto=settings.crossref_mailto,
-            api_key=settings.crossref_api_key,
-            timeout_seconds=settings.crossref_timeout_seconds,
-            max_retries=settings.crossref_max_retries,
-            min_interval_seconds=settings.crossref_min_interval_seconds,
-        )
-    if settings.source_search_provider == "europepmc":
-        return EuropePMCProvider(
-            base_url=settings.europepmc_base_url,
-            timeout_seconds=settings.europepmc_timeout_seconds,
-            max_retries=settings.europepmc_max_retries,
-            min_interval_seconds=settings.europepmc_min_interval_seconds,
-        )
     if settings.source_search_provider == "pubmed":
         return PubMedProvider(
             api_key=settings.pubmed_api_key,

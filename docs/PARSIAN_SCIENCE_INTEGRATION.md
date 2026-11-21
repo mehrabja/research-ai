@@ -21,7 +21,7 @@ This integration is intentionally incremental and backend-backed.
 1. Agent execution — evaluate the portable @aipoch/agent-harness separately from the Electron host. If adopted, run it behind a narrow, authenticated Node worker boundary; do not import Electron IPC, Prisma or desktop settings into FastAPI.
 2. Scientific execution — adapt notebook/job contracts to Research AI's durable job system. Kernel execution must run in an isolated worker/container with CPU, memory, wall-clock, filesystem and network limits. Never execute notebook code inside the web or API process.
 3. Connectors — add required scientific APIs through the existing provider/connector registry, with per-provider timeouts, rate limits, attribution, content-rights checks and tenant-scoped provenance.
-4. PDF structure — benchmark Parsian's table/figure extraction against the existing ingestion pipeline before replacing any parser. Preserve source page/region coordinates and extraction confidence.
+4. PDF structure — benchmark-first adoption is specified in [the PDF structure adoption assessment](PARSIAN_PDF_STRUCTURE_ADOPTION.md). The upstream engine requires a Node 22.13+ worker, pinned local ONNX assets and host-owned authorization, immutable staging, tenant-scoped cache, process-tree termination and resource controls. Do not run it in FastAPI or replace pypdf until the benchmark and sandbox gates pass.
 5. Round-table review — implemented as a durable orchestration strategy with three separate role-specific requests (disciplinary, methodology, evidence/provenance), followed by a synthesis request. Every perspective receives the same report-scoped retrieved excerpts; AI calls are metered, token/provider-call budgets are enforced, unsupported evidence references are surfaced, and the persisted node is human-approval gated. These are distinct prompts and requests using the configured Research AI provider/model, not separate agent runtimes or guaranteed independent model families.
 6. Localization and UX — borrow interaction patterns, not the Electron design system wholesale. Keep Research AI navigation, responsive breakpoints, keyboard behavior and accessible controls.
 
@@ -141,11 +141,11 @@ Structured output is not treated as proof of truth. References invented by a mod
 
 ## Validation status
 
-The merged integration was validated on the default branch by GitHub Actions CI run 44838088491 (commit `4b02559ebb088365241d3b85e0f5bb754f233de0`). All CI jobs passed:
+The merged integration's latest default-branch validation in this review is GitHub Actions CI run 44873906428 (commit `9fc67dc9700fc9285ef56627532c7e5e08a5f1bf`), with all four jobs successful:
 
 - Backend: Ruff, mypy, Alembic upgrade/downgrade/upgrade, application import, smoke tests and pytest.
 - Frontend: dependency install, TypeScript typecheck, unit tests, API-boundary audit and production build.
-- E2E: database migration, backend startup, Playwright browser setup and end-to-end tests.
+- E2E: database migration, Playwright browser setup and end-to-end tests.
 - Docker: API image build.
 
-The separate Secret Scan reported 24 `generic-api-key` matches in historical local-only E2E/API test fixtures. The exact commit-scoped Gitleaks fingerprints are recorded in the repository root `.gitleaksignore`. No rule-wide or path-wide allowlist is added; these entries suppress only the reviewed historical findings. Any new commit containing a new occurrence is still scanned and reported.
+The matching Secret Scan run 44873906422 also passed. Earlier historical `generic-api-key` findings were addressed with exact commit-scoped Gitleaks fingerprints in the repository root `.gitleaksignore`; no rule-wide or path-wide suppression is used.

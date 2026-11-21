@@ -1,123 +1,11 @@
 """M35 — Orchestration Pydantic schemas."""
 from __future__ import annotations
 
-import json
-import re
 import uuid
 from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
-
-_OUTPUT_PREVIEW_MAX_BYTES = 16_000
-_OUTPUT_PREVIEW_BUDGET_CHARS = 2_800
-_OUTPUT_PREVIEW_MAX_DEPTH = 5
-_OUTPUT_PREVIEW_MAX_ITEMS = 24
-_OUTPUT_PREVIEW_MAX_STRING_CHARS = 900
-_OUTPUT_PREVIEW_SENSITIVE_KEYS = frozenset(
-    {
-        "api_key",
-        "access_token",
-        "refresh_token",
-        "authorization",
-        "password",
-        "secret",
-        "credential",
-        "credentials",
-        "private_key",
-        "cookie",
-        "set_cookie",
-    }
-)
-
-
-def _preview_key_is_sensitive(key: str) -> bool:
-    is_internal = key.startswith("_")
-    normalized = re.sub(r"[^a-z0-9_]+", "_", key.casefold()).strip("_")
-    return (
-        is_internal
-        or normalized in _OUTPUT_PREVIEW_SENSITIVE_KEYS
-        or normalized == "token"
-        or normalized.endswith("_token")
-        or normalized.startswith("token_")
-        or any(
-            marker in normalized
-            for marker in (
-                "api_key",
-                "apikey",
-                "access_token",
-                "refresh_token",
-                "password",
-                "secret",
-            )
-        )
-    )
-
-
-def _preview_value(value: Any, *, depth: int, budget: list[int]) -> Any:
-    if budget[0] <= 0:
-        return "[preview truncated]"
-    if value is None or isinstance(value, (bool, int, float)):
-        budget[0] -= 8
-        return value
-    if isinstance(value, str):
-        limit = min(_OUTPUT_PREVIEW_MAX_STRING_CHARS, budget[0])
-        clipped = value[:limit]
-        budget[0] -= len(clipped)
-        return clipped + ("…[truncated]" if len(value) > limit else "")
-    if depth >= _OUTPUT_PREVIEW_MAX_DEPTH:
-        return "[nested content omitted]"
-    if isinstance(value, dict):
-        result: dict[str, Any] = {}
-        for index, (raw_key, item) in enumerate(value.items()):
-            if index >= _OUTPUT_PREVIEW_MAX_ITEMS or budget[0] <= 0:
-                result["preview_truncated"] = True
-                break
-            if not isinstance(raw_key, str) or _preview_key_is_sensitive(raw_key):
-                continue
-            key = raw_key[:80]
-            budget[0] -= len(key)
-            result[key] = _preview_value(
-                item, depth=depth + 1, budget=budget
-            )
-        return result
-    if isinstance(value, (list, tuple)):
-        preview_items = [
-            _preview_value(item, depth=depth + 1, budget=budget)
-            for item in value[:_OUTPUT_PREVIEW_MAX_ITEMS]
-        ]
-        if len(value) > _OUTPUT_PREVIEW_MAX_ITEMS:
-            preview_items.append("[additional items omitted]")
-        return preview_items
-    return f"[unsupported value: {type(value).__name__}]"
-
-
-def build_orchestration_output_preview(
-    snapshot: Any,
-) -> dict[str, Any] | None:
-    """Return a bounded, secret-filtered projection of a persisted node output.
-
-    Raw output_snapshot remains server-side. Only this sanitized preview is
-    returned by the report-authorized orchestration read endpoints.
-    """
-    if not isinstance(snapshot, dict) or not snapshot:
-        return None
-    safe = _preview_value(
-        snapshot,
-        depth=0,
-        budget=[_OUTPUT_PREVIEW_BUDGET_CHARS],
-    )
-    if not isinstance(safe, dict):
-        return None
-    encoded = json.dumps(
-        safe, ensure_ascii=False, separators=(",", ":")
-    ).encode("utf-8")
-    if len(encoded) > _OUTPUT_PREVIEW_MAX_BYTES:
-        return {
-            "preview_truncated": True,
-            "message": "Node output is too large for an inline preview.",
-        }
-    return safe
 
 
 class OrchestrationRunRequest(BaseModel):
@@ -157,7 +45,6 @@ class OrchestrationNodeRead(BaseModel):
     deterministic: bool
     error_class: str | None
     error_message: str | None
-    output_preview: dict[str, Any] | None = None
     duration_ms: int | None
     started_at: datetime | None
     completed_at: datetime | None
