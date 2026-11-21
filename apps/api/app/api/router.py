@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.routes.academic_qa import router as academic_qa_router
+from app.api.routes.agent_runtime import router as agent_runtime_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.billing import router as billing_router
 from app.api.routes.citations import router as citations_router
@@ -36,6 +37,7 @@ from app.api.routes.manuscript_humanization import (
 from app.api.routes.manuscript_prose import (
     router as manuscript_prose_router,
 )
+from app.api.routes.mcp_connections import router as mcp_connections_router
 from app.api.routes.notifications import router as notifications_router
 from app.api.routes.orchestration import (
     router as orchestration_router,
@@ -66,6 +68,7 @@ api_router = APIRouter()
 api_router.include_router(projects_router)
 api_router.include_router(health_router)
 api_router.include_router(auth_router)
+api_router.include_router(agent_runtime_router)
 api_router.include_router(reports_router)
 api_router.include_router(sources_router)
 api_router.include_router(embeddings_router)
@@ -95,6 +98,7 @@ api_router.include_router(publication_router)
 api_router.include_router(collaboration_router)
 api_router.include_router(orchestration_router)
 api_router.include_router(workspaces_router)
+api_router.include_router(mcp_connections_router)
 api_router.include_router(invitations_router)
 
 api_router.include_router(notifications_router)

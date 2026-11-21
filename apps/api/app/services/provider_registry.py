@@ -55,6 +55,46 @@ class GenerationProviderFallback:
         assert last is not None
         raise last
 
+    def generate_stream(self, **kwargs: Any) -> Any:
+        from app.integrations.generation.base import (
+            GenerationProviderUnavailableError,
+            GenerationRateLimitError,
+            GenerationTimeoutError,
+        )
+        original_callback = kwargs.pop("on_delta")
+        emitted = False
+        last: Exception | None = None
+        for provider in self._providers:
+            name = getattr(provider, "provider_name", self.provider_name)
+            self.attempted_providers.append(name)
+
+            def forward_delta(delta: str) -> None:
+                nonlocal emitted
+                emitted = True
+                original_callback(delta)
+
+            try:
+                method = getattr(provider, "generate_stream", None)
+                if callable(method):
+                    result = method(**kwargs, on_delta=forward_delta)
+                else:
+                    result = provider.generate(**kwargs)
+                    if result.text:
+                        forward_delta(result.text)
+                self.last_used_provider_name = getattr(result, "provider", name)
+                return result
+            except (
+                GenerationRateLimitError,
+                GenerationTimeoutError,
+                GenerationProviderUnavailableError,
+            ) as exc:
+                if emitted:
+                    raise
+                last = exc
+                continue
+        assert last is not None
+        raise last
+
 
 class TranslationProviderFallback:
     def __init__(self, providers: tuple[Any, ...]) -> None:

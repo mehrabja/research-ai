@@ -177,6 +177,14 @@ export const routes={
   orchestrationResume:(reportId:string,runId:string)=>"reports/"+segment(reportId)+"/orchestration/runs/"+segment(runId)+"/resume",
   orchestrationTools:(reportId:string)=>"reports/"+segment(reportId)+"/orchestration/tools",
   orchestrationValidate:(reportId:string,runId:string)=>"reports/"+segment(reportId)+"/orchestration/runs/"+segment(runId)+"/validate",
+  agentRuntimeSessions:(reportId:string)=>"reports/"+segment(reportId)+"/agent-runtime/sessions",
+  agentRuntimeSession:(reportId:string,sessionId:string)=>"reports/"+segment(reportId)+"/agent-runtime/sessions/"+segment(sessionId),
+  agentRuntimeMessages:(reportId:string,sessionId:string)=>"reports/"+segment(reportId)+"/agent-runtime/sessions/"+segment(sessionId)+"/messages",
+  agentRuntimeEvents:(reportId:string,sessionId:string)=>"reports/"+segment(reportId)+"/agent-runtime/sessions/"+segment(sessionId)+"/events",
+  agentRuntimeCheckpoints:(reportId:string,sessionId:string)=>"reports/"+segment(reportId)+"/agent-runtime/sessions/"+segment(sessionId)+"/checkpoints",
+  agentRuntimeToolCalls:(reportId:string,sessionId:string)=>"reports/"+segment(reportId)+"/agent-runtime/sessions/"+segment(sessionId)+"/tool-calls",
+  agentRuntimeToolApprove:(reportId:string,sessionId:string,toolCallId:string)=>"reports/"+segment(reportId)+"/agent-runtime/sessions/"+segment(sessionId)+"/tool-calls/"+segment(toolCallId)+"/approve",
+  agentRuntimeToolReject:(reportId:string,sessionId:string,toolCallId:string)=>"reports/"+segment(reportId)+"/agent-runtime/sessions/"+segment(sessionId)+"/tool-calls/"+segment(toolCallId)+"/reject",
   postTranslationHumanization:(reportId:string)=>"reports/"+segment(reportId)+"/post-translation-humanization/enqueue",
 } as const;
 

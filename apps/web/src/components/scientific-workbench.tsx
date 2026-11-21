@@ -5,6 +5,7 @@ import {useRouter,useSearchParams} from "next/navigation";
 import {useEffect,useMemo,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {api} from "@/lib/api/client";
+import {AgentRuntimePanel} from "./agent-runtime-panel";
 import {useWorkspace} from "./app-shell";
 import {isActiveRunStatus,isTerminalJobStatus,progressPercent} from "./scientific-workbench-model";
 import "./scientific-workbench.css";
@@ -234,6 +235,8 @@ export function ScientificWorkbench() {
           {jobId&&<div className="notice" style={{marginTop:12}}>Workflow preparation: {job.data?.status??"queued"}</div>}
           {start.isError&&<div className="notice error" style={{marginTop:12}}>{start.error instanceof Error?start.error.message:"Could not start the workflow."}</div>}
         </section>
+
+        <AgentRuntimePanel reportId={reportId}/>
 
         <section className="wb-panel wb-run-panel">
           <Heading title={selectedRunId?"Selected workflow":"Live workflow"} detail={displayed?.run.goal??"No workflow is selected yet"} action={displayed&&<span className={"wb-status "+tone(displayed.run.status)}>{displayed.run.status}</span>}/>

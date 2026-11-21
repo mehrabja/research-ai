@@ -111,6 +111,119 @@ class OpenAIGenerationProvider:
         jitter = base * self._jitter * self._random()
         return min(self._retry_max, base + jitter)
 
+
+    def generate_stream(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float,
+        max_output_tokens: int,
+        on_delta,
+    ) -> GenerationProviderResult:
+        """Stream Chat Completions deltas; callers persist deltas before exposing them."""
+        if not system_prompt or not user_prompt:
+            raise GenerationInvalidRequestError("empty prompt")
+        if not self._api_key:
+            raise GenerationAuthenticationError(
+                f"{self.provider_name} API key is not configured"
+            )
+
+        payload: dict[str, Any] = {
+            "model": self.model_name,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": temperature,
+            "max_tokens": max_output_tokens,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+        settings = get_settings()
+        if self.provider_name == "openrouter":
+            if settings.openrouter_http_referer.strip():
+                headers["HTTP-Referer"] = settings.openrouter_http_referer.strip()
+            if settings.openrouter_app_title.strip():
+                headers["X-Title"] = settings.openrouter_app_title.strip()
+
+        text_parts: list[str] = []
+        usage_raw: dict[str, Any] = {}
+        request_id: str | None = None
+        try:
+            with httpx.stream(
+                "POST",
+                f"{self._base_url}/chat/completions",
+                json=payload,
+                headers=headers,
+                timeout=self._timeout,
+            ) as response:
+                request_id = response.headers.get("x-request-id")
+                if response.status_code in _RETRYABLE_STATUSES:
+                    if response.status_code == 429:
+                        raise GenerationRateLimitError(f"HTTP {response.status_code}")
+                    raise GenerationProviderUnavailableError(f"HTTP {response.status_code}")
+                if response.status_code in (401, 403):
+                    raise GenerationAuthenticationError(f"HTTP {response.status_code}")
+                if response.status_code == 400:
+                    raise GenerationInvalidRequestError("HTTP 400")
+                if response.status_code >= 400:
+                    raise GenerationInvalidRequestError(f"HTTP {response.status_code}")
+
+                for line in response.iter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if not data:
+                        continue
+                    if data == "[DONE]":
+                        break
+                    try:
+                        body = __import__("json").loads(data)
+                    except (TypeError, ValueError) as exc:
+                        raise GenerationInvalidResponseError("invalid streaming JSON") from exc
+                    if not isinstance(body, dict):
+                        raise GenerationInvalidResponseError("malformed streaming event")
+                    if isinstance(body.get("usage"), dict):
+                        usage_raw = body["usage"]
+                    choices = body.get("choices") or []
+                    if not choices:
+                        continue
+                    choice = choices[0]
+                    if not isinstance(choice, dict):
+                        raise GenerationInvalidResponseError("malformed streaming choice")
+                    delta = choice.get("delta") or {}
+                    if not isinstance(delta, dict):
+                        continue
+                    content = delta.get("content")
+                    if isinstance(content, str) and content:
+                        text_parts.append(content)
+                        on_delta(content)
+        except httpx.TimeoutException as exc:
+            raise GenerationTimeoutError("stream timeout") from exc
+        except httpx.HTTPError as exc:
+            raise GenerationProviderUnavailableError(
+                f"stream transport: {type(exc).__name__}"
+            ) from exc
+
+        text = "".join(text_parts)
+        if not text:
+            raise GenerationInvalidResponseError("stream finished without text")
+        return GenerationProviderResult(
+            text=text,
+            provider=self.provider_name,
+            model=self.model_name,
+            input_tokens=_as_int(usage_raw.get("prompt_tokens")),
+            output_tokens=_as_int(usage_raw.get("completion_tokens")),
+            total_tokens=_as_int(usage_raw.get("total_tokens")),
+            request_id=request_id,
+        )
+
     def _generate_once(
         self,
         *,

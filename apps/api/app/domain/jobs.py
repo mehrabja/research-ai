@@ -68,6 +68,7 @@ class JobTypes(StrEnum):
     HUMANIZE_POST_TRANSLATION = "humanize_post_translation"
     SEND_EMAIL_VERIFICATION = "send_email_verification"
     SEND_PASSWORD_RESET = "send_password_reset"
+    AGENT_RUNTIME_TURN = "agent_runtime_turn"
 
 EXECUTABLE_JOB_TYPES: frozenset[str] = frozenset({
     JobTypes.TEST_NOOP,
@@ -81,7 +82,9 @@ EXECUTABLE_JOB_TYPES: frozenset[str] = frozenset({
     JobTypes.SEND_PASSWORD_RESET.value,
 })
 
-RESERVED_JOB_TYPES: frozenset[str] = frozenset()
+RESERVED_JOB_TYPES: frozenset[str] = frozenset({
+    JobTypes.AGENT_RUNTIME_TURN.value,
+})
 
 
 RETRYABLE_ERROR_CODES: frozenset[str] = frozenset({

@@ -3,6 +3,13 @@ from app.db.models.academic_qa import (
     AcademicQAFinding,
     AcademicQARun,
 )
+from app.db.models.agent_runtime import (
+    AgentRuntimeCheckpoint,
+    AgentRuntimeEvent,
+    AgentRuntimeMessage,
+    AgentRuntimeSession,
+    AgentRuntimeToolCall,
+)
 from app.db.models.ai_operation import AIOperation
 from app.db.models.auth_tokens import (
     EmailVerificationToken,
@@ -77,6 +84,7 @@ from app.db.models.manuscript_prose import (
     ManuscriptProseSection,
     ManuscriptProseSentence,
 )
+from app.db.models.mcp_connection import WorkspaceMCPConnection
 from app.db.models.membership import WorkspaceMembership  # noqa: F401
 from app.db.models.metric import Metric
 from app.db.models.notifications import Notification, NotificationPreference
@@ -267,6 +275,12 @@ __all__ = [
     "APIToken",
     "UserTwoFactor",
     "AIOperation",
+    "AgentRuntimeSession",
+    "AgentRuntimeMessage",
+    "AgentRuntimeToolCall",
+    "AgentRuntimeEvent",
+    "AgentRuntimeCheckpoint",
+    "WorkspaceMCPConnection",
     "Notification",
     "NotificationPreference",
     "OAuthState",

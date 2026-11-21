@@ -83,3 +83,79 @@ def test_malformed_response(monkeypatch) -> None:  # type: ignore[no-untyped-def
     with pytest.raises(GenerationInvalidResponseError):
         p.generate(system_prompt="s", user_prompt="u",
                    temperature=0.2, max_output_tokens=100)
+
+
+class _FakeStreamingResponse:
+    def __init__(self, lines: list[str], *, status_code: int = 200) -> None:
+        self.status_code = status_code
+        self.headers = {"x-request-id": "stream-req-1"}
+        self._lines = lines
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args) -> None:
+        return None
+
+    def iter_lines(self):
+        return iter(self._lines)
+
+
+def test_generate_stream_emits_deltas_and_normalizes_usage(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    import app.integrations.generation.openai as mod
+
+    captured: dict[str, object] = {}
+    lines = [
+        'data: {"choices":[{"delta":{"content":"Hello"}}]}',
+        "",
+        'data: {"choices":[{"delta":{"content":" world"}}]}',
+        'data: {"choices":[],"usage":{"prompt_tokens":20,"completion_tokens":4,"total_tokens":24}}',
+        "data: [DONE]",
+    ]
+
+    def fake_stream(method, url, **kwargs):  # type: ignore[no-untyped-def]
+        captured["method"] = method
+        captured["url"] = url
+        captured["payload"] = kwargs.get("json")
+        return _FakeStreamingResponse(lines)
+
+    monkeypatch.setattr(mod.httpx, "stream", fake_stream)
+    provider = OpenAIGenerationProvider(model="gpt-4o-mini", api_key="k")
+    deltas: list[str] = []
+    result = provider.generate_stream(
+        system_prompt="system",
+        user_prompt="user",
+        temperature=0.2,
+        max_output_tokens=100,
+        on_delta=deltas.append,
+    )
+
+    assert captured["method"] == "POST"
+    assert captured["url"].endswith("/chat/completions")
+    assert captured["payload"]["stream"] is True  # type: ignore[index]
+    assert captured["payload"]["stream_options"] == {"include_usage": True}  # type: ignore[index]
+    assert deltas == ["Hello", " world"]
+    assert result.text == "Hello world"
+    assert result.input_tokens == 20
+    assert result.output_tokens == 4
+    assert result.total_tokens == 24
+    assert result.request_id == "stream-req-1"
+
+
+def test_generate_stream_maps_rate_limit_without_retrying(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    import app.integrations.generation.openai as mod
+
+    monkeypatch.setattr(
+        mod.httpx,
+        "stream",
+        lambda *args, **kwargs: _FakeStreamingResponse([], status_code=429),
+    )
+    provider = OpenAIGenerationProvider(model="m", api_key="k", max_retries=0)
+    with pytest.raises(GenerationRateLimitError):
+        provider.generate_stream(
+            system_prompt="s",
+            user_prompt="u",
+            temperature=0.2,
+            max_output_tokens=100,
+            on_delta=lambda _delta: None,
+        )

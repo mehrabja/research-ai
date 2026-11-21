@@ -9,6 +9,7 @@ from app.integrations.sources.base import (
     SourceProviderUnavailableError,
     SourceSearchProvider,
 )
+from app.integrations.sources.clinicaltrials import ClinicalTrialsGovProvider
 from app.integrations.sources.crossref import CrossrefProvider
 from app.integrations.sources.europepmc import EuropePMCProvider
 from app.integrations.sources.openalex import OpenAlexProvider
@@ -19,6 +20,7 @@ from app.integrations.sources.semantic_scholar import (
 
 __all__ = [
     "ArxivProvider",
+    "ClinicalTrialsGovProvider",
     "CrossrefProvider",
     "EuropePMCProvider",
     "OpenAlexProvider",

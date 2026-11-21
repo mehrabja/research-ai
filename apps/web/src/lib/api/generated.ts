@@ -153,3 +153,29 @@ export type OrchestrationApprovalResponse={status:string;run_id:UUID;node_id:UUI
 export type OrchestrationResumeResponse={status:string;run_id:UUID};
 
 export type GenerationCurrent={report_id:UUID;run_id:UUID|null;status:string|null;prompt_version:string|null;provider:string|null;model:string|null;input_tokens:number|null;output_tokens:number|null;language:string|null;text:string|null;context_hash:string|null;evidence:unknown[];cited_markers:string[];created_at:DateTime|null;completed_at:DateTime|null};
+
+export type AgentRuntimeSessionRead={
+  id:UUID;user_id:UUID;project_id:UUID|null;report_id:UUID;title:string;status:string;
+  active_job_id:UUID|null;next_sequence:number;revision:number;last_message_at:DateTime|null;
+  last_error_code:string|null;created_at:DateTime;updated_at:DateTime;
+};
+export type AgentRuntimeMessageRead={
+  id:UUID;session_id:UUID;sequence:number;role:string;content:string;
+  evidence_refs:Array<Record<string,unknown>>;in_reply_to_message_id:UUID|null;
+  provider_name:string|null;model_name:string|null;token_usage:Record<string,number|null>|null;
+  created_at:DateTime;
+};
+export type AgentRuntimeToolCallRead={
+  id:UUID;session_id:UUID;user_message_id:UUID;tool_key:string;tool_version:string;
+  tool_description:string;reason:string;arguments:Record<string,unknown>;status:string;
+  output_preview:Record<string,unknown>|null;error_code:string|null;created_at:DateTime;
+  approved_at:DateTime|null;rejected_at:DateTime|null;completed_at:DateTime|null;
+};
+export type AgentRuntimeMessageListResponse={items:AgentRuntimeMessageRead[];total:number;limit:number};
+export type AgentRuntimeToolCallListResponse={items:AgentRuntimeToolCallRead[];limit:number};
+export type AgentRuntimeTurnAccepted={
+  status:string;session_id:UUID;job_id:UUID;user_message_id:UUID;revision:number;
+};
+export type AgentRuntimeToolCallDecision={
+  status:string;tool_call_id:UUID;session_id:UUID;job_id:UUID|null;
+};

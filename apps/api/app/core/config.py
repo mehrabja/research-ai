@@ -8,7 +8,6 @@ from typing import Literal
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 def _resolve_repo_root() -> Path:
     current = Path(__file__).resolve()
 
@@ -17,7 +16,6 @@ def _resolve_repo_root() -> Path:
             return parent
 
     return current.parents[2]
-
 
 REPO_ROOT: Path = _resolve_repo_root()
 DEV_JWT_SECRET: str = "dev-insecure-secret-change-me-before-production"
@@ -32,10 +30,8 @@ _PLACEHOLDER_SECRETS = frozenset({
     "placeholder",
 })
 
-
 def _is_placeholder_secret(value: str) -> bool:
     return value.strip().lower() in _PLACEHOLDER_SECRETS
-
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -71,6 +67,26 @@ class Settings(BaseSettings):
         default=2_000_000, ge=1000, le=50_000_000
     )
     orchestration_require_approval: bool = True
+
+    # --- M42: Workspace-scoped MCP discovery ----------------------------
+    mcp_server_profiles_json: str = Field(default="", repr=False)
+    mcp_connect_timeout_seconds: float = Field(default=5.0, ge=1.0, le=30.0)
+    mcp_read_timeout_seconds: float = Field(default=45.0, ge=5.0, le=180.0)
+    mcp_write_timeout_seconds: float = Field(default=15.0, ge=1.0, le=60.0)
+    mcp_discovery_timeout_seconds: float = Field(default=60.0, ge=5.0, le=180.0)
+    mcp_discovery_max_items: int = Field(default=100, ge=1, le=500)
+    mcp_discovery_rate_limit_per_minute: int = Field(default=5, ge=1, le=100)
+
+    # --- M40: Evidence-grounded Agent Runtime -------------------------
+    agent_runtime_enabled: bool = True
+    agent_runtime_max_history_messages: int = Field(default=12, ge=0, le=12)
+    agent_runtime_max_prompt_chars: int = Field(default=24000, ge=1000, le=100000)
+    agent_runtime_max_output_tokens: int = Field(default=1600, ge=128, le=8192)
+    agent_runtime_compaction_trigger_chars: int = Field(default=16000, ge=4000, le=80000)
+    agent_runtime_compaction_target_chars: int = Field(default=5000, ge=1000, le=20000)
+    agent_runtime_recent_messages_after_compaction: int = Field(default=6, ge=2, le=20)
+    agent_runtime_max_context_messages: int = Field(default=200, ge=12, le=1000)
+    agent_runtime_max_compaction_batches: int = Field(default=5, ge=1, le=20)
 
     app_env: str = "development"
     debug: bool = False
@@ -720,7 +736,7 @@ class Settings(BaseSettings):
     )
 
     # --- Scientific source discovery ---------------------------------------
-    source_search_provider: Literal["semantic_scholar", "pubmed", "openalex", "arxiv", "crossref", "europepmc"] = "semantic_scholar"
+    source_search_provider: Literal["semantic_scholar", "pubmed", "openalex", "arxiv", "crossref", "europepmc", "clinicaltrials"] = "semantic_scholar"
     semantic_scholar_api_key: str = Field(default="", repr=False)
     semantic_scholar_base_url: str = (
         "https://api.semanticscholar.org/graph/v1"
@@ -774,6 +790,13 @@ class Settings(BaseSettings):
     europepmc_max_retries: int = Field(default=2, ge=0, le=10)
     europepmc_min_interval_seconds: float = Field(
         default=0.34, ge=0.0, le=10.0
+    )
+    clinicaltrials_timeout_seconds: float = Field(
+        default=20.0, ge=1.0, le=120.0
+    )
+    clinicaltrials_max_retries: int = Field(default=2, ge=0, le=10)
+    clinicaltrials_min_interval_seconds: float = Field(
+        default=1.0, ge=0.0, le=30.0
     )
     source_search_limit_default: int = Field(default=25, ge=1, le=1000)
     source_search_limit_max: int = Field(default=1000, ge=1, le=1000)
@@ -1124,7 +1147,6 @@ class Settings(BaseSettings):
         if not self.backup_directory.strip():
             raise ValueError("backup_directory must not be empty")
         return self
-
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
