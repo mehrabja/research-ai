@@ -99,17 +99,18 @@ test("requires an explicit decision before Agent Runtime registry tools execute"
 
     if(method==="GET"&&path.endsWith("/events")){
       eventStreamRequests+=1;
-      const events=[
-        "retry: 3600000",
-        'id: 1\ndata: '+JSON.stringify({id:1,type:"turn_started",payload:{}}),
-        "",
-        'id: 2\ndata: '+JSON.stringify({id:2,type:"text_delta",payload:{text:"Streaming response from mocked model."}}),
-        "",
-      ].join("\n");
+      const events="data: "+JSON.stringify({
+        id:2,
+        type:"text_delta",
+        payload:{text:"Streaming response from mocked model."},
+      })+"\n\n";
       await route.fulfill({
         status:200,
-        contentType:"text/event-stream",
-        headers:{"cache-control":"no-cache"},
+        headers:{
+          "content-type":"text/event-stream; charset=utf-8",
+          "cache-control":"no-cache, no-transform",
+          "x-accel-buffering":"no",
+        },
         body:events,
       });
       return;
