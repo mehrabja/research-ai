@@ -129,4 +129,11 @@ Structured output is not treated as proof of truth. References invented by a mod
 
 ## Validation status
 
-The component includes focused state-helper tests. Full Next.js typecheck/build and browser E2E are still required in the repository CI. This environment could not clone the repository for a local Next.js build, so no successful build is claimed.
+The merged integration was validated on the default branch by GitHub Actions CI run 44838088491 (commit `4b02559ebb088365241d3b85e0f5bb754f233de0`). All CI jobs passed:
+
+- Backend: Ruff, mypy, Alembic upgrade/downgrade/upgrade, application import, smoke tests and pytest.
+- Frontend: dependency install, TypeScript typecheck, unit tests, API-boundary audit and production build.
+- E2E: database migration, backend startup, Playwright browser setup and end-to-end tests.
+- Docker: API image build.
+
+The separate Secret Scan reported 24 `generic-api-key` matches in historical local-only E2E/API test fixtures. The exact commit-scoped Gitleaks fingerprints are recorded in the repository root `.gitleaksignore`. No rule-wide or path-wide allowlist is added; these entries suppress only the reviewed historical findings. Any new commit containing a new occurrence is still scanned and reported.
