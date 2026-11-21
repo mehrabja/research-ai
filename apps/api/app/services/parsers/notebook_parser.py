@@ -172,7 +172,12 @@ def parse_notebook(
                 "analysis_kind": "jupyter_notebook",
                 "static_only": True,
                 "execution_performed": False,
-                "unsupported_nbformat": nbformat,
+                "unsupported_nbformat": (
+                    nbformat
+                    if isinstance(nbformat, int)
+                    and not isinstance(nbformat, bool)
+                    else _safe_label(nbformat)
+                ),
             },
         )
 
@@ -224,9 +229,12 @@ def parse_notebook(
             continue
 
         raw_cell_type = cell.get("cell_type")
-        cell_type = raw_cell_type if raw_cell_type in {
-            "code", "markdown", "raw"
-        } else "unknown"
+        cell_type = (
+            raw_cell_type
+            if isinstance(raw_cell_type, str)
+            and raw_cell_type in {"code", "markdown", "raw"}
+            else "unknown"
+        )
         cell_type_counts[cell_type] += 1
 
         raw_source = _cell_source(cell.get("source", ""))
@@ -268,7 +276,12 @@ def parse_notebook(
                 if not isinstance(output, dict):
                     continue
                 output_type = output.get("output_type")
-                label = output_type if output_type in _OUTPUT_TYPES else "other"
+                label = (
+                    output_type
+                    if isinstance(output_type, str)
+                    and output_type in _OUTPUT_TYPES
+                    else "other"
+                )
                 output_type_counts[label] += 1
 
         if not is_python:

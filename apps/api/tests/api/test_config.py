@@ -33,3 +33,12 @@ def test_europepmc_source_settings_defaults() -> None:
     assert settings.europepmc_timeout_seconds == 15.0
     assert settings.europepmc_max_retries == 2
     assert settings.europepmc_min_interval_seconds == 0.34
+
+
+
+def test_notebook_analysis_limits_defaults() -> None:
+    from app.core.config import Settings
+
+    settings = Settings(database_url="postgresql://user:pass@localhost/test")
+    assert settings.notebook_max_cells == 2000
+    assert settings.notebook_max_cell_source_chars == 250_000

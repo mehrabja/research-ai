@@ -157,6 +157,55 @@ def test_code_analysis_happy_path(cleanup_users):
     assert r.json()["class_count"] == 1
 
 
+
+def test_notebook_code_analysis_returns_bounded_metadata(cleanup_users):
+    import json
+
+    _, token = _register_and_login(cleanup_users)
+    project_id = _mk_project(token)
+    notebook = {
+        "nbformat": 4,
+        "nbformat_minor": 5,
+        "metadata": {
+            "kernelspec": {"name": "python3", "language": "python"}
+        },
+        "cells": [
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [
+                    {
+                        "output_type": "stream",
+                        "text": ["DO_NOT_PERSIST_OUTPUT"],
+                    }
+                ],
+                "source": ["def estimate(x):\n", "    return x * 2\n"],
+            }
+        ],
+    }
+    upload = _upload(
+        token,
+        project_id,
+        "model.ipynb",
+        json.dumps(notebook).encode("utf-8"),
+        mime="application/x-ipynb+json",
+    )
+    assert upload.status_code == 201, upload.text
+    file_id = upload.json()["id"]
+    _run_code_analysis(file_id)
+
+    response = client.get(
+        f"/api/v1/files/{file_id}/code-analysis",
+        headers=_auth(token),
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["language"] == "notebook"
+    assert body["analysis_meta"]["notebook"]["execution_performed"] is False
+    assert body["analysis_meta"]["notebook"]["execution"]["unexecuted_code_cells"] == 1
+    assert "DO_NOT_PERSIST_OUTPUT" not in response.text
+
 def test_code_symbols_pagination(cleanup_users):
     _, token = _register_and_login(cleanup_users)
     pid = _mk_project(token)

@@ -151,6 +151,80 @@ def test_code_analyze_happy_path(cleanup_users):
         assert analysis.class_count == 1
 
 
+
+def test_notebook_upload_runs_static_code_analysis(cleanup_users):
+    import json
+
+    uid = _mk_user(cleanup_users)
+    notebook = {
+        "nbformat": 4,
+        "nbformat_minor": 5,
+        "metadata": {
+            "kernelspec": {"name": "python3", "language": "python"},
+            "language_info": {"name": "python"},
+        },
+        "cells": [
+            {
+                "cell_type": "code",
+                "execution_count": 1,
+                "metadata": {},
+                "outputs": [
+                    {
+                        "output_type": "execute_result",
+                        "data": {"text/plain": "PRIVATE_NOTEBOOK_OUTPUT"},
+                    }
+                ],
+                "source": [
+                    "import math\n",
+                    "def area(radius):\n",
+                    "    return math.pi * radius * radius\n",
+                ],
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": "# Research notes",
+            },
+        ],
+    }
+    raw = json.dumps(notebook).encode("utf-8")
+
+    with SessionLocal() as db:
+        project = projects_service.create_project(
+            db, user_id=uid, name="Notebook project"
+        )
+        pf = _upload(
+            db,
+            uid=uid,
+            pid=project.id,
+            name="analysis.ipynb",
+            data=raw,
+        )
+        assert pf.file_kind == "code"
+        job = db.execute(
+            select(Job).where(
+                Job.project_file_id == pf.id,
+                Job.job_type == "code_analyze",
+            )
+        ).scalar_one()
+        handle_code_analyze(_ctx(job))
+
+        analysis = db.execute(
+            select(CodeAnalysis).where(
+                CodeAnalysis.project_file_id == pf.id
+            )
+        ).scalar_one()
+        assert analysis.language == "notebook"
+        assert analysis.parse_status == ParseStatus.COMPLETED.value
+        assert analysis.function_count == 1
+        assert analysis.import_count == 1
+        notebook_meta = analysis.analysis_meta["notebook"]
+        assert notebook_meta["execution_performed"] is False
+        assert notebook_meta["cell_count_total"] == 2
+        assert notebook_meta["cell_type_counts"]["markdown"] == 1
+        assert notebook_meta["outputs"]["output_payloads_stored"] is False
+        assert "PRIVATE_NOTEBOOK_OUTPUT" not in str(analysis.analysis_meta)
+
 def test_code_analyze_deleted_file_noop(cleanup_users):
     uid = _mk_user(cleanup_users)
     with SessionLocal() as db:

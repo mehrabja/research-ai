@@ -12,8 +12,8 @@ from app.services.parsers.base import (
     RawSymbol,
 )
 from app.services.parsers.fallback_parser import parse_fallback
-from app.services.parsers.python_parser import parse_python
 from app.services.parsers.notebook_parser import parse_notebook
+from app.services.parsers.python_parser import parse_python
 
 __all__ = [
     "CodeParseResult",
