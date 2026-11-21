@@ -220,7 +220,7 @@ def test_deduplication_and_invalid_records_are_bounded(
     ]
 
 
-def test_provider_limit_is_capped_at_100(
+def test_provider_uses_bounded_100_record_pages_for_large_limit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     requests: list[object] = []
@@ -247,6 +247,67 @@ def test_provider_limit_is_capped_at_100(
         (400, SourceProviderInvalidResponseError),
     ],
 )
+def test_search_follows_cursor_and_combines_pages(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requests: list[object] = []
+    pages = [
+        {
+            "resultList": {"result": [_record(identifier="1")]},
+            "nextCursorMark": "cursor-2",
+        },
+        {
+            "resultList": {"result": [_record(identifier="2")]},
+            "nextCursorMark": "cursor-2",
+        },
+    ]
+
+    def handler(request: object, timeout: float) -> _Response:
+        requests.append(request)
+        return _Response(json.dumps(pages[len(requests) - 1]).encode())
+
+    _install(monkeypatch, handler)
+    results = _provider().search(query="cursor test", limit=150)
+
+    assert [item.external_source_id for item in results] == [
+        "MED:1",
+        "MED:2",
+    ]
+    assert len(requests) == 2
+    first = parse_qs(urlparse(requests[0].full_url).query)  # type: ignore[attr-defined]
+    second = parse_qs(urlparse(requests[1].full_url).query)  # type: ignore[attr-defined]
+    assert first["cursorMark"] == ["*"]
+    assert second["cursorMark"] == ["cursor-2"]
+    assert first["pageSize"] == ["100"]
+    assert second["pageSize"] == ["100"]
+    assert first["query"] == second["query"]
+
+
+def test_search_stops_at_ten_pages_even_when_cursor_keeps_advancing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requests: list[object] = []
+
+    def handler(request: object, timeout: float) -> _Response:
+        requests.append(request)
+        page = len(requests)
+        return _Response(
+            json.dumps(
+                {
+                    "resultList": {
+                        "result": [_record(identifier=str(page))]
+                    },
+                    "nextCursorMark": f"cursor-{page + 1}",
+                }
+            ).encode()
+        )
+
+    _install(monkeypatch, handler)
+    results = _provider().search(query="page cap", limit=1000)
+    assert len(results) == 10
+    assert len(requests) == 10
+
+
 def test_http_errors_are_typed(
     monkeypatch: pytest.MonkeyPatch,
     status: int,

@@ -127,7 +127,7 @@ Research AI supports Europe PMC through the existing report-scoped source-search
 
 Abstract text is returned only when the record carries an explicit reusable licence (CC BY, CC BY-SA, CC0 or public-domain marker). An Open Access flag alone is not treated as a text-reuse licence. Unknown, NC, ND or missing licences retain bibliographic metadata but omit the abstract. The adapter does not retrieve PDFs or claim that full text has been read; acquisition and extraction remain in the existing controlled ingestion pipeline.
 
-The adapter applies response-size, result-count, timeout, retry and per-process pacing limits. The current provider interface returns one page and does not expose Europe PMC cursor continuation; result counts above 100 are therefore intentionally capped rather than silently presenting a page as exhaustive.
+The adapter follows Europe PMC cursor pages internally when needed, up to 10 pages and 1,000 accepted records per search. Each page retains the same query and filters, uses the returned cursor, and passes through response-size, timeout, retry and per-process pacing controls. Pagination stops on an empty page, missing/repeated cursor, requested result limit or the hard page cap; it does not claim that a capped result set is exhaustive.
 
 Official references:
 - https://europepmc.org/RestfulWebService
