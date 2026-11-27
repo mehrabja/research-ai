@@ -55,7 +55,7 @@ soupsieve==2.9.2
 SQLAlchemy==2.0.54
 starlette==1.6.0
 tiktoken==0.14.0
-typing-inspection==0.4.4
+typing-inspection==0.4.5
 typing_extensions==4.16.0
 tzdata==2026.4
 urllib3==2.8.0
